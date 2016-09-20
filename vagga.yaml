@@ -1,0 +1,45 @@
+containers:
+  ubuntu:
+    setup:
+    - !Ubuntu xenial
+    - !Install
+      - gcc
+      - libc6-dev
+    - !TarInstall
+      url: https://static.rust-lang.org/dist/rust-1.11.0-x86_64-unknown-linux-gnu.tar.gz
+      script: ./install.sh --prefix=/usr
+    auto-clean: true
+
+  sphinx:
+    setup:
+    - !Alpine v3.4
+    - !Repo edge/main
+    - !Install [py-sphinx, py-imagesize, make]
+    auto-clean: true
+
+commands:
+  rustc: !Command
+    container: ubuntu
+    description: Run rustc command
+    run: [rustc]
+  cargo: !Command
+    container: ubuntu
+    description: Run Cargo command
+    run: [cargo]
+  build: !Command
+    container: ubuntu
+    description: Build project
+    run: [cargo, build]
+  run: !Command
+    container: ubuntu
+    description: Run
+    run: [cargo, run]
+  docs: !Command
+    container: sphinx
+    description: Build documentation
+    epilog: |
+      ---------------------------------------------------
+      Run this to open docs in browser:
+      xdg-open $(pwd)/docs/_build/html/index.html
+    work-dir: docs
+    run: [make, html]
