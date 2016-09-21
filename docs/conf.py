@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Tangle documentation build configuration file, created by
+# Swindon documentation build configuration file, created by
 # sphinx-quickstart on Tue Sep 20 15:28:54 2016.
 #
 # This file is execfile()d with the current directory set to its
@@ -48,7 +48,7 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = u'Tangle'
+project = u'Swindon'
 copyright = u'2016, Evo Company'
 author = u'Evo Company'
 
@@ -133,7 +133,7 @@ html_theme = 'alabaster'
 # The name for this set of Sphinx documents.
 # "<project> v<release> documentation" by default.
 #
-# html_title = u'Tangle v0.1.0'
+# html_title = u'Swindon v0.1.0'
 
 # A shorter title for the navigation bar.  Default is the same as html_title.
 #
@@ -142,7 +142,7 @@ html_theme = 'alabaster'
 # The name of an image file (relative to this directory) to place at the top
 # of the sidebar.
 #
-# html_logo = None
+html_logo = '_static/swindon.jpg'
 
 # The name of an image file (relative to this directory) to use as a favicon of
 # the docs.  This file should be a Windows icon file (.ico) being 16x16 or 32x32
@@ -259,7 +259,7 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, 'Tangle.tex', u'Tangle Documentation',
+    (master_doc, 'Swindon.tex', u'Swindon Documentation',
      u'Evo Company', 'manual'),
 ]
 
@@ -301,7 +301,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    (master_doc, 'tangle', u'Tangle Documentation',
+    (master_doc, 'Swindon', u'Swindon Documentation',
      [author], 1)
 ]
 
@@ -316,8 +316,8 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-    (master_doc, 'Tangle', u'Tangle Documentation',
-     author, 'Tangle', 'One line description of project.',
+    (master_doc, 'Swindon', u'Swindon Documentation',
+     author, 'Swindon', 'One line description of project.',
      'Miscellaneous'),
 ]
 
