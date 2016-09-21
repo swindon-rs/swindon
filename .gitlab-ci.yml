@@ -1,0 +1,23 @@
+before_script:
+- vagga --version
+- vagga _init_storage_dir --allow-multiple swindon
+
+stages:
+- containers
+- test
+- publish
+- cleanup
+
+build_docs:
+  stage: containers
+  only:
+  - master
+  script:
+  - vagga docs
+  - gitlab-publish docs/_build/html doc.swindon
+
+cleanup:
+  stage: cleanup
+  when: always
+  script:
+  - vagga _clean --unused --at-least 1day
