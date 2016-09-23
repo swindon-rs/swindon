@@ -9,9 +9,23 @@ containers:
     - !TarInstall
       url: https://static.rust-lang.org/dist/rust-1.11.0-x86_64-unknown-linux-gnu.tar.gz
       script: ./install.sh --prefix=/usr
+    - !EnsureDir /cargo
     auto-clean: true
     environ:
       HOME: /work
+
+  cargo-registry:
+    setup:
+    - !Container ubuntu
+    - !EnsureDir /cargo
+    - !Env
+      CARGO_HOME: /cargo
+    - !Depends Cargo.toml
+    - !Sh |
+        cargo install
+    auto-clean: true
+    data-dirs:
+    - /cargo
 
   sphinx:
     setup:
@@ -40,6 +54,10 @@ commands:
   _cargo-doc: !Command
     container: ubuntu
     description: build rust docs
+    environ:
+      CARGO_HOME: /cargo
+    volumes:
+      /cargo: !Snapshot { container: cargo-registry }
     run: |
       cargo doc --no-deps \
         -p swindon -p minihttp
