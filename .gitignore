@@ -1,2 +1,4 @@
 .vagga
 docs/_build
+target
+.cargo

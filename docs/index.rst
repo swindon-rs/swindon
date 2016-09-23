@@ -4,13 +4,14 @@
    contain the root `toctree` directive.
 
 Welcome to Swindon's documentation!
-==================================
+===================================
 
 Contents:
 
 .. toctree::
    :maxdepth: 2
 
+   rust_api/swindon/index
 
 
 Indices and tables

@@ -5,10 +5,13 @@ containers:
     - !Install
       - gcc
       - libc6-dev
+      - ca-certificates
     - !TarInstall
       url: https://static.rust-lang.org/dist/rust-1.11.0-x86_64-unknown-linux-gnu.tar.gz
       script: ./install.sh --prefix=/usr
     auto-clean: true
+    environ:
+      HOME: /work
 
   sphinx:
     setup:
@@ -34,9 +37,29 @@ commands:
     container: ubuntu
     description: Run
     run: [cargo, run]
+  _cargo-doc: !Command
+    container: ubuntu
+    description: build rust docs
+    run: |
+      cargo doc --no-deps \
+        -p swindon -p minirouter -p minihttp
+  _copy-doc: !Command
+    container: ubuntu
+    description: copy rust docs into sphinx build dir
+    prerequisites: [_cargo-doc]
+    run: |
+      mkdir -p docs/_build/html
+      [ -d docs/_build/html/rust_api ] && rm -r docs/_build/html/rust_api
+      cp -rT target/doc docs/_build/html/rust_api
+  _cargo-new: !Command
+    container: ubuntu
+    description: Create New Crate lib
+    work-dir: /work/deps
+    run: [cargo, new, --vcs, git]
   docs: !Command
     container: sphinx
     description: Build documentation
+    prerequisites: [_copy-doc]
     epilog: |
       ---------------------------------------------------
       Run this to open docs in browser:
