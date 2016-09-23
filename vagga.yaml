@@ -42,7 +42,7 @@ commands:
     description: build rust docs
     run: |
       cargo doc --no-deps \
-        -p swindon -p minirouter -p minihttp
+        -p swindon -p minihttp
   _copy-doc: !Command
     container: ubuntu
     description: copy rust docs into sphinx build dir

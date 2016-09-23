@@ -2,7 +2,7 @@
 
 name = "swindon"
 version = "0.1.0"
-authors = ["a.popravka@smartweb.com"]
+authors = ["a.popravka@smartweb.com.ua"]
 
 [dependencies]
 # bytes = { git = "https://github.com/carllerche/bytes" }
