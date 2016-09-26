@@ -180,7 +180,7 @@ html_static_path = ['_static']
 # template names.
 #
 html_additional_pages = {
-    'rust_api/swindon/index': "../../target/doc/swindon/index.html",
+    'rust_api/swindon/index': "/work/target/doc/swindon/index.html",
 }
 
 # If false, no module index is generated.

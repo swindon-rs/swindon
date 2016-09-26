@@ -57,7 +57,7 @@ commands:
     environ:
       CARGO_HOME: /cargo
     volumes:
-      /cargo: !Snapshot { container: cargo-registry }
+      /cargo: !Snapshot { container: cargo-registry, size: 1G }
     run: |
       cargo doc --no-deps \
         -p swindon -p minihttp
