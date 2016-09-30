@@ -41,6 +41,7 @@ pub fn main() {
     let addr = "0.0.0.0:8080".parse().unwrap();
 
     minihttp::serve(&lp.handle(), addr, HelloWorld).unwrap();
+    minihttp::core_serve(&lp.handle(), "0.0.0.0:8081".parse().unwrap());
 
     lp.run(futures::empty::<(), ()>()).unwrap();
 }
