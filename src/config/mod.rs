@@ -4,6 +4,7 @@ use std::path::{PathBuf, Path};
 mod read;
 mod root;
 mod listen;
+mod routing;
 
 pub use self::read::Error;
 pub use self::root::Config;

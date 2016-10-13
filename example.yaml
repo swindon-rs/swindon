@@ -1,2 +1,8 @@
 listen:
 - 127.0.0.1:8080
+
+routing:
+  chat.example.com/: example-chat
+  chat.example.com/css: example-chat-static
+  chat.example.com/js: example-chat-static
+  chat.example.com/index.html: example-chat-static
