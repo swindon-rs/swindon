@@ -27,3 +27,14 @@ handlers:
     mode: relative_to_site_root
     path: /work/public
     gzip-static: true
+
+http-destinations:
+  chat:
+
+    load-balancing: queue
+    queue-size-for-503: 100k
+    backend-connections-per-ip-port: 1
+    in-flight-requests-per-backend-connection: 1
+
+    addresses:
+    - example.com:5000
