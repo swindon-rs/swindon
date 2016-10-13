@@ -8,7 +8,7 @@ use super::routing::{self, Routing};
 use super::handlers::{self, Handler};
 use super::http_destinations::{self, Destination};
 
-#[derive(RustcDecodable)]
+#[derive(RustcDecodable, PartialEq, Eq, Debug)]
 pub struct Config {
     pub listen: Vec<ListenSocket>,
     pub routing: Routing,

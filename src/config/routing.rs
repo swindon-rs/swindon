@@ -5,7 +5,7 @@ use rustc_serialize::{Decoder, Decodable};
 use quire::validate::{Mapping, Scalar};
 
 
-#[derive(Eq, PartialEq, PartialOrd, Ord)]
+#[derive(Eq, PartialEq, PartialOrd, Ord, Debug)]
 pub struct Route {
     pub host: String,
     pub path: Option<String>,

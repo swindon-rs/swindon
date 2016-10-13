@@ -8,6 +8,7 @@ pub fn destination_validator() -> Scalar {
     Scalar::new()
 }
 
+#[derive(PartialEq, Eq, Debug)]
 pub struct Destination {
     pub upstream: String,
     pub path: String,

@@ -5,7 +5,7 @@ use super::proxy;
 use quire::validate::{Enum};
 
 
-#[derive(RustcDecodable)]
+#[derive(RustcDecodable, Debug, PartialEq, Eq)]
 pub enum Handler {
     SwindonChat(chat::Chat),
     Static(static_files::Static),

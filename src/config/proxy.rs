@@ -2,14 +2,14 @@ use super::http;
 
 use quire::validate::{Nothing, Enum, Structure, Scalar};
 
-#[derive(RustcDecodable)]
+#[derive(RustcDecodable, Debug, PartialEq, Eq)]
 #[allow(non_camel_case_types)]
 pub enum Mode {
     /// Means forward all headers including Host header
     forward,
 }
 
-#[derive(RustcDecodable)]
+#[derive(RustcDecodable, Debug, PartialEq, Eq)]
 pub struct Proxy {
     pub mode: Mode,
     pub ip_header: String,

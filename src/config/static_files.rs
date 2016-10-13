@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use quire::validate::{Nothing, Enum, Structure, Scalar};
 
 
-#[derive(RustcDecodable)]
+#[derive(RustcDecodable, Debug, PartialEq, Eq)]
 #[allow(non_camel_case_types)]
 pub enum Mode {
     relative_to_site_root,
@@ -11,7 +11,7 @@ pub enum Mode {
 }
 
 
-#[derive(RustcDecodable)]
+#[derive(RustcDecodable, Debug, PartialEq, Eq)]
 pub struct Static {
     pub mode: Mode,
     pub path: PathBuf,

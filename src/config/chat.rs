@@ -6,7 +6,7 @@ use super::listen::{self, ListenSocket};
 use super::http;
 
 
-#[derive(RustcDecodable)]
+#[derive(RustcDecodable, Debug, PartialEq, Eq)]
 pub struct Chat {
     pub listen: ListenSocket,
     pub http_route: http::Destination,

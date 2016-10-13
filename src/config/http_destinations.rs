@@ -1,13 +1,13 @@
 use quire::validate::{Structure, Scalar, Enum, Numeric, Nothing};
 use quire::validate::{Sequence};
 
-#[derive(RustcDecodable)]
+#[derive(RustcDecodable, Debug, PartialEq, Eq)]
 #[allow(non_camel_case_types)]
 pub enum LoadBalancing {
     queue,
 }
 
-#[derive(RustcDecodable)]
+#[derive(RustcDecodable, Debug, PartialEq, Eq)]
 pub struct Destination {
     pub load_balancing: LoadBalancing,
     pub queue_size_for_503: usize,

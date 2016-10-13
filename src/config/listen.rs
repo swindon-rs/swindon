@@ -4,6 +4,7 @@ use rustc_serialize::{Decoder, Decodable};
 use quire::validate::{Enum, Scalar};
 
 
+#[derive(Debug, PartialEq, Eq)]
 pub enum ListenSocket {
     Tcp(SocketAddr),
     // TODO(tailhook)
