@@ -6,3 +6,24 @@ routing:
   chat.example.com/css: example-chat-static
   chat.example.com/js: example-chat-static
   chat.example.com/index.html: example-chat-static
+
+handlers:
+
+  example-chat: !SwindonChat
+
+    listen: 127.0.0.1:2007
+    http-route: example-chat-http
+
+    message-handlers:
+      "*": chat/chat
+      sub.chat.*: chat/sub_chat
+
+  example-chat-http: !Proxy
+    mode: forward
+    ip-header: X-Remote-Ip
+    destination: chat
+
+  example-chat-static: !Static
+    mode: relative_to_site_root
+    path: /work/public
+    gzip-static: true

@@ -3,8 +3,15 @@ use std::path::{PathBuf, Path};
 
 mod read;
 mod root;
+mod http;
+// sections
 mod listen;
 mod routing;
+mod handlers;
+// handlers
+mod chat;
+mod static_files;
+mod proxy;
 
 pub use self::read::Error;
 pub use self::root::Config;
