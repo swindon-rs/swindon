@@ -1,6 +1,7 @@
 use std::io::{self, Read};
 use std::rc::Rc;
-use std::fs::File;
+use std::fs::{File, Metadata, metadata};
+use std::cell::RefCell;
 use std::path::{PathBuf, Path, Component};
 
 use quire::{self, Pos, Include, ErrorCollector, Options, parse_config};
@@ -29,7 +30,8 @@ quick_error! {
 
 
 
-pub fn include_file(pos: &Pos, include: &Include,
+pub fn include_file(files: &RefCell<&mut Vec<(PathBuf, Metadata)>>,
+    pos: &Pos, include: &Include,
     err: &ErrorCollector, options: &Options)
     -> Ast
 {
@@ -54,11 +56,16 @@ pub fn include_file(pos: &Pos, include: &Include,
 
             let mut body = String::new();
             File::open(&path)
-            .and_then(|mut f| f.read_to_string(&mut body))
+            .and_then(|mut f| {
+                let m = f.metadata();
+                try!(f.read_to_string(&mut body));
+                m
+            })
             .map_err(|e| {
                 err.add_error(quire::Error::OpenError(path.clone(), e))
             }).ok()
-            .and_then(|_| {
+            .and_then(|metadata| {
+                files.borrow_mut().push((path.to_path_buf(), metadata));
                 parse_yaml(Rc::new(path.display().to_string()), &body,
                     |doc| { process_ast(&options, doc, err) },
                 ).map_err(|e| err.add_error(e)).ok()
@@ -68,10 +75,19 @@ pub fn include_file(pos: &Pos, include: &Include,
     }
 }
 
-pub fn read_config<P: AsRef<Path>>(filename: P) -> Result<Config, Error> {
-    let mut opt = Options::default();
-    opt.allow_include(include_file);
-    let cfg = try!(parse_config(filename, &config_validator(), &opt));
-    // TODO(tailhook) additional validations
-    Ok(cfg)
+pub fn read_config<P: AsRef<Path>>(filename: P)
+    -> Result<(Config, Vec<(PathBuf, Metadata)>), Error>
+{
+    let filename = filename.as_ref();
+    let mut files = Vec::new();
+    files.push((filename.to_path_buf(), try!(metadata(filename))));
+    let cfg = {
+        let cell = RefCell::new(&mut files);
+        let mut opt = Options::default();
+        opt.allow_include(
+            |a, b, c, d| include_file(&cell, a, b, c, d));
+        try!(parse_config(filename, &config_validator(), &opt))
+        // TODO(tailhook) additional validations
+    };
+    Ok((cfg, files))
 }

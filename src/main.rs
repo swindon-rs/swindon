@@ -12,11 +12,14 @@ extern crate rustc_serialize;
 mod config;
 
 use std::io::{self, Write};
+use std::time::Duration;
 use std::process::exit;
 
 use futures::{Async, Finished};
+use futures::stream::Stream;
 use argparse::{ArgumentParser, Parse, StoreTrue, Print};
 use tokio_core::reactor::Core;
+use tokio_core::reactor::Interval;
 use minihttp::server::Message;
 use minihttp::request::Request;
 use minihttp::response::Response;
@@ -75,7 +78,7 @@ pub fn main() {
         ap.parse_args_or_exit();
     }
 
-    let configurator = match config::Configurator::new(&config) {
+    let mut configurator = match config::Configurator::new(&config) {
         Ok(cfg) => cfg,
         Err(e) => {
             writeln!(&mut io::stderr(), "{}", e).ok();
@@ -101,5 +104,21 @@ pub fn main() {
         }
     }
 
-    lp.run(futures::empty::<(), ()>()).unwrap();
+    let config_updater = Interval::new(Duration::new(10, 0), &lp.handle())
+        .expect("interval created")
+        .for_each(move |_| {
+            match configurator.try_update() {
+                Ok(false) => {}
+                Ok(true) => {
+                    // TODO(tailhook) update listening sockets
+                    info!("Updated config");
+                }
+                Err(e) => {
+                    error!("{}", e);
+                }
+            }
+            Ok(())
+        });
+
+    lp.run(config_updater).unwrap();
 }
