@@ -1,11 +1,21 @@
+#[macro_use] extern crate log;
+#[macro_use] extern crate quick_error;
+extern crate env_logger;
 extern crate futures;
+extern crate quire;
+extern crate argparse;
 extern crate tokio_core;
 extern crate tokio_service;
-
 extern crate minihttp;
+extern crate rustc_serialize;
 
-use std::io;
+mod config;
+
+use std::io::{self, Write};
+use std::process::exit;
+
 use futures::{Async, Finished};
+use argparse::{ArgumentParser, Parse, StoreTrue, Print};
 use tokio_core::reactor::Core;
 use minihttp::server::Message;
 use minihttp::request::Request;
@@ -39,6 +49,38 @@ impl minihttp::server::HttpService for HelloWorld {
 }
 
 pub fn main() {
+    env_logger::init().unwrap();
+
+    let mut config = String::from("/etc/swindon/main.yaml");
+    let mut check = false;
+    {
+        let mut ap = ArgumentParser::new();
+        ap.set_description("Runs tree of processes");
+        ap.refer(&mut config)
+          .add_option(&["-c", "--config"], Parse,
+            "Configuration file name")
+          .metavar("FILE");
+        ap.refer(&mut check)
+          .add_option(&["-C", "--check-config"], StoreTrue,
+            "Check configuration file and exit");
+        ap.add_option(&["--version"],
+            Print(env!("CARGO_PKG_VERSION").to_string()),
+            "Show version");
+        ap.parse_args_or_exit();
+    }
+
+    let cfg = match config::Configurator::new(&config) {
+        Ok(cfg) => cfg,
+        Err(e) => {
+            writeln!(&mut io::stderr(), "{}", e).ok();
+            exit(1);
+        }
+    };
+
+    if check {
+        exit(0);
+    }
+
     let mut lp = Core::new().unwrap();
 
     let addr = "0.0.0.0:8080".parse().unwrap();

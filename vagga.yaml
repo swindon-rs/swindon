@@ -47,10 +47,12 @@ commands:
     container: ubuntu
     description: Build project
     run: [cargo, build]
+
   run: !Command
     container: ubuntu
     description: Run
-    run: [cargo, run]
+    run: [cargo, run, "--", --config=example.yaml]
+
   _cargo-doc: !Command
     container: ubuntu
     description: build rust docs
