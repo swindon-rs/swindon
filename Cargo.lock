@@ -8,7 +8,7 @@ dependencies = [
  "log 0.3.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "minihttp 0.1.0 (git+https://github.com/tailhook/minihttp?branch=new_handler)",
  "quick-error 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "quire 0.1.8 (git+https://github.com/tailhook/rust-quire?rev=f8aecc4)",
+ "quire 0.1.8 (git+https://github.com/tailhook/rust-quire?rev=719d201)",
  "rustc-serialize 0.3.19 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio-core 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio-service 0.1.0 (git+https://github.com/tokio-rs/tokio-service)",
@@ -184,7 +184,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 [[package]]
 name = "quire"
 version = "0.1.8"
-source = "git+https://github.com/tailhook/rust-quire?rev=f8aecc4#f8aecc43a8d0513290364c54bf7b8c90a6fc1f21"
+source = "git+https://github.com/tailhook/rust-quire?rev=719d201#719d201c8b7924746eb025c8584d2ad0b04c0fdd"
 dependencies = [
  "argparse 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "quick-error 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -358,7 +358,7 @@ dependencies = [
 "checksum netbuf 0.3.3 (git+https://github.com/tailhook/netbuf)" = "<none>"
 "checksum nix 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)" = "7a7bb1da2be7da3cbffda73fc681d509ffd9e665af478d2bee1907cee0bc64b2"
 "checksum quick-error 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "0aad603e8d7fb67da22dbdf1f4b826ce8829e406124109e73cf1b2454b93a71c"
-"checksum quire 0.1.8 (git+https://github.com/tailhook/rust-quire?rev=f8aecc4)" = "<none>"
+"checksum quire 0.1.8 (git+https://github.com/tailhook/rust-quire?rev=719d201)" = "<none>"
 "checksum rand 0.3.14 (registry+https://github.com/rust-lang/crates.io-index)" = "2791d88c6defac799c3f20d74f094ca33b9332612d9aef9078519c82e4fe04a5"
 "checksum regex 0.1.77 (registry+https://github.com/rust-lang/crates.io-index)" = "64b03446c466d35b42f2a8b203c8e03ed8b91c0f17b56e1f84f7210a257aa665"
 "checksum regex-syntax 0.3.7 (registry+https://github.com/rust-lang/crates.io-index)" = "48f0573bcee95a48da786f8823465b5f2a1fae288a55407aca991e5b3e0eae11"

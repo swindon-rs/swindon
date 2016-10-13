@@ -21,6 +21,8 @@ use minihttp::server::Message;
 use minihttp::request::Request;
 use minihttp::response::Response;
 
+use config::ListenSocket;
+
 
 #[derive(Clone)]
 struct HelloWorld;
@@ -53,6 +55,7 @@ pub fn main() {
 
     let mut config = String::from("/etc/swindon/main.yaml");
     let mut check = false;
+    let mut verbose = false;
     {
         let mut ap = ArgumentParser::new();
         ap.set_description("Runs tree of processes");
@@ -66,24 +69,37 @@ pub fn main() {
         ap.add_option(&["--version"],
             Print(env!("CARGO_PKG_VERSION").to_string()),
             "Show version");
+        ap.refer(&mut verbose)
+            .add_option(&["--verbose"], StoreTrue,
+            "Print some user-friendly startup messages");
         ap.parse_args_or_exit();
     }
 
-    let cfg = match config::Configurator::new(&config) {
+    let configurator = match config::Configurator::new(&config) {
         Ok(cfg) => cfg,
         Err(e) => {
             writeln!(&mut io::stderr(), "{}", e).ok();
             exit(1);
         }
     };
+    let cfg = configurator.config();
 
     if check {
         exit(0);
     }
 
     let mut lp = Core::new().unwrap();
+    // TODO(tailhook) do something when config updates
+    for sock in &cfg.get().listen {
+        match sock {
+            &ListenSocket::Tcp(addr) => {
+                if verbose {
+                    println!("Listening at {}", addr);
+                }
+                minihttp::serve(&lp.handle(), addr, || HelloWorld);
+            }
+        }
+    }
 
-    let addr = "0.0.0.0:8080".parse().unwrap();
-    minihttp::serve(&lp.handle(), addr, || HelloWorld);
     lp.run(futures::empty::<(), ()>()).unwrap();
 }

@@ -51,7 +51,12 @@ commands:
   run: !Command
     container: ubuntu
     description: Run
-    run: [cargo, run, "--", --config=example.yaml]
+    run:
+    - cargo
+    - run
+    - "--"
+    - --verbose
+    - --config=example.yaml
 
   _cargo-doc: !Command
     container: ubuntu
