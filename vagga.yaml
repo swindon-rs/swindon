@@ -7,7 +7,7 @@ containers:
       - libc6-dev
       - ca-certificates
     - !TarInstall
-      url: https://static.rust-lang.org/dist/rust-1.11.0-x86_64-unknown-linux-gnu.tar.gz
+      url: https://static.rust-lang.org/dist/rust-1.12.0-x86_64-unknown-linux-gnu.tar.gz
       script: ./install.sh --prefix=/usr
     - !EnsureDir /cargo
     auto-clean: true

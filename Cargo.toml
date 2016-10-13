@@ -5,13 +5,9 @@ version = "0.1.0"
 authors = ["a.popravka@smartweb.com.ua"]
 
 [dependencies]
-# bytes = { git = "https://github.com/carllerche/bytes" }
 futures = "0.1.1"
-# httparse = { git = "https://github.com/seanmonstar/httparse" } # "1.1.2"
-# log = "0.3.6"
-# time = "0.1"
 tokio-core = "0.1.0"
-# tokio-proto = { git = "https://github.com/tokio-rs/tokio-proto" }
 tokio-service = { git = "https://github.com/tokio-rs/tokio-service" }
 
-minihttp = { git = "https://github.com/popravich/minihttp" } # path = "/work/deps/minihttp" }
+#minihttp = { git = "https://github.com/popravich/minihttp", rev="ac1f402" }
+minihttp = { git = "https://github.com/tailhook/minihttp", branch="new_handler" }
