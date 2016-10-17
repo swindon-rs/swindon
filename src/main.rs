@@ -10,44 +10,20 @@ extern crate minihttp;
 extern crate rustc_serialize;
 
 mod config;
+mod handler;
 
 use std::io::{self, Write};
 use std::time::Duration;
 use std::process::exit;
 
-use futures::{Async, Finished};
 use futures::stream::Stream;
 use argparse::{ArgumentParser, Parse, StoreTrue, Print};
 use tokio_core::reactor::Core;
 use tokio_core::reactor::Interval;
-use tokio_service::Service;
-use minihttp::request::Request;
-use minihttp::response::Response;
 
 use config::ListenSocket;
+use handler::Main;
 
-
-#[derive(Clone)]
-struct HelloWorld;
-
-impl Service for HelloWorld {
-    type Request = Request;
-    type Response = Response;
-    type Error = io::Error;
-    type Future = Finished<Response, io::Error>;
-
-    fn call(&self, req: Request) -> Self::Future {
-        let mut resp = req.new_response();
-        resp.set_status(204)
-            .set_reason("No Content".to_string())
-            .header("Content-Length", "0");
-        futures::finished(resp)
-    }
-
-    fn poll_ready(&self) -> Async<()> {
-        Async::Ready(())
-    }
-}
 
 pub fn main() {
     env_logger::init().unwrap();
@@ -88,6 +64,9 @@ pub fn main() {
     }
 
     let mut lp = Core::new().unwrap();
+    let handler = Main {
+        config: cfg.clone(),
+    };
     // TODO(tailhook) do something when config updates
     for sock in &cfg.get().listen {
         match sock {
@@ -95,7 +74,7 @@ pub fn main() {
                 if verbose {
                     println!("Listening at {}", addr);
                 }
-                minihttp::serve(&lp.handle(), addr, HelloWorld);
+                minihttp::serve(&lp.handle(), addr, handler.clone());
             }
         }
     }
