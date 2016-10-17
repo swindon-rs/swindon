@@ -33,7 +33,7 @@ pub struct Configurator {
 pub struct ConfigCell(Arc<RwLock<Arc<Config>>>);
 
 impl ConfigCell {
-    pub fn get(self) -> Arc<Config> {
+    pub fn get(&self) -> Arc<Config> {
         self.0.read()
             .expect("config exists")
             .clone()

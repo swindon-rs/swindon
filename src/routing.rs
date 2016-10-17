@@ -3,6 +3,7 @@ use std::collections::BTreeMap;
 use config::Route;
 
 
+/// Map host port to a route of arbitrary type
 pub fn route<'x, D>(host: &str, path: &str, table: &'x BTreeMap<Route, D>)
     -> Option<&'x D>
 {
@@ -30,6 +31,15 @@ fn path_match<S: AsRef<str>>(pattern: &Option<S>, value: &str) -> bool {
     } else {
         return true;
     }
+}
+
+
+/// Returns host with trimmed whitespace and without port number if exists
+pub fn parse_host(host_header: &str) -> &str {
+    match host_header.find(':') {
+        Some(idx) => &host_header[..idx],
+        None => host_header,
+    }.trim()
 }
 
 #[cfg(test)]
