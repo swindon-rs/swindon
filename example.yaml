@@ -15,13 +15,13 @@ handlers:
     http-route: example-chat-http
 
     message-handlers:
-      "*": chat/chat
-      sub.chat.*: chat/sub_chat
+      "*": superman/chat
+      sub.chat.*: superman/sub_chat
 
   example-chat-http: !Proxy
     mode: forward
     ip-header: X-Remote-Ip
-    destination: chat
+    destination: superman/
 
   example-chat-static: !Static
     mode: relative_to_site_root
@@ -29,7 +29,7 @@ handlers:
     gzip-static: true
 
 http-destinations:
-  chat:
+  superman:
 
     load-balancing: queue
     queue-size-for-503: 100k

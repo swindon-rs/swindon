@@ -20,7 +20,7 @@ use futures::stream::Stream;
 use argparse::{ArgumentParser, Parse, StoreTrue, Print};
 use tokio_core::reactor::Core;
 use tokio_core::reactor::Interval;
-use minihttp::server::Message;
+use tokio_service::Service;
 use minihttp::request::Request;
 use minihttp::response::Response;
 
@@ -30,22 +30,18 @@ use config::ListenSocket;
 #[derive(Clone)]
 struct HelloWorld;
 
-impl minihttp::server::HttpService for HelloWorld {
+impl Service for HelloWorld {
     type Request = Request;
     type Response = Response;
     type Error = io::Error;
-    type Future = Finished<Message<Response>, io::Error>;
+    type Future = Finished<Response, io::Error>;
 
     fn call(&self, req: Request) -> Self::Future {
-        println!("REQUEST: {:?}", req);
-        let resp = req.new_response();
-        // resp.header("Content-Type", "text/html");
-        // resp.body(
-        //     format!("<h4>Hello world</h4>\n<b>Method: {:?}</b>",
-        //             _request.method).as_str());
-        // let resp = resp;
-
-        futures::finished(Message::WithoutBody(resp))
+        let mut resp = req.new_response();
+        resp.set_status(204)
+            .set_reason("No Content".to_string())
+            .header("Content-Length", "0");
+        futures::finished(resp)
     }
 
     fn poll_ready(&self) -> Async<()> {
@@ -99,7 +95,7 @@ pub fn main() {
                 if verbose {
                     println!("Listening at {}", addr);
                 }
-                minihttp::serve(&lp.handle(), addr, || HelloWorld);
+                minihttp::serve(&lp.handle(), addr, HelloWorld);
             }
         }
     }
