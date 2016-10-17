@@ -11,6 +11,7 @@ extern crate rustc_serialize;
 
 mod config;
 mod handler;
+mod routing;
 
 use std::io::{self, Write};
 use std::time::Duration;

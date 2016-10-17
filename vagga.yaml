@@ -35,18 +35,26 @@ containers:
     auto-clean: true
 
 commands:
+
   rustc: !Command
     container: ubuntu
     description: Run rustc command
     run: [rustc]
+
   cargo: !Command
     container: ubuntu
     description: Run Cargo command
     run: [cargo]
+
   build: !Command
     container: ubuntu
     description: Build project
     run: [cargo, build]
+
+  test: !Command
+    container: ubuntu
+    description: Test project
+    run: [cargo, test]
 
   run: !Command
     container: ubuntu
