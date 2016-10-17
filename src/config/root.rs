@@ -14,6 +14,7 @@ pub struct Config {
     pub routing: Routing,
     pub handlers: HashMap<String, Handler>,
     pub http_destinations: HashMap<String, Destination>,
+    pub debug_routing: bool,
 }
 
 pub fn config_validator<'a>() -> Structure<'a> {
@@ -21,6 +22,7 @@ pub fn config_validator<'a>() -> Structure<'a> {
     .member("listen", Sequence::new(listen::validator()))
     .member("routing", routing::validator())
     .member("handlers", Mapping::new(Scalar::new(), handlers::validator()))
-    .member("http-destinations",
+    .member("http_destinations",
         Mapping::new(Scalar::new(), http_destinations::validator()))
+    .member("debug_routing", Scalar::new().default(false))
 }

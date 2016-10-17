@@ -29,9 +29,11 @@ impl Service for Main {
             if let Some(route) = route(host, &req.path, &cfg.routing) {
                 let mut resp = req.new_response();
                 resp.set_status(200)
-                    .set_reason("OK".into())
-                    .header("X-Destination-Route", route)
-                    .header("Content-Length", "0");
+                    .set_reason("OK".into());
+                if cfg.debug_routing {
+                    resp.header("X-Swindon-Route", route);
+                }
+                resp.header("Content-Length", "0");
                 return finished(resp).boxed();
             }
         }
