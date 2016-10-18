@@ -6,6 +6,7 @@ use minihttp::Error;
 use config::ConfigCell;
 use routing::{parse_host, route};
 use serializer::{Response, Serializer};
+use config::Handler;
 
 #[derive(Clone)]
 pub struct Main {
@@ -23,10 +24,20 @@ impl Service for Main {
         // it changes in runtime. Config changes in the middle of request
         // can create undesirable effects
         let cfg = self.config.get();
+        let cfg2 = cfg.clone();
 
         if let Some(host) = req.host().map(parse_host) {
-            if let Some(_route) = route(host, &req.path, &cfg.routing) {
-                return Response::ErrorPage(404).serve(cfg.clone());
+            if let Some(route) = route(host, &req.path, &cfg.routing) {
+                match cfg.handlers.get(route) {
+                    Some(&Handler::EmptyGif) => {
+                        return Response::EmptyGif.serve(cfg2)
+                    }
+                    // TODO(tailhook) make better error code for None
+                    _ => {
+                        // Not implemented
+                        return Response::ErrorPage(501).serve(cfg2)
+                    }
+                }
             }
         }
         Response::ErrorPage(404).serve(cfg)

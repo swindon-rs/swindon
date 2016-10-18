@@ -7,6 +7,7 @@ use minihttp::{Error, GenericResponse, ResponseWriter};
 
 use config::Config;
 use default_error_page::error_page;
+use handlers::serve_empty_gif;
 
 
 pub struct Serializer {
@@ -17,6 +18,7 @@ pub struct Serializer {
 
 pub enum Response {
     ErrorPage(u16),
+    EmptyGif,
 }
 
 impl Response {
@@ -35,6 +37,9 @@ impl GenericResponse for Serializer {
             Response::ErrorPage(code) => {
                 // TODO(tailhook) resolve statuses
                 error_page(code, "Unknown", writer)
+            }
+            Response::EmptyGif => {
+                serve_empty_gif(writer)
             }
         }
     }

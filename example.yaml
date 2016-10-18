@@ -4,6 +4,7 @@ listen:
 debug-routing: true
 
 routing:
+  localhost/empty.gif: empty-gif
   chat.example.com/: example-chat
   chat.example.com/css: example-chat-static
   chat.example.com/js: example-chat-static
@@ -29,6 +30,8 @@ handlers:
     mode: relative_to_site_root
     path: /work/public
     gzip-static: true
+
+  empty-gif: !EmptyGif
 
 http-destinations:
   superman:

@@ -12,6 +12,7 @@ extern crate rustc_serialize;
 
 mod config;
 mod handler;
+mod handlers;
 mod routing;
 mod serializer;
 mod default_error_page;

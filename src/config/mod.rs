@@ -18,8 +18,9 @@ mod proxy;
 
 pub use self::read::Error;
 pub use self::root::Config;
-pub use self::routing::Route;
 pub use self::listen::ListenSocket;
+pub use self::routing::Route;
+pub use self::handlers::Handler;
 
 
 pub struct Configurator {
