@@ -7,11 +7,14 @@ extern crate argparse;
 extern crate tokio_core;
 extern crate tokio_service;
 extern crate minihttp;
+extern crate netbuf;
 extern crate rustc_serialize;
 
 mod config;
 mod handler;
 mod routing;
+mod serializer;
+mod default_error_page;
 
 use std::io::{self, Write};
 use std::time::Duration;
