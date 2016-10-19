@@ -4,7 +4,9 @@ use netbuf::Buf;
 use futures::{BoxFuture, Future};
 use tokio_core::net::TcpStream;
 
-use minihttp::{Error, ResponseWriter};
+use minihttp::{Error};
+
+use {Pickler};
 
 const PART1: &'static str = "\
     <!DOCTYPE html>\
@@ -28,15 +30,15 @@ const PART3: &'static str = concat!("\
     </html>\
     ");
 
-pub fn error_page(code: u16, status: &str, mut response: ResponseWriter)
+pub fn error_page(code: u16, status: &str, mut response: Pickler)
     -> BoxFuture<(TcpStream, Buf), Error>
 {
     let content_length = PART1.len() + PART2.len() + PART3.len() +
         2*(4 + status.as_bytes().len());
     response.status(code, status);
-    response.add_length(content_length as u64).unwrap();
-    response.add_header("Content-Type", "text/html").unwrap();
-    if response.done_headers().unwrap() {
+    response.add_length(content_length as u64);
+    response.add_header("Content-Type", "text/html");
+    if response.done_headers() {
         write!(&mut response, "\
             {p1}{code:03} {status}{p2}{code:03} {status}{p3}",
                 code=code, status=status,

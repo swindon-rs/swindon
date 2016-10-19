@@ -8,6 +8,7 @@ use minihttp::{Error, GenericResponse, ResponseWriter};
 use config::Config;
 use default_error_page::error_page;
 use handlers::serve_empty_gif;
+use {Pickler};
 
 
 pub struct Serializer {
@@ -33,6 +34,7 @@ impl Response {
 impl GenericResponse for Serializer {
     type Future = BoxFuture<(TcpStream, Buf), Error>;
     fn into_serializer(self, writer: ResponseWriter) -> Self::Future {
+        let writer = Pickler(writer, self.config);
         match self.response {
             Response::ErrorPage(code) => {
                 // TODO(tailhook) resolve statuses

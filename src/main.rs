@@ -16,6 +16,7 @@ mod handlers;
 mod routing;
 mod serializer;
 mod default_error_page;
+mod response;
 
 use std::io::{self, Write};
 use std::time::Duration;
@@ -28,6 +29,7 @@ use tokio_core::reactor::Interval;
 
 use config::ListenSocket;
 use handler::Main;
+pub use response::Pickler;
 
 
 pub fn main() {
