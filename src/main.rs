@@ -11,6 +11,7 @@ extern crate tokio_core;
 extern crate tokio_service;
 extern crate minihttp;
 extern crate netbuf;
+extern crate mime;
 extern crate mime_guess;
 extern crate tk_sendfile;
 extern crate rustc_serialize;

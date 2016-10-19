@@ -15,7 +15,7 @@ pub enum Mode {
 pub struct Static {
     pub mode: Mode,
     pub path: PathBuf,
-    pub gzip_static: bool,
+    pub text_charset: Option<String>,
 }
 
 pub fn validator<'x>() -> Structure<'x> {
@@ -25,5 +25,5 @@ pub fn validator<'x>() -> Structure<'x> {
         .option("relative_to_route", Nothing)
         .allow_plain())
     .member("path", Scalar::new())
-    .member("gzip_static", Scalar::new().default(false))
+    .member("text_charset", Scalar::new().optional())
 }

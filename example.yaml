@@ -32,6 +32,7 @@ handlers:
   src: !Static
     mode: relative_to_route
     path: /work/src
+    text-charset: utf-8
 
 http-destinations:
   superman:

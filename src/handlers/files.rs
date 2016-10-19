@@ -5,6 +5,7 @@ use netbuf::Buf;
 use futures::{BoxFuture, Future};
 use minihttp::{Error};
 use minihttp::request::Request;
+use mime::TopLevel;
 use mime_guess::guess_mime_type;
 use tk_sendfile::DiskPool;
 use tokio_core::net::TcpStream;
@@ -21,7 +22,7 @@ lazy_static! {
 }
 
 
-pub fn serve(mut response: Pickler, path: PathBuf, _settings: Arc<Static>)
+pub fn serve(mut response: Pickler, path: PathBuf, settings: Arc<Static>)
     -> BoxFuture<(TcpStream, Buf), Error>
 {
     // TODO(tailhook) check for symlink attacks
@@ -30,7 +31,15 @@ pub fn serve(mut response: Pickler, path: PathBuf, _settings: Arc<Static>)
     .and_then(move |file| {
         response.status(200, "OK");
         response.add_length(file.size());
-        response.format_header("Content-Type", mime);
+        match (&mime.0, &settings.text_charset) {
+            (&TopLevel::Text, &Some(ref enc)) => {
+                response.format_header("Content-Type", format_args!(
+                    "{}/{}; charset={}", mime.0, mime.1, enc));
+            }
+            _ => {
+                response.format_header("Content-Type", mime);
+            }
+        }
         if response.done_headers() {
             response.steal_socket()
             .and_then(|(socket, buf)| {
