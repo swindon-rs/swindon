@@ -4,15 +4,18 @@ use config::Route;
 
 
 /// Map host port to a route of arbitrary type
-pub fn route<'x, D>(host: &str, path: &str, table: &'x BTreeMap<Route, D>)
-    -> Option<&'x D>
+///
+/// Returns destination route and relative path
+pub fn route<'x, D>(host: &str, path: &'x str, table: &'x BTreeMap<Route, D>)
+    -> Option<(&'x D, &'x str)>
 {
     // TODO(tailhook) transform into range iteration when `btree_range` is
     // stable
     for (route, result) in table.iter().rev() {
         if route.host == host && path_match(&route.path, path) {
             // Longest match is the last in reversed iteration
-            return Some(result);
+            let prefix_len = route.path.as_ref().map(|x| x.len()).unwrap_or(0);
+            return Some((result, &path[prefix_len..]));
         }
     }
     return None;
@@ -52,8 +55,10 @@ mod test {
         let table = vec![
             (Route { host: "example.com".into(), path: None }, 1),
             ].into_iter().collect();
-        assert_eq!(route("example.com", "/hello", &table), Some(&1));
-        assert_eq!(route("example.com", "/", &table), Some(&1));
+        assert_eq!(route("example.com", "/hello", &table),
+                   Some((&1, "/hello")));
+        assert_eq!(route("example.com", "/", &table),
+                   Some((&1, "/")));
         assert_eq!(route("example.org", "/hello", &table), None);
         assert_eq!(route("example.org", "/", &table), None);
     }
@@ -65,12 +70,18 @@ mod test {
             (Route { host: "ex.com".into(), path: None }, 0),
             (Route { host: "ex.com".into(), path: Some("/two".into()) }, 2),
             ].into_iter().collect();
-        assert_eq!(route("ex.com", "/one", &table), Some(&1));
-        assert_eq!(route("ex.com", "/one/end", &table), Some(&1));
-        assert_eq!(route("ex.com", "/two", &table), Some(&2));
-        assert_eq!(route("ex.com", "/two/some", &table), Some(&2));
-        assert_eq!(route("ex.com", "/three", &table), Some(&0));
-        assert_eq!(route("ex.com", "/", &table), Some(&0));
+        assert_eq!(route("ex.com", "/one", &table),
+                   Some((&1, "")));
+        assert_eq!(route("ex.com", "/one/end", &table),
+                   Some((&1, "/end")));
+        assert_eq!(route("ex.com", "/two", &table),
+                   Some((&2, "")));
+        assert_eq!(route("ex.com","/two/some", &table),
+                   Some((&2, "/some")));
+        assert_eq!(route("ex.com", "/three", &table),
+                   Some((&0, "/three")));
+        assert_eq!(route("ex.com", "/", &table),
+                   Some((&0, "/")));
         assert_eq!(route("ex.org", "/one", &table), None);
         assert_eq!(route("subdomain.ex.org", "/two", &table), None);
         assert_eq!(route("example.org", "/", &table), None);

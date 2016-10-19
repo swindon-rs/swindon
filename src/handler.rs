@@ -29,7 +29,8 @@ impl Service for Main {
         let mut debug = DebugInfo::new(&req);
 
         if let Some(host) = req.host().map(parse_host) {
-            if let Some(route) = route(host, &req.path, &cfg.routing) {
+            if let Some((route, _suf)) = route(host, &req.path, &cfg.routing)
+            {
                 debug.set_route(route);
                 match cfg.handlers.get(route) {
                     Some(&Handler::EmptyGif) => {
