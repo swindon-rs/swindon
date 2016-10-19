@@ -1,4 +1,5 @@
 use std::fmt;
+use std::ops::Deref;
 use std::borrow::Borrow;
 use std::sync::{Arc, RwLock};
 use std::collections::HashSet;
@@ -73,5 +74,12 @@ impl fmt::Display for Atom {
 impl Decodable for Atom {
     fn decode<D: Decoder>(d: &mut D) -> Result<Self, D::Error> {
         d.read_str().map(Atom::from)
+    }
+}
+
+impl Deref for Atom {
+    type Target = str;
+    fn deref(&self) -> &str {
+        &self.0
     }
 }
