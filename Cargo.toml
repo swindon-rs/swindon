@@ -15,7 +15,7 @@ tokio-service = { git = "https://github.com/tokio-rs/tokio-service" }
 quire = { git="https://github.com/tailhook/rust-quire", rev="719d201" }
 argparse = "0.2.1"
 
-minihttp = { git = "https://github.com/tailhook/minihttp", branch="serializer" }
+minihttp = { git = "https://github.com/popravich/minihttp", rev="eff9dae" }
 netbuf = "0.3.4"
 
 [replace]
