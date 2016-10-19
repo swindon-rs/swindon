@@ -23,7 +23,11 @@ impl Pickler {
         self.0.add_header(name, value).unwrap();
     }
     pub fn done_headers(&mut self) -> bool {
-        self.0.done_headers().unwrap()
+        let Pickler(ref mut wr, ref cfg) = *self;
+        cfg.server_name.as_ref().map(|name| {
+            wr.add_header("Server", name).unwrap();
+        });
+        wr.done_headers().unwrap()
     }
     pub fn done(self) -> Finished<(TcpStream, Buf), Error> {
         self.0.done()

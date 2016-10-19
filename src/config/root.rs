@@ -15,6 +15,7 @@ pub struct Config {
     pub handlers: HashMap<String, Handler>,
     pub http_destinations: HashMap<String, Destination>,
     pub debug_routing: bool,
+    pub server_name: Option<String>,
 }
 
 pub fn config_validator<'a>() -> Structure<'a> {
@@ -25,4 +26,6 @@ pub fn config_validator<'a>() -> Structure<'a> {
     .member("http_destinations",
         Mapping::new(Scalar::new(), http_destinations::validator()))
     .member("debug_routing", Scalar::new().default(false))
+    .member("server_name", Scalar::new().optional()
+        .default(concat!("swindon/", env!("CARGO_PKG_VERSION"))))
 }
