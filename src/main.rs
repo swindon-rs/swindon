@@ -3,6 +3,7 @@
 #[macro_use] extern crate lazy_static;
 extern crate env_logger;
 extern crate futures;
+extern crate futures_cpupool;
 extern crate quire;
 extern crate time;
 extern crate argparse;
@@ -10,6 +11,8 @@ extern crate tokio_core;
 extern crate tokio_service;
 extern crate minihttp;
 extern crate netbuf;
+extern crate mime_guess;
+extern crate tk_sendfile;
 extern crate rustc_serialize;
 
 mod intern;

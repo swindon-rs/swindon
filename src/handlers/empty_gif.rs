@@ -9,7 +9,7 @@ use {Pickler};
 
 const EMPTY_GIF: &'static [u8] = include_bytes!("../empty.gif");
 
-pub fn serve_empty_gif(mut response: Pickler)
+pub fn serve(mut response: Pickler)
     -> BoxFuture<(TcpStream, Buf), Error>
 {
     response.status(200, "OK");

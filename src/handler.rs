@@ -8,6 +8,7 @@ use response::DebugInfo;
 use routing::{parse_host, route};
 use serializer::{Response, Serializer};
 use config::Handler;
+use handlers::files;
 
 #[derive(Clone)]
 pub struct Main {
@@ -28,23 +29,33 @@ impl Service for Main {
         let cfg2 = cfg.clone();
         let mut debug = DebugInfo::new(&req);
 
-        if let Some(host) = req.host().map(parse_host) {
-            if let Some((route, _suf)) = route(host, &req.path, &cfg.routing)
-            {
-                debug.set_route(route);
-                match cfg.handlers.get(route) {
-                    Some(&Handler::EmptyGif) => {
-                        return Response::EmptyGif.serve(cfg2, debug)
-                    }
-                    // TODO(tailhook) make better error code for None
-                    _ => {
-                        // Not implemented
-                        return Response::ErrorPage(501).serve(cfg2, debug)
+        let matched_route = req.host().map(parse_host)
+            .and_then(|host| route(host, &req.path, &cfg.routing));
+        if let Some((route, suffix)) = matched_route {
+            debug.set_route(route);
+            match cfg.handlers.get(route) {
+                Some(&Handler::EmptyGif) => {
+                    Response::EmptyGif.serve(cfg2, debug)
+                }
+                Some(&Handler::Static(ref settings)) => {
+                    if let Ok(path) = files::path(settings, suffix, &req) {
+                        Response::Static {
+                            path: path,
+                            settings: settings.clone(),
+                        }.serve(cfg2, debug)
+                    } else {
+                        Response::ErrorPage(403).serve(cfg2, debug)
                     }
                 }
+                // TODO(tailhook) make better error code for None
+                _ => {
+                    // Not implemented
+                    Response::ErrorPage(501).serve(cfg2, debug)
+                }
             }
+        } else {
+            Response::ErrorPage(404).serve(cfg2, debug)
         }
-        Response::ErrorPage(404).serve(cfg, debug)
     }
 
     fn poll_ready(&self) -> Async<()> {

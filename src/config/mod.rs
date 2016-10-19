@@ -13,7 +13,7 @@ mod handlers;
 mod http_destinations;
 // handlers
 mod chat;
-mod static_files;
+pub mod static_files;
 mod proxy;
 
 pub use self::read::Error;

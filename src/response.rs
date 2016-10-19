@@ -1,3 +1,4 @@
+use std::fmt::Display;
 use std::ops::{Deref, DerefMut};
 use std::sync::Arc;
 
@@ -6,6 +7,7 @@ use netbuf::Buf;
 use futures::{Finished};
 use minihttp::request::Request;
 use tokio_core::net::TcpStream;
+use tokio_core::io::WriteAll;
 
 use minihttp::{ResponseWriter, Error};
 
@@ -29,6 +31,13 @@ impl Pickler {
     }
     pub fn add_header<V: AsRef<[u8]>>(&mut self, name: &str, value: V) {
         self.0.add_header(name, value).unwrap();
+    }
+    pub fn format_header<D: Display>(&mut self, name: &str, value: D) {
+        self.0.format_header(name, value).unwrap();
+    }
+    pub fn steal_socket(self) -> WriteAll<TcpStream, Buf> {
+        let Pickler(wr, _cfg, _debug) = self;
+        wr.steal_socket()
     }
     pub fn done_headers(&mut self) -> bool {
         let Pickler(ref mut wr, ref cfg, ref debug) = *self;

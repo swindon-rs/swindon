@@ -1,3 +1,2 @@
-mod empty_gif;
-
-pub use self::empty_gif::serve_empty_gif;
+pub mod empty_gif;
+pub mod files;

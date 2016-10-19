@@ -1,14 +1,16 @@
 use std::sync::Arc;
+use std::path::PathBuf;
 
 use netbuf::Buf;
 use futures::{BoxFuture, Future, finished};
 use tokio_core::net::TcpStream;
 use minihttp::{Error, GenericResponse, ResponseWriter};
 
-use config::Config;
+use config::{Config};
+use config::static_files::Static;
 use response::DebugInfo;
 use default_error_page::error_page;
-use handlers::serve_empty_gif;
+use handlers::{files, empty_gif};
 use {Pickler};
 
 
@@ -21,6 +23,10 @@ pub struct Serializer {
 pub enum Response {
     ErrorPage(u16),
     EmptyGif,
+    Static {
+        path: PathBuf,
+        settings: Arc<Static>,
+    }
 }
 
 impl Response {
@@ -45,7 +51,10 @@ impl GenericResponse for Serializer {
                 error_page(code, "Unknown", writer)
             }
             Response::EmptyGif => {
-                serve_empty_gif(writer)
+                empty_gif::serve(writer)
+            }
+            Response::Static { path, settings } => {
+                files::serve(writer, path, settings)
             }
         }
     }

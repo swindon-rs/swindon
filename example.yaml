@@ -5,6 +5,7 @@ debug-routing: true
 
 routing:
   localhost/empty.gif: empty-gif
+  localhost/sources: src
   chat.example.com/: example-chat
   chat.example.com/css: example-chat-static
   chat.example.com/js: example-chat-static
@@ -26,12 +27,11 @@ handlers:
     ip-header: X-Remote-Ip
     destination: superman/
 
-  example-chat-static: !Static
-    mode: relative_to_site_root
-    path: /work/public
-    gzip-static: true
-
   empty-gif: !EmptyGif
+
+  src: !Static
+    mode: relative_to_route
+    path: /work/src
 
 http-destinations:
   superman:

@@ -1,14 +1,16 @@
+use std::sync::Arc;
+
+use quire::validate::{Enum, Nothing};
+
 use super::chat;
 use super::static_files;
 use super::proxy;
-
-use quire::validate::{Enum, Nothing};
 
 
 #[derive(RustcDecodable, Debug, PartialEq, Eq)]
 pub enum Handler {
     SwindonChat(chat::Chat),
-    Static(static_files::Static),
+    Static(Arc<static_files::Static>),
     Proxy(proxy::Proxy),
     EmptyGif,
 }
