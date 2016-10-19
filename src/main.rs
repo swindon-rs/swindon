@@ -17,6 +17,8 @@ extern crate mime_guess;
 extern crate tk_sendfile;
 extern crate tk_bufstream;
 extern crate rustc_serialize;
+extern crate tokio_curl;
+extern crate curl;
 
 mod intern;
 mod config;
@@ -84,6 +86,7 @@ pub fn main() {
     let handler = Main {
         config: cfg.clone(),
         handle: lp.handle(),
+        curl_session: tokio_curl::Session::new(lp.handle()),
     };
     // TODO(tailhook) do something when config updates
     for sock in &cfg.get().listen {

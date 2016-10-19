@@ -8,6 +8,7 @@ routing:
   localhost/sources: src
   localhost/websocket.html: websocket-echo-static
   localhost/websocket-echo: websocket-echo
+  example.com: example-chat-http
   chat.example.com/: example-chat
   chat.example.com/css: example-chat-static
   chat.example.com/js: example-chat-static
