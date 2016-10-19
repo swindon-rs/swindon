@@ -27,6 +27,11 @@ pub fn serve(mut response: Pickler, path: PathBuf, settings: Arc<Static>)
 {
     // TODO(tailhook) check for symlink attacks
     let mime = guess_mime_type(&path);
+    let debug_path = if response.debug_routing() {
+        Some(path.clone())
+    } else {
+        None
+    };
     DISK_POOL.open(path)
     .and_then(move |file| {
         response.status(200, "OK");
@@ -39,6 +44,10 @@ pub fn serve(mut response: Pickler, path: PathBuf, settings: Arc<Static>)
             _ => {
                 response.format_header("Content-Type", mime);
             }
+        }
+        if let Some(path) = debug_path {
+            response.format_header("X-Swindon-File-Path",
+                format_args!("{:?}", path));
         }
         if response.done_headers() {
             response.steal_socket()

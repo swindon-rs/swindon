@@ -56,6 +56,9 @@ impl Pickler {
     pub fn done(self) -> Finished<(TcpStream, Buf), Error> {
         self.0.done()
     }
+    pub fn debug_routing(&self) -> bool {
+        self.1.debug_routing
+    }
 }
 
 impl Deref for Pickler {
