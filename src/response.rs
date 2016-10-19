@@ -1,6 +1,7 @@
 use std::ops::{Deref, DerefMut};
 use std::sync::Arc;
 
+use time;
 use netbuf::Buf;
 use futures::{Finished};
 use tokio_core::net::TcpStream;
@@ -27,6 +28,7 @@ impl Pickler {
         cfg.server_name.as_ref().map(|name| {
             wr.add_header("Server", name).unwrap();
         });
+        wr.format_header("Date", time::now().rfc822()).unwrap();
         wr.done_headers().unwrap()
     }
     pub fn done(self) -> Finished<(TcpStream, Buf), Error> {

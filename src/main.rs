@@ -3,6 +3,7 @@
 extern crate env_logger;
 extern crate futures;
 extern crate quire;
+extern crate time;
 extern crate argparse;
 extern crate tokio_core;
 extern crate tokio_service;

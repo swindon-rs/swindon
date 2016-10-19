@@ -14,8 +14,9 @@ rustc-serialize = "0.3.19"
 tokio-service = { git = "https://github.com/tokio-rs/tokio-service" }
 quire = { git="https://github.com/tailhook/rust-quire", rev="719d201" }
 argparse = "0.2.1"
+time = "0.1.35"
 
-minihttp = { git = "https://github.com/popravich/minihttp", rev="eff9dae" }
+minihttp = { git = "https://github.com/popravich/minihttp", rev="c51b384" }
 netbuf = "0.3.4"
 
 [replace]
