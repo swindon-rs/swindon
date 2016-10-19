@@ -3,6 +3,8 @@ use std::str::FromStr;
 use rustc_serialize::{Decoder, Decodable};
 use quire::validate::{Scalar};
 
+use intern::Atom;
+
 
 pub fn destination_validator() -> Scalar {
     Scalar::new()
@@ -10,7 +12,7 @@ pub fn destination_validator() -> Scalar {
 
 #[derive(PartialEq, Eq, Debug)]
 pub struct Destination {
-    pub upstream: String,
+    pub upstream: Atom,
     pub path: String,
 }
 
@@ -27,12 +29,12 @@ impl FromStr for Destination {
     fn from_str(val: &str) -> Result<Destination, String> {
         if let Some(path_start) = val.find('/') {
             Ok(Destination {
-                upstream: val[..path_start].to_string(),
+                upstream: Atom::from(&val[..path_start]),
                 path: val[path_start..].to_string(),
             })
         } else {
             Ok(Destination {
-                upstream: val.to_string(),
+                upstream: Atom::from(val),
                 path: "/".to_string(),
             })
         }

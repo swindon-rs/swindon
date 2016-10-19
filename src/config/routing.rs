@@ -1,6 +1,7 @@
 use std::str::FromStr;
 use std::collections::BTreeMap;
 
+use intern::Atom;
 use rustc_serialize::{Decoder, Decodable};
 use quire::validate::{Mapping, Scalar};
 
@@ -11,7 +12,7 @@ pub struct Route {
     pub path: Option<String>,
 }
 
-pub type Routing = BTreeMap<Route, String>;
+pub type Routing = BTreeMap<Route, Atom>;
 
 pub fn validator<'x>() -> Mapping<'x> {
     Mapping::new(Scalar::new(), Scalar::new())

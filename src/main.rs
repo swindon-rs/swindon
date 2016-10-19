@@ -1,5 +1,6 @@
 #[macro_use] extern crate log;
 #[macro_use] extern crate quick_error;
+#[macro_use] extern crate lazy_static;
 extern crate env_logger;
 extern crate futures;
 extern crate quire;
@@ -11,6 +12,7 @@ extern crate minihttp;
 extern crate netbuf;
 extern crate rustc_serialize;
 
+mod intern;
 mod config;
 mod handler;
 mod handlers;

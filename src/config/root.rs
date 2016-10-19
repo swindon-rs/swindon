@@ -3,6 +3,7 @@ use std::collections::HashMap;
 
 use quire::validate::{Structure, Sequence, Mapping, Scalar};
 
+use intern::Atom;
 use super::listen::{self, ListenSocket};
 use super::routing::{self, Routing};
 use super::handlers::{self, Handler};
@@ -12,8 +13,8 @@ use super::http_destinations::{self, Destination};
 pub struct Config {
     pub listen: Vec<ListenSocket>,
     pub routing: Routing,
-    pub handlers: HashMap<String, Handler>,
-    pub http_destinations: HashMap<String, Destination>,
+    pub handlers: HashMap<Atom, Handler>,
+    pub http_destinations: HashMap<Atom, Destination>,
     pub debug_routing: bool,
     pub server_name: Option<String>,
 }
