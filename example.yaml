@@ -6,6 +6,7 @@ debug-routing: true
 routing:
   localhost/empty.gif: empty-gif
   localhost/sources: src
+  localhost/websocket-echo: websocket-echo
   chat.example.com/: example-chat
   chat.example.com/css: example-chat-static
   chat.example.com/js: example-chat-static
@@ -28,6 +29,7 @@ handlers:
     destination: superman/
 
   empty-gif: !EmptyGif
+  websocket-echo: !WebsocketEcho
 
   src: !Static
     mode: relative_to_route
