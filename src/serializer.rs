@@ -12,6 +12,7 @@ use config::static_files::Static;
 use response::DebugInfo;
 use default_error_page::error_page;
 use handlers::{files, empty_gif};
+use websocket;
 use {Pickler};
 
 
@@ -27,7 +28,8 @@ pub enum Response {
     Static {
         path: PathBuf,
         settings: Arc<Static>,
-    }
+    },
+    WebsocketEcho,
 }
 
 impl Response {
@@ -56,6 +58,9 @@ impl<S: Io + AsRawFd + Send + 'static> GenericResponse<S> for Serializer {
             }
             Response::Static { path, settings } => {
                 files::serve(writer, path, settings)
+            }
+            Response::WebsocketEcho => {
+                websocket::negotiate(writer)
             }
         }
     }

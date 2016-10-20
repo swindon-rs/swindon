@@ -25,6 +25,7 @@ mod routing;
 mod serializer;
 mod default_error_page;
 mod response;
+mod websocket;
 
 use std::io::{self, Write};
 use std::time::Duration;

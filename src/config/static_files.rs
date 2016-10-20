@@ -6,7 +6,7 @@ use quire::validate::{Nothing, Enum, Structure, Scalar};
 #[derive(RustcDecodable, Debug, PartialEq, Eq)]
 #[allow(non_camel_case_types)]
 pub enum Mode {
-    relative_to_site_root,
+    relative_to_domain_root,
     relative_to_route,
 }
 
@@ -21,7 +21,7 @@ pub struct Static {
 pub fn validator<'x>() -> Structure<'x> {
     Structure::new()
     .member("mode", Enum::new()
-        .option("relative_to_site_root", Nothing)
+        .option("relative_to_domain_root", Nothing)
         .option("relative_to_route", Nothing)
         .allow_plain())
     .member("path", Scalar::new())

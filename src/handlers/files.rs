@@ -65,7 +65,7 @@ pub fn path(settings: &Static, suffix: &str, req: &Request)
     -> Result<PathBuf, ()>
 {
     let path = match settings.mode {
-        Mode::relative_to_site_root => &req.path,
+        Mode::relative_to_domain_root => &req.path,
         Mode::relative_to_route => suffix,
     };
     let path = Path::new(path.trim_left_matches('/'));

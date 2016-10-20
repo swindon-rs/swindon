@@ -47,6 +47,9 @@ impl Service for Main {
                         Response::ErrorPage(403).serve(cfg2, debug)
                     }
                 }
+                Some(&Handler::WebsocketEcho) => {
+                    Response::WebsocketEcho.serve(cfg2, debug)
+                }
                 // TODO(tailhook) make better error code for None
                 _ => {
                     // Not implemented
