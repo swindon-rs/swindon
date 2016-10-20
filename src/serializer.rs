@@ -29,7 +29,7 @@ pub enum Response {
         path: PathBuf,
         settings: Arc<Static>,
     },
-    WebsocketEcho,
+    WebsocketEcho(websocket::Init),
 }
 
 impl Response {
@@ -59,8 +59,8 @@ impl<S: Io + AsRawFd + Send + 'static> GenericResponse<S> for Serializer {
             Response::Static { path, settings } => {
                 files::serve(writer, path, settings)
             }
-            Response::WebsocketEcho => {
-                websocket::negotiate(writer)
+            Response::WebsocketEcho(init) => {
+                websocket::negotiate(writer, init)
             }
         }
     }

@@ -9,6 +9,7 @@ use routing::{parse_host, route};
 use serializer::{Response, Serializer};
 use config::Handler;
 use handlers::files;
+use websocket;
 
 #[derive(Clone)]
 pub struct Main {
@@ -48,7 +49,17 @@ impl Service for Main {
                     }
                 }
                 Some(&Handler::WebsocketEcho) => {
-                    Response::WebsocketEcho.serve(cfg2, debug)
+                    match websocket::prepare(&req) {
+                        Ok(init) => {
+                            Response::WebsocketEcho(init).serve(cfg2, debug)
+                        }
+                        Err(status) => {
+                            // TODO(tailhook) use real status
+                            Response::ErrorPage(
+                                ::minihttp::enums::HttpStatus::code(&status)
+                            ).serve(cfg2, debug)
+                        }
+                    }
                 }
                 // TODO(tailhook) make better error code for None
                 _ => {
