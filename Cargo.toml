@@ -19,10 +19,10 @@ time = "0.1.35"
 lazy_static = "0.2.1"
 mime = "0.2.2"
 mime_guess = "1.8.0"
-tk-sendfile = "0.2.0"
-
-minihttp = { git = "https://github.com/popravich/minihttp", rev="c51b384" }
-netbuf = "0.3.4"
+tk-sendfile = "0.3.0"
+tk-bufstream = "0.1.0"
+minihttp = { git = "https://github.com/popravich/minihttp", rev="0967d08" }
+netbuf = "0.3.5"
 
 [replace]
 "tokio-core:0.1.0" = { git="https://github.com/tokio-rs/tokio-core", rev="62514fc" }

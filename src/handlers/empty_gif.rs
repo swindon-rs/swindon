@@ -1,6 +1,6 @@
-use netbuf::Buf;
 use futures::{BoxFuture, Future};
-use tokio_core::net::TcpStream;
+use tokio_core::io::Io;
+use tk_bufstream::IoBuf;
 
 use minihttp::{Error};
 
@@ -9,8 +9,9 @@ use {Pickler};
 
 const EMPTY_GIF: &'static [u8] = include_bytes!("../empty.gif");
 
-pub fn serve(mut response: Pickler)
-    -> BoxFuture<(TcpStream, Buf), Error>
+pub fn serve<S>(mut response: Pickler<S>)
+    -> BoxFuture<IoBuf<S>, Error>
+    where S: Io + Send + 'static
 {
     response.status(200, "OK");
     response.add_length(EMPTY_GIF.len() as u64);

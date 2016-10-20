@@ -1,14 +1,15 @@
 use std::path::{Path, PathBuf, Component};
 use std::sync::Arc;
+use std::os::unix::io::AsRawFd;
 
-use netbuf::Buf;
 use futures::{BoxFuture, Future};
 use minihttp::{Error};
 use minihttp::request::Request;
 use mime::TopLevel;
 use mime_guess::guess_mime_type;
 use tk_sendfile::DiskPool;
-use tokio_core::net::TcpStream;
+use tk_bufstream::IoBuf;
+use tokio_core::io::Io;
 use futures_cpupool::CpuPool;
 
 use config::static_files::{Static, Mode};
@@ -22,8 +23,9 @@ lazy_static! {
 }
 
 
-pub fn serve(mut response: Pickler, path: PathBuf, settings: Arc<Static>)
-    -> BoxFuture<(TcpStream, Buf), Error>
+pub fn serve<S>(mut response: Pickler<S>, path: PathBuf, settings: Arc<Static>)
+    -> BoxFuture<IoBuf<S>, Error>
+    where S: Io + Send + AsRawFd + 'static,
 {
     // TODO(tailhook) check for symlink attacks
     let mime = guess_mime_type(&path);
@@ -51,9 +53,7 @@ pub fn serve(mut response: Pickler, path: PathBuf, settings: Arc<Static>)
         }
         if response.done_headers() {
             response.steal_socket()
-            .and_then(|(socket, buf)| {
-                file.write_into(socket).map(|sock| (sock, buf))
-            })
+            .and_then(|sock| file.write_into(sock))
         } else {
             // Don't send any body
             unimplemented!();

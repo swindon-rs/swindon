@@ -3,11 +3,10 @@ use std::ops::{Deref, DerefMut};
 use std::sync::Arc;
 
 use time;
-use netbuf::Buf;
 use futures::{Finished};
 use minihttp::request::Request;
-use tokio_core::net::TcpStream;
-use tokio_core::io::WriteAll;
+use tokio_core::io::Io;
+use tk_bufstream::{IoBuf, Flushed};
 
 use minihttp::{ResponseWriter, Error};
 
@@ -20,9 +19,10 @@ pub struct DebugInfo {
 }
 
 
-pub struct Pickler(pub ResponseWriter, pub Arc<Config>, pub DebugInfo);
+pub struct Pickler<S: Io>(pub ResponseWriter<S>,
+                          pub Arc<Config>, pub DebugInfo);
 
-impl Pickler {
+impl<S: Io> Pickler<S> {
     pub fn add_length(&mut self, n: u64) {
         self.0.add_length(n).unwrap();
     }
@@ -35,7 +35,7 @@ impl Pickler {
     pub fn format_header<D: Display>(&mut self, name: &str, value: D) {
         self.0.format_header(name, value).unwrap();
     }
-    pub fn steal_socket(self) -> WriteAll<TcpStream, Buf> {
+    pub fn steal_socket(self) -> Flushed<S> {
         let Pickler(wr, _cfg, _debug) = self;
         wr.steal_socket()
     }
@@ -53,7 +53,7 @@ impl Pickler {
 
         wr.done_headers().unwrap()
     }
-    pub fn done(self) -> Finished<(TcpStream, Buf), Error> {
+    pub fn done(self) -> Finished<IoBuf<S>, Error> {
         self.0.done()
     }
     pub fn debug_routing(&self) -> bool {
@@ -61,15 +61,15 @@ impl Pickler {
     }
 }
 
-impl Deref for Pickler {
-    type Target = ResponseWriter;
-    fn deref(&self) -> &ResponseWriter {
+impl<S: Io> Deref for Pickler<S> {
+    type Target = ResponseWriter<S>;
+    fn deref(&self) -> &ResponseWriter<S> {
         &self.0
     }
 }
 
-impl DerefMut for Pickler {
-    fn deref_mut(&mut self) -> &mut ResponseWriter {
+impl<S: Io> DerefMut for Pickler<S> {
+    fn deref_mut(&mut self) -> &mut ResponseWriter<S> {
         &mut self.0
     }
 }

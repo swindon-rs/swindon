@@ -1,9 +1,10 @@
 use std::sync::Arc;
 use std::path::PathBuf;
+use std::os::unix::io::AsRawFd;
 
-use netbuf::Buf;
 use futures::{BoxFuture, Future, finished};
-use tokio_core::net::TcpStream;
+use tokio_core::io::Io;
+use tk_bufstream::IoBuf;
 use minihttp::{Error, GenericResponse, ResponseWriter};
 
 use config::{Config};
@@ -41,9 +42,9 @@ impl Response {
     }
 }
 
-impl GenericResponse for Serializer {
-    type Future = BoxFuture<(TcpStream, Buf), Error>;
-    fn into_serializer(self, writer: ResponseWriter) -> Self::Future {
+impl<S: Io + AsRawFd + Send + 'static> GenericResponse<S> for Serializer {
+    type Future = BoxFuture<IoBuf<S>, Error>;
+    fn into_serializer(self, writer: ResponseWriter<S>) -> Self::Future {
         let writer = Pickler(writer, self.config, self.debug);
         match self.response {
             Response::ErrorPage(code) => {

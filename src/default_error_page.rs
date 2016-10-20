@@ -1,8 +1,8 @@
 use std::io::Write;
 
-use netbuf::Buf;
 use futures::{BoxFuture, Future};
-use tokio_core::net::TcpStream;
+use tokio_core::io::Io;
+use tk_bufstream::IoBuf;
 
 use minihttp::{Error};
 
@@ -30,8 +30,9 @@ const PART3: &'static str = concat!("\
     </html>\
     ");
 
-pub fn error_page(code: u16, status: &str, mut response: Pickler)
-    -> BoxFuture<(TcpStream, Buf), Error>
+pub fn error_page<S>(code: u16, status: &str, mut response: Pickler<S>)
+    -> BoxFuture<IoBuf<S>, Error>
+    where S: Io + Send + 'static
 {
     let content_length = PART1.len() + PART2.len() + PART3.len() +
         2*(4 + status.as_bytes().len());

@@ -14,6 +14,7 @@ extern crate netbuf;
 extern crate mime;
 extern crate mime_guess;
 extern crate tk_sendfile;
+extern crate tk_bufstream;
 extern crate rustc_serialize;
 
 mod intern;
