@@ -86,8 +86,8 @@ commands:
     - httpbin:app
     - -b
     - example.com:5000
-    - --log-level
-    - debug
+    # - --log-level
+    # - debug
     - -k
     - gevent
 

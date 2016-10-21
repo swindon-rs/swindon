@@ -65,7 +65,9 @@ impl Service for Main {
                     }
                 }
                 Some(&Handler::Proxy(ref settings)) => {
-                    if let Some(dest) = cfg.http_destinations.get(&settings.destination.upstream) {
+                    if let Some(dest) = cfg.http_destinations
+                            .get(&settings.destination.upstream)
+                    {
                         match proxy::prepare(&req, &dest, settings.clone()) {
                             Ok(call) => {
                                 Response::Proxy {

@@ -22,6 +22,8 @@ pub fn serve<S>(mut response: Pickler<S>, session: Session, call: UpstreamCall)
         .map_err(|e| e.into_error().into())
         .and_then(|mut resp| {
             let code = resp.response_code().unwrap();
+            // TODO: handle response codes respectively,
+            //      ie 204 has no body.
             response.status(code as u16, "OK");
             response.add_length(0);
             response.done_headers();
@@ -47,6 +49,9 @@ pub fn prepare(req: &Request, dest: &Destination, settings: Arc<Proxy>)
     let hostport = dest.addresses.first().unwrap();
     curl.url(format!("http://{}{}", hostport, req.path).as_str()).unwrap();
 
+    // TODO: setup all proxied headers
+    //      setup request body if any
+    curl.forbid_reuse(true).unwrap();
     Ok(UpstreamCall {
         request: curl,
         settings: settings,
