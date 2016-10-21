@@ -71,14 +71,14 @@ impl Service for Main {
                                 Response::Proxy {
                                     session: self.curl_session.clone(),
                                     call: call,
-                                }.serve(cfg2, debug)
+                                }
                             }
                             Err(_) => {
-                                Response::ErrorPage(500).serve(cfg2, debug)
+                                Response::ErrorPage(500)
                             }
                         }
                     } else {
-                        Response::ErrorPage(404).serve(cfg2, debug)
+                        Response::ErrorPage(404)
                     }
                 }
                 // TODO(tailhook) make better error code for None
