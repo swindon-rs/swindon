@@ -36,6 +36,15 @@ containers:
     - !Install [py-sphinx, py-imagesize, make]
     auto-clean: true
 
+  httpbin:
+    setup:
+    - !Alpine v3.4
+    - !PipConfig {dependencies: true}
+    - !Py3Install
+      - httpbin
+      - gunicorn
+    auto-clean: true
+
 commands:
 
   rustc: !Command
@@ -58,7 +67,7 @@ commands:
     description: Test project
     run: [cargo, test]
 
-  run: !Command
+  run: &run !Command
     container: ubuntu
     description: Run
     run:
@@ -67,6 +76,23 @@ commands:
     - "--"
     - --verbose
     - --config=example.yaml
+
+  httpbin: &httpbin !Command
+    container: httpbin
+    description: Run httpbin instance
+    run:
+    - gunicorn
+    - httpbin:app
+    - -b
+    - example.com:5000
+    - --log-level
+    - debug
+
+  run-with-proxy: !Supervise
+    description: Run swindon & httpbin
+    children:
+      httpbin: *httpbin
+      swindon: *run
 
   _cargo-doc: !Command
     container: ubuntu
