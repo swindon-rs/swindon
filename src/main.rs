@@ -19,6 +19,7 @@ extern crate tk_bufstream;
 extern crate rustc_serialize;
 extern crate tokio_curl;
 extern crate curl;
+extern crate byteorder;
 
 mod intern;
 mod config;
