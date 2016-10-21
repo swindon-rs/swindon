@@ -4,6 +4,7 @@ use std::os::unix::io::AsRawFd;
 
 use futures::{BoxFuture, Future, finished};
 use tokio_core::io::Io;
+use tokio_core::reactor::{Handle, Remote};
 use tk_bufstream::IoBuf;
 use minihttp::{Error, GenericResponse, ResponseWriter};
 
@@ -20,6 +21,7 @@ pub struct Serializer {
     config: Arc<Config>,
     debug: DebugInfo,
     response: Response,
+    handle: Remote,
 }
 
 pub enum Response {
@@ -33,13 +35,14 @@ pub enum Response {
 }
 
 impl Response {
-    pub fn serve(self, cfg: Arc<Config>, debug: DebugInfo)
+    pub fn serve(self, cfg: Arc<Config>, debug: DebugInfo, handle: &Handle)
         -> BoxFuture<Serializer, Error>
     {
         finished(Serializer {
             config: cfg,
             debug: debug,
             response: self,
+            handle: handle.remote().clone(),
         }).boxed()
     }
 }
@@ -60,7 +63,7 @@ impl<S: Io + AsRawFd + Send + 'static> GenericResponse<S> for Serializer {
                 files::serve(writer, path, settings)
             }
             Response::WebsocketEcho(init) => {
-                websocket::negotiate(writer, init)
+                websocket::negotiate(writer, init, self.handle)
             }
         }
     }

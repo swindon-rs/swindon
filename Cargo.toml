@@ -23,6 +23,7 @@ tk-sendfile = "0.3.0"
 tk-bufstream = "0.1.0"
 minihttp = { git = "https://github.com/popravich/minihttp", rev="d6e67d1" }
 netbuf = "0.3.5"
+sha1 = "0.2.0"
 
 [replace]
 "tokio-core:0.1.0" = { git="https://github.com/tokio-rs/tokio-core", rev="62514fc" }

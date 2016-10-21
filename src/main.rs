@@ -12,6 +12,7 @@ extern crate tokio_service;
 extern crate minihttp;
 extern crate netbuf;
 extern crate mime;
+extern crate sha1;
 extern crate mime_guess;
 extern crate tk_sendfile;
 extern crate tk_bufstream;
@@ -82,6 +83,7 @@ pub fn main() {
     let mut lp = Core::new().unwrap();
     let handler = Main {
         config: cfg.clone(),
+        handle: lp.handle(),
     };
     // TODO(tailhook) do something when config updates
     for sock in &cfg.get().listen {
