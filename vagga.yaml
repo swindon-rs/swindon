@@ -43,6 +43,7 @@ containers:
     - !Py3Install
       - httpbin
       - gunicorn
+      - gevent
     auto-clean: true
 
 commands:
@@ -87,6 +88,8 @@ commands:
     - example.com:5000
     - --log-level
     - debug
+    - -k
+    - gevent
 
   run-with-proxy: !Supervise
     description: Run swindon & httpbin
