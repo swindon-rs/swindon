@@ -5,6 +5,8 @@ containers:
     - !Install
       - gcc
       - libc6-dev
+      - zlib1g-dev
+      - libssl-dev
       - ca-certificates
     - !TarInstall
       url: https://static.rust-lang.org/dist/rust-1.12.0-x86_64-unknown-linux-gnu.tar.gz

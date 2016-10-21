@@ -11,7 +11,7 @@ use super::proxy;
 pub enum Handler {
     SwindonChat(chat::Chat),
     Static(Arc<static_files::Static>),
-    Proxy(proxy::Proxy),
+    Proxy(Arc<proxy::Proxy>),
     EmptyGif,
     /// This endpoints is for testing websocket implementation. It's not
     /// guaranteed to work in forward compatible manner. We use it for

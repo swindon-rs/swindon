@@ -10,11 +10,11 @@ mod http;
 mod listen;
 mod routing;
 mod handlers;
-mod http_destinations;
+pub mod http_destinations;
 // handlers
 mod chat;
 pub mod static_files;
-mod proxy;
+pub mod proxy;
 
 pub use self::read::Error;
 pub use self::root::Config;

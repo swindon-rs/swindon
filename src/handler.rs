@@ -3,19 +3,21 @@ use tokio_service::Service;
 use tokio_core::reactor::Handle;
 use minihttp::request::Request;
 use minihttp::Error;
+use tokio_curl::Session;
 
 use config::ConfigCell;
 use response::DebugInfo;
 use routing::{parse_host, route};
 use serializer::{Response, Serializer};
 use config::Handler;
-use handlers::files;
+use handlers::{files, proxy};
 use websocket;
 
 #[derive(Clone)]
 pub struct Main {
     pub config: ConfigCell,
     pub handle: Handle,
+    pub curl_session: Session,
 }
 
 impl Service for Main {
@@ -60,6 +62,23 @@ impl Service for Main {
                                 ::minihttp::enums::HttpStatus::code(&status)
                             )
                         }
+                    }
+                }
+                Some(&Handler::Proxy(ref settings)) => {
+                    if let Some(dest) = cfg.http_destinations.get(&settings.destination.upstream) {
+                        match proxy::prepare(&req, &dest, settings.clone()) {
+                            Ok(call) => {
+                                Response::Proxy {
+                                    session: self.curl_session.clone(),
+                                    call: call,
+                                }.serve(cfg2, debug)
+                            }
+                            Err(_) => {
+                                Response::ErrorPage(500).serve(cfg2, debug)
+                            }
+                        }
+                    } else {
+                        Response::ErrorPage(404).serve(cfg2, debug)
                     }
                 }
                 // TODO(tailhook) make better error code for None

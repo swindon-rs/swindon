@@ -7,12 +7,14 @@ use tokio_core::io::Io;
 use tokio_core::reactor::{Handle, Remote};
 use tk_bufstream::IoBuf;
 use minihttp::{Error, GenericResponse, ResponseWriter};
+use tokio_curl::Session;
 
 use config::{Config};
 use config::static_files::Static;
+// use config::proxy::Proxy;
 use response::DebugInfo;
 use default_error_page::error_page;
-use handlers::{files, empty_gif};
+use handlers::{files, empty_gif, proxy};
 use websocket;
 use {Pickler};
 
@@ -32,6 +34,11 @@ pub enum Response {
         settings: Arc<Static>,
     },
     WebsocketEcho(websocket::Init),
+    Proxy {
+        session: Session,
+        // settings: Arc<Proxy>,
+        call: proxy::UpstreamCall,
+    },
 }
 
 impl Response {
@@ -64,6 +71,10 @@ impl<S: Io + AsRawFd + Send + 'static> GenericResponse<S> for Serializer {
             }
             Response::WebsocketEcho(init) => {
                 websocket::negotiate(writer, init, self.handle)
+            }
+            Response::Proxy { session, call } => {
+                // TODO(popravich) determine proxy destination and headers
+                proxy::serve(writer, session, call)
             }
         }
     }
