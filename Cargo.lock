@@ -10,7 +10,7 @@ dependencies = [
  "log 0.3.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "mime 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "mime_guess 1.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "minihttp 0.1.0 (git+https://github.com/popravich/minihttp?rev=51a4ab5)",
+ "minihttp 0.1.0 (git+https://github.com/popravich/minihttp?rev=d6e67d1)",
  "netbuf 0.3.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "quick-error 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "quire 0.1.8 (git+https://github.com/tailhook/rust-quire?rev=719d201)",
@@ -146,7 +146,7 @@ dependencies = [
 [[package]]
 name = "minihttp"
 version = "0.1.0"
-source = "git+https://github.com/popravich/minihttp?rev=51a4ab5#51a4ab59642020c13bfa9fd3db7e1bb0274821b7"
+source = "git+https://github.com/popravich/minihttp?rev=d6e67d1#d6e67d17e098aee702b401daf1268a448de67fdc"
 dependencies = [
  "futures 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "httparse 1.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -471,7 +471,7 @@ dependencies = [
 "checksum memchr 0.1.11 (registry+https://github.com/rust-lang/crates.io-index)" = "d8b629fb514376c675b98c1421e80b151d3817ac42d7c667717d282761418d20"
 "checksum mime 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)" = "b5c93a4bd787ddc6e7833c519b73a50883deb5863d76d9b71eb8216fb7f94e66"
 "checksum mime_guess 1.8.0 (registry+https://github.com/rust-lang/crates.io-index)" = "e9a7d89cb3bce9145b0d0339a0588b044e3e3e3faa1dcd74822ebdc36bfac020"
-"checksum minihttp 0.1.0 (git+https://github.com/popravich/minihttp?rev=51a4ab5)" = "<none>"
+"checksum minihttp 0.1.0 (git+https://github.com/popravich/minihttp?rev=d6e67d1)" = "<none>"
 "checksum mio 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)" = "2dadd39d4b47343e10513ac2a731c979517a4761224ecb6bbd243602300c9537"
 "checksum miow 0.1.3 (registry+https://github.com/rust-lang/crates.io-index)" = "d5bfc6782530ac8ace97af10a540054a37126b63b0702ddaaa243b73b5745b9a"
 "checksum net2 0.2.26 (registry+https://github.com/rust-lang/crates.io-index)" = "5edf9cb6be97212423aed9413dd4729d62b370b5e1c571750e882cebbbc1e3e2"
