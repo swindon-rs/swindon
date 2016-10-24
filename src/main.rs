@@ -31,6 +31,10 @@ mod default_error_page;
 mod response;
 mod websocket;
 
+// Utils
+mod short_circuit;
+mod either;
+
 use std::io::{self, Write};
 use std::time::Duration;
 use std::process::exit;

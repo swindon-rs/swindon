@@ -3,6 +3,7 @@ use std::sync::Arc;
 use std::os::unix::io::AsRawFd;
 
 use futures::{BoxFuture, Future};
+use either::Either;
 use minihttp::{Error};
 use minihttp::request::Request;
 use mime::TopLevel;
@@ -35,6 +36,7 @@ pub fn serve<S>(mut response: Pickler<S>, path: PathBuf, settings: Arc<Static>)
         None
     };
     DISK_POOL.open(path)
+    .map_err(Into::into)
     .and_then(move |file| {
         response.status(200, "OK");
         response.add_length(file.size());
@@ -52,13 +54,13 @@ pub fn serve<S>(mut response: Pickler<S>, path: PathBuf, settings: Arc<Static>)
                 format_args!("{:?}", path));
         }
         if response.done_headers() {
-            response.steal_socket()
-            .and_then(|sock| file.write_into(sock))
+            Either::A(response.steal_socket()
+                .and_then(|sock| file.write_into(sock))
+                .map_err(Into::into))
         } else {
-            // Don't send any body
-            unimplemented!();
+            Either::B(response.done())
         }
-    }).map_err(|e| e.into()).boxed()
+    }).boxed()
 }
 
 pub fn path(settings: &Static, suffix: &str, req: &Request)
@@ -86,6 +88,8 @@ pub fn serve_file<S>(mut response: Pickler<S>, settings: Arc<SingleFile>)
     where S: Io + Send + AsRawFd + 'static,
 {
     DISK_POOL.open(settings.path.clone())
+    // TODO(tailhook) this is not very good error
+    .map_err(Into::into)
     .and_then(move |file| {
         response.status(200, "OK");
         response.add_length(file.size());
@@ -93,11 +97,11 @@ pub fn serve_file<S>(mut response: Pickler<S>, settings: Arc<SingleFile>)
         response.format_header("X-Swindon-File-Path",
             format_args!("{:?}", settings.path));
         if response.done_headers() {
-            response.steal_socket()
-            .and_then(|sock| file.write_into(sock))
+            Either::A(response.steal_socket()
+                .and_then(|sock| file.write_into(sock))
+                .map_err(Into::into))
         } else {
-            // Don't send any body
-            unimplemented!();
+            Either::B(response.done())
         }
-    }).map_err(|e| e.into()).boxed()
+    }).boxed()
 }
