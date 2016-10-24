@@ -10,7 +10,7 @@ use minihttp::{Error, GenericResponse, ResponseWriter};
 use tokio_curl::Session;
 
 use config::{Config};
-use config::static_files::Static;
+use config::static_files::{Static, SingleFile};
 // use config::proxy::Proxy;
 use response::DebugInfo;
 use default_error_page::error_page;
@@ -33,6 +33,7 @@ pub enum Response {
         path: PathBuf,
         settings: Arc<Static>,
     },
+    SingleFile(Arc<SingleFile>),
     WebsocketEcho(websocket::Init),
     Proxy {
         session: Session,
@@ -68,6 +69,9 @@ impl<S: Io + AsRawFd + Send + 'static> GenericResponse<S> for Serializer {
             }
             Response::Static { path, settings } => {
                 files::serve(writer, path, settings)
+            }
+            Response::SingleFile(settings) => {
+                files::serve_file(writer, settings)
             }
             Response::WebsocketEcho(init) => {
                 websocket::negotiate(writer, init, self.handle,

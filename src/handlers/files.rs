@@ -12,7 +12,7 @@ use tk_bufstream::IoBuf;
 use tokio_core::io::Io;
 use futures_cpupool::CpuPool;
 
-use config::static_files::{Static, Mode};
+use config::static_files::{Static, Mode, SingleFile};
 use {Pickler};
 
 
@@ -79,4 +79,25 @@ pub fn path(settings: &Static, suffix: &str, req: &Request)
         }
     }
     Ok(buf)
+}
+
+pub fn serve_file<S>(mut response: Pickler<S>, settings: Arc<SingleFile>)
+    -> BoxFuture<IoBuf<S>, Error>
+    where S: Io + Send + AsRawFd + 'static,
+{
+    DISK_POOL.open(settings.path.clone())
+    .and_then(move |file| {
+        response.status(200, "OK");
+        response.add_length(file.size());
+        response.add_header("Content-Type", &settings.content_type);
+        response.format_header("X-Swindon-File-Path",
+            format_args!("{:?}", settings.path));
+        if response.done_headers() {
+            response.steal_socket()
+            .and_then(|sock| file.write_into(sock))
+        } else {
+            // Don't send any body
+            unimplemented!();
+        }
+    }).map_err(|e| e.into()).boxed()
 }

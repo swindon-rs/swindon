@@ -18,6 +18,12 @@ pub struct Static {
     pub text_charset: Option<String>,
 }
 
+#[derive(RustcDecodable, Debug, PartialEq, Eq)]
+pub struct SingleFile {
+    pub path: PathBuf,
+    pub content_type: String,
+}
+
 pub fn validator<'x>() -> Structure<'x> {
     Structure::new()
     .member("mode", Enum::new()
@@ -26,4 +32,10 @@ pub fn validator<'x>() -> Structure<'x> {
         .allow_plain())
     .member("path", Scalar::new())
     .member("text_charset", Scalar::new().optional())
+}
+
+pub fn single_file<'x>() -> Structure<'x> {
+    Structure::new()
+    .member("path", Scalar::new())
+    .member("content_type", Scalar::new())
 }

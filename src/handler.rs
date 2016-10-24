@@ -51,6 +51,9 @@ impl Service for Main {
                         Response::ErrorPage(403)
                     }
                 }
+                Some(&Handler::SingleFile(ref settings)) => {
+                    Response::SingleFile(settings.clone())
+                }
                 Some(&Handler::WebsocketEcho) => {
                     match websocket::prepare(&req) {
                         Ok(init) => {

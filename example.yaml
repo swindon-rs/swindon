@@ -7,6 +7,7 @@ routing:
   localhost/empty.gif: empty-gif
   localhost/sources: src
   localhost/websocket.html: websocket-echo-static
+  localhost/echo: websocket-echo-html
   localhost/websocket-echo: websocket-echo
   example.com: example-chat-http
   chat.example.com/: example-chat
@@ -31,10 +32,16 @@ handlers:
     destination: superman/
 
   empty-gif: !EmptyGif
+
   websocket-echo-static: !Static
     mode: relative_to_domain_root
     path: /work/public
     text-charset: utf-8
+
+  websocket-echo-html: !SingleFile
+    path: /work/public/websocket.html
+    content-type: "text/html; charset=utf-8"
+
   websocket-echo: !WebsocketEcho
 
   src: !Static

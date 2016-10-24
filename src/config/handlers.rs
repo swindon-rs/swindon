@@ -11,6 +11,7 @@ use super::proxy;
 pub enum Handler {
     SwindonChat(chat::Chat),
     Static(Arc<static_files::Static>),
+    SingleFile(Arc<static_files::SingleFile>),
     Proxy(Arc<proxy::Proxy>),
     EmptyGif,
     /// This endpoints is for testing websocket implementation. It's not
@@ -24,6 +25,7 @@ pub fn validator<'x>() -> Enum<'x> {
     Enum::new()
     .option("SwindonChat", chat::validator())
     .option("Static", static_files::validator())
+    .option("SingleFile", static_files::single_file())
     .option("Proxy", proxy::validator())
     .option("EmptyGif", Nothing)
     .option("WebsocketEcho", Nothing)
