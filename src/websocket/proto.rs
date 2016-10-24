@@ -6,9 +6,9 @@ use futures::{Future, Async, Poll};
 use futures::Async::{Ready, NotReady};
 use tokio_core::io::Io;
 use tk_bufstream::IoBuf;
-use byteorder::BigEndian;
+use byteorder::{BigEndian, ByteOrder};
 
-use super::Dispatcher;
+use super::{Dispatcher, ImmediateReplier};
 use self::Frame::*;
 
 const MAX_MESSAGE_SIZE: u64 = 128 << 10;
@@ -42,7 +42,7 @@ quick_error! {
 }
 
 
-pub struct WebsockProto<S: Io, D: Dispatcher<S>> {
+pub struct WebsockProto<S: Io, D: Dispatcher> {
     dispatcher: D,
     io: IoBuf<S>,
 }
@@ -64,15 +64,15 @@ fn parse_frame<'x>(buf: &'x mut Buf) -> Poll<(Frame<'x>, usize), Error> {
                 if buf.len() < 4 {
                     return Ok(NotReady);
                 }
-                (BigEndian.read_u16(buf[2..4]) as u64, 4)
+                (BigEndian::read_u16(&buf[2..4]) as u64, 4)
             }
             127 => {
                 if buf.len() < 10 {
                     return Ok(NotReady);
                 }
-                (BigEndian::read_u64(buf[2..10]), 10)
+                (BigEndian::read_u64(&buf[2..10]), 10)
             }
-            size => (size as u64, 1),
+            size => (size as u64, 2),
         }
     };
     if size > MAX_MESSAGE_SIZE {
@@ -94,9 +94,9 @@ fn parse_frame<'x>(buf: &'x mut Buf) -> Poll<(Frame<'x>, usize), Error> {
     if !mask {
         return Err(Error::Unmasked);
     }
-    let mask: [u8; 4] = buf[start-4..start];
+    let mask = [buf[start-4], buf[start-3], buf[start-2], buf[start-1]];
     for idx in 0..size { // hopefully llvm is smart enough to optimize it
-        buf[start + idx] |= mask[idx % 4];
+        buf[start + idx] ^= mask[idx % 4];
     }
     let data = &buf[start..(start + size)];
     let frame = match opcode {
@@ -104,23 +104,32 @@ fn parse_frame<'x>(buf: &'x mut Buf) -> Poll<(Frame<'x>, usize), Error> {
         0xA => Pong(data),
         0x1 => Text(try!(from_utf8(data))),
         0x2 => Binary(data),
+        // TODO(tailhook) implement shutdown packets
         x => return Err(Error::InvalidOpcode(x)),
     };
-    return (frame, start + size);
+    return Ok(Ready((frame, start + size)));
 }
 
 
 impl<D, S: Io> Future for WebsockProto<S, D>
-    where D: Dispatcher<S>,
+    where D: Dispatcher,
 {
     type Item = ();
     type Error = Error;
     fn poll(&mut self) -> Poll<(), Error> {
         loop {
             try!(self.io.flush());
-            if let Some((frame, bytes)) = parse_frame(self.io.in_buf) {
-                try!(self.dispatcher.dispatch(frame, self.io));
-                self.io.in_buf.consume(bytes);  // consume together with '\n'
+            let packet_len = if let Ready((frame, bytes)) =
+                try!(parse_frame(&mut self.io.in_buf))
+            {
+                try!(self.dispatcher.dispatch(frame,
+                    &mut ImmediateReplier::new(&mut self.io.out_buf)));
+                Some(bytes)
+            } else {
+                None
+            };
+            if let Some(packet_len) = packet_len {
+                self.io.in_buf.consume(packet_len);
             } else {
                 let nbytes = try!(self.io.read());
                 if nbytes == 0 {
@@ -129,8 +138,21 @@ impl<D, S: Io> Future for WebsockProto<S, D>
                     } else {
                         return Ok(Async::NotReady);
                     }
+                } else {
+                    continue;
                 }
-            }
+            };
+        }
+    }
+}
+
+impl<S: Io, D> WebsockProto<S, D>
+    where D: Dispatcher,
+{
+    pub fn new(sock: IoBuf<S>, dispatcher: D) -> WebsockProto<S, D> {
+        WebsockProto {
+            io: sock,
+            dispatcher: dispatcher,
         }
     }
 }

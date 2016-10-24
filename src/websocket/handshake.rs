@@ -11,6 +11,9 @@ use minihttp::enums::Status;
 use minihttp::{Error, Request};
 
 use super::base64::Base64;
+use super::proto::WebsockProto;
+use super::{Kind};
+use super::echo;
 use {Pickler};
 
 const GUID: &'static str = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
@@ -67,7 +70,8 @@ pub fn prepare(req: &Request) -> Result<Init, Status> {
 }
 
 #[allow(unreachable_code)]
-pub fn negotiate<S>(mut response: Pickler<S>, init: Init, remote: Remote)
+pub fn negotiate<S>(mut response: Pickler<S>, init: Init, remote: Remote,
+    kind: Kind)
     -> BoxFuture<IoBuf<S>, Error>
     where S: Io + Send + 'static
 {
@@ -77,16 +81,13 @@ pub fn negotiate<S>(mut response: Pickler<S>, init: Init, remote: Remote)
     response.format_header("Sec-WebSocket-Accept", Base64(&init.accept[..]));
     response.done_headers();
     response.steal_socket()
-    .and_then(move |mut socket: IoBuf<S>| {
-        remote.spawn(|handle| {
-            ::tokio_core::reactor::Timeout::new(
-                ::std::time::Duration::new(60, 0),
-                handle)
-            .unwrap()
-            .and_then(move |()| {
-                socket.out_buf.extend(b"Invalid websocket data after 60 secs");
-                socket.flush()
-            }).map_err(|_| ())
+    .and_then(move |socket: IoBuf<S>| {
+        remote.spawn(move |_| {
+            let dispatcher = match kind {
+                Kind::Echo => echo::Echo,
+            };
+            WebsockProto::new(socket, dispatcher)
+            .map_err(|e| info!("Websocket error: {}", e))
         });
         Err(io::Error::new(io::ErrorKind::BrokenPipe,
                            "Connection is stolen for websocket"))

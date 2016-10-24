@@ -1,27 +1,28 @@
-use tokio_core::io::Io;
-use tk_bufstream::IoBuf;
-
-use super::{Dispatcher};
-use super::Frame;
+use super::{Dispatcher, Frame, Error, ImmediateReplier};
 
 
 pub struct Echo;
 
 
-impl<S: Io> Dispatcher<S> for Echo {
-    fn dispatch(&mut self, frame: Frame, sock: &mut IoBuf<S>) {
+impl Dispatcher for Echo {
+    fn dispatch(&mut self, frame: Frame, replier: &mut ImmediateReplier)
+        -> Result<(), Error>
+    {
         match frame {
-            Frame::Ping(_) => {
-                unimplemented!();
+            Frame::Ping(data) => {
+                debug!("Got ping");
+                replier.pong(data);
             }
             Frame::Pong(_) => { }  // track last ping?
-            Frame::Text(x) => {
-                println!("Received {:?}", x);
+            Frame::Text(data) => {
+                debug!("Echoing {:?}", data);
+                replier.text(data);
             }
-            Frame::Binary(x) => {
-                println!("Received (bin) {:?}", x);
+            Frame::Binary(data) => {
+                debug!("Echoing (bin) {:?}", String::from_utf8_lossy(data));
+                replier.binary(data);
             }
         }
+        Ok(())
     }
 }
-

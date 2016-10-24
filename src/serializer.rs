@@ -70,7 +70,8 @@ impl<S: Io + AsRawFd + Send + 'static> GenericResponse<S> for Serializer {
                 files::serve(writer, path, settings)
             }
             Response::WebsocketEcho(init) => {
-                websocket::negotiate(writer, init, self.handle)
+                websocket::negotiate(writer, init, self.handle,
+                    websocket::Kind::Echo)
             }
             Response::Proxy { session, call } => {
                 // TODO(popravich) determine proxy destination and headers
