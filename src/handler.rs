@@ -33,67 +33,64 @@ impl Service for Main {
         let cfg = self.config.get();
         let mut debug = DebugInfo::new(&req);
 
-        let matched_route = req.host().map(parse_host)
-            .and_then(|host| route(host, &req.path, &cfg.routing));
-        let response = if let Some((route, suffix)) = matched_route {
-            debug.set_route(route);
-            match cfg.handlers.get(route) {
-                Some(&Handler::EmptyGif) => {
-                    Response::EmptyGif
-                }
-                Some(&Handler::Static(ref settings)) => {
-                    if let Ok(path) = files::path(settings, suffix, &req) {
-                        Response::Static {
-                            path: path,
-                            settings: settings.clone(),
-                        }
-                    } else {
-                        Response::ErrorPage(Status::Forbidden)
+        let response = {
+            let matched_route = req.host().map(parse_host)
+                .and_then(|host| route(host, &req.path, &cfg.routing));
+            if let Some((route, suffix)) = matched_route {
+                debug.set_route(route);
+                match cfg.handlers.get(route) {
+                    Some(&Handler::EmptyGif) => {
+                        Response::EmptyGif
                     }
-                }
-                Some(&Handler::SingleFile(ref settings)) => {
-                    Response::SingleFile(settings.clone())
-                }
-                Some(&Handler::WebsocketEcho) => {
-                    match websocket::prepare(&req) {
-                        Ok(init) => {
-                            Response::WebsocketEcho(init)
-                        }
-                        Err(status) => {
-                            // TODO(tailhook) use real status
-                            Response::ErrorPage(status)
-                        }
-                    }
-                }
-                Some(&Handler::Proxy(ref settings)) => {
-                    if let Some(dest) = cfg.http_destinations
-                            .get(&settings.destination.upstream)
-                    {
-                        match proxy::prepare(&req, &dest, settings.clone()) {
-                            Ok(call) => {
-                                Response::Proxy {
-                                    session: self.curl_session.clone(),
-                                    call: call,
-                                }
+                    Some(&Handler::Static(ref settings)) => {
+                        if let Ok(path) = files::path(settings, suffix, &req) {
+                            Response::Static {
+                                path: path,
+                                settings: settings.clone(),
                             }
-                            Err(_) => {
-                                Response::ErrorPage(
-                                    Status::InternalServerError)
+                        } else {
+                            Response::ErrorPage(Status::Forbidden)
+                        }
+                    }
+                    Some(&Handler::SingleFile(ref settings)) => {
+                        Response::SingleFile(settings.clone())
+                    }
+                    Some(&Handler::WebsocketEcho) => {
+                        match websocket::prepare(&req) {
+                            Ok(init) => {
+                                Response::WebsocketEcho(init)
+                            }
+                            Err(status) => {
+                                // TODO(tailhook) use real status
+                                Response::ErrorPage(status)
                             }
                         }
-                    } else {
-                        Response::ErrorPage(Status::NotFound)
+                    }
+                    Some(&Handler::Proxy(ref settings)) => {
+                        if let Some(dest) = cfg.http_destinations
+                                .get(&settings.destination.upstream)
+                        {
+                            use handlers::proxy::ProxyCall::*;
+                            let hostport = proxy::pick_backend_host(dest);
+                            Response::Proxy(Prepare {
+                                hostport: hostport,
+                                settings: settings.clone(),
+                                session: self.curl_session.clone(),
+                            })
+                        } else {
+                            Response::ErrorPage(Status::NotFound)
+                        }
+                    }
+                    // TODO(tailhook) make better error code for None
+                    _ => {
+                        Response::ErrorPage(Status::NotImplemented)
                     }
                 }
-                // TODO(tailhook) make better error code for None
-                _ => {
-                    Response::ErrorPage(Status::NotImplemented)
-                }
+            } else {
+                Response::ErrorPage(Status::NotFound)
             }
-        } else {
-            Response::ErrorPage(Status::NotFound)
         };
-        response.serve(cfg.clone(), debug, &self.handle)
+        response.serve(req, cfg.clone(), debug, &self.handle)
     }
 
     fn poll_ready(&self) -> Async<()> {

@@ -6,12 +6,11 @@ use futures::{BoxFuture, Future, finished};
 use tokio_core::io::Io;
 use tokio_core::reactor::{Handle, Remote};
 use tk_bufstream::IoBuf;
-use minihttp::{Error, GenericResponse, ResponseWriter, Status};
-use tokio_curl::Session;
+use minihttp::{Error, GenericResponse, ResponseWriter, Status, Request};
 
 use config::{Config};
 use config::static_files::{Static, SingleFile};
-// use config::proxy::Proxy;
+
 use response::DebugInfo;
 use default_error_page::error_page;
 use handlers::{files, empty_gif, proxy};
@@ -35,23 +34,39 @@ pub enum Response {
     },
     SingleFile(Arc<SingleFile>),
     WebsocketEcho(websocket::Init),
-    Proxy {
-        session: Session,
-        // settings: Arc<Proxy>,
-        call: proxy::UpstreamCall,
-    },
+    Proxy(proxy::ProxyCall),
 }
 
 impl Response {
-    pub fn serve(self, cfg: Arc<Config>, debug: DebugInfo, handle: &Handle)
+    pub fn serve(self, req: Request, cfg: Arc<Config>,
+                 debug: DebugInfo, handle: &Handle)
         -> BoxFuture<Serializer, Error>
     {
-        finished(Serializer {
-            config: cfg,
-            debug: debug,
-            response: self,
-            handle: handle.remote().clone(),
-        }).boxed()
+        use handlers::proxy::ProxyCall::*;
+        match self {
+            Response::Proxy(Prepare{ hostport, settings, session}) => {
+                let resp = proxy::CurlRequest::new(
+                    req, hostport, session, settings);
+                let handle = handle.remote().clone();
+                resp.into_future()
+                .and_then(move |resp| {
+                    finished(Serializer {
+                        config: cfg,
+                        debug: debug,
+                        response: Response::Proxy(Ready(resp)),
+                        handle: handle,
+                    })
+                }).boxed()
+            }
+            _ => {
+                finished(Serializer {
+                    config: cfg,
+                    debug: debug,
+                    response: self,
+                    handle: handle.remote().clone(),
+                }).boxed()
+            }
+        }
     }
 }
 
@@ -76,10 +91,28 @@ impl<S: Io + AsRawFd + Send + 'static> GenericResponse<S> for Serializer {
                 websocket::negotiate(writer, init, self.handle,
                     websocket::Kind::Echo)
             }
-            Response::Proxy { session, call } => {
-                // TODO(popravich) determine proxy destination and headers
-                proxy::serve(writer, session, call)
+            Response::Proxy(state) => {
+                match state {
+                    proxy::ProxyCall::Ready(req) => {
+                        proxy::serve(writer, req)
+                    }
+                    _ => panic!("Unreachable state")
+                }
             }
+        }
+    }
+}
+
+impl Serializer {
+    pub fn new(config: Arc<Config>, debug: DebugInfo,
+               response: Response, handle: Remote)
+        -> Serializer
+    {
+        Serializer {
+            config: config,
+            debug: debug,
+            response: response,
+            handle: handle,
         }
     }
 }
