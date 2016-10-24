@@ -38,6 +38,9 @@ quick_error! {
         Unmasked {
             description("Received unmasked frame")
         }
+        Framented {
+            description("Received fragmented frame")
+        }
         TooLong {
             description("Received frame that is too long")
         }
@@ -94,7 +97,7 @@ fn parse_frame<'x>(buf: &'x mut Buf) -> Poll<(Frame<'x>, usize), Error> {
     // TODO(tailhook) should we assert that reserved bits are zero?
     let mask = buf[1] & 0x80 != 0;
     if !fin {
-        unimplemented!();  // framed(chunked) messages
+        return Err(Error::Fragmented);
     }
     if !mask {
         return Err(Error::Unmasked);
