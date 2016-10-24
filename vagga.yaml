@@ -78,6 +78,14 @@ commands:
     - --verbose
     - --config=example.yaml
 
+  debug-run: !Command
+    container: ubuntu
+    description: Run with debugging enabled
+    run: |
+      cargo build
+      echo Starting...
+      RUST_LOG=debug exec ./target/debug/swindon --config=example.yaml
+
   httpbin: &httpbin !Command
     container: httpbin
     description: Run httpbin instance
