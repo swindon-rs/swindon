@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::path::PathBuf;
 use std::os::unix::io::AsRawFd;
 
@@ -7,6 +7,7 @@ use tokio_core::io::Io;
 use tokio_core::reactor::{Handle, Remote};
 use tk_bufstream::IoBuf;
 use minihttp::{Error, GenericResponse, ResponseWriter, Status, Request};
+use netbuf::Buf;
 
 use config::{Config};
 use config::static_files::{Static, SingleFile};
@@ -45,18 +46,22 @@ impl Response {
         use handlers::proxy::ProxyCall::*;
         match self {
             Response::Proxy(Prepare{ hostport, settings, session}) => {
-                let resp = proxy::CurlRequest::new(
-                    req, hostport, session, settings);
                 let handle = handle.remote().clone();
-                resp.into_future()
-                .and_then(move |resp| {
-                    finished(Serializer {
-                        config: cfg,
-                        debug: debug,
-                        response: Response::Proxy(Ready(resp)),
-                        handle: handle,
-                    })
-                }).boxed()
+                let resp_buf = Arc::new(Mutex::new(Buf::new()));
+
+                let easy = proxy::prepare(
+                    req, hostport, settings, resp_buf.clone());
+
+                session.perform(easy)
+                    .map_err(|err| err.into_error().into())
+                    .and_then(move |resp| {
+                        finished(Serializer {
+                            config: cfg,
+                            debug: debug,
+                            response: Response::Proxy(Ready(resp, resp_buf)),
+                            handle: handle,
+                        })
+                    }).boxed()
             }
             _ => {
                 finished(Serializer {
@@ -93,8 +98,8 @@ impl<S: Io + AsRawFd + Send + 'static> GenericResponse<S> for Serializer {
             }
             Response::Proxy(state) => {
                 match state {
-                    proxy::ProxyCall::Ready(req) => {
-                        proxy::serve(writer, req)
+                    proxy::ProxyCall::Ready(req, resp_buf) => {
+                        proxy::serve(writer, req, resp_buf)
                     }
                     _ => panic!("Unreachable state")
                 }
