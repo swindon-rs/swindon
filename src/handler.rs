@@ -2,7 +2,7 @@ use futures::{Async, BoxFuture};
 use tokio_service::Service;
 use tokio_core::reactor::Handle;
 use minihttp::request::Request;
-use minihttp::Error;
+use minihttp::{Error, Status};
 use tokio_curl::Session;
 
 use config::ConfigCell;
@@ -48,7 +48,7 @@ impl Service for Main {
                             settings: settings.clone(),
                         }
                     } else {
-                        Response::ErrorPage(403)
+                        Response::ErrorPage(Status::Forbidden)
                     }
                 }
                 Some(&Handler::SingleFile(ref settings)) => {
@@ -61,9 +61,7 @@ impl Service for Main {
                         }
                         Err(status) => {
                             // TODO(tailhook) use real status
-                            Response::ErrorPage(
-                                ::minihttp::enums::HttpStatus::code(&status)
-                            )
+                            Response::ErrorPage(status)
                         }
                     }
                 }
@@ -79,21 +77,21 @@ impl Service for Main {
                                 }
                             }
                             Err(_) => {
-                                Response::ErrorPage(500)
+                                Response::ErrorPage(
+                                    Status::InternalServerError)
                             }
                         }
                     } else {
-                        Response::ErrorPage(404)
+                        Response::ErrorPage(Status::NotFound)
                     }
                 }
                 // TODO(tailhook) make better error code for None
                 _ => {
-                    // Not implemented
-                    Response::ErrorPage(501)
+                    Response::ErrorPage(Status::NotImplemented)
                 }
             }
         } else {
-            Response::ErrorPage(404)
+            Response::ErrorPage(Status::NotFound)
         };
         response.serve(cfg.clone(), debug, &self.handle)
     }

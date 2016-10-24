@@ -4,7 +4,7 @@ use std::os::unix::io::AsRawFd;
 
 use futures::{BoxFuture, Future};
 use either::Either;
-use minihttp::{Error};
+use minihttp::{Error, Status};
 use minihttp::request::Request;
 use mime::TopLevel;
 use mime_guess::guess_mime_type;
@@ -38,7 +38,7 @@ pub fn serve<S>(mut response: Pickler<S>, path: PathBuf, settings: Arc<Static>)
     DISK_POOL.open(path)
     .map_err(Into::into)
     .and_then(move |file| {
-        response.status(200, "OK");
+        response.status(Status::Ok);
         response.add_length(file.size());
         match (&mime.0, &settings.text_charset) {
             (&TopLevel::Text, &Some(ref enc)) => {
@@ -91,7 +91,7 @@ pub fn serve_file<S>(mut response: Pickler<S>, settings: Arc<SingleFile>)
     // TODO(tailhook) this is not very good error
     .map_err(Into::into)
     .and_then(move |file| {
-        response.status(200, "OK");
+        response.status(Status::Ok);
         response.add_length(file.size());
         response.add_header("Content-Type", &settings.content_type);
         response.format_header("X-Swindon-File-Path",

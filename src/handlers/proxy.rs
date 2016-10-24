@@ -24,7 +24,7 @@ pub fn serve<S>(mut response: Pickler<S>, session: Session, call: UpstreamCall)
             let code = resp.response_code().unwrap();
             // TODO: handle response codes respectively,
             //      ie 204 has no body.
-            response.status(code as u16, "OK");
+            response.custom_status(code as u16, "OK");
             response.add_length(0);
             response.done_headers();
             response.done()

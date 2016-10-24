@@ -6,7 +6,7 @@ use futures::{BoxFuture, Future, finished};
 use tokio_core::io::Io;
 use tokio_core::reactor::{Handle, Remote};
 use tk_bufstream::IoBuf;
-use minihttp::{Error, GenericResponse, ResponseWriter};
+use minihttp::{Error, GenericResponse, ResponseWriter, Status};
 use tokio_curl::Session;
 
 use config::{Config};
@@ -27,7 +27,7 @@ pub struct Serializer {
 }
 
 pub enum Response {
-    ErrorPage(u16),
+    ErrorPage(Status),
     EmptyGif,
     Static {
         path: PathBuf,
@@ -60,9 +60,8 @@ impl<S: Io + AsRawFd + Send + 'static> GenericResponse<S> for Serializer {
     fn into_serializer(self, writer: ResponseWriter<S>) -> Self::Future {
         let writer = Pickler(writer, self.config, self.debug);
         match self.response {
-            Response::ErrorPage(code) => {
-                // TODO(tailhook) resolve statuses
-                error_page(code, "Unknown", writer)
+            Response::ErrorPage(status) => {
+                error_page(status, writer)
             }
             Response::EmptyGif => {
                 empty_gif::serve(writer)

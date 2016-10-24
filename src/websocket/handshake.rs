@@ -75,7 +75,7 @@ pub fn negotiate<S>(mut response: Pickler<S>, init: Init, remote: Remote,
     -> BoxFuture<IoBuf<S>, Error>
     where S: Io + Send + 'static
 {
-    response.status(101, "Switching Protocols");
+    response.status(Status::SwitchingProtocol);
     response.add_header("Upgrade", "websocket");
     response.add_header("Connection", "upgrade");
     response.format_header("Sec-WebSocket-Accept", Base64(&init.accept[..]));

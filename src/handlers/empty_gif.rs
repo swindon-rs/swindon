@@ -2,7 +2,7 @@ use futures::{BoxFuture, Future};
 use tokio_core::io::Io;
 use tk_bufstream::IoBuf;
 
-use minihttp::{Error};
+use minihttp::{Error, Status};
 
 use {Pickler};
 
@@ -13,7 +13,7 @@ pub fn serve<S>(mut response: Pickler<S>)
     -> BoxFuture<IoBuf<S>, Error>
     where S: Io + Send + 'static
 {
-    response.status(200, "OK");
+    response.status(Status::Ok);
     response.add_length(EMPTY_GIF.len() as u64);
     response.add_header("Content-Type", "image/gif");
     if response.done_headers() {
