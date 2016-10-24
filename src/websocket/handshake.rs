@@ -82,11 +82,11 @@ pub fn negotiate<S>(mut response: Pickler<S>, init: Init, remote: Remote,
     response.done_headers();
     response.steal_socket()
     .and_then(move |socket: IoBuf<S>| {
-        remote.spawn(move |_| {
+        remote.spawn(move |handle| {
             let dispatcher = match kind {
-                Kind::Echo => echo::Echo,
+                Kind::Echo => echo::Echo(handle.clone()),
             };
-            WebsockProto::new(socket, dispatcher)
+            WebsockProto::new(socket, dispatcher, handle)
             .map_err(|e| info!("Websocket error: {}", e))
         });
         Err(io::Error::new(io::ErrorKind::BrokenPipe,

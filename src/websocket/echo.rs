@@ -1,11 +1,17 @@
-use super::{Dispatcher, Frame, Error, ImmediateReplier};
+use std::time::Duration;
+
+use futures::Future;
+use tokio_core::reactor::{Handle, Timeout};
+
+use super::{Dispatcher, Frame, Error, ImmediateReplier, RemoteReplier};
 
 
-pub struct Echo;
+pub struct Echo(pub Handle);
 
 
 impl Dispatcher for Echo {
-    fn dispatch(&mut self, frame: Frame, replier: &mut ImmediateReplier)
+    fn dispatch(&mut self, frame: Frame, replier: &mut ImmediateReplier,
+        remote: &RemoteReplier)
         -> Result<(), Error>
     {
         match frame {
@@ -15,6 +21,23 @@ impl Dispatcher for Echo {
             }
             Frame::Pong(_) => { }  // track last ping?
             Frame::Text(data) => {
+                if data.starts_with("alarm ") {
+                    if let Ok(num) = data[6..].parse() {
+                        let remote = remote.clone();
+                        let timeout = Timeout::new(Duration::new(num, 0),
+                                                   &self.0)
+                            .expect("can set timeout")
+                            // TODO(tailhook) another misleading error type
+                            .map_err(|e| e.into())
+                            .and_then(move |()| {
+                                remote.send_text("Alarm triggered")
+                            })
+                            .map_err(|e| info!("Alarm error: {}", e));
+                        self.0.spawn(timeout);
+                        replier.text("Okay, the alarm is set");
+                        return Ok(())
+                    }
+                }
                 debug!("Echoing {:?}", data);
                 replier.text(data);
             }

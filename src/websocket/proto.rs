@@ -4,11 +4,14 @@ use std::str::{from_utf8, Utf8Error};
 use netbuf::Buf;
 use futures::{Future, Async, Poll};
 use futures::Async::{Ready, NotReady};
+use futures::stream::{Stream};
 use tokio_core::io::Io;
+use tokio_core::channel::Receiver;
+use tokio_core::reactor::Handle;
 use tk_bufstream::IoBuf;
 use byteorder::{BigEndian, ByteOrder};
 
-use super::{Dispatcher, ImmediateReplier};
+use super::{Dispatcher, ImmediateReplier, RemoteReplier, OutFrame};
 use self::Frame::*;
 
 const MAX_MESSAGE_SIZE: u64 = 128 << 10;
@@ -45,6 +48,8 @@ quick_error! {
 pub struct WebsockProto<S: Io, D: Dispatcher> {
     dispatcher: D,
     io: IoBuf<S>,
+    remote: RemoteReplier,
+    recv: Receiver<OutFrame>,
 }
 
 pub enum Frame<'a> {
@@ -118,12 +123,14 @@ impl<D, S: Io> Future for WebsockProto<S, D>
     type Error = Error;
     fn poll(&mut self) -> Poll<(), Error> {
         loop {
+            try!(self.poll_recv());
             try!(self.io.flush());
             let packet_len = if let Ready((frame, bytes)) =
                 try!(parse_frame(&mut self.io.in_buf))
             {
                 try!(self.dispatcher.dispatch(frame,
-                    &mut ImmediateReplier::new(&mut self.io.out_buf)));
+                    &mut ImmediateReplier::new(&mut self.io.out_buf),
+                    &self.remote));
                 Some(bytes)
             } else {
                 None
@@ -149,10 +156,30 @@ impl<D, S: Io> Future for WebsockProto<S, D>
 impl<S: Io, D> WebsockProto<S, D>
     where D: Dispatcher,
 {
-    pub fn new(sock: IoBuf<S>, dispatcher: D) -> WebsockProto<S, D> {
+    pub fn new(sock: IoBuf<S>, dispatcher: D, handle: &Handle)
+        -> WebsockProto<S, D>
+    {
+        let (tx, rx) = RemoteReplier::pair(handle);
         WebsockProto {
             io: sock,
             dispatcher: dispatcher,
+            remote: tx,
+            recv: rx,
         }
+    }
+
+    fn poll_recv(&mut self) -> Result<(), Error> {
+        if let Ready(Some(frame)) = try!(self.recv.poll()) {
+            let mut imm = ImmediateReplier::new(&mut self.io.out_buf);
+            match frame {
+                OutFrame::Text(val) => {
+                    imm.text(&val);
+                }
+                OutFrame::Binary(val) => {
+                    imm.binary(&val);
+                }
+            }
+        }
+        Ok(())
     }
 }

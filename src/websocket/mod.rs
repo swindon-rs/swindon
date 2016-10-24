@@ -8,6 +8,7 @@ mod echo;
 
 pub use self::handshake::{Init, prepare, negotiate};
 pub use self::dispatcher::{Dispatcher, ImmediateReplier};
+pub use self::dispatcher::{RemoteReplier, OutFrame};
 pub use self::echo::Echo;
 pub use self::proto::{Frame, Error};
 
