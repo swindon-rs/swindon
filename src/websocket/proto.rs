@@ -38,7 +38,7 @@ quick_error! {
         Unmasked {
             description("Received unmasked frame")
         }
-        Framented {
+        Fragmented {
             description("Received fragmented frame")
         }
         TooLong {
