@@ -32,6 +32,7 @@ mod serializer;
 mod default_error_page;
 mod response;
 mod websocket;
+mod chat;
 
 // Utils
 mod short_circuit;

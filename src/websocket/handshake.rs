@@ -14,6 +14,7 @@ use super::base64::Base64;
 use super::proto::WebsockProto;
 use super::{Kind};
 use super::echo;
+use super::super::chat;
 use {Pickler};
 
 const GUID: &'static str = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
@@ -82,14 +83,22 @@ pub fn negotiate<S>(mut response: Pickler<S>, init: Init, remote: Remote,
     response.done_headers();
     response.steal_socket()
     .and_then(move |socket: IoBuf<S>| {
-        remote.spawn(move |handle| {
-            let dispatcher = match kind {
-                Kind::Echo => echo::Echo(handle.clone()),
-                Kind::SwindonChat => echo::Echo(handle.clone()),
-            };
-            WebsockProto::new(socket, dispatcher, handle)
-            .map_err(|e| info!("Websocket error: {}", e))
-        });
+        match kind {
+            Kind::Echo => {
+                remote.spawn(move |handle| {
+                    WebsockProto::new(
+                        socket, echo::Echo(handle.clone()), handle)
+                    .map_err(|e| info!("Websocket error: {}", e))
+                });
+            },
+            Kind::SwindonChat => {
+                remote.spawn(move |handle| {
+                    WebsockProto::new(
+                        socket, chat::Chat(handle.clone()), handle)
+                    .map_err(|e| info!("Websocket error: {}", e))
+                });
+            }
+        }
         Err(io::Error::new(io::ErrorKind::BrokenPipe,
                            "Connection is stolen for websocket"))
     })
