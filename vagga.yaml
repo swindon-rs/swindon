@@ -14,7 +14,7 @@ containers:
       url: https://static.rust-lang.org/dist/rust-1.12.0-x86_64-unknown-linux-gnu.tar.gz
       script: ./install.sh --prefix=/usr
     - !EnsureDir /cargo
-    auto-clean: true
+    # auto-clean: true
     environ:
       HOME: /work
 
@@ -27,7 +27,7 @@ containers:
     - !Depends Cargo.toml
     - !Sh |
         cargo install
-    auto-clean: true
+    # auto-clean: true
     data-dirs:
     - /cargo
 
@@ -47,6 +47,13 @@ containers:
       - gunicorn
       - gevent
     auto-clean: true
+
+  wrk:
+    setup:
+    - !Container ubuntu
+    - !UbuntuUniverse
+    - !Install
+      - wrk
 
 commands:
 
@@ -140,3 +147,8 @@ commands:
       xdg-open $(pwd)/docs/_build/html/index.html
     work-dir: docs
     run: [make, html]
+
+  wrk: !Command
+    container: wrk
+    description: Run wrk tool
+    run: [wrk]
