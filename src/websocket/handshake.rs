@@ -85,6 +85,7 @@ pub fn negotiate<S>(mut response: Pickler<S>, init: Init, remote: Remote,
         remote.spawn(move |handle| {
             let dispatcher = match kind {
                 Kind::Echo => echo::Echo(handle.clone()),
+                Kind::SwindonChat => echo::Echo(handle.clone()),
             };
             WebsockProto::new(socket, dispatcher, handle)
             .map_err(|e| info!("Websocket error: {}", e))

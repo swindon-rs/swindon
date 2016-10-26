@@ -108,6 +108,18 @@ impl Main {
                     Response::ErrorPage(Status::NotFound)
                 }
             }
+            Some(&Handler::SwindonChat(ref chat)) => {
+                match websocket::prepare(&req) {
+                    Ok(init) => {
+                        Response::WebsocketChat(init)
+                    }
+                    Err(_) => {
+                        // internal redirect
+                        let ref route = chat.http_route.upstream;
+                        self.match_handler(route, suffix, req)
+                    }
+                }
+            }
             // TODO(tailhook) make better error code for None
             _ => {
                 Response::ErrorPage(Status::NotImplemented)

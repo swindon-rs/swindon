@@ -15,4 +15,5 @@ pub use self::proto::{Frame, Error};
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum Kind {
     Echo,
+    SwindonChat,
 }

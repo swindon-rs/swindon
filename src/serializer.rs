@@ -37,6 +37,7 @@ pub enum Response {
     },
     SingleFile(Arc<SingleFile>),
     WebsocketEcho(websocket::Init),
+    WebsocketChat(websocket::Init),
     Proxy(ProxyCall),
 }
 
@@ -106,6 +107,10 @@ impl<S: Io + AsRawFd + Send + 'static> GenericResponse<S> for Serializer {
             Response::WebsocketEcho(init) => {
                 websocket::negotiate(writer, init, self.handle,
                     websocket::Kind::Echo)
+            }
+            Response::WebsocketChat(init) => {
+                websocket::negotiate(writer, init, self.handle,
+                    websocket::Kind::SwindonChat)
             }
             Response::Proxy(ProxyCall::Ready {curl, num_headers, body }) => {
                 proxy::serialize(writer, curl, num_headers, body)
