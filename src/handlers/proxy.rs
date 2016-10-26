@@ -8,14 +8,12 @@ use tokio_core::io::Io;
 use minihttp::{Error, Request, Status};
 use minihttp::enums::{Method, Header};
 use tk_bufstream::IoBuf;
-use tokio_curl::Session;
-use curl::easy::{Easy, List, ReadError, WriteError};
+use curl::easy::{Easy, List};   //, ReadError, WriteError};
 use curl::Error as CurlError;
 use netbuf::Buf;
 use httparse;
 
 use config::proxy::Proxy;
-use config::http_destinations::Destination;
 use {Pickler};
 
 
@@ -28,6 +26,10 @@ pub enum ProxyCall {
 }
 
 
+/// Build and return curl.Easy handle.
+///
+/// Response body will be written into `resp_bu``.
+/// `headers_counter` will hold number of response headers parsed by curl.
 pub fn prepare(mut request: Request, hostport: String,
                settings: Arc<Proxy>,
                resp_buf: Arc<Mutex<Buf>>,
@@ -97,7 +99,7 @@ pub fn prepare(mut request: Request, hostport: String,
                 // XXX: need to handle io::Error properly here;
                 Err(e) => {
                     panic!("Write request body error: {:?}", e);
-                    Err(ReadError::Abort)
+                    // Err(ReadError::Abort)
                 }
             }
         }));
@@ -113,7 +115,7 @@ pub fn prepare(mut request: Request, hostport: String,
             }
             headers_buf.lock().unwrap()
             .write(line)
-            .map(|bytes| true)
+            .map(|_| true)
             .unwrap_or(false)
         }
     }));
@@ -124,7 +126,7 @@ pub fn prepare(mut request: Request, hostport: String,
         .write(buf)
         .map_err(|e| {
             panic!("Write response body error: {:?}", e);
-            WriteError::Pause
+            // WriteError::Pause
         })
     }));
 
@@ -133,8 +135,8 @@ pub fn prepare(mut request: Request, hostport: String,
 }
 
 
-pub fn serve<S>(mut response: Pickler<S>, mut resp: Easy,
-                num_headers: usize, body: Buf)
+pub fn serialize<S>(mut response: Pickler<S>, mut resp: Easy,
+        num_headers: usize, body: Buf)
     -> BoxFuture<IoBuf<S>, Error>
     where S: Io + Send + 'static,
 {

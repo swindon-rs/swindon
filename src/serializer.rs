@@ -106,28 +106,12 @@ impl<S: Io + AsRawFd + Send + 'static> GenericResponse<S> for Serializer {
                 websocket::negotiate(writer, init, self.handle,
                     websocket::Kind::Echo)
             }
-            Response::Proxy(state) => {
-                match state {
-                    proxy::ProxyCall::Ready(req, num_headers, resp_buf) => {
-                        proxy::serve(writer, req, num_headers, resp_buf)
-                    }
-                    _ => panic!("Unreachable state")
-                }
+            Response::Proxy(proxy::ProxyCall::Ready(resp, num, buf)) => {
+                proxy::serialize(writer, resp, num, buf)
             }
-        }
-    }
-}
-
-impl Serializer {
-    pub fn new(config: Arc<Config>, debug: DebugInfo,
-               response: Response, handle: Remote)
-        -> Serializer
-    {
-        Serializer {
-            config: config,
-            debug: debug,
-            response: response,
-            handle: handle,
+            Response::Proxy(_) => {
+                error_page(Status::BadRequest, writer)
+            }
         }
     }
 }
