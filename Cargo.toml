@@ -27,6 +27,7 @@ sha1 = "0.2.0"
 curl = "0.3.8"
 tokio-curl = "0.1.3"
 byteorder = "0.5.3"
+httparse = "1.1.2"
 
 [replace]
 "tokio-core:0.1.0" = { git="https://github.com/tokio-rs/tokio-core", rev="62514fc" }

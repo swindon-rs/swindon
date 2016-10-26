@@ -8,6 +8,7 @@ use tokio_core::reactor::{Handle, Remote};
 use tk_bufstream::IoBuf;
 use minihttp::{Error, GenericResponse, ResponseWriter, Status, Request};
 use netbuf::Buf;
+use tokio_curl::Session;
 
 use config::{Config};
 use config::static_files::{Static, SingleFile};
@@ -40,25 +41,34 @@ pub enum Response {
 
 impl Response {
     pub fn serve(self, req: Request, cfg: Arc<Config>,
-                 debug: DebugInfo, handle: &Handle)
+                 debug: DebugInfo, handle: &Handle,
+                 curl_session: &Session)
         -> BoxFuture<Serializer, Error>
     {
         use handlers::proxy::ProxyCall::*;
         match self {
-            Response::Proxy(Prepare{ hostport, settings, session}) => {
+            Response::Proxy(Prepare{ hostport, settings}) => {
                 let handle = handle.remote().clone();
                 let resp_buf = Arc::new(Mutex::new(Buf::new()));
+                let headers_counter = Arc::new(Mutex::new(0));
 
-                let easy = proxy::prepare(
-                    req, hostport, settings, resp_buf.clone());
+                let request = proxy::prepare(
+                    req, hostport, settings,
+                    resp_buf.clone(),
+                    headers_counter.clone())
+                    .unwrap();
 
-                session.perform(easy)
+                curl_session.perform(request)
                     .map_err(|err| err.into_error().into())
                     .and_then(move |resp| {
+                        let body = resp_buf.lock().unwrap().split_off(0);
+                        let n = headers_counter.lock().unwrap().clone();
+                        let resp = Response::Proxy(
+                            Ready(resp, n, body));
                         finished(Serializer {
                             config: cfg,
                             debug: debug,
-                            response: Response::Proxy(Ready(resp, resp_buf)),
+                            response: resp,
                             handle: handle,
                         })
                     }).boxed()
@@ -98,8 +108,8 @@ impl<S: Io + AsRawFd + Send + 'static> GenericResponse<S> for Serializer {
             }
             Response::Proxy(state) => {
                 match state {
-                    proxy::ProxyCall::Ready(req, resp_buf) => {
-                        proxy::serve(writer, req, resp_buf)
+                    proxy::ProxyCall::Ready(req, num_headers, resp_buf) => {
+                        proxy::serve(writer, req, num_headers, resp_buf)
                     }
                     _ => panic!("Unreachable state")
                 }

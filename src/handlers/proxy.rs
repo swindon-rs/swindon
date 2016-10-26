@@ -1,22 +1,21 @@
 use std::str;
 use std::sync::{Arc, Mutex};
 use std::io::Write;
+use std::ascii::AsciiExt;
 
-use futures::{BoxFuture, Future, Poll, Async};
+use futures::{BoxFuture, Future};
 use tokio_core::io::Io;
-use tokio_core::reactor::{Handle, Remote};
 use minihttp::{Error, Request, Status};
 use minihttp::enums::{Method, Header};
 use tk_bufstream::IoBuf;
-use tokio_curl::{Session, Perform};
+use tokio_curl::Session;
 use curl::easy::{Easy, List, ReadError, WriteError};
+use curl::Error as CurlError;
 use netbuf::Buf;
+use httparse;
 
-use config::Config;
 use config::proxy::Proxy;
 use config::http_destinations::Destination;
-use serializer::{Response, Serializer};
-use response::DebugInfo;
 use {Pickler};
 
 
@@ -24,28 +23,56 @@ pub enum ProxyCall {
     Prepare {
         hostport: String,
         settings: Arc<Proxy>,
-        session: Session,
     },
-    Ready(Easy, Arc<Mutex<Buf>>),
+    Ready(Easy, usize, Buf),
 }
 
 
 pub fn prepare(mut request: Request, hostport: String,
-               settings: Arc<Proxy>, resp_buf: Arc<Mutex<Buf>>)
-    -> Easy
+               settings: Arc<Proxy>,
+               resp_buf: Arc<Mutex<Buf>>,
+               headers_counter: Arc<Mutex<usize>>)
+    -> Result<Easy, CurlError>
 {
-    let mut easy = Easy::new();
-    easy.forbid_reuse(true).unwrap();
+    let mut curl = Easy::new();
+    let mut headers = List::new();
+
+    // NOTE: close connections because of curl bug;
+    curl.forbid_reuse(true).unwrap();
+    try!(headers.append("Connection: close"));
+
+    try!(curl.url(format!("http://{}{}", hostport, request.path).as_str()));
 
     match request.method {
-        Method::Get => easy.get(true).unwrap(),
-        Method::Post => easy.post(true).unwrap(),
+        // TODO: implement all methods
+        Method::Get => {
+            try!(curl.get(true))
+        }
+        Method::Post => {
+            try!(curl.post(true))
+        }
+        Method::Head => {
+            try!(curl.nobody(true));
+            try!(curl.custom_request("HEAD"));
+        }
+        Method::Patch => {
+            try!(curl.custom_request("PATCH"));
+        }
+        Method::Put => {
+            try!(curl.custom_request("PUT"));
+        }
+        Method::Other(m) => {
+            try!(curl.custom_request(m.as_str()));
+        }
         _ => panic!("Not implemented"),
     };
-    easy.url(format!("http://{}{}", hostport, request.path).as_str())
-        .unwrap();
 
-    let mut headers = List::new();
+    let ip_addr = request.peer_addr.ip();
+    try!(headers.append(
+        format!("{}: {}", settings.ip_header, ip_addr)
+        .as_str()));
+
+    // Copy headers
     for &(ref name, ref value) in &request.headers {
         // TODO: validate headers
         let line = match name {
@@ -53,16 +80,15 @@ pub fn prepare(mut request: Request, hostport: String,
             &Header::Raw(ref name) => format!("{}: {}", name, value),
             _ => continue,
         };
-        headers.append(line.as_str()).unwrap();
+        try!(headers.append(line.as_str()));
     }
-    // TODO: add settings.ip_header to list;
     if request.body.is_some() {
         let mut body = request.body.take().unwrap();
         let clen = body.data.len();
-        headers.append(format!("Content-Length: {}", clen).as_str());
 
-        easy.read_function(move |mut buf| {
-            println!("Writing data: {}", body.data.len());
+        try!(headers.append(format!("Content-Length: {}", clen).as_str()));
+
+        try!(curl.read_function(move |mut buf| {
             match buf.write(&body.data[..]) {
                 Ok(bytes) => {
                     body.data.consume(bytes);
@@ -74,53 +100,72 @@ pub fn prepare(mut request: Request, hostport: String,
                     Err(ReadError::Abort)
                 }
             }
-        }).unwrap();
+        }));
     }
-    easy.http_headers(headers);
+    // TODO: setup response headers collect function;
+    let headers_buf = resp_buf.clone();
+    try!(curl.header_function(move |line| {
+        if line.starts_with(b"HTTP/1.") {
+            true
+        } else {
+            if !line.starts_with(b"\r\n") {
+                *headers_counter.lock().unwrap() += 1;
+            }
+            headers_buf.lock().unwrap()
+            .write(line)
+            .map(|bytes| true)
+            .unwrap_or(false)
+        }
+    }));
 
-    easy.write_function(move |buf| {
+    // Setup response collect function;
+    try!(curl.write_function(move |buf| {
         resp_buf.lock().unwrap()
         .write(buf)
         .map_err(|e| {
             panic!("Write response body error: {:?}", e);
             WriteError::Pause
         })
-    });
-    easy
+    }));
+
+    try!(curl.http_headers(headers));
+    Ok(curl)
 }
 
 
-pub fn pick_backend_host(dest: &Destination) -> String
-{
-    // TODO: poperly implement Destination pickup
-
-    //match dest.load_balancing {
-    //    LoadBalancing::queue => {}
-    //}
-
-    // Pick backend address;
-    // XXX: currently pick first one:
-    dest.addresses.first().unwrap().clone()
-}
-
-
-pub fn serve<S>(mut response: Pickler<S>, mut resp: Easy, body: Arc<Mutex<Buf>>)
+pub fn serve<S>(mut response: Pickler<S>, mut resp: Easy,
+                num_headers: usize, body: Buf)
     -> BoxFuture<IoBuf<S>, Error>
     where S: Io + Send + 'static,
 {
-    let buf = body.lock().unwrap().split_off(0);
+    let mut headers = vec![httparse::EMPTY_HEADER; num_headers];
+    let body_offset = match httparse::parse_headers(&body[..], &mut headers) {
+        Ok(httparse::Status::Complete((bytes, _))) => bytes,
+        _ => {
+            // TODO: write ErrorRepsonse
+            unreachable!();
+        }
+    };
 
     let code = resp.response_code().unwrap();
     // TODO: handle response codes respectively,
     //      ie 204 has no body.
     let status = Status::from(code as u16).unwrap();
     response.status(status);
-    if status.response_has_body() {
-        response.add_length(buf.len() as u64);
+
+    for h in headers.iter() {
+        if h.name.eq_ignore_ascii_case("Content-Length") {
+            response.add_length((body.len() - body_offset) as u64);
+        } else if h.name.eq_ignore_ascii_case("Transfer-encoding") {
+            response.add_chunked();
+        } else {
+            response.add_header(h.name, h.value);
+        }
     }
+
     if response.done_headers() {
         if status.response_has_body() {
-            response.write_body(&buf[..]);
+            response.write_body(&body[body_offset..]);
         }
     };
     response.done().boxed()

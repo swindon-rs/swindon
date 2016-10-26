@@ -20,6 +20,7 @@ extern crate rustc_serialize;
 extern crate tokio_curl;
 extern crate curl;
 extern crate byteorder;
+extern crate httparse;
 
 mod intern;
 mod config;

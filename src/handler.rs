@@ -71,11 +71,10 @@ impl Service for Main {
                                 .get(&settings.destination.upstream)
                         {
                             use handlers::proxy::ProxyCall::*;
-                            let hostport = proxy::pick_backend_host(dest);
+                            let addr = dest.addresses.first().unwrap().clone();
                             Response::Proxy(Prepare {
-                                hostport: hostport,
+                                hostport: addr,
                                 settings: settings.clone(),
-                                session: self.curl_session.clone(),
                             })
                         } else {
                             Response::ErrorPage(Status::NotFound)
@@ -90,7 +89,8 @@ impl Service for Main {
                 Response::ErrorPage(Status::NotFound)
             }
         };
-        response.serve(req, cfg.clone(), debug, &self.handle)
+        response.serve(req, cfg.clone(), debug,
+                       &self.handle, &self.curl_session)
     }
 
     fn poll_ready(&self) -> Async<()> {
