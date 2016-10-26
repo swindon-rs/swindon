@@ -16,6 +16,7 @@ use config::static_files::{Static, SingleFile};
 use response::DebugInfo;
 use default_error_page::error_page;
 use handlers::{files, empty_gif, proxy};
+use handlers::proxy::ProxyCall;
 use websocket;
 use {Pickler};
 
@@ -36,7 +37,7 @@ pub enum Response {
     },
     SingleFile(Arc<SingleFile>),
     WebsocketEcho(websocket::Init),
-    Proxy(proxy::ProxyCall),
+    Proxy(ProxyCall),
 }
 
 impl Response {
@@ -45,26 +46,26 @@ impl Response {
                  curl_session: &Session)
         -> BoxFuture<Serializer, Error>
     {
-        use handlers::proxy::ProxyCall::*;
         match self {
-            Response::Proxy(Prepare{ hostport, settings}) => {
+            Response::Proxy(ProxyCall::Prepare{ hostport, settings}) => {
                 let handle = handle.remote().clone();
                 let resp_buf = Arc::new(Mutex::new(Buf::new()));
-                let headers_counter = Arc::new(Mutex::new(0));
+                let num_headers = Arc::new(Mutex::new(0));
 
                 let request = proxy::prepare(
                     req, hostport, settings,
                     resp_buf.clone(),
-                    headers_counter.clone())
+                    num_headers.clone())
                     .unwrap();
 
                 curl_session.perform(request)
                     .map_err(|err| err.into_error().into())
                     .and_then(move |resp| {
-                        let body = resp_buf.lock().unwrap().split_off(0);
-                        let n = headers_counter.lock().unwrap().clone();
-                        let resp = Response::Proxy(
-                            Ready(resp, n, body));
+                        let resp = Response::Proxy(ProxyCall::Ready {
+                            curl: resp,
+                            num_headers: num_headers.lock().unwrap().clone(),
+                            body: resp_buf.lock().unwrap().split_off(0),
+                        });
                         finished(Serializer {
                             config: cfg,
                             debug: debug,
@@ -106,8 +107,8 @@ impl<S: Io + AsRawFd + Send + 'static> GenericResponse<S> for Serializer {
                 websocket::negotiate(writer, init, self.handle,
                     websocket::Kind::Echo)
             }
-            Response::Proxy(proxy::ProxyCall::Ready(resp, num, buf)) => {
-                proxy::serialize(writer, resp, num, buf)
+            Response::Proxy(ProxyCall::Ready {curl, num_headers, body }) => {
+                proxy::serialize(writer, curl, num_headers, body)
             }
             Response::Proxy(_) => {
                 error_page(Status::BadRequest, writer)

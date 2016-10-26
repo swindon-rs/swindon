@@ -22,7 +22,11 @@ pub enum ProxyCall {
         hostport: String,
         settings: Arc<Proxy>,
     },
-    Ready(Easy, usize, Buf),
+    Ready {
+        curl: Easy,
+        num_headers: usize,
+        body: Buf,
+    },
 }
 
 
@@ -135,6 +139,8 @@ pub fn prepare(mut request: Request, hostport: String,
 }
 
 
+/// Serialize buffered response.
+///
 pub fn serialize<S>(mut response: Pickler<S>, mut resp: Easy,
         num_headers: usize, body: Buf)
     -> BoxFuture<IoBuf<S>, Error>
@@ -143,10 +149,7 @@ pub fn serialize<S>(mut response: Pickler<S>, mut resp: Easy,
     let mut headers = vec![httparse::EMPTY_HEADER; num_headers];
     let body_offset = match httparse::parse_headers(&body[..], &mut headers) {
         Ok(httparse::Status::Complete((bytes, _))) => bytes,
-        _ => {
-            // TODO: write ErrorRepsonse
-            unreachable!();
-        }
+        _ => unreachable!() // TODO: write ErrorRepsonse
     };
 
     let code = resp.response_code().unwrap();
@@ -157,6 +160,7 @@ pub fn serialize<S>(mut response: Pickler<S>, mut resp: Easy,
 
     for h in headers.iter() {
         if h.name.eq_ignore_ascii_case("Content-Length") {
+            // in case of HEAD request Content length can be passed through
             response.add_length((body.len() - body_offset) as u64);
         } else if h.name.eq_ignore_ascii_case("Transfer-encoding") {
             response.add_chunked();
