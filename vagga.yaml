@@ -3,6 +3,7 @@ containers:
     setup:
     - !Ubuntu xenial
     - !Install
+      - make
       - gcc
       - libc6-dev
       - zlib1g-dev
