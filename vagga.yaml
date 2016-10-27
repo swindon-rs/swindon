@@ -10,6 +10,8 @@ containers:
       - libssl-dev
       - libcurl4-openssl-dev
       - ca-certificates
+      - libcurl3
+      - pkg-config
     - !TarInstall
       url: https://static.rust-lang.org/dist/rust-1.12.0-x86_64-unknown-linux-gnu.tar.gz
       script: ./install.sh --prefix=/usr
@@ -26,7 +28,7 @@ containers:
       CARGO_HOME: /cargo
     - !Depends Cargo.toml
     - !Sh |
-        cargo install
+        cargo build
     # auto-clean: true
     data-dirs:
     - /cargo
@@ -75,6 +77,15 @@ commands:
   test: !Command
     container: ubuntu
     description: Test project
+    run: [cargo, test]
+
+  ci-test: !Command
+    container: ubuntu
+    description: Run CI tests (with crates in container)
+    environ:
+      CARGO_HOME: /cargo
+    volumes:
+      /cargo: !Snapshot { container: cargo-registry, size: 1G }
     run: [cargo, test]
 
   run: &run !Command
