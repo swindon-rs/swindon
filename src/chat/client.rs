@@ -1,4 +1,5 @@
-use std::io;
+use std::io::{self, Write};
+use std::sync::{Arc, Mutex};
 
 use curl;
 use curl::easy::{Easy, List};
@@ -7,6 +8,7 @@ use tokio_core::reactor::Handle;
 use rustc_serialize::json::{self, Json};    // XXX: use serde
 use futures::{Future, BoxFuture};
 use futures::{finished, failed};
+use netbuf::Buf;
 
 // HttpClient (service)
 //
@@ -29,7 +31,9 @@ impl HttpJsonClient {
     pub fn perform(&self, req: JsonRequest, auth: Option<String>)
         -> BoxFuture<JsonResponse, io::Error>
     {
-        let curl = match self.build(req, auth) {
+        let body_buf = Arc::new(Mutex::new(Buf::new()));
+
+        let curl = match self.build(req, auth, body_buf.clone()) {
             Ok(curl) => curl,
             Err(e) => {
                 return failed(io::Error::new(
@@ -40,18 +44,22 @@ impl HttpJsonClient {
 
         self.session.perform(curl)
             .map_err(|e| e.into_error())
-            .and_then(|resp| {
+            .and_then(move |resp| {
                 // TODO: collect & parse response body
-                finished(JsonResponse {})
+                let buf = body_buf.lock().unwrap();
+                finished(JsonResponse::from(resp, &buf))
             }).boxed()
     }
 
-    fn build(&self, req: JsonRequest, auth: Option<String>)
+    fn build(&self, req: JsonRequest, auth: Option<String>,
+        body_buf: Arc<Mutex<Buf>>)
         -> Result<Easy, curl::Error>
     {
         let mut curl = Easy::new();
         let mut headers = List::new();
         try!(curl.forbid_reuse(true));
+        try!(curl.url(
+            format!("http://{}{}", req.backend, req.method).as_str()));
         match req.data {
             Some(ref payload) => {
                 try!(curl.post(true));
@@ -67,6 +75,14 @@ impl HttpJsonClient {
             try!(headers.append(format!("Authorization: {}", auth).as_str()));
         }
         try!(curl.http_headers(headers));
+
+        try!(curl.write_function(move |buf| {
+            body_buf.lock().unwrap()
+                .write(buf)
+                .map_err(|e| {
+                    panic!("write respone body error: {:?}", e);
+                })
+        }));
         Ok(curl)
     }
 }
@@ -82,4 +98,10 @@ struct JsonRequest {
 }
 
 struct JsonResponse {
+}
+
+impl JsonResponse {
+    pub fn from(resp: Easy, body: &Buf) -> JsonResponse {
+        JsonResponse {}
+    }
 }
