@@ -47,7 +47,7 @@ use argparse::{ArgumentParser, Parse, StoreTrue, Print};
 use tokio_core::reactor::Core;
 use tokio_core::reactor::Interval;
 
-use config::ListenSocket;
+use config::{ListenSocket, Handler};
 use handler::Main;
 pub use response::Pickler;
 
@@ -105,6 +105,20 @@ pub fn main() {
                 }
                 minihttp::serve(&lp.handle(), addr, handler.clone());
             }
+        }
+    }
+    for (name, h) in cfg.get().handlers.iter() {
+        match h {
+            &Handler::SwindonChat(ref chat) => {
+                match chat.listen {
+                    ListenSocket::Tcp(addr) => {
+                        if verbose {
+                            println!("Listening {} at {}", name, addr);
+                        }
+                    }
+                }
+            }
+            _ => {}
         }
     }
     handlers::files::update_pools(&cfg.get().disk_pools);

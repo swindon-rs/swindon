@@ -23,6 +23,12 @@ pub struct Init {
     accept: [u8; 20],
 }
 
+impl Init {
+    pub fn base64(&self) -> Base64 {
+        Base64(&self.accept[..])
+    }
+}
+
 pub fn prepare(req: &Request) -> Result<Init, Status> {
     let mut upgrade = false;
     let mut connection = false;
@@ -83,22 +89,13 @@ pub fn negotiate<S>(mut response: Pickler<S>, init: Init, remote: Remote,
     response.done_headers();
     response.steal_socket()
     .and_then(move |socket: IoBuf<S>| {
-        match kind {
-            Kind::Echo => {
-                remote.spawn(move |handle| {
-                    WebsockProto::new(
-                        socket, echo::Echo(handle.clone()), handle)
-                    .map_err(|e| info!("Websocket error: {}", e))
-                });
-            },
-            Kind::SwindonChat => {
-                remote.spawn(move |handle| {
-                    WebsockProto::new(
-                        socket, chat::Chat(handle.clone()), handle)
-                    .map_err(|e| info!("Websocket error: {}", e))
-                });
-            }
-        }
+        remote.spawn(move |handle| {
+            let dispatcher = match kind {
+                Kind::Echo => echo::Echo(handle.clone()),
+            };
+            WebsockProto::new(socket, dispatcher, handle)
+            .map_err(|e| info!("Websocket error: {}", e))
+        });
         Err(io::Error::new(io::ErrorKind::BrokenPipe,
                            "Connection is stolen for websocket"))
     })

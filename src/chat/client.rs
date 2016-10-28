@@ -1,3 +1,4 @@
+use std::str;
 use std::io::{self, Write};
 use std::sync::{Arc, Mutex};
 
@@ -10,11 +11,6 @@ use futures::{Future, BoxFuture};
 use futures::{finished, failed};
 use netbuf::Buf;
 
-// HttpClient (service)
-//
-//  new(curl_session)
-//
-//  call(req: HttpRequest) -> Future<Response>
 
 struct HttpJsonClient {
     session: Session,
@@ -45,7 +41,6 @@ impl HttpJsonClient {
         self.session.perform(curl)
             .map_err(|e| e.into_error())
             .and_then(move |resp| {
-                // TODO: collect & parse response body
                 let buf = body_buf.lock().unwrap();
                 finished(JsonResponse::from(resp, &buf))
             }).boxed()
@@ -58,6 +53,7 @@ impl HttpJsonClient {
         let mut curl = Easy::new();
         let mut headers = List::new();
         try!(curl.forbid_reuse(true));
+        try!(headers.append("Connection: close"));
         try!(curl.url(
             format!("http://{}{}", req.backend, req.method).as_str()));
         match req.data {
@@ -97,11 +93,43 @@ struct JsonRequest {
     data: Option<Json>,
 }
 
-struct JsonResponse {
+enum JsonResponse {
+    Ok(Json),
+    HttpError(Option<Json>),
+    InvalidJson,
 }
 
+
 impl JsonResponse {
-    pub fn from(resp: Easy, body: &Buf) -> JsonResponse {
-        JsonResponse {}
+    pub fn from(mut resp: Easy, body: &Buf) -> JsonResponse {
+
+        let parse = |body: &[u8]| {
+            str::from_utf8(body)
+            .map_err(|_| json::ParserError::SyntaxError(
+                json::ErrorCode::NotUtf8, 0, 0))
+            .and_then(|s| Json::from_str(s))
+        };
+
+        match resp.response_code() {
+            Ok(200) => {
+                match parse(&body[..]) {
+                    Ok(message) => JsonResponse::Ok(message),
+                    _ => JsonResponse::InvalidJson,
+                }
+            }
+            _ => {
+                match resp.content_type() {
+                    Ok(Some("application/json")) => {
+                        // try extracting body
+                        let error = match parse(&body[..]) {
+                            Ok(error) => Some(error),
+                            _ => None,
+                        };
+                        JsonResponse::HttpError(error)
+                    }
+                    _ => JsonResponse::HttpError(None)
+                }
+            }
+        }
     }
 }

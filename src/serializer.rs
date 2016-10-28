@@ -8,6 +8,7 @@ use tokio_core::reactor::{Handle, Remote};
 use tokio_service::Service;
 use tk_bufstream::IoBuf;
 use minihttp::{Error, GenericResponse, ResponseWriter, Status, Request};
+use minihttp::client::HttpClient;
 use netbuf::Buf;
 use tokio_curl::Session;
 use httpbin::HttpBin;
@@ -19,6 +20,7 @@ use response::DebugInfo;
 use default_error_page::error_page;
 use handlers::{files, empty_gif, proxy};
 use handlers::proxy::ProxyCall;
+use chat;
 use websocket;
 use {Pickler};
 
@@ -41,7 +43,7 @@ pub enum Response {
     },
     SingleFile(Arc<SingleFile>),
     WebsocketEcho(websocket::Init),
-    WebsocketChat(websocket::Init),
+    WebsocketChat(websocket::Init, HttpClient),
     Proxy(ProxyCall),
 }
 
@@ -79,6 +81,17 @@ impl Response {
                             request: None,
                         })
                     }).boxed()
+            }
+            Response::WebsocketChat(init, client) => {
+                // TODO: issue Auth request to backend;
+                //      if authorized — negotiate;
+                //      otherwise — Response Error
+                finished(Serializer {
+                    config: cfg,
+                    debug: debug,
+                    response: Response::WebsocketChat(init, client),
+                    handle: handle.remote().clone(),
+                }).boxed()
             }
             _ => {
                 finished(Serializer {
@@ -125,9 +138,8 @@ impl<S: Io + AsRawFd + Send + 'static> GenericResponse<S> for Serializer {
                 websocket::negotiate(writer, init, self.handle,
                     websocket::Kind::Echo)
             }
-            Response::WebsocketChat(init) => {
-                websocket::negotiate(writer, init, self.handle,
-                    websocket::Kind::SwindonChat)
+            Response::WebsocketChat(init, client) => {
+                chat::negotiate(writer, init, self.handle, client)
             }
             Response::Proxy(ProxyCall::Ready {curl, num_headers, body }) => {
                 proxy::serialize(writer, curl, num_headers, body)

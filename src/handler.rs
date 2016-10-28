@@ -3,6 +3,7 @@ use tokio_service::Service;
 use tokio_core::reactor::Handle;
 use minihttp::request::Request;
 use minihttp::{Error, Status};
+use minihttp::client::HttpClient;
 use tokio_curl::Session;
 
 use config::ConfigCell;
@@ -114,7 +115,8 @@ impl Main {
             Some(&Handler::SwindonChat(ref chat)) => {
                 match websocket::prepare(&req) {
                     Ok(init) => {
-                        Response::WebsocketChat(init)
+                        let client = HttpClient::new(self.handle.clone());
+                        Response::WebsocketChat(init, client)
                     }
                     Err(_) => {
                         // internal redirect
