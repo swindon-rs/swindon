@@ -10,6 +10,7 @@ routing:
   localhost/echo: websocket-echo-html
   localhost/websocket-echo: websocket-echo
   example.com: example-chat-http
+  httpbin.devd.io: http-bin
   chat.example.com/: example-chat
   chat.example.com/css: example-chat-static
   chat.example.com/js: example-chat-static
@@ -43,6 +44,8 @@ handlers:
     content-type: "text/html; charset=utf-8"
 
   websocket-echo: !WebsocketEcho
+
+  http-bin: !HttpBin
 
   src: !Static
     mode: relative_to_route

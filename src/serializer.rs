@@ -2,13 +2,15 @@ use std::sync::{Arc, Mutex};
 use std::path::PathBuf;
 use std::os::unix::io::AsRawFd;
 
-use futures::{BoxFuture, Future, finished};
+use futures::{BoxFuture, Future, Async, finished};
 use tokio_core::io::Io;
 use tokio_core::reactor::{Handle, Remote};
+use tokio_service::Service;
 use tk_bufstream::IoBuf;
 use minihttp::{Error, GenericResponse, ResponseWriter, Status, Request};
 use netbuf::Buf;
 use tokio_curl::Session;
+use httpbin::HttpBin;
 
 use config::{Config};
 use config::static_files::{Static, SingleFile};
@@ -26,11 +28,13 @@ pub struct Serializer {
     debug: DebugInfo,
     response: Response,
     handle: Remote,
+    request: Option<Request>,
 }
 
 pub enum Response {
     ErrorPage(Status),
     EmptyGif,
+    HttpBin,
     Static {
         path: PathBuf,
         settings: Arc<Static>,
@@ -72,6 +76,7 @@ impl Response {
                             debug: debug,
                             response: resp,
                             handle: handle,
+                            request: None,
                         })
                     }).boxed()
             }
@@ -81,6 +86,7 @@ impl Response {
                     debug: debug,
                     response: self,
                     handle: handle.remote().clone(),
+                    request: Some(req), // only needed for HttpBin
                 }).boxed()
             }
         }
@@ -89,7 +95,7 @@ impl Response {
 
 impl<S: Io + AsRawFd + Send + 'static> GenericResponse<S> for Serializer {
     type Future = BoxFuture<IoBuf<S>, Error>;
-    fn into_serializer(self, writer: ResponseWriter<S>) -> Self::Future {
+    fn into_serializer(mut self, writer: ResponseWriter<S>) -> Self::Future {
         let writer = Pickler(writer, self.config, self.debug);
         match self.response {
             Response::ErrorPage(status) => {
@@ -97,6 +103,17 @@ impl<S: Io + AsRawFd + Send + 'static> GenericResponse<S> for Serializer {
             }
             Response::EmptyGif => {
                 empty_gif::serve(writer)
+            }
+            Response::HttpBin => {
+                // TODO(tailhook) it's not very good idea to unpack the future
+                // this way
+                match HttpBin::new().call(self.request.take().unwrap()).poll()
+                {
+                    Ok(Async::Ready(gen_response)) => {
+                        gen_response.into_serializer(writer.0).boxed()
+                    }
+                    _ => unreachable!(),
+                }
             }
             Response::Static { path, settings } => {
                 files::serve(writer, path, settings)

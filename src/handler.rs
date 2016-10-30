@@ -70,6 +70,9 @@ impl Main {
             Some(&Handler::EmptyGif) => {
                 Response::EmptyGif
             }
+            Some(&Handler::HttpBin) => {
+                Response::HttpBin
+            }
             Some(&Handler::Static(ref settings)) => {
                 if let Ok(path) = files::path(settings, suffix, &req) {
                     Response::Static {
@@ -121,8 +124,8 @@ impl Main {
                 }
             }
             // TODO(tailhook) make better error code for None
-            _ => {
-                Response::ErrorPage(Status::NotImplemented)
+            None => {
+                Response::ErrorPage(Status::NotFound)
             }
         }
     }

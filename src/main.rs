@@ -21,6 +21,7 @@ extern crate tokio_curl;
 extern crate curl;
 extern crate byteorder;
 extern crate httparse;
+extern crate httpbin;
 
 mod intern;
 mod config;

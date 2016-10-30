@@ -14,6 +14,7 @@ pub enum Handler {
     SingleFile(Arc<static_files::SingleFile>),
     Proxy(Arc<proxy::Proxy>),
     EmptyGif,
+    HttpBin,
     /// This endpoints is for testing websocket implementation. It's not
     /// guaranteed to work in forward compatible manner. We use it for
     /// autobahn tests, but we might choose to change test suite, so don't use
@@ -27,6 +28,7 @@ pub fn validator<'x>() -> Enum<'x> {
     .option("Static", static_files::validator())
     .option("SingleFile", static_files::single_file())
     .option("Proxy", proxy::validator())
+    .option("HttpBin", Nothing)
     .option("EmptyGif", Nothing)
     .option("WebsocketEcho", Nothing)
 }
