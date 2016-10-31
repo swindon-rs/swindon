@@ -21,7 +21,7 @@ mime = "0.2.2"
 mime_guess = "1.8.0"
 tk-sendfile = "0.3.0"
 tk-bufstream = "0.1.0"
-minihttp = { git = "https://github.com/popravich/minihttp", rev="16126a2" }
+minihttp = { git = "https://github.com/popravich/minihttp", rev="14df6bb" }
 netbuf = "0.3.6"
 sha1 = "0.2.0"
 curl = "0.3.8"

@@ -1,4 +1,4 @@
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use std::path::PathBuf;
 use std::os::unix::io::AsRawFd;
 
@@ -9,8 +9,6 @@ use tokio_service::Service;
 use tk_bufstream::IoBuf;
 use minihttp::{Error, GenericResponse, ResponseWriter, Status, Request};
 use minihttp::client::HttpClient;
-use netbuf::Buf;
-use tokio_curl::Session;
 use httpbin::HttpBin;
 
 use config::{Config, EmptyGif};
@@ -50,28 +48,21 @@ pub enum Response {
 impl Response {
     pub fn serve(self, req: Request, cfg: Arc<Config>,
                  debug: DebugInfo, handle: &Handle,
-                 curl_session: &Session)
+                 http_client: &HttpClient)
         -> BoxFuture<Serializer, Error>
     {
         match self {
             Response::Proxy(ProxyCall::Prepare{ hostport, settings}) => {
                 let handle = handle.remote().clone();
-                let resp_buf = Arc::new(Mutex::new(Buf::new()));
-                let num_headers = Arc::new(Mutex::new(0));
 
-                let request = proxy::prepare(
-                    req, hostport, settings,
-                    resp_buf.clone(),
-                    num_headers.clone())
-                    .unwrap();
+                let mut client = http_client.clone();
+                proxy::prepare(req, hostport, settings, &mut client);
 
-                curl_session.perform(request)
-                    .map_err(|err| err.into_error().into())
+                client.done()
+                    .map_err(|e| e.into())
                     .and_then(move |resp| {
                         let resp = Response::Proxy(ProxyCall::Ready {
-                            curl: resp,
-                            num_headers: num_headers.lock().unwrap().clone(),
-                            body: resp_buf.lock().unwrap().split_off(0),
+                            response: resp,
                         });
                         finished(Serializer {
                             config: cfg,
@@ -141,8 +132,8 @@ impl<S: Io + AsRawFd + Send + 'static> GenericResponse<S> for Serializer {
             Response::WebsocketChat(init, client) => {
                 chat::negotiate(writer, init, self.handle, client)
             }
-            Response::Proxy(ProxyCall::Ready {curl, num_headers, body }) => {
-                proxy::serialize(writer, curl, num_headers, body)
+            Response::Proxy(ProxyCall::Ready { response }) => {
+                proxy::serialize(writer, response)
             }
             Response::Proxy(_) => {
                 error_page(Status::BadRequest, writer)

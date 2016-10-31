@@ -4,7 +4,6 @@ use tokio_core::reactor::Handle;
 use minihttp::request::Request;
 use minihttp::{Error, Status};
 use minihttp::client::HttpClient;
-use tokio_curl::Session;
 
 use config::ConfigCell;
 use response::DebugInfo;
@@ -19,7 +18,7 @@ use websocket;
 pub struct Main {
     pub config: ConfigCell,
     pub handle: Handle,
-    pub curl_session: Session,
+    pub http_client: HttpClient,
 }
 
 impl Service for Main {
@@ -37,7 +36,7 @@ impl Service for Main {
 
         let response = self.prepare_response(&req, &mut debug);
         response.serve(req, cfg.clone(), debug,
-                       &self.handle, &self.curl_session)
+                       &self.handle, &self.http_client)
     }
 
     fn poll_ready(&self) -> Async<()> {

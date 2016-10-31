@@ -46,6 +46,7 @@ use futures::stream::Stream;
 use argparse::{ArgumentParser, Parse, StoreTrue, Print};
 use tokio_core::reactor::Core;
 use tokio_core::reactor::Interval;
+use minihttp::client::HttpClient;
 
 use config::{ListenSocket, Handler};
 use handler::Main;
@@ -94,7 +95,7 @@ pub fn main() {
     let handler = Main {
         config: cfg.clone(),
         handle: lp.handle(),
-        curl_session: tokio_curl::Session::new(lp.handle()),
+        http_client: HttpClient::new(lp.handle()),
     };
     // TODO(tailhook) do something when config updates
     for sock in &cfg.get().listen {
