@@ -1,18 +1,15 @@
 //! Chat protocol.
-use std::io;
-use std::collections::BTreeMap;
-use rustc_serialize::json::{self, ToJson, Json};
+use std::str;
+use rustc_serialize::json::Json;
 
-use futures::{Future, Async, Poll};
-use tokio_core::reactor::{Handle, Timeout};
-use minihttp::enums::{Method, Header};
+use futures::Future;
+use tokio_core::reactor::{Handle};
+use minihttp::enums::{Status, Method};
 use minihttp::client::HttpClient;
 use netbuf::Buf;
 
-// use serde::{Serialize, Deserialize};
-// use serde_json::{Value, Map};
-
 use websocket::{Dispatcher, Frame, ImmediateReplier, RemoteReplier, Error};
+use super::message::{Message, MessageError};
 
 
 pub struct Chat(pub Handle, pub HttpClient);
@@ -25,30 +22,44 @@ impl Dispatcher for Chat {
     {
         match frame {
             Frame::Text(data) => {
-                if let Some(message) = decode(data) {
-                    println!("Got message");
-                    let remote = remote.clone();
-                    let mut client = self.1.clone();
-                    // TODO: make call to correct backend;
-                    let payload = json::encode(&message).unwrap();
-                    client.request(Method::Post,
-                        format!("http://localhost:5000/{}", message.method())
-                        .as_str());
-                    client.add_header(
-                        "Content-Type".into(), "application/json");
-                    // client.add_header
-                    client.add_length(payload.as_bytes().len() as u64);
-                    client.done_headers();
-                    client.write_body(payload.as_bytes());
-                    let call = client.done()
-                        .map_err(|e| info!("Http Error: {:?}", e));
-                    self.0.spawn(call.and_then(move |resp| {
-                            remote.send_text(
-                                format!("Respnonse done: {:?}", resp).as_str())
+                match Message::decode(data) {
+                    Ok(message) => {
+                        let remote = remote.clone();
+
+                        let mut client = self.1.clone();
+                        // TODO: make call to correct backend;
+                        //      find proper route;
+                        //      resolve hostname to IP
+                        let path = format!(
+                            "http://localhost:5000/{}",
+                            message.method_as_path());
+                        let payload = message.payload();
+                        client.request(Method::Post, path.as_str());
+                        client.add_header(
+                            "Content-Type".into(), "application/json");
+                        client.add_length(payload.as_bytes().len() as u64);
+                        client.done_headers();
+                        client.write_body(payload.as_bytes());
+                        let call = client.done()
+                            .map_err(|e| info!("Http Error: {:?}", e));
+
+                        self.0.spawn(call.and_then(move |resp| {
+                            let result = parse_response(
+                                resp.status, resp.body)
+                                .map(|data| message.encode_result(data))
+                                .unwrap_or_else(|e| message.encode_error(e));
+                            remote.send_text(result.as_str())
                             .map_err(|e| info!("Remote send error: {:?}", e))
-                        })
-                    )
-                };
+                        }));
+                    }
+                    Err(error) => {
+                        let msg = Json::String(format!("{:?}", error));
+                        let msg = format!(
+                            "[\"error\",{{\"error_kind\":\
+                            \"validation_error\"}}, {}]", msg);
+                        replier.text(msg.as_str())
+                    }
+                }
             }
             _ => {}
         }
@@ -56,74 +67,56 @@ impl Dispatcher for Chat {
     }
 }
 
-fn decode(data: &str) -> Option<Message> {
-    let invalid_method = |m: &str| {
-        m.starts_with("tangle.") | m.find("/").is_some()
-    };
-    match Json::from_str(data) {
-        Ok(Json::Array(mut message)) => {
-            if message.len() != 4 {
-                trace!("Invalid args length: {}", message.len());
-                return None
-            }
-            let kwargs = match message.pop() {
-                Some(Json::Object(kwargs)) => kwargs,
-                _ => {
-                    trace!("kwargs not object");
-                    return None
-                }
+
+/// Parse backend response.
+pub fn parse_response(status: Status, body: Option<Buf>)
+    -> Result<Json, MessageError>
+{
+    // TODO: check content-type
+    match status {
+        Status::Ok => {
+            let result = if let Some(ref body) = body {
+                str::from_utf8(&body[..])
+                .map_err(|e| MessageError::Utf8Error(e))
+                .and_then(|s| Json::from_str(s)
+                    .map_err(|e| MessageError::JsonError(e)))
+            } else {
+                Ok(Json::Null)
             };
-            let args = match message.pop() {
-                Some(Json::Array(args)) => args,
-                _ => {
-                    trace!("args not array");
-                    return None
-                }
-            };
-            let meta = match message.pop() {
-                Some(Json::Object(meta)) => {
-                    if !meta.contains_key("request_id") {
-                        trace!("meta missing 'request_id' key");
-                        return None
-                    }
-                    meta
-                }
-                _ => {
-                    trace!("meta is not object");
-                    return None
-                }
-            };
-            let method = match message.pop() {
-                Some(Json::String(method)) => {
-                    if invalid_method(&method) {
-                        trace!("invalid method: {:?}", method);
-                        return None
-                    }
-                    method
-                }
-                _ => {
-                    trace!("method not string");
-                    return None
-                }
-            };
-            Some(Message(method, meta, args, kwargs))
+            result
         }
-        _ => {
-            trace!("message is not an array");
-            return None
+        s => {
+            let info = if let Some(ref body) = body {
+                str::from_utf8(&body[..])
+                .map_err(|e| MessageError::Utf8Error(e))
+                .and_then(|s| Json::from_str(s)
+                    .map_err(|e| MessageError::JsonError(e)))
+                .ok()
+            } else {
+                None
+            };
+            Err(MessageError::HttpError(s, info))
         }
     }
 }
 
-// #[derive(Debug, Serialize, Deserialize)]
-// struct Msg(String, Map<String, Value>, Vec<Value>, Map<String, Value>);
+#[cfg(test)]
+mod test {
 
-#[derive(RustcEncodable)]
-struct Message(String, BTreeMap<String, Json>,
-    Vec<Json>, BTreeMap<String, Json>);
+    use rustc_serialize::json::Json;
+    use minihttp::Status;
+    use netbuf::Buf;
 
-impl Message {
-    pub fn method(&self) -> &str {
-        self.0.as_str()
+    use super::parse_response;
+
+    #[test]
+    fn response_parsing() {
+        let mut buf = Buf::new();
+        buf.extend(b"[\"hello\",\"world\"]");
+        let res = parse_response(Status::Ok, Some(buf)).unwrap();
+        let res = res.as_array().unwrap();
+        assert_eq!(res.len(), 2);
+        assert_eq!(res[0], Json::String("hello".to_string()));
+        assert_eq!(res[1], Json::String("world".to_string()));
     }
 }

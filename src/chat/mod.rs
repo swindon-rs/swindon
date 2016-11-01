@@ -12,8 +12,8 @@ use super::websocket::WebsockProto;
 use super::websocket::Init;
 use {Pickler};
 
+mod message;
 mod proto;
-mod client;
 
 pub use self::proto::Chat;
 

@@ -14,7 +14,6 @@ use super::base64::Base64;
 use super::proto::WebsockProto;
 use super::{Kind};
 use super::echo;
-use super::super::chat;
 use {Pickler};
 
 const GUID: &'static str = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
