@@ -12,6 +12,7 @@ use serializer::{Response, Serializer};
 use config::Handler;
 use handlers::{files, proxy};
 use intern::Atom;
+use chat::MessageRouter;
 use websocket;
 
 #[derive(Clone)]
@@ -114,8 +115,9 @@ impl Main {
             Some(&Handler::SwindonChat(ref chat)) => {
                 match websocket::prepare(&req) {
                     Ok(init) => {
-                        let client = HttpClient::new(self.handle.clone());
-                        Response::WebsocketChat(init, client)
+                        let client = self.http_client.clone();
+                        let router = MessageRouter(chat.clone(), cfg.clone());
+                        Response::WebsocketChat(init, client, router)
                     }
                     Err(_) => {
                         // internal redirect

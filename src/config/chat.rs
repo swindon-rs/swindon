@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 use quire::validate::{Structure, Scalar, Mapping};
 
@@ -10,8 +10,9 @@ use super::http;
 pub struct Chat {
     pub listen: ListenSocket,
     pub http_route: http::Destination,
-    pub message_handlers: HashMap<String, http::Destination>,
+    pub message_handlers: BTreeMap<String, http::Destination>,
 }
+
 
 pub fn validator<'x>() -> Structure<'x> {
     Structure::new()

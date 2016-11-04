@@ -12,7 +12,7 @@ mod routing;
 mod handlers;
 pub mod http_destinations;
 // handlers
-mod chat;
+pub mod chat;
 pub mod static_files;
 pub mod proxy;
 pub mod disk;
@@ -92,5 +92,84 @@ impl Configurator {
         } else {
             Ok(false)
         }
+    }
+}
+
+#[cfg(test)]
+pub mod test {
+    use std::sync::Arc;
+    use quire::{parse_string, Options};
+    use config::root::{Config, config_validator};
+
+    pub fn make_config() -> Arc<Config> {
+        let raw = r#"
+            listen:
+            - 127.0.0.1:8080
+
+            debug-routing: true
+
+            routing:
+              localhost/empty.gif: empty-gif
+              localhost/sources: src
+              localhost/websocket.html: websocket-echo-static
+              localhost/echo: websocket-echo-html
+              localhost/websocket-echo: websocket-echo
+              example.com: example-chat-http
+              chat.example.com/: example-chat
+              chat.example.com/css: example-chat-static
+              chat.example.com/js: example-chat-static
+              chat.example.com/index.html: example-chat-static
+
+            handlers:
+
+              example-chat: !SwindonChat
+
+                listen: 127.0.0.1:2007
+                http-route: example-chat-http
+
+                message-handlers:
+                  "*": superman/chat
+                  sub.chat.*: superman/sub_chat
+                  sub.chat: superman/sub
+                  other.*: superman
+
+              example-chat-http: !Proxy
+                mode: forward
+                ip-header: X-Remote-Ip
+                destination: superman/
+
+              empty-gif: !EmptyGif
+
+              websocket-echo-static: !Static
+                mode: relative_to_domain_root
+                path: /work/public
+                text-charset: utf-8
+
+              websocket-echo-html: !SingleFile
+                path: /work/public/websocket.html
+                content-type: "text/html; charset=utf-8"
+
+              websocket-echo: !WebsocketEcho
+
+              src: !Static
+                mode: relative_to_route
+                path: /work/src
+                text-charset: utf-8
+
+            http-destinations:
+              superman:
+
+                load-balancing: queue
+                queue-size-for-503: 100k
+                backend-connections-per-ip-port: 1
+                in-flight-requests-per-backend-connection: 1
+
+                addresses:
+                - example.com:5000
+        "#;
+        let v = config_validator();
+        let o = Options::default();
+        let cfg: Config = parse_string("<inline>", raw, &v, &o).unwrap();
+        Arc::new(cfg)
     }
 }

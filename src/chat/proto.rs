@@ -10,9 +10,10 @@ use netbuf::Buf;
 
 use websocket::{Dispatcher, Frame, ImmediateReplier, RemoteReplier, Error};
 use super::message::{Message, MessageError};
+use super::router::MessageRouter;
 
 
-pub struct Chat(pub Handle, pub HttpClient);
+pub struct Chat(pub Handle, pub HttpClient, pub MessageRouter);
 
 impl Dispatcher for Chat {
 
@@ -20,48 +21,47 @@ impl Dispatcher for Chat {
         replier: &mut ImmediateReplier, remote: &RemoteReplier)
         -> Result<(), Error>
     {
-        match frame {
-            Frame::Text(data) => {
-                match Message::decode(data) {
-                    Ok(message) => {
-                        let remote = remote.clone();
+        let data = match frame {
+            Frame::Text(data) => data,
+            _ => return Ok(()),
+        };
 
-                        let mut client = self.1.clone();
-                        // TODO: make call to correct backend;
-                        //      find proper route;
-                        //      resolve hostname to IP
-                        let path = format!(
-                            "http://localhost:5000/{}",
-                            message.method_as_path());
-                        let payload = message.payload();
-                        client.request(Method::Post, path.as_str());
-                        client.add_header(
-                            "Content-Type".into(), "application/json");
-                        client.add_length(payload.as_bytes().len() as u64);
-                        client.done_headers();
-                        client.write_body(payload.as_bytes());
-                        let call = client.done()
-                            .map_err(|e| info!("Http Error: {:?}", e));
+        match Message::decode(data) {
+            Ok(message) => {
+                let remote = remote.clone();
 
-                        self.0.spawn(call.and_then(move |resp| {
-                            let result = parse_response(
-                                resp.status, resp.body)
-                                .map(|data| message.encode_result(data))
-                                .unwrap_or_else(|e| message.encode_error(e));
-                            remote.send_text(result.as_str())
-                            .map_err(|e| info!("Remote send error: {:?}", e))
-                        }));
-                    }
-                    Err(error) => {
-                        let msg = Json::String(format!("{:?}", error));
-                        let msg = format!(
-                            "[\"error\",{{\"error_kind\":\
-                            \"validation_error\"}}, {}]", msg);
-                        replier.text(msg.as_str())
-                    }
-                }
+                let mut client = self.1.clone();
+                // TODO: make call to correct backend;
+                //      find proper route;
+                //      resolve hostname to IP
+                let url = self.2.get_url(message.method());
+                let payload = message.payload();
+                client.request(Method::Post, url.as_str());
+                client.add_header("Content-Type".into(), "application/json");
+                client.add_length(payload.as_bytes().len() as u64);
+                client.done_headers();
+                client.write_body(payload.as_bytes());
+                let call = client.done()
+                    .map_err(|e| info!("Http Error: {:?}", e));
+
+                self.0.spawn(
+                    call.and_then(move |resp| {
+                        let result = parse_response(
+                            resp.status, resp.body)
+                            .map(|data| message.encode_result(data))
+                            .unwrap_or_else(|e| message.encode_error(e));
+                        remote.send_text(result.as_str())
+                        .map_err(|e| info!("Remote send error: {:?}", e))
+                    })
+                );
             }
-            _ => {}
+            Err(error) => {
+                let msg = Json::String(format!("{:?}", error));
+                let msg = format!(
+                    "[\"error\",{{\"error_kind\":\
+                    \"validation_error\"}}, {}]", msg);
+                replier.text(msg.as_str());
+            }
         }
         Ok(())
     }

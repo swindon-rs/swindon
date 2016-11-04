@@ -8,6 +8,7 @@ use tokio_core::reactor::{Handle, Remote};
 use tokio_service::Service;
 use tk_bufstream::IoBuf;
 use minihttp::{Error, GenericResponse, ResponseWriter, Status, Request};
+use minihttp::enums::Method;
 use minihttp::client::HttpClient;
 use httpbin::HttpBin;
 
@@ -41,7 +42,7 @@ pub enum Response {
     },
     SingleFile(Arc<SingleFile>),
     WebsocketEcho(websocket::Init),
-    WebsocketChat(websocket::Init, HttpClient),
+    WebsocketChat(websocket::Init, HttpClient, chat::MessageRouter),
     Proxy(ProxyCall),
 }
 
@@ -73,14 +74,19 @@ impl Response {
                         })
                     }).boxed()
             }
-            Response::WebsocketChat(init, client) => {
+            Response::WebsocketChat(init, client, router) => {
                 // TODO: issue Auth request to backend;
                 //      if authorized — negotiate;
                 //      otherwise — Response Error
+
+                let mut auth = http_client.clone();
+                let url = router.get_url("tangle.authorize_connection".into());
+                auth.request(Method::Post, url.as_str());
+                auth.done();
                 finished(Serializer {
                     config: cfg,
                     debug: debug,
-                    response: Response::WebsocketChat(init, client),
+                    response: Response::WebsocketChat(init, client, router),
                     handle: handle.remote().clone(),
                 }).boxed()
             }
@@ -129,8 +135,8 @@ impl<S: Io + AsRawFd + Send + 'static> GenericResponse<S> for Serializer {
                 websocket::negotiate(writer, init, self.handle,
                     websocket::Kind::Echo)
             }
-            Response::WebsocketChat(init, client) => {
-                chat::negotiate(writer, init, self.handle, client)
+            Response::WebsocketChat(init, client, router) => {
+                chat::negotiate(writer, init, self.handle, client, router)
             }
             Response::Proxy(ProxyCall::Ready { response }) => {
                 proxy::serialize(writer, response)

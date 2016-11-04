@@ -10,7 +10,7 @@ use super::empty_gif;
 
 #[derive(RustcDecodable, Debug, PartialEq, Eq)]
 pub enum Handler {
-    SwindonChat(chat::Chat),
+    SwindonChat(Arc<chat::Chat>),
     Static(Arc<static_files::Static>),
     SingleFile(Arc<static_files::SingleFile>),
     Proxy(Arc<proxy::Proxy>),

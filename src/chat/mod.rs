@@ -14,12 +14,14 @@ use {Pickler};
 
 mod message;
 mod proto;
+mod router;
 
 pub use self::proto::Chat;
+pub use self::router::MessageRouter;
 
 
 pub fn negotiate<S>(mut response: Pickler<S>, init: Init, remote: Remote,
-    http_client: HttpClient)
+    http_client: HttpClient, router: MessageRouter)
     -> BoxFuture<IoBuf<S>, Error>
     where S: Io + Send + 'static
 {
@@ -31,7 +33,7 @@ pub fn negotiate<S>(mut response: Pickler<S>, init: Init, remote: Remote,
     response.steal_socket()
     .and_then(move |socket: IoBuf<S>| {
         remote.spawn(move |handle| {
-            let dispatcher = Chat(handle.clone(), http_client.clone());
+            let dispatcher = Chat(handle.clone(), http_client.clone(), router);
             WebsockProto::new(socket, dispatcher, handle)
             .map_err(|e| info!("Websocket error: {}", e))
         });
