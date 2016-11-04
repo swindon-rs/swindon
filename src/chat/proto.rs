@@ -39,6 +39,7 @@ impl Dispatcher for Chat {
                 client.request(Method::Post, url.as_str());
                 client.add_header("Content-Type".into(), "application/json");
                 client.add_length(payload.as_bytes().len() as u64);
+                // TODO: add Authorization header (with encoded user info);
                 client.done_headers();
                 client.write_body(payload.as_bytes());
                 let call = client.done()
@@ -48,7 +49,7 @@ impl Dispatcher for Chat {
                     call.and_then(move |resp| {
                         let result = parse_response(
                             resp.status, resp.body)
-                            .map(|data| message.encode_result(data))
+                            .map(|data| message.encode_result("result", data))
                             .unwrap_or_else(|e| message.encode_error(e));
                         remote.send_text(result.as_str())
                         .map_err(|e| info!("Remote send error: {:?}", e))

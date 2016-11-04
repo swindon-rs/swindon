@@ -75,20 +75,44 @@ impl Response {
                     }).boxed()
             }
             Response::WebsocketChat(init, client, router) => {
-                // TODO: issue Auth request to backend;
-                //      if authorized — negotiate;
-                //      otherwise — Response Error
+                let remote = handle.remote().clone();
+
+                let url = router.get_url("tangle.authorize_connection".into());
+                let http_cookies = req.headers.iter()
+                    .filter(|&&(ref k, _)| k == "Cookie")
+                    .map(|&(_, ref v)| v.clone())
+                    .collect::<String>();
+                let http_auth = req.headers.iter()
+                    .find(|&&(ref k, _)| k == "Authorization")
+                    .map(|&(_, ref v)| v.clone());
+                // println!("Cookies: {:?}; {:?}", http_cookies, http_auth);
 
                 let mut auth = http_client.clone();
-                let url = router.get_url("tangle.authorize_connection".into());
                 auth.request(Method::Post, url.as_str());
-                auth.done();
-                finished(Serializer {
-                    config: cfg,
-                    debug: debug,
-                    response: Response::WebsocketChat(init, client, router),
-                    handle: handle.remote().clone(),
-                }).boxed()
+                // TODO: write auth message with cookies
+                //  get request's headers (cookie & authorization)
+                //  TODO: connection with id;
+                auth.add_header("Content-Type".into(), "application/json");
+                auth.add_length(0);
+                auth.done_headers();
+                auth.done()
+                .map_err(|e| e.into())
+                .and_then(move |resp| {
+                    let msg = chat::parse_response(resp.status, resp.body);
+                    let resp = if resp.status == Status::Ok {
+                        // TODO: pass response (user id / info) to serializer
+                        Response::WebsocketChat(init, client, router)
+                    } else {
+                        Response::ErrorPage(Status::InternalServerError)
+                    };
+                    finished(Serializer {
+                        config: cfg,
+                        debug: debug,
+                        response: resp,
+                        handle: remote,
+                    })
+                })
+                .boxed()
             }
             _ => {
                 finished(Serializer {

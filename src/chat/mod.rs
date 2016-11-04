@@ -16,7 +16,7 @@ mod message;
 mod proto;
 mod router;
 
-pub use self::proto::Chat;
+pub use self::proto::{Chat, parse_response};
 pub use self::router::MessageRouter;
 
 

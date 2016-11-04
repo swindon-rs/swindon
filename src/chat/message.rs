@@ -104,8 +104,8 @@ impl Message {
     /// ```javascript
     /// ["result", {"meta": "data"}, "result obj"]
     /// ```
-    pub fn encode_result(&self, result: Json) -> String {
-        json::encode(&ResultPayload(self, "result", &result)).unwrap()
+    pub fn encode_result(&self, kind: &str, result: Json) -> String {
+        json::encode(&ResultPayload(self, kind, &result)).unwrap()
     }
 
     /// Encode backend call error for WebSocket response.
