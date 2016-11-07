@@ -16,6 +16,7 @@ mod chat;
 pub mod static_files;
 pub mod proxy;
 pub mod disk;
+pub mod empty_gif;
 
 pub use self::read::Error;
 pub use self::root::Config;
@@ -23,6 +24,7 @@ pub use self::listen::ListenSocket;
 pub use self::routing::Route;
 pub use self::handlers::Handler;
 pub use self::disk::Disk;
+pub use self::empty_gif::EmptyGif;
 
 
 pub struct Configurator {

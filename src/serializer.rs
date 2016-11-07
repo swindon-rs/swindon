@@ -12,7 +12,7 @@ use netbuf::Buf;
 use tokio_curl::Session;
 use httpbin::HttpBin;
 
-use config::{Config};
+use config::{Config, EmptyGif};
 use config::static_files::{Static, SingleFile};
 
 use response::DebugInfo;
@@ -33,7 +33,7 @@ pub struct Serializer {
 
 pub enum Response {
     ErrorPage(Status),
-    EmptyGif,
+    EmptyGif(Arc<EmptyGif>),
     HttpBin,
     Static {
         path: PathBuf,
@@ -101,8 +101,8 @@ impl<S: Io + AsRawFd + Send + 'static> GenericResponse<S> for Serializer {
             Response::ErrorPage(status) => {
                 error_page(status, writer)
             }
-            Response::EmptyGif => {
-                empty_gif::serve(writer)
+            Response::EmptyGif(cfg) => {
+                empty_gif::serve(writer, cfg)
             }
             Response::HttpBin => {
                 // TODO(tailhook) it's not very good idea to unpack the future

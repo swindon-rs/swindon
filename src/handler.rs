@@ -67,8 +67,8 @@ impl Main {
     {
         let cfg = self.config.get();
         match cfg.handlers.get(route) {
-            Some(&Handler::EmptyGif) => {
-                Response::EmptyGif
+            Some(&Handler::EmptyGif(ref cfg)) => {
+                Response::EmptyGif(cfg.clone())
             }
             Some(&Handler::HttpBin) => {
                 Response::HttpBin
