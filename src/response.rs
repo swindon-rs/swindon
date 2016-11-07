@@ -37,7 +37,8 @@ impl<S: Io> Pickler<S> {
         self.0.format_header(name, value).unwrap();
     }
     /// This adds headers specified by user in the configuration. I.e. it
-    /// pretends to be fail-safe.
+    /// pretends to be fail-safe. But *may skip invalid header* with
+    /// a warning.
     pub fn add_extra_headers(&mut self, headers: &HashMap<String, String>) {
         for (name, value) in headers {
             match self.0.add_header(name, value) {
