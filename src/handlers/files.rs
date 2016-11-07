@@ -1,6 +1,9 @@
+use std::sync::{Arc, RwLock};
 use std::path::{Path, PathBuf, Component};
-use std::sync::Arc;
+use std::collections::HashMap;
+use std::collections::hash_map::Entry::{Occupied, Vacant};
 use std::os::unix::io::AsRawFd;
+use std::hash::{Hash, Hasher, SipHasher};
 
 use futures::{BoxFuture, Future};
 use either::Either;
@@ -13,14 +16,16 @@ use tk_bufstream::IoBuf;
 use tokio_core::io::Io;
 use futures_cpupool::CpuPool;
 
+use intern::Atom;
+use config;
 use config::static_files::{Static, Mode, SingleFile};
 use {Pickler};
 
 
 lazy_static! {
-    // The amount of thread pools is important because it increases disk
-    // parallelism and the ability for the kernel to merge disk requests
-    static ref DISK_POOL: DiskPool = DiskPool::new(CpuPool::new(40));
+    static ref POOLS: RwLock<HashMap<Atom, (u64, DiskPool)>> =
+        RwLock::new(HashMap::new());
+    static ref DEFAULT: Atom = Atom::from("default");
 }
 
 
@@ -35,7 +40,7 @@ pub fn serve<S>(mut response: Pickler<S>, path: PathBuf, settings: Arc<Static>)
     } else {
         None
     };
-    DISK_POOL.open(path)
+    get_pool(&settings.pool).open(path)
     .map_err(Into::into)
     .and_then(move |file| {
         response.status(Status::Ok);
@@ -87,7 +92,7 @@ pub fn serve_file<S>(mut response: Pickler<S>, settings: Arc<SingleFile>)
     -> BoxFuture<IoBuf<S>, Error>
     where S: Io + Send + AsRawFd + 'static,
 {
-    DISK_POOL.open(settings.path.clone())
+    get_pool(&settings.pool).open(settings.path.clone())
     // TODO(tailhook) this is not very good error
     .map_err(Into::into)
     .and_then(move |file| {
@@ -104,4 +109,50 @@ pub fn serve_file<S>(mut response: Pickler<S>, settings: Arc<SingleFile>)
             Either::B(response.done())
         }
     }).boxed()
+}
+
+fn new_pool(cfg: &config::Disk) -> DiskPool {
+    DiskPool::new(CpuPool::new(cfg.num_threads))
+}
+
+fn get_pool(name: &Atom) -> DiskPool {
+    let pools = POOLS.read().expect("readlock for pools");
+    match pools.get(name) {
+        Some(&(_, ref x)) => x.clone(),
+        None => {
+            warn!("Unknown disk pool {}, using default", name);
+            pools.get(&*DEFAULT).unwrap().1.clone()
+        }
+    }
+}
+
+pub fn update_pools(config: &HashMap<Atom, config::Disk>) {
+    let mut pools = POOLS.write().expect("writelock for pools");
+    for (name, props) in config {
+        let mut hasher = SipHasher::new();
+        props.hash(&mut hasher);
+        let new_hash = hasher.finish();
+        match pools.entry(name.clone()) {
+            Occupied(mut o) => {
+                let (ref mut old_hash, ref mut old_pool) = *o.get_mut();
+                debug!("Upgrading disk pool {} to {:?}", name, props);
+                if *old_hash != new_hash {
+                    *old_pool = new_pool(props);
+                    *old_hash = new_hash;
+                }
+            }
+            Vacant(v) => {
+                v.insert((new_hash, new_pool(props)));
+            }
+        }
+    }
+    if !pools.contains_key(&*DEFAULT) {
+        let cfg = config::Disk {
+            num_threads: 40,
+        };
+        let mut hasher = SipHasher::new();
+        cfg.hash(&mut hasher);
+        let hash = hasher.finish();
+        pools.insert(DEFAULT.clone(), (hash, new_pool(&cfg)));
+    }
 }

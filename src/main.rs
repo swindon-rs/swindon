@@ -106,6 +106,7 @@ pub fn main() {
             }
         }
     }
+    handlers::files::update_pools(&cfg.get().disk_pools);
 
     let config_updater = Interval::new(Duration::new(10, 0), &lp.handle())
         .expect("interval created")
@@ -115,6 +116,7 @@ pub fn main() {
                 Ok(true) => {
                     // TODO(tailhook) update listening sockets
                     info!("Updated config");
+                    handlers::files::update_pools(&cfg.get().disk_pools);
                 }
                 Err(e) => {
                     error!("{}", e);
