@@ -1,6 +1,7 @@
 use std::path::PathBuf;
+use std::collections::HashMap;
 
-use quire::validate::{Nothing, Enum, Structure, Scalar};
+use quire::validate::{Nothing, Enum, Structure, Scalar, Mapping};
 
 use intern::Atom;
 
@@ -19,6 +20,7 @@ pub struct Static {
     pub path: PathBuf,
     pub text_charset: Option<String>,
     pub pool: Atom,
+    pub extra_headers: HashMap<String, String>,
 }
 
 #[derive(RustcDecodable, Debug, PartialEq, Eq)]
@@ -26,6 +28,7 @@ pub struct SingleFile {
     pub path: PathBuf,
     pub content_type: String,
     pub pool: Atom,
+    pub extra_headers: HashMap<String, String>,
 }
 
 pub fn validator<'x>() -> Structure<'x> {
@@ -37,6 +40,7 @@ pub fn validator<'x>() -> Structure<'x> {
     .member("path", Scalar::new())
     .member("text_charset", Scalar::new().optional())
     .member("pool", Scalar::new().default("default"))
+    .member("extra_headers", Mapping::new(Scalar::new(), Scalar::new()))
 }
 
 pub fn single_file<'x>() -> Structure<'x> {
@@ -44,4 +48,5 @@ pub fn single_file<'x>() -> Structure<'x> {
     .member("path", Scalar::new())
     .member("content_type", Scalar::new())
     .member("pool", Scalar::new().default("default"))
+    .member("extra_headers", Mapping::new(Scalar::new(), Scalar::new()))
 }

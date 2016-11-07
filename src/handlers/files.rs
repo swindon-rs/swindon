@@ -54,10 +54,13 @@ pub fn serve<S>(mut response: Pickler<S>, path: PathBuf, settings: Arc<Static>)
                 response.format_header("Content-Type", mime);
             }
         }
-        if let Some(path) = debug_path {
-            response.format_header("X-Swindon-File-Path",
-                format_args!("{:?}", path));
+        if response.debug_routing() {  // just to be explicit
+            if let Some(path) = debug_path {
+                response.format_header("X-Swindon-File-Path",
+                    format_args!("{:?}", path));
+            }
         }
+        response.add_extra_headers(&settings.extra_headers);
         if response.done_headers() {
             Either::A(response.steal_socket()
                 .and_then(|sock| file.write_into(sock))
@@ -99,8 +102,11 @@ pub fn serve_file<S>(mut response: Pickler<S>, settings: Arc<SingleFile>)
         response.status(Status::Ok);
         response.add_length(file.size());
         response.add_header("Content-Type", &settings.content_type);
-        response.format_header("X-Swindon-File-Path",
-            format_args!("{:?}", settings.path));
+        if response.debug_routing() {
+            response.format_header("X-Swindon-File-Path",
+                format_args!("{:?}", settings.path));
+        }
+        response.add_extra_headers(&settings.extra_headers);
         if response.done_headers() {
             Either::A(response.steal_socket()
                 .and_then(|sock| file.write_into(sock))

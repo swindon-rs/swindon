@@ -1,6 +1,7 @@
 use std::fmt::Display;
 use std::ops::{Deref, DerefMut};
 use std::sync::Arc;
+use std::collections::HashMap;
 
 use time;
 use futures::{Finished};
@@ -34,6 +35,21 @@ impl<S: Io> Pickler<S> {
     }
     pub fn format_header<D: Display>(&mut self, name: &str, value: D) {
         self.0.format_header(name, value).unwrap();
+    }
+    /// This adds headers specified by user in the configuration. I.e. it
+    /// pretends to be fail-safe.
+    pub fn add_extra_headers(&mut self, headers: &HashMap<String, String>) {
+        for (name, value) in headers {
+            match self.0.add_header(name, value) {
+                Ok(()) => {}
+                Err(e) => {
+                    warn!("Can't add header: {:?}:{:?}, reason {}. \
+                        Almost always this means that something wrong with \
+                        configuration of extra headers.",
+                        name, value, e);
+                }
+            }
+        }
     }
     pub fn steal_socket(self) -> Flushed<S> {
         let Pickler(wr, _cfg, _debug) = self;

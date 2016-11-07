@@ -38,10 +38,14 @@ handlers:
     mode: relative_to_domain_root
     path: /work/public
     text-charset: utf-8
+    extra-headers:
+      X-Swindon-Hello: Greetings from tailhook!
 
   websocket-echo-html: !SingleFile
     path: /work/public/websocket.html
     content-type: "text/html; charset=utf-8"
+    extra-headers:
+      X-Swindon-Hello: Greetings from tailhook!
 
   websocket-echo: !WebsocketEcho
 
