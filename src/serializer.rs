@@ -110,6 +110,7 @@ impl Response {
                         debug: debug,
                         response: resp,
                         handle: remote,
+                        request: None,
                     })
                 })
                 .boxed()
