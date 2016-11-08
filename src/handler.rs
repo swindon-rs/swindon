@@ -3,7 +3,7 @@ use tokio_service::Service;
 use tokio_core::reactor::Handle;
 use minihttp::request::Request;
 use minihttp::{Error, Status};
-use tokio_curl::Session;
+use minihttp::client::HttpClient;
 
 use config::ConfigCell;
 use response::DebugInfo;
@@ -12,13 +12,14 @@ use serializer::{Response, Serializer};
 use config::Handler;
 use handlers::{files, proxy};
 use intern::Atom;
+use chat::MessageRouter;
 use websocket;
 
 #[derive(Clone)]
 pub struct Main {
     pub config: ConfigCell,
     pub handle: Handle,
-    pub curl_session: Session,
+    pub http_client: HttpClient,
 }
 
 impl Service for Main {
@@ -36,7 +37,7 @@ impl Service for Main {
 
         let response = self.prepare_response(&req, &mut debug);
         response.serve(req, cfg.clone(), debug,
-                       &self.handle, &self.curl_session)
+                       &self.handle, &self.http_client)
     }
 
     fn poll_ready(&self) -> Async<()> {
@@ -114,7 +115,12 @@ impl Main {
             Some(&Handler::SwindonChat(ref chat)) => {
                 match websocket::prepare(&req) {
                     Ok(init) => {
-                        Response::WebsocketChat(init)
+                        use super::chat::ChatInit::Prepare;
+                        let router = MessageRouter(chat.clone(), cfg.clone());
+                        // TODO: make connection object;
+                        //  wrap all in some structure
+                        //  (client + router + connection)
+                        Response::WebsocketChat(Prepare(init, router))
                     }
                     Err(_) => {
                         // internal redirect

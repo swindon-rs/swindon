@@ -22,6 +22,12 @@ pub struct Init {
     accept: [u8; 20],
 }
 
+impl Init {
+    pub fn base64(&self) -> Base64 {
+        Base64(&self.accept[..])
+    }
+}
+
 pub fn prepare(req: &Request) -> Result<Init, Status> {
     let mut upgrade = false;
     let mut connection = false;
@@ -85,7 +91,6 @@ pub fn negotiate<S>(mut response: Pickler<S>, init: Init, remote: Remote,
         remote.spawn(move |handle| {
             let dispatcher = match kind {
                 Kind::Echo => echo::Echo(handle.clone()),
-                Kind::SwindonChat => echo::Echo(handle.clone()),
             };
             WebsockProto::new(socket, dispatcher, handle)
             .map_err(|e| info!("Websocket error: {}", e))

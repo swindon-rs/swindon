@@ -32,6 +32,7 @@ mod serializer;
 mod default_error_page;
 mod response;
 mod websocket;
+mod chat;
 
 // Utils
 mod short_circuit;
@@ -45,8 +46,9 @@ use futures::stream::Stream;
 use argparse::{ArgumentParser, Parse, StoreTrue, Print};
 use tokio_core::reactor::Core;
 use tokio_core::reactor::Interval;
+use minihttp::client::HttpClient;
 
-use config::ListenSocket;
+use config::{ListenSocket, Handler};
 use handler::Main;
 pub use response::Pickler;
 
@@ -93,7 +95,7 @@ pub fn main() {
     let handler = Main {
         config: cfg.clone(),
         handle: lp.handle(),
-        curl_session: tokio_curl::Session::new(lp.handle()),
+        http_client: HttpClient::new(lp.handle()),
     };
     // TODO(tailhook) do something when config updates
     for sock in &cfg.get().listen {
@@ -104,6 +106,24 @@ pub fn main() {
                 }
                 minihttp::serve(&lp.handle(), addr, handler.clone());
             }
+        }
+    }
+    for (name, h) in cfg.get().handlers.iter() {
+        match h {
+            &Handler::SwindonChat(ref chat) => {
+                match chat.listen {
+                    ListenSocket::Tcp(addr) => {
+                        if verbose {
+                            println!("Listening {} at {}", name, addr);
+                            // TODO: start Chat API handler;
+                            //  bound to its own sub-config;
+                            // handler can hold connection storage ref;
+                            //  and use it to get connection
+                        }
+                    }
+                }
+            }
+            _ => {}
         }
     }
     handlers::files::update_pools(&cfg.get().disk_pools);

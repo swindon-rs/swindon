@@ -21,3 +21,8 @@ cleanup:
   when: always
   script:
   - vagga _clean --unused --at-least 1day
+
+tests:
+  stage: test
+  script:
+  - vagga ci-test
