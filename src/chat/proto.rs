@@ -13,7 +13,7 @@ use super::message::{Message, MessageError};
 use super::router::MessageRouter;
 
 
-pub struct Chat(pub Handle, pub HttpClient, pub MessageRouter);
+pub struct Chat(pub Handle, pub HttpClient, pub MessageRouter, pub Json);
 
 impl Dispatcher for Chat {
 

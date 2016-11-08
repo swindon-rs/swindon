@@ -371,7 +371,7 @@ mod test {
         let result = Json::from_str("{\"result\": null}").unwrap();
         let message = default();
 
-        let result = message.encode_result(result);
+        let result = message.encode_result("result", result);
         assert_eq!(result, "[\"result\",{\"request_id\":\"req123\"},\
             {\"result\":null}]");
     }

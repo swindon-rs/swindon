@@ -42,7 +42,7 @@ pub enum Response {
     },
     SingleFile(Arc<SingleFile>),
     WebsocketEcho(websocket::Init),
-    WebsocketChat(websocket::Init, HttpClient, chat::MessageRouter),
+    WebsocketChat(chat::ChatInit),
     Proxy(ProxyCall),
 }
 
@@ -52,8 +52,10 @@ impl Response {
                  http_client: &HttpClient)
         -> BoxFuture<Serializer, Error>
     {
+        use self::Response::*;
+        use super::chat::ChatInit::*;
         match self {
-            Response::Proxy(ProxyCall::Prepare{ hostport, settings}) => {
+            Proxy(ProxyCall::Prepare{ hostport, settings}) => {
                 let handle = handle.remote().clone();
 
                 let mut client = http_client.clone();
@@ -74,8 +76,9 @@ impl Response {
                         })
                     }).boxed()
             }
-            Response::WebsocketChat(init, client, router) => {
+            WebsocketChat(Prepare(init, router)) => {
                 let remote = handle.remote().clone();
+                let client = http_client.clone();
 
                 let url = router.get_url("tangle.authorize_connection".into());
                 let http_cookies = req.headers.iter()
@@ -98,10 +101,16 @@ impl Response {
                 auth.done()
                 .map_err(|e| e.into())
                 .and_then(move |resp| {
-                    let msg = chat::parse_response(resp.status, resp.body);
                     let resp = if resp.status == Status::Ok {
-                        // TODO: pass response (user id / info) to serializer
-                        Response::WebsocketChat(init, client, router)
+                        match chat::parse_response(resp.status, resp.body) {
+                            Ok(userinfo) => {
+                                WebsocketChat(
+                                    Ready(init, client, router, userinfo))
+                            }
+                            Err(err) => {
+                                WebsocketChat(AuthError(init, err))
+                            }
+                        }
                     } else {
                         Response::ErrorPage(Status::InternalServerError)
                     };
@@ -131,6 +140,7 @@ impl Response {
 impl<S: Io + AsRawFd + Send + 'static> GenericResponse<S> for Serializer {
     type Future = BoxFuture<IoBuf<S>, Error>;
     fn into_serializer(mut self, writer: ResponseWriter<S>) -> Self::Future {
+        use super::chat::ChatInit::*;
         let writer = Pickler(writer, self.config, self.debug);
         match self.response {
             Response::ErrorPage(status) => {
@@ -160,8 +170,12 @@ impl<S: Io + AsRawFd + Send + 'static> GenericResponse<S> for Serializer {
                 websocket::negotiate(writer, init, self.handle,
                     websocket::Kind::Echo)
             }
-            Response::WebsocketChat(init, client, router) => {
-                chat::negotiate(writer, init, self.handle, client, router)
+            Response::WebsocketChat(Ready(init, client, router, userinfo)) => {
+                chat::negotiate(writer, init, self.handle, client,
+                    router, userinfo)
+            }
+            Response::WebsocketChat(_) => {
+                error_page(Status::BadRequest, writer)
             }
             Response::Proxy(ProxyCall::Ready { response }) => {
                 proxy::serialize(writer, response)

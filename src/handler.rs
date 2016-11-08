@@ -115,9 +115,12 @@ impl Main {
             Some(&Handler::SwindonChat(ref chat)) => {
                 match websocket::prepare(&req) {
                     Ok(init) => {
-                        let client = self.http_client.clone();
+                        use super::chat::ChatInit::Prepare;
                         let router = MessageRouter(chat.clone(), cfg.clone());
-                        Response::WebsocketChat(init, client, router)
+                        // TODO: make connection object;
+                        //  wrap all in some structure
+                        //  (client + router + connection)
+                        Response::WebsocketChat(Prepare(init, router))
                     }
                     Err(_) => {
                         // internal redirect

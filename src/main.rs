@@ -115,6 +115,10 @@ pub fn main() {
                     ListenSocket::Tcp(addr) => {
                         if verbose {
                             println!("Listening {} at {}", name, addr);
+                            // TODO: start Chat API handler;
+                            //  bound to its own sub-config;
+                            // handler can hold connection storage ref;
+                            //  and use it to get connection
                         }
                     }
                 }
