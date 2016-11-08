@@ -21,7 +21,7 @@ mime = "0.2.2"
 mime_guess = "1.8.0"
 tk-sendfile = "0.3.0"
 tk-bufstream = "0.1.0"
-minihttp = { git = "https://github.com/popravich/minihttp", rev="a7ebc2b" }
+minihttp = { git = "https://github.com/popravich/minihttp", rev="b44c59e" }
 netbuf = "0.3.6"
 sha1 = "0.2.0"
 curl = "0.3.8"
@@ -33,3 +33,4 @@ httpbin = { git="https://github.com/tailhook/httpbin-rs", rev="ca39b37" }
 [replace]
 "tokio-core:0.1.0" = { git="https://github.com/tokio-rs/tokio-core", rev="62514fc" }
 "tokio-service:0.1.0" = { git="https://github.com/tokio-rs/tokio-service" }
+"minihttp:0.1.0" = { git = "https://github.com/popravich/minihttp", rev="b44c59e" }
