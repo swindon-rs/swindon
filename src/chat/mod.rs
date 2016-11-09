@@ -20,7 +20,7 @@ mod router;
 
 pub use self::proto::{Chat, parse_response};
 pub use self::router::MessageRouter;
-pub use self::message::MessageError;
+pub use self::message::{Message, Meta, Args, Kwargs, MessageError};
 
 
 pub enum ChatInit {
@@ -42,9 +42,10 @@ pub fn negotiate<S>(mut response: Pickler<S>, init: Init, remote: Remote,
     response.steal_socket()
     .and_then(move |mut socket: IoBuf<S>| {
         remote.spawn(move |handle| {
-            send_hello(&mut socket.out_buf, &userinfo);
+            send_hello(&mut socket.out_buf,
+                Message::Hello(userinfo.clone()).encode().as_str());
 
-            let dispatcher = Chat(
+            let dispatcher = Chat::new(
                 handle.clone(), http_client, router, userinfo);
             WebsockProto::new(socket, dispatcher, handle)
             .map_err(|e| info!("Websocket error: {}", e))
@@ -56,8 +57,6 @@ pub fn negotiate<S>(mut response: Pickler<S>, init: Init, remote: Remote,
     .boxed()
 }
 
-fn send_hello(buf: &mut Buf, data: &Json) {
-    let mut replier = ImmediateReplier::new(buf);
-    // XXX: encode as tangle response
-    replier.text(data.to_string().as_str());
+fn send_hello(buf: &mut Buf, data: &str) {
+    ImmediateReplier::new(buf).text(data);
 }

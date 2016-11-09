@@ -11,6 +11,7 @@ pub use self::dispatcher::{Dispatcher, ImmediateReplier};
 pub use self::dispatcher::{RemoteReplier, OutFrame};
 pub use self::echo::Echo;
 pub use self::proto::{Frame, Error, WebsockProto};
+pub use self::base64::Base64;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum Kind {

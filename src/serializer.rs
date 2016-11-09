@@ -11,6 +11,7 @@ use minihttp::{Error, GenericResponse, ResponseWriter, Status, Request};
 use minihttp::enums::Method;
 use minihttp::client::HttpClient;
 use httpbin::HttpBin;
+use rustc_serialize::json::Json;
 
 use config::{Config, EmptyGif};
 use config::static_files::{Static, SingleFile};
@@ -87,8 +88,17 @@ impl Response {
                     .collect::<String>();
                 let http_auth = req.headers.iter()
                     .find(|&&(ref k, _)| k == "Authorization")
-                    .map(|&(_, ref v)| v.clone());
-                // println!("Cookies: {:?}; {:?}", http_cookies, http_auth);
+                    .map(|&(_, ref v)| v.clone())
+                    .unwrap_or("".to_string());
+
+                let mut data = chat::Kwargs::new();
+                // TODO: parse cookie string to hashmap;
+                data.insert("http_cookie".into(),
+                    Json::String(http_cookies));
+                data.insert("http_authorization".into(),
+                    Json::String(http_auth));
+                let payload = chat::Message::Auth(data)
+                    .encode_with(&chat::Meta::new());
 
                 let mut auth = http_client.clone();
                 auth.request(Method::Post, url.as_str());
@@ -96,8 +106,9 @@ impl Response {
                 //  get request's headers (cookie & authorization)
                 //  TODO: connection with id;
                 auth.add_header("Content-Type".into(), "application/json");
-                auth.add_length(0);
+                auth.add_length(payload.as_bytes().len() as u64);
                 auth.done_headers();
+                auth.write_body(payload.as_bytes());
                 auth.done()
                 .map_err(|e| e.into())
                 .and_then(move |resp| {

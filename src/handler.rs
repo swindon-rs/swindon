@@ -117,9 +117,6 @@ impl Main {
                     Ok(init) => {
                         use super::chat::ChatInit::Prepare;
                         let router = MessageRouter(chat.clone(), cfg.clone());
-                        // TODO: make connection object;
-                        //  wrap all in some structure
-                        //  (client + router + connection)
                         Response::WebsocketChat(Prepare(init, router))
                     }
                     Err(_) => {

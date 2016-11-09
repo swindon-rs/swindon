@@ -1,6 +1,6 @@
 //! Chat protocol.
 use std::str;
-use rustc_serialize::json::Json;
+use rustc_serialize::json::{self, Json};
 
 use futures::Future;
 use tokio_core::reactor::{Handle};
@@ -9,11 +9,51 @@ use minihttp::client::HttpClient;
 use netbuf::Buf;
 
 use websocket::{Dispatcher, Frame, ImmediateReplier, RemoteReplier, Error};
-use super::message::{Message, MessageError};
+use websocket::Base64;
+use super::message::{self, Message, MessageError};
 use super::router::MessageRouter;
 
 
-pub struct Chat(pub Handle, pub HttpClient, pub MessageRouter, pub Json);
+pub struct Chat {
+    handle: Handle,
+    client: HttpClient,
+    router: MessageRouter,
+    userinfo: Json,
+    auth: String,
+}
+
+impl Chat {
+    pub fn new(handle: Handle, client: HttpClient,
+        router: MessageRouter, userinfo: Json)
+        -> Chat
+    {
+        // TODO: userinfo is not needed here any more, only 'user_id'
+        let auth = Chat::encode_userinfo(&userinfo);
+        Chat {
+            handle: handle,
+            client: client,
+            router: router,
+            userinfo: userinfo,
+            auth: auth,
+        }
+    }
+
+    fn encode_userinfo(data: &Json) -> String {
+        match data {
+            &Json::Object(ref o) => {
+                match o.get("user_id") {
+                    Some(&Json::String(ref uid)) => {
+                        let auth = format!("{{\"user_id\":{}}}",
+                            json::encode(uid).unwrap());
+                        format!("Tangle {}", Base64(auth.as_bytes()))
+                    }
+                    _ => unreachable!(),
+                }
+            }
+            _ => unreachable!(),
+        }
+    }
+}
 
 impl Dispatcher for Chat {
 
@@ -26,18 +66,16 @@ impl Dispatcher for Chat {
             _ => return Ok(()),
         };
 
-        match Message::decode(data) {
-            Ok(message) => {
+        match message::decode_message(data) {
+            Ok((mut meta, msg)) => {
                 let remote = remote.clone();
 
-                let mut client = self.1.clone();
-                // TODO: make call to correct backend;
-                //      find proper route;
-                //      resolve hostname to IP
-                let url = self.2.get_url(message.method());
-                let payload = message.payload();
+                let mut client = self.client.clone();
+                let url = self.router.get_url(msg.method());
+                let payload = msg.encode_with(&meta);
                 client.request(Method::Post, url.as_str());
                 client.add_header("Content-Type".into(), "application/json");
+                client.add_header("Authorization".into(), self.auth.as_str());
                 client.add_length(payload.as_bytes().len() as u64);
                 // TODO: add Authorization header (with encoded user info);
                 client.done_headers();
@@ -45,18 +83,24 @@ impl Dispatcher for Chat {
                 let call = client.done()
                     .map_err(|e| info!("Http Error: {:?}", e));
 
-                self.0.spawn(
+                self.handle.spawn(
                     call.and_then(move |resp| {
                         let result = parse_response(
                             resp.status, resp.body)
-                            .map(|data| message.encode_result("result", data))
-                            .unwrap_or_else(|e| message.encode_error(e));
+                            .map(|data| Message::Result(data))
+                            .unwrap_or_else(|e| {
+                                let e = Message::Error(e);
+                                e.update_meta(&mut meta);
+                                e
+                            })
+                            .encode_with(&meta);
                         remote.send_text(result.as_str())
                         .map_err(|e| info!("Remote send error: {:?}", e))
                     })
                 );
             }
             Err(error) => {
+                // TODO: make Error encodable
                 let msg = Json::String(format!("{:?}", error));
                 let msg = format!(
                     "[\"error\",{{\"error_kind\":\
