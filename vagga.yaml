@@ -20,19 +20,6 @@ containers:
     environ:
       HOME: /work
 
-  cargo-registry:
-    setup:
-    - !Container ubuntu
-    - !EnsureDir /cargo
-    - !Env
-      CARGO_HOME: /cargo
-    - !Depends Cargo.toml
-    - !Sh |
-        cargo build
-    # auto-clean: true
-    data-dirs:
-    - /cargo
-
   sphinx:
     setup:
     - !Alpine v3.4
@@ -85,7 +72,7 @@ commands:
     environ:
       CARGO_HOME: /cargo
     volumes:
-      /cargo: !Snapshot { container: cargo-registry, size: 1G }
+      /cargo: !Persistent { name: cargo }
     run: [cargo, test]
 
   run: &run !Command
@@ -131,10 +118,9 @@ commands:
     environ:
       CARGO_HOME: /cargo
     volumes:
-      /cargo: !Snapshot { container: cargo-registry, size: 1G }
+      /cargo: !Persistent { name: cargo }
     run: |
-      cargo doc --no-deps \
-        -p swindon -p minihttp
+      cargo doc --no-deps
   _copy-doc: !Command
     container: ubuntu
     description: copy rust docs into sphinx build dir
