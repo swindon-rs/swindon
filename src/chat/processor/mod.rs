@@ -10,7 +10,6 @@
 
 use std::time::Instant;
 use std::sync::Arc;
-use std::collections::HashMap;
 
 use rustc_serialize::json::Json;
 use tokio_core::channel::channel as tokio_channel;
@@ -22,6 +21,7 @@ use chat::Cid;
 mod main;
 mod pool;
 mod public;
+mod session;
 
 pub use self::public::Processor;
 

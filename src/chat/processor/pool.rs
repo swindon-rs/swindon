@@ -1,16 +1,13 @@
 use std::sync::Arc;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 use rustc_serialize::json::Json;
 
 use intern::Atom;
 use config;
 use chat::Cid;
+use super::session::Session;
 
-pub struct Session {
-    connections: HashSet<Cid>,
-    metadata: Arc<Json>,
-}
 
 pub struct Pool {
     name: Atom,
@@ -30,10 +27,7 @@ impl Pool {
     pub fn add_connection(&mut self,
         user_id: Atom, conn_id: Cid, metadata: Arc<Json>)
     {
-        let entry = self.sessions.entry(user_id).or_insert_with(|| Session {
-                connections: HashSet::new(),
-                metadata: metadata.clone(),
-        });
+        let entry = self.sessions.entry(user_id).or_insert_with(Session::new);
         entry.connections.insert(conn_id);
         // TODO(tailhook) should we merge metadata
         entry.metadata = metadata;
