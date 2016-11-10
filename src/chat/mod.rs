@@ -17,6 +17,7 @@ pub mod handler;
 mod message;
 mod proto;
 mod router;
+pub mod processor;
 
 pub use self::proto::{Chat, parse_userinfo};
 pub use self::router::MessageRouter;

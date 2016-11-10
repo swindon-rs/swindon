@@ -26,6 +26,7 @@ pub use self::routing::Route;
 pub use self::handlers::Handler;
 pub use self::disk::Disk;
 pub use self::empty_gif::EmptyGif;
+pub use self::session_pools::SessionPool;
 
 
 pub struct Configurator {

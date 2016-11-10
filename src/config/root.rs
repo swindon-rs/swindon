@@ -1,5 +1,6 @@
 //! Root config validator
 use std::collections::HashMap;
+use std::sync::Arc;
 
 use quire::validate::{Structure, Sequence, Mapping, Scalar};
 
@@ -7,7 +8,7 @@ use intern::Atom;
 use super::listen::{self, ListenSocket};
 use super::routing::{self, Routing};
 use super::handlers::{self, Handler};
-use super::session_pools::{self, Session};
+use super::session_pools::{self, SessionPool};
 use super::http_destinations::{self, Destination};
 use super::disk::{self, Disk};
 
@@ -16,7 +17,7 @@ pub struct Config {
     pub listen: Vec<ListenSocket>,
     pub routing: Routing,
     pub handlers: HashMap<Atom, Handler>,
-    pub session_pools: HashMap<Atom, Session>,
+    pub session_pools: HashMap<Atom, Arc<SessionPool>>,
     pub http_destinations: HashMap<Atom, Destination>,
     pub debug_routing: bool,
     pub server_name: Option<String>,

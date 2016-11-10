@@ -12,7 +12,7 @@ use serializer::{Response, Serializer};
 use config::Handler;
 use handlers::{files, proxy};
 use intern::Atom;
-use chat::MessageRouter;
+use chat::{self, MessageRouter};
 use websocket;
 
 #[derive(Clone)]
@@ -20,6 +20,7 @@ pub struct Main {
     pub config: ConfigCell,
     pub handle: Handle,
     pub http_client: HttpClient,
+    pub chat_processor: chat::processor::Processor,
 }
 
 impl Service for Main {
