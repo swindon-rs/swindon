@@ -85,12 +85,7 @@ impl Dispatcher for Chat {
                 );
             }
             Err(error) => {
-                // TODO: make Error encodable
-                let msg = Json::String(format!("{:?}", error));
-                let msg = format!(
-                    "[\"error\",{{\"error_kind\":\
-                    \"validation_error\"}}, {}]", msg);
-                replier.text(msg.as_str());
+                replier.text(Message::Error(error).encode().as_str());
             }
         }
         Ok(())

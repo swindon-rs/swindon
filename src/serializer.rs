@@ -97,8 +97,7 @@ impl Response {
                     Json::String(http_cookies));
                 data.insert("http_authorization".into(),
                     Json::String(http_auth));
-                let payload = chat::Message::Auth(data)
-                    .encode_with(&chat::Meta::new());
+                let payload = chat::Message::Auth(data).encode();
 
                 let mut auth = http_client.clone();
                 auth.request(Method::Post, url.as_str());
@@ -118,8 +117,8 @@ impl Response {
                                 WebsocketChat(
                                     Ready(init, client, router, userinfo))
                             }
-                            err => {
-                                WebsocketChat(AuthError(init, err))
+                            other => {
+                                WebsocketChat(AuthError(init, other))
                             }
                         }
                     } else {

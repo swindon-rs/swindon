@@ -6,8 +6,7 @@ use tokio_core::reactor::Remote;
 use minihttp::{Error};
 use minihttp::enums::Status;
 use minihttp::client::HttpClient;
-use tk_bufstream::{IoBuf, Buf};
-use rustc_serialize::json::Json;
+use tk_bufstream::IoBuf;
 
 use super::websocket::WebsockProto;
 use super::websocket::Init;

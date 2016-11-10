@@ -95,8 +95,6 @@ pub fn decode_message(s: &str)
 {
     // TODO: replace MessageError here with ProtocolError
     //      ProtocolError can't be sent back.
-    //  make MessageError part of Message enum;
-    //  make Message -> enum;
     use self::ValidationError::*;
     let invalid_method = |m: &str| {
         m.starts_with("tangle.") | m.find("/").is_some()
