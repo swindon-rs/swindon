@@ -13,6 +13,7 @@ use super::websocket::Init;
 use super::websocket::ImmediateReplier;
 use {Pickler};
 
+pub mod handler;
 mod message;
 mod proto;
 mod router;

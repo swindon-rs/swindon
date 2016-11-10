@@ -50,6 +50,7 @@ use minihttp::client::HttpClient;
 
 use config::{ListenSocket, Handler};
 use handler::Main;
+use chat::handler::ChatAPI;
 pub use response::Pickler;
 
 
@@ -108,22 +109,21 @@ pub fn main() {
             }
         }
     }
-    for (name, h) in cfg.get().handlers.iter() {
-        match h {
-            &Handler::SwindonChat(ref chat) => {
-                match chat.listen {
-                    ListenSocket::Tcp(addr) => {
-                        if verbose {
-                            println!("Listening {} at {}", name, addr);
-                            // TODO: start Chat API handler;
-                            //  bound to its own sub-config;
-                            // handler can hold connection storage ref;
-                            //  and use it to get connection
-                        }
+    let chat_handler = ChatAPI;
+    let root = cfg.get();
+    for (name, h) in root.handlers.iter() {
+        if let &Handler::SwindonChat(ref chat) = h {
+            let sess = root.session_pools
+                .get(&chat.session_pool).unwrap();
+            match sess.listen {
+                ListenSocket::Tcp(addr) => {
+                    if verbose {
+                        println!("Listening {} at {}", name, addr);
                     }
+                    minihttp::serve(&lp.handle(), addr,
+                        chat_handler.clone());
                 }
             }
-            _ => {}
         }
     }
     handlers::files::update_pools(&cfg.get().disk_pools);
