@@ -7,24 +7,24 @@
 //! 3. No time management here, only accept time value from events (*)
 //!
 //! This allows much better unit tests
+
 use std::time::Instant;
-use std::thread::spawn;
 use std::sync::Arc;
-use std::sync::mpsc::{channel, Sender};
 use std::collections::HashMap;
 
+use rustc_serialize::json::Json;
 use tokio_core::channel::channel as tokio_channel;
 
 use config;
 use intern::Atom;
+use chat::Cid;
 
 mod main;
 mod pool;
+mod public;
 
-#[derive(Clone)]
-pub struct Processor {
-    queue: Sender<Event>,
-}
+pub use self::public::Processor;
+
 
 pub struct Event {
     pool: Atom,
@@ -40,28 +40,10 @@ pub enum Action {
     EnsureSessionPool(Arc<config::SessionPool>),
     StopSessionPool,
 
-    // Connection actions
-}
-
-pub fn start() -> Processor {
-    let (tx, rx) = channel();
-    spawn(move || {
-        main::run(rx)
-    });
-    return Processor {
-        queue: tx,
-    }
-}
-
-pub fn update_pools(pro: &Processor,
-    pools: &HashMap<Atom, Arc<config::SessionPool>>)
-{
-    let tx = &pro.queue;
-    for (name, props) in pools {
-        tx.send(Event {
-            pool: name.clone(),
-            timestamp: Instant::now(),
-            action: Action::EnsureSessionPool(props.clone()),
-        }).map_err(|e| panic!("Processor loop send error: {}", e));
-    }
+    // Connection management
+    NewConnection {
+        user_id: Atom,
+        conn_id: Cid,
+        metadata: Arc<Json>
+    },
 }

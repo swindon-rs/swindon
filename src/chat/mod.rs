@@ -17,12 +17,16 @@ pub mod handler;
 mod message;
 mod proto;
 mod router;
-pub mod processor;
+mod processor;
 
+pub use self::processor::Processor;
 pub use self::proto::{Chat, parse_userinfo};
 pub use self::router::MessageRouter;
 pub use self::message::{Message, Meta, Args, Kwargs, MessageError};
 
+/// Internal connection id
+#[derive(Debug, Hash, PartialEq, Eq)]
+pub struct Cid(u64);
 
 pub enum ChatInit {
     Prepare(Init, MessageRouter),
@@ -57,4 +61,14 @@ pub fn negotiate<S>(mut response: Pickler<S>, init: Init, remote: Remote,
     })
     .map_err(|e: io::Error| e.into())
     .boxed()
+}
+
+impl Cid {
+    #[cfg(target_pointer_width = "64")]
+    pub fn new() -> Cid {
+        // Until atomic u64 really works
+        use std::sync::atomic::{AtomicUsize, ATOMIC_USIZE_INIT, Ordering};
+        static COUNTER: AtomicUsize = ATOMIC_USIZE_INIT;
+        Cid(COUNTER.fetch_add(1, Ordering::Relaxed) as u64)
+    }
 }

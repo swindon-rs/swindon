@@ -92,7 +92,7 @@ pub fn main() {
         exit(0);
     }
 
-    let chat_pro = chat::processor::start();
+    let chat_pro = chat::Processor::new();
     let mut lp = Core::new().unwrap();
     let handler = Main {
         config: cfg.clone(),
@@ -129,7 +129,7 @@ pub fn main() {
         }
     }
     handlers::files::update_pools(&cfg.get().disk_pools);
-    chat::processor::update_pools(&chat_pro, &cfg.get().session_pools);
+    chat_pro.update_pools(&cfg.get().session_pools);
 
     let config_updater = Interval::new(Duration::new(10, 0), &lp.handle())
         .expect("interval created")
@@ -140,8 +140,7 @@ pub fn main() {
                     // TODO(tailhook) update listening sockets
                     info!("Updated config");
                     handlers::files::update_pools(&cfg.get().disk_pools);
-                    chat::processor::update_pools(&chat_pro,
-                        &cfg.get().session_pools);
+                    chat_pro.update_pools(&cfg.get().session_pools);
                 }
                 Err(e) => {
                     error!("{}", e);
