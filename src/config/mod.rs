@@ -125,7 +125,7 @@ pub mod test {
 
               example-chat: !SwindonChat
 
-                listen: 127.0.0.1:2007
+                session-pool: example-session
                 http-route: example-chat-http
 
                 message-handlers:
@@ -156,6 +156,10 @@ pub mod test {
                 mode: relative_to_route
                 path: /work/src
                 text-charset: utf-8
+
+            session-pools:
+              example-session:
+                listen: 127.0.0.1:2007
 
             http-destinations:
               superman:
