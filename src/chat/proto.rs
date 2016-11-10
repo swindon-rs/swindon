@@ -18,39 +18,24 @@ pub struct Chat {
     handle: Handle,
     client: HttpClient,
     router: MessageRouter,
-    userinfo: Json,
+    user_id: String,
     auth: String,
 }
 
 impl Chat {
     pub fn new(handle: Handle, client: HttpClient,
-        router: MessageRouter, userinfo: Json)
+        router: MessageRouter, user_id: String)
         -> Chat
     {
-        // TODO: userinfo is not needed here any more, only 'user_id'
-        let auth = Chat::encode_userinfo(&userinfo);
+        let auth = format!("{{\"user_id\":{}}}",
+            json::encode(&user_id).unwrap());
+        let auth = format!("Tangle {}", Base64(auth.as_bytes()));
         Chat {
             handle: handle,
             client: client,
             router: router,
-            userinfo: userinfo,
+            user_id: user_id,
             auth: auth,
-        }
-    }
-
-    fn encode_userinfo(data: &Json) -> String {
-        match data {
-            &Json::Object(ref o) => {
-                match o.get("user_id") {
-                    Some(&Json::String(ref uid)) => {
-                        let auth = format!("{{\"user_id\":{}}}",
-                            json::encode(uid).unwrap());
-                        format!("Tangle {}", Base64(auth.as_bytes()))
-                    }
-                    _ => unreachable!(),
-                }
-            }
-            _ => unreachable!(),
         }
     }
 }
@@ -122,9 +107,8 @@ pub fn parse_response(status: Status, body: Option<Buf>)
         Status::Ok => {
             let result = if let Some(ref body) = body {
                 str::from_utf8(&body[..])
-                .map_err(|e| MessageError::Utf8Error(e))
-                .and_then(|s| Json::from_str(s)
-                    .map_err(|e| MessageError::JsonError(e)))
+                .map_err(|e| e.into())
+                .and_then(|s| Json::from_str(s).map_err(|e| e.into()))
             } else {
                 Ok(Json::Null)
             };
@@ -142,6 +126,23 @@ pub fn parse_response(status: Status, body: Option<Buf>)
             };
             Err(MessageError::HttpError(s, info))
         }
+    }
+}
+
+
+/// Parse userinfo received on Auth call;
+pub fn parse_userinfo(status: Status, body: Option<Buf>) -> Message {
+    use super::message::ValidationError::*;
+    use super::message::MessageError::*;
+    match parse_response(status, body) {
+        Ok(Json::Object(data)) => {
+            match data.get("user_id".into()) {
+                Some(&Json::String(_)) => Message::Hello(Json::Object(data)),
+                _ => Message::Error(ValidationError(InvalidUserId)),
+            }
+        }
+        Ok(_) => Message::Error(ValidationError(ObjectExpected)),
+        Err(err) => Message::Error(err),
     }
 }
 

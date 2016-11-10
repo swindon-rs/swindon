@@ -113,12 +113,12 @@ impl Response {
                 .map_err(|e| e.into())
                 .and_then(move |resp| {
                     let resp = if resp.status == Status::Ok {
-                        match chat::parse_response(resp.status, resp.body) {
-                            Ok(userinfo) => {
+                        match chat::parse_userinfo(resp.status, resp.body) {
+                            userinfo @ chat::Message::Hello(_) => {
                                 WebsocketChat(
                                     Ready(init, client, router, userinfo))
                             }
-                            Err(err) => {
+                            err => {
                                 WebsocketChat(AuthError(init, err))
                             }
                         }

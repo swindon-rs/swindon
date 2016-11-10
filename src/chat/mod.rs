@@ -18,19 +18,19 @@ mod message;
 mod proto;
 mod router;
 
-pub use self::proto::{Chat, parse_response};
+pub use self::proto::{Chat, parse_userinfo};
 pub use self::router::MessageRouter;
 pub use self::message::{Message, Meta, Args, Kwargs, MessageError};
 
 
 pub enum ChatInit {
     Prepare(Init, MessageRouter),
-    AuthError(Init, MessageError),
-    Ready(Init, HttpClient, MessageRouter, Json),
+    AuthError(Init, Message),
+    Ready(Init, HttpClient, MessageRouter, Message),
 }
 
 pub fn negotiate<S>(mut response: Pickler<S>, init: Init, remote: Remote,
-    http_client: HttpClient, router: MessageRouter, userinfo: Json)
+    http_client: HttpClient, router: MessageRouter, userinfo: Message)
     -> BoxFuture<IoBuf<S>, Error>
     where S: Io + Send + 'static
 {
@@ -42,11 +42,12 @@ pub fn negotiate<S>(mut response: Pickler<S>, init: Init, remote: Remote,
     response.steal_socket()
     .and_then(move |mut socket: IoBuf<S>| {
         remote.spawn(move |handle| {
-            send_hello(&mut socket.out_buf,
-                Message::Hello(userinfo.clone()).encode().as_str());
+            ImmediateReplier::new(&mut socket.out_buf)
+                .text(userinfo.encode().as_str());
 
+            let user_id = userinfo.get_user_id().unwrap().clone();
             let dispatcher = Chat::new(
-                handle.clone(), http_client, router, userinfo);
+                handle.clone(), http_client, router, user_id);
             WebsockProto::new(socket, dispatcher, handle)
             .map_err(|e| info!("Websocket error: {}", e))
         });
@@ -55,8 +56,4 @@ pub fn negotiate<S>(mut response: Pickler<S>, init: Init, remote: Remote,
     })
     .map_err(|e: io::Error| e.into())
     .boxed()
-}
-
-fn send_hello(buf: &mut Buf, data: &str) {
-    ImmediateReplier::new(buf).text(data);
 }

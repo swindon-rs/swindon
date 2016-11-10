@@ -77,6 +77,16 @@ impl Message {
             _ => {}
         }
     }
+
+    /// Return value of user_id field for Hello message type;
+    pub fn get_user_id(&self) -> Option<&String> {
+        if let Message::Hello(Json::Object(ref info)) = *self {
+            if let Some(&Json::String(ref s)) = info.get("user_id".into()) {
+                return Some(s)
+            }
+        }
+        None
+    }
 }
 
 /// Decode Websocket json message into Meta & Message structs.
@@ -87,6 +97,7 @@ pub fn decode_message(s: &str)
     //      ProtocolError can't be sent back.
     //  make MessageError part of Message enum;
     //  make Message -> enum;
+    use self::ValidationError::*;
     let invalid_method = |m: &str| {
         m.starts_with("tangle.") | m.find("/").is_some()
     };
@@ -95,73 +106,94 @@ pub fn decode_message(s: &str)
             use rustc_serialize::json::Json::*;
 
             if message.len() != 4 {
-                return Err(MessageError::InvalidLength)
+                return Err(InvalidLength.into())
             }
             let kwargs = match message.pop() {
                 Some(Object(kwargs)) => kwargs,
-                _ => return Err(MessageError::ObjectExpected),
+                _ => return Err(ObjectExpected.into()),
             };
             let args = match message.pop() {
                 Some(Array(args)) => args,
-                _ => return Err(MessageError::ArrayExpected),
+                _ => return Err(ArrayExpected.into()),
             };
             let meta = match message.pop() {
                 Some(Object(meta)) => meta,
-                _ => return Err(MessageError::ObjectExpected),
+                _ => return Err(ObjectExpected.into()),
             };
             match meta.get("request_id".into()) {
                 Some(&Json::String(_)) |
                     Some(&Json::I64(_)) |
                     Some(&Json::U64(_)) |
                     Some(&Json::F64(_)) => {},
-                _ => return Err(MessageError::InvalidRequestId),
+                _ => return Err(InvalidRequestId.into()),
             };
             let method = match message.pop() {
                 Some(Json::String(method)) => {
                     if invalid_method(&method) {
-                        return Err(MessageError::InvalidMethod);
+                        return Err(InvalidMethod.into());
                     }
                     method
                 }
-                _ => return Err(MessageError::InvalidMethod),
+                _ => return Err(InvalidMethod.into()),
             };
             Ok((meta, Message::Call(method, args, kwargs)))
         }
-        Ok(_) => Err(MessageError::ArrayExpected),
-        Err(e) => Err(MessageError::JsonError(e))
+        Ok(_) => Err(ArrayExpected.into()),
+        Err(e) => Err(e.into())
     }
 }
 
 
 #[derive(Debug, PartialEq)]
-pub enum MessageError {
+pub enum ValidationError {
     /// Invalid message length;
     InvalidLength,
     /// Invalid method ("tangle." or contains ".");
     InvalidMethod,
+    /// request_id is missing or invalid in request_meta object;
+    InvalidRequestId,
+    /// user_id is missing or invalid in request_meta object;
+    InvalidUserId,
     /// Array of args expected;
     ArrayExpected,
     /// Meta/Kwargs object expected;
     ObjectExpected,
-    /// Request_id is missing or invalid in request_meta object;
-    InvalidRequestId,
-    // variants above only for Message parsing; so it makes sense
-    // to move those to separate enum and make it smaller
+}
 
-    /// Utf8 decoding error;
-    Utf8Error(Utf8Error),
-    /// JSON Parser Error;
-    JsonError(ParserError),
-    /// Response Http Error;
-    HttpError(Status, Option<Json>)
+quick_error! {
+    #[derive(Debug, PartialEq)]
+    pub enum MessageError {
+        /// Message validation error;
+        ValidationError(err: ValidationError) {
+            description("Message validation error")
+            display("Validation error: {:?}", err)
+            from()
+        }
+        /// Utf8 decoding error;
+        Utf8Error(err: Utf8Error) {
+            description(err.description())
+            display("Decode error {}", err)
+            from()
+        }
+        /// JSON Parser Error;
+        JsonError(err: ParserError) {
+            description(err.description())
+            display("JSON error: {}", err)
+            from()
+        }
+        /// Response Http Error;
+        HttpError(status: Status, body: Option<Json>) {
+            // from()
+            description("Http error")
+            display("Http error: {}: {:?}", status.code(), body)
+        }
+    }
 }
 
 impl Encodable for MessageError {
     fn encode<S: Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
         use self::MessageError::*;
         match *self {
-            // yet, only in case of http error we must
-            //  filter out from message.meta 'http_error' key
             HttpError(_, None) => {
                 s.emit_nil()
             }
@@ -174,8 +206,8 @@ impl Encodable for MessageError {
             JsonError(ref err) => {
                 s.emit_str(format!("{}", err).as_str())
             }
-            ref other => {
-                s.emit_str(format!("{:?}", other).as_str())
+            ValidationError(ref err) => {
+                s.emit_str(format!("{:?}", err).as_str())
             }
 
         }
