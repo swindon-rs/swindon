@@ -76,7 +76,7 @@ impl fmt::Display for Atom {
 impl Decodable for Atom {
     fn decode<D: Decoder>(d: &mut D) -> Result<Self, D::Error> {
         use std::error::Error;
-        try!(d.read_str())
+        d.read_str()?
         .parse::<Atom>()
         .map_err(|e| d.error(e.description()))
     }

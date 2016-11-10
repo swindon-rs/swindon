@@ -21,12 +21,12 @@ impl<F: Future> Future for ShortCircuit<F> {
     fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
         use self::ShortCircuit::*;
         let future = match mem::replace(self, Done) {
-            Future(mut f) => match try!(f.poll()) {
+            Future(mut f) => match f.poll()? {
                 Ready(v) => return Ok(Ready(v)),
                 NotReady => f,
             },
             Value(v) => {
-                return Ok(Ready(try!(v)))
+                return Ok(Ready(v?))
             }
             Done => unreachable!(),
         };

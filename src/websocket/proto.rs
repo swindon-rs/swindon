@@ -110,7 +110,7 @@ fn parse_frame<'x>(buf: &'x mut Buf) -> Poll<(Frame<'x>, usize), Error> {
     let frame = match opcode {
         0x9 => Ping(data),
         0xA => Pong(data),
-        0x1 => Text(try!(from_utf8(data))),
+        0x1 => Text(from_utf8(data)?),
         0x2 => Binary(data),
         // TODO(tailhook) implement shutdown packets
         x => return Err(Error::InvalidOpcode(x)),
@@ -126,14 +126,14 @@ impl<D, S: Io> Future for WebsockProto<S, D>
     type Error = Error;
     fn poll(&mut self) -> Poll<(), Error> {
         loop {
-            try!(self.poll_recv());
-            try!(self.io.flush());
+            self.poll_recv()?;
+            self.io.flush()?;
             let packet_len = if let Ready((frame, bytes)) =
-                try!(parse_frame(&mut self.io.in_buf))
+                parse_frame(&mut self.io.in_buf)?
             {
-                try!(self.dispatcher.dispatch(frame,
+                self.dispatcher.dispatch(frame,
                     &mut ImmediateReplier::new(&mut self.io.out_buf),
-                    &self.remote));
+                    &self.remote)?;
                 Some(bytes)
             } else {
                 None
@@ -141,7 +141,7 @@ impl<D, S: Io> Future for WebsockProto<S, D>
             if let Some(packet_len) = packet_len {
                 self.io.in_buf.consume(packet_len);
             } else {
-                let nbytes = try!(self.io.read());
+                let nbytes = self.io.read()?;
                 if nbytes == 0 {
                     if self.io.done() {
                         return Ok(Async::Ready(()));
@@ -172,7 +172,7 @@ impl<S: Io, D> WebsockProto<S, D>
     }
 
     fn poll_recv(&mut self) -> Result<(), Error> {
-        if let Ready(Some(frame)) = try!(self.recv.poll()) {
+        if let Ready(Some(frame)) = self.recv.poll()? {
             let mut imm = ImmediateReplier::new(&mut self.io.out_buf);
             match frame {
                 OutFrame::Text(val) => {

@@ -58,7 +58,7 @@ pub fn include_file(files: &RefCell<&mut Vec<(PathBuf, Metadata)>>,
             File::open(&path)
             .and_then(|mut f| {
                 let m = f.metadata();
-                try!(f.read_to_string(&mut body));
+                f.read_to_string(&mut body)?;
                 m
             })
             .map_err(|e| {
@@ -80,13 +80,13 @@ pub fn read_config<P: AsRef<Path>>(filename: P)
 {
     let filename = filename.as_ref();
     let mut files = Vec::new();
-    files.push((filename.to_path_buf(), try!(metadata(filename))));
+    files.push((filename.to_path_buf(), metadata(filename)?));
     let cfg = {
         let cell = RefCell::new(&mut files);
         let mut opt = Options::default();
         opt.allow_include(
             |a, b, c, d| include_file(&cell, a, b, c, d));
-        try!(parse_config(filename, &config_validator(), &opt))
+        parse_config(filename, &config_validator(), &opt)?
         // TODO(tailhook) additional validations
     };
     Ok((cfg, files))

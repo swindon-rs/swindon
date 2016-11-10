@@ -18,7 +18,7 @@ pub struct Destination {
 
 impl Decodable for Destination {
     fn decode<D: Decoder>(d: &mut D) -> Result<Self, D::Error> {
-        try!(d.read_str())
+        d.read_str()?
         .parse()
         .map_err(|e: String| d.error(&e))
     }
@@ -29,14 +29,14 @@ impl FromStr for Destination {
     fn from_str(val: &str) -> Result<Destination, String> {
         if let Some(path_start) = val.find('/') {
             Ok(Destination {
-                upstream: try!(Atom::from_str(&val[..path_start])
-                    .map_err(|e| format!("Invalid upstream: {}", e))),
+                upstream: Atom::from_str(&val[..path_start])
+                    .map_err(|e| format!("Invalid upstream: {}", e))?,
                 path: val[path_start..].to_string(),
             })
         } else {
             Ok(Destination {
-                upstream: try!(Atom::from_str(&val)
-                    .map_err(|e| format!("Invalid upstream: {}", e))),
+                upstream: Atom::from_str(&val)
+                    .map_err(|e| format!("Invalid upstream: {}", e))?,
                 path: "/".to_string(),
             })
         }

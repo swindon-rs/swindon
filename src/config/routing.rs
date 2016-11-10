@@ -20,7 +20,7 @@ pub fn validator<'x>() -> Mapping<'x> {
 
 impl Decodable for Route {
     fn decode<D: Decoder>(d: &mut D) -> Result<Self, D::Error> {
-        try!(d.read_str())
+        d.read_str()?
         .parse()
         .map_err(|e: String| d.error(&e))
     }

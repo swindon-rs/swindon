@@ -20,7 +20,7 @@ pub fn validator<'x>() -> Enum<'x> {
 
 impl Decodable for ListenSocket {
     fn decode<D: Decoder>(d: &mut D) -> Result<Self, D::Error> {
-        try!(d.read_str())
+        d.read_str()?
         .parse()
         .map(ListenSocket::Tcp)
         .map_err(|_| d.error("Can't parse socket address"))

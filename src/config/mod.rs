@@ -50,7 +50,7 @@ impl ConfigCell {
 impl Configurator {
     pub fn new<P: AsRef<Path>>(path: P) -> Result<Configurator, Error> {
         let path = path.as_ref();
-        let (cfg, meta) = try!(read::read_config(path));
+        let (cfg, meta) = read::read_config(path)?;
         Ok(Configurator {
             path: path.to_path_buf(),
             file_metadata: meta,
@@ -83,7 +83,7 @@ impl Configurator {
         if !changed {
             return Ok(false);
         }
-        let (new_cfg, new_meta) = try!(read::read_config(&self.path));
+        let (new_cfg, new_meta) = read::read_config(&self.path)?;
         if *self.config().get() != new_cfg {
             self.file_metadata = new_meta;
             *self.cell.0.write()

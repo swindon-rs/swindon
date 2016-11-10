@@ -222,44 +222,44 @@ impl<'a> Encodable for Payload<'a> {
         s.emit_seq(3, |s| {
             match self.1 {
                 &Call(_, ref args, ref kwargs) => {
-                    try!(s.emit_seq_elt(0, |s| self.0.encode(s)));
-                    try!(s.emit_seq_elt(1, |s| args.encode(s)));
-                    try!(s.emit_seq_elt(2, |s| kwargs.encode(s)));
+                    s.emit_seq_elt(0, |s| self.0.encode(s))?;
+                    s.emit_seq_elt(1, |s| args.encode(s))?;
+                    s.emit_seq_elt(2, |s| kwargs.encode(s))?;
                 }
                 &Auth(ref kwargs) => {
-                    try!(s.emit_seq_elt(0, |s| self.0.encode(s)));
-                    try!(s.emit_seq_elt(1, |s| s.emit_seq(0, |_| Ok(())) ));
-                    try!(s.emit_seq_elt(2, |s| kwargs.encode(s)));
+                    s.emit_seq_elt(0, |s| self.0.encode(s))?;
+                    s.emit_seq_elt(1, |s| s.emit_seq(0, |_| Ok(())) )?;
+                    s.emit_seq_elt(2, |s| kwargs.encode(s))?;
                 }
                 &Inactive => {
-                    try!(s.emit_seq_elt(0, |s| self.0.encode(s)));
-                    try!(s.emit_seq_elt(1, |s| s.emit_seq(0, |_| Ok(())) ));
-                    try!(s.emit_seq_elt(2, |s| s.emit_map(0, |_| Ok(())) ));
+                    s.emit_seq_elt(0, |s| self.0.encode(s))?;
+                    s.emit_seq_elt(1, |s| s.emit_seq(0, |_| Ok(())) )?;
+                    s.emit_seq_elt(2, |s| s.emit_map(0, |_| Ok(())) )?;
                 }
                 &Result(ref value) => {
-                    try!(s.emit_seq_elt(0, |s| s.emit_str("result")));
-                    try!(s.emit_seq_elt(1, |s| self.0.encode(s)));
-                    try!(s.emit_seq_elt(2, |s| value.encode(s)));
+                    s.emit_seq_elt(0, |s| s.emit_str("result"))?;
+                    s.emit_seq_elt(1, |s| self.0.encode(s))?;
+                    s.emit_seq_elt(2, |s| value.encode(s))?;
                 }
                 &Hello(ref value) => {
-                    try!(s.emit_seq_elt(0, |s| s.emit_str("result")));
-                    try!(s.emit_seq_elt(1, |s| s.emit_map(0, |_| Ok(())) ));
-                    try!(s.emit_seq_elt(2, |s| value.encode(s)));
+                    s.emit_seq_elt(0, |s| s.emit_str("result"))?;
+                    s.emit_seq_elt(1, |s| s.emit_map(0, |_| Ok(())) )?;
+                    s.emit_seq_elt(2, |s| value.encode(s))?;
                 }
                 &Message(ref value) => {
-                    try!(s.emit_seq_elt(0, |s| s.emit_str("message")));
-                    try!(s.emit_seq_elt(1, |s| self.0.encode(s)));
-                    try!(s.emit_seq_elt(2, |s| value.encode(s)));
+                    s.emit_seq_elt(0, |s| s.emit_str("message"))?;
+                    s.emit_seq_elt(1, |s| self.0.encode(s))?;
+                    s.emit_seq_elt(2, |s| value.encode(s))?;
                 }
                 &Lattice(ref value) => {
-                    try!(s.emit_seq_elt(0, |s| s.emit_str("lattice")));
-                    try!(s.emit_seq_elt(1, |s| self.0.encode(s)));
-                    try!(s.emit_seq_elt(2, |s| value.encode(s)));
+                    s.emit_seq_elt(0, |s| s.emit_str("lattice"))?;
+                    s.emit_seq_elt(1, |s| self.0.encode(s))?;
+                    s.emit_seq_elt(2, |s| value.encode(s))?;
                 }
                 &Error(ref value) => {
-                    try!(s.emit_seq_elt(0, |s| s.emit_str("error")));
-                    try!(s.emit_seq_elt(1, |s| self.0.encode(s)));
-                    try!(s.emit_seq_elt(2, |s| value.encode(s)));
+                    s.emit_seq_elt(0, |s| s.emit_str("error"))?;
+                    s.emit_seq_elt(1, |s| self.0.encode(s))?;
+                    s.emit_seq_elt(2, |s| value.encode(s))?;
                 }
             }
             Ok(())
