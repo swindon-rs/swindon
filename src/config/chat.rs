@@ -2,13 +2,13 @@ use std::collections::BTreeMap;
 
 use quire::validate::{Structure, Scalar, Mapping};
 
-use super::listen::{self, ListenSocket};
 use super::http;
+use intern::Atom;
 
 
 #[derive(RustcDecodable, Debug, PartialEq, Eq)]
 pub struct Chat {
-    pub listen: ListenSocket,
+    pub session_pool: Atom,
     pub http_route: http::Destination,
     pub message_handlers: BTreeMap<String, http::Destination>,
 }
@@ -16,7 +16,7 @@ pub struct Chat {
 
 pub fn validator<'x>() -> Structure<'x> {
     Structure::new()
-    .member("listen", listen::validator())
+    .member("session_pool", Scalar::new())
     .member("http_route", http::destination_validator())
     .member("message_handlers",
         Mapping::new(Scalar::new(), http::destination_validator()))

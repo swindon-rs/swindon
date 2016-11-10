@@ -10,6 +10,7 @@ mod http;
 mod listen;
 mod routing;
 mod handlers;
+mod session_pools;
 pub mod http_destinations;
 // handlers
 pub mod chat;

@@ -7,6 +7,7 @@ use intern::Atom;
 use super::listen::{self, ListenSocket};
 use super::routing::{self, Routing};
 use super::handlers::{self, Handler};
+use super::session_pools::{self, Session};
 use super::http_destinations::{self, Destination};
 use super::disk::{self, Disk};
 
@@ -15,6 +16,7 @@ pub struct Config {
     pub listen: Vec<ListenSocket>,
     pub routing: Routing,
     pub handlers: HashMap<Atom, Handler>,
+    pub session_pools: HashMap<Atom, Session>,
     pub http_destinations: HashMap<Atom, Destination>,
     pub debug_routing: bool,
     pub server_name: Option<String>,
@@ -29,6 +31,8 @@ pub fn config_validator<'a>() -> Structure<'a> {
     .member("listen", Sequence::new(listen::validator()))
     .member("routing", routing::validator())
     .member("handlers", Mapping::new(Scalar::new(), handlers::validator()))
+    .member("session_pools",
+        Mapping::new(Scalar::new(), session_pools::validator()))
     .member("http_destinations",
         Mapping::new(Scalar::new(), http_destinations::validator()))
     .member("debug_routing", Scalar::new().default(false))

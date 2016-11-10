@@ -20,7 +20,7 @@ handlers:
 
   example-chat: !SwindonChat
 
-    listen: 127.0.0.1:2007
+    session-pool: example-chat-session
     http-route: example-chat-http
 
     message-handlers:
@@ -55,6 +55,11 @@ handlers:
     mode: relative_to_route
     path: /work/src
     text-charset: utf-8
+
+session-pools:
+  example-chat-session:
+    listen: 127.0.0.1:2007
+
 
 http-destinations:
   superman:
