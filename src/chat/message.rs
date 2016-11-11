@@ -222,48 +222,57 @@ impl<'a> Encodable for Payload<'a> {
         s.emit_seq(3, |s| {
             match self.1 {
                 &Call(_, ref args, ref kwargs) => {
-                    s.emit_seq_elt(0, |s| self.0.encode(s))?;
+                    s.emit_seq_elt(0, |s| self.encode_meta(s))?;
                     s.emit_seq_elt(1, |s| args.encode(s))?;
                     s.emit_seq_elt(2, |s| kwargs.encode(s))?;
                 }
                 &Auth(ref kwargs) => {
-                    s.emit_seq_elt(0, |s| self.0.encode(s))?;
+                    s.emit_seq_elt(0, |s| self.encode_meta(s))?;
                     s.emit_seq_elt(1, |s| s.emit_seq(0, |_| Ok(())) )?;
                     s.emit_seq_elt(2, |s| kwargs.encode(s))?;
                 }
                 &Inactive => {
-                    s.emit_seq_elt(0, |s| self.0.encode(s))?;
+                    s.emit_seq_elt(0, |s| self.encode_meta(s))?;
                     s.emit_seq_elt(1, |s| s.emit_seq(0, |_| Ok(())) )?;
                     s.emit_seq_elt(2, |s| s.emit_map(0, |_| Ok(())) )?;
                 }
                 &Result(ref value) => {
                     s.emit_seq_elt(0, |s| s.emit_str("result"))?;
-                    s.emit_seq_elt(1, |s| self.0.encode(s))?;
+                    s.emit_seq_elt(1, |s| self.encode_meta(s))?;
                     s.emit_seq_elt(2, |s| value.encode(s))?;
                 }
                 &Hello(ref value) => {
                     s.emit_seq_elt(0, |s| s.emit_str("result"))?;
-                    s.emit_seq_elt(1, |s| s.emit_map(0, |_| Ok(())) )?;
+                    s.emit_seq_elt(1, |s| self.encode_meta(s))?;
                     s.emit_seq_elt(2, |s| value.encode(s))?;
                 }
                 &Message(ref value) => {
                     s.emit_seq_elt(0, |s| s.emit_str("message"))?;
-                    s.emit_seq_elt(1, |s| self.0.encode(s))?;
+                    s.emit_seq_elt(1, |s| self.encode_meta(s))?;
                     s.emit_seq_elt(2, |s| value.encode(s))?;
                 }
                 &Lattice(ref value) => {
                     s.emit_seq_elt(0, |s| s.emit_str("lattice"))?;
-                    s.emit_seq_elt(1, |s| self.0.encode(s))?;
+                    s.emit_seq_elt(1, |s| self.encode_meta(s))?;
                     s.emit_seq_elt(2, |s| value.encode(s))?;
                 }
                 &Error(ref value) => {
                     s.emit_seq_elt(0, |s| s.emit_str("error"))?;
-                    s.emit_seq_elt(1, |s| self.0.encode(s))?;
+                    s.emit_seq_elt(1, |s| self.encode_meta(s))?;
                     s.emit_seq_elt(2, |s| value.encode(s))?;
                 }
             }
             Ok(())
         })
+    }
+}
+
+impl<'a> Payload<'a> {
+    fn encode_meta<S: Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
+        match self.0 {
+            Some(meta) => meta.encode(s),
+            None => s.emit_map(0, |_| Ok(())),
+        }
     }
 }
 

@@ -111,7 +111,9 @@ pub fn main() {
             }
         }
     }
-    let chat_handler = ChatAPI;
+    let chat_handler = ChatAPI {
+        config: cfg.clone(),
+    };
     let root = cfg.get();
     for (name, h) in root.handlers.iter() {
         if let &Handler::SwindonChat(ref chat) = h {

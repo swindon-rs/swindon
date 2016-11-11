@@ -17,7 +17,7 @@ use config::{Config, EmptyGif};
 use config::static_files::{Static, SingleFile};
 
 use response::DebugInfo;
-use default_error_page::error_page;
+use default_error_page::write_error_page;
 use handlers::{files, empty_gif, proxy};
 use handlers::proxy::ProxyCall;
 use chat;
@@ -154,7 +154,7 @@ impl<S: Io + AsRawFd + Send + 'static> GenericResponse<S> for Serializer {
         let writer = Pickler(writer, self.config, self.debug);
         match self.response {
             Response::ErrorPage(status) => {
-                error_page(status, writer)
+                write_error_page(status, writer).done().boxed()
             }
             Response::EmptyGif(cfg) => {
                 empty_gif::serve(writer, cfg)
@@ -185,13 +185,14 @@ impl<S: Io + AsRawFd + Send + 'static> GenericResponse<S> for Serializer {
                     router, userinfo)
             }
             Response::WebsocketChat(_) => {
-                error_page(Status::BadRequest, writer)
+                write_error_page(Status::BadRequest, writer).done().boxed()
             }
             Response::Proxy(ProxyCall::Ready { response }) => {
                 proxy::serialize(writer, response)
             }
             Response::Proxy(_) => {
-                error_page(Status::BadRequest, writer)
+                write_error_page(Status::BadRequest, writer)
+                .done().boxed()
             }
         }
     }
