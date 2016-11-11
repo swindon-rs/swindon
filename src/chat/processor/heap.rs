@@ -12,6 +12,7 @@
 //! just work.
 
 use std::mem;
+use std::cmp::max;
 use std::hash::Hash;
 use std::borrow::Borrow;
 use std::collections::HashMap;
@@ -235,6 +236,20 @@ impl<K, T, V> HeapMap<K, T, V>
                 // TODO(tailhook) optimize timeout update
                 heap.remove(slot);
                 let slot = heap.push((timestamp, index));
+                (slot, key, value)
+            })
+        });
+    }
+    pub fn update_if_smaller<Q: ?Sized>(&mut self, k: &Q, timestamp: T)
+        where K: Borrow<Q>, Q: Hash + Eq
+    {
+        let HeapMap { ref mut slab, ref mut map, ref mut heap } = *self;
+        map.get(k).map(|&index| {
+            let mut entry = slab.entry(index).unwrap();
+            entry.replace_with(|(slot, key, value)| {
+                // TODO(tailhook) optimize timeout update
+                let (old_ts, index) = heap.remove(slot);
+                let slot = heap.push((max(timestamp, old_ts), index));
                 (slot, key, value)
             })
         });

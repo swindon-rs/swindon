@@ -44,6 +44,11 @@ impl Pool {
             self.sessions.insert(user_id, expire, session);
         }
     }
+
+    pub fn update_activity(&mut self, user_id: Atom, activity_ts: Instant)
+    {
+        self.sessions.update_if_smaller(&user_id, activity_ts)
+    }
 }
 
 #[cfg(test)]

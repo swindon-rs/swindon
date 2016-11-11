@@ -47,4 +47,10 @@ pub enum Action {
         conn_id: Cid,
         metadata: Arc<Json>
     },
+    UpdateActivity {
+        user_id: Atom,
+        // We receive duration from client, but we expect request handling
+        // code to validate and normalize it for us
+        timestamp: Instant,
+    }
 }

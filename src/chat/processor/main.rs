@@ -29,6 +29,11 @@ pub fn run(rc: Receiver<Event>) {
                                           user_id, conn_id, metadata))
                 .unwrap_or_else(|| debug!("Undefined pool {:?}", pool))
             }
+            UpdateActivity { user_id, timestamp } => {
+                pools.get_mut(&pool)
+                .map(|p| p.update_activity(user_id, timestamp))
+                .unwrap_or_else(|| debug!("Undefined pool {:?}", pool))
+            }
         }
     }
 }
