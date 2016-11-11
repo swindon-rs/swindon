@@ -15,12 +15,12 @@ use config::ConfigCell;
 use response::DebugInfo;
 use default_error_page::write_error_page;
 
-use super::Processor;
+use super::ProcessorPool;
 
 #[derive(Clone)]
 pub struct ChatAPI {
     pub config: ConfigCell,
-    pub chat_processor: Processor,
+    pub chat_pool: ProcessorPool,
 }
 
 

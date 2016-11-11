@@ -19,7 +19,7 @@ mod proto;
 mod router;
 mod processor;
 
-pub use self::processor::Processor;
+pub use self::processor::{Processor, ProcessorPool};
 pub use self::proto::{Chat, parse_userinfo};
 pub use self::router::MessageRouter;
 pub use self::message::{Message, Meta, Args, Kwargs, MessageError};

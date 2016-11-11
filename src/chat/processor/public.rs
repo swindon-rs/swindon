@@ -15,6 +15,12 @@ pub struct Processor {
     queue: Sender<Event>,
 }
 
+#[derive(Clone)]
+pub struct ProcessorPool {
+    pool_name: Atom,
+    queue: Sender<Event>,
+}
+
 
 impl Processor {
     pub fn new() -> Processor {
@@ -36,5 +42,23 @@ impl Processor {
                 action: Action::EnsureSessionPool(props.clone()),
             }).map_err(|e| panic!("Processor loop send error: {}", e)).ok();
         }
+    }
+
+    pub fn pool(&self, name: &Atom) -> ProcessorPool {
+        ProcessorPool {
+            pool_name: name.clone(),
+            // TODO(tailhook) Should we reference Processor instead
+            queue: self.queue.clone(),
+        }
+    }
+}
+
+impl ProcessorPool {
+    pub fn send(&self, action: Action) {
+        self.queue.send(Event {
+            pool: self.pool_name.clone(),
+            timestamp: Instant::now(),
+            action: action,
+        }).map_err(|e| panic!("Error invoking processor: {}", e)).ok();
     }
 }

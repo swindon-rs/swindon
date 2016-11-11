@@ -104,10 +104,6 @@ pub fn main() {
         http_client: HttpClient::new(lp.handle()),
         chat_processor: chat_pro.clone(),
     };
-    let chat_handler = ChatAPI {
-        config: cfg.clone(),
-        chat_processor: chat_pro.clone(),
-    };
     // TODO(tailhook) do something when config updates
     for sock in &cfg.get().listen {
         match sock {
@@ -129,6 +125,10 @@ pub fn main() {
                     if verbose {
                         println!("Listening {} at {}", name, addr);
                     }
+                    let chat_handler = ChatAPI {
+                        config: cfg.clone(),
+                        chat_pool: chat_pro.pool(&chat.session_pool),
+                    };
                     minihttp::serve(&lp.handle(), addr,
                         chat_handler.clone());
                 }

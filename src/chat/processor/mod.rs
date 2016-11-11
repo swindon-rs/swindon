@@ -24,7 +24,7 @@ mod public;
 mod session;
 mod heap;
 
-pub use self::public::Processor;
+pub use self::public::{Processor, ProcessorPool};
 
 
 pub struct Event {
