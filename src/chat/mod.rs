@@ -25,7 +25,7 @@ pub use self::router::MessageRouter;
 pub use self::message::{Message, Meta, Args, Kwargs, MessageError};
 
 /// Internal connection id
-#[derive(Debug, Hash, PartialEq, Eq)]
+#[derive(Debug, Hash, PartialEq, Eq, Clone, Copy)]
 pub struct Cid(u64);
 
 pub enum ChatInit {

@@ -53,6 +53,11 @@ pub fn run(rx: Receiver<Event>) {
                     .map(|p| p.update_activity(user_id, timestamp))
                     .unwrap_or_else(|| debug!("Undefined pool {:?}", pool))
                 }
+                Disconnect { user_id, conn_id } => {
+                    pools.get_mut(&pool)
+                    .map(|p| p.del_connection(user_id, conn_id))
+                    .unwrap_or_else(|| debug!("Undefined pool {:?}", pool))
+                }
             }
         }
     }

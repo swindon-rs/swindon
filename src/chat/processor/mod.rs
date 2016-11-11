@@ -53,5 +53,9 @@ pub enum Action {
         // We receive duration from client, but we expect request handling
         // code to validate and normalize it for us
         timestamp: Instant,
-    }
+    },
+    Disconnect {
+        user_id: Atom,
+        conn_id: Cid,
+    },
 }

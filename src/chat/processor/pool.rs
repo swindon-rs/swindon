@@ -52,6 +52,22 @@ impl Pool {
             self.active_sessions.insert(user_id, expire, session);
         }
     }
+    pub fn del_connection(&mut self, user_id: Atom, conn_id: Cid) {
+        if self.inactive_sessions.contains_key(&user_id) {
+            let conns = {
+                let mut session = self.inactive_sessions.get_mut(&user_id)
+                                  .unwrap();
+                session.connections.remove(&conn_id);
+                session.connections.len()
+            };
+            if conns == 0 {
+                self.inactive_sessions.remove(&user_id);
+            }
+        } if let Some(mut session) = self.active_sessions.get_mut(&user_id) {
+            session.connections.remove(&conn_id);
+            // We delete it on inactivation
+        }
+    }
 
     pub fn update_activity(&mut self, user_id: Atom, activity_ts: Instant)
     {
@@ -67,11 +83,17 @@ impl Pool {
             .map(|(_, &x, _)| x < timestamp).unwrap_or(false)
         {
             let (user_id, _, session) = self.active_sessions.pop().unwrap();
-            let val = self.inactive_sessions.insert(user_id, session);
-            debug_assert!(val.is_none());
+            if session.connections.len() == 0 {
+                // TODO(tailhook) Maybe do session cleanup ?
+            } else {
+                let val = self.inactive_sessions.insert(user_id, session);
+                debug_assert!(val.is_none());
+            }
+            // TODO(tailhook) send inactiity message to IO thread
         }
         self.active_sessions.peek().map(|(_, &x, _)| x)
     }
+
 }
 
 #[cfg(test)]
@@ -104,9 +126,10 @@ mod test {
     }
 
     #[test]
-    fn cleanup() {
+    fn disconnect_after_inactive() {
         let mut pool = pool();
-        pool.add_connection(Instant::now(), Atom::from("user1"), Cid::new(),
+        let cid = Cid::new();
+        pool.add_connection(Instant::now(), Atom::from("user1"), cid,
             Arc::new(Json::Object(vec![
                 ("user_id", "user1"),
             ].into_iter().map(|(x, y)| {
@@ -121,5 +144,32 @@ mod test {
         pool.cleanup(Instant::now() + Duration::new(120, 0));
         assert_eq!(pool.active_sessions.len(), 0);
         assert_eq!(pool.inactive_sessions.len(), 1);
+        pool.del_connection(Atom::from("user1"), cid);
+        assert_eq!(pool.active_sessions.len(), 0);
+        assert_eq!(pool.inactive_sessions.len(), 0);
+    }
+
+    #[test]
+    fn disconnect_before_inactive() {
+        let mut pool = pool();
+        let cid = Cid::new();
+        pool.add_connection(Instant::now(), Atom::from("user1"), cid,
+            Arc::new(Json::Object(vec![
+                ("user_id", "user1"),
+            ].into_iter().map(|(x, y)| {
+                (x.into(), Json::String(y.into()))
+            }).collect())));
+        assert_eq!(pool.active_sessions.len(), 1);
+        assert_eq!(pool.inactive_sessions.len(), 0);
+        pool.cleanup(Instant::now() + Duration::new(10, 0));
+        // New connection timeout is expected to be ~ 60 seconds
+        assert_eq!(pool.active_sessions.len(), 1);
+        assert_eq!(pool.inactive_sessions.len(), 0);
+        pool.del_connection(Atom::from("user1"), cid);
+        assert_eq!(pool.active_sessions.len(), 1);
+        assert_eq!(pool.inactive_sessions.len(), 0);
+        pool.cleanup(Instant::now() + Duration::new(120, 0));
+        assert_eq!(pool.active_sessions.len(), 0);
+        assert_eq!(pool.inactive_sessions.len(), 0);
     }
 }
