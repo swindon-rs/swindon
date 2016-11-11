@@ -1,3 +1,6 @@
+// TODO(tailhook) until we fill all stabs
+#![allow(dead_code)]
+
 #[macro_use] extern crate log;
 #[macro_use] extern crate quick_error;
 #[macro_use] extern crate lazy_static;
@@ -22,6 +25,7 @@ extern crate curl;
 extern crate byteorder;
 extern crate httparse;
 extern crate httpbin;
+extern crate slab;
 
 mod intern;
 mod config;

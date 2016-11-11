@@ -22,6 +22,7 @@ mod main;
 mod pool;
 mod public;
 mod session;
+mod heap;
 
 pub use self::public::Processor;
 

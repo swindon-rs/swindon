@@ -20,6 +20,7 @@ dependencies = [
  "quire 0.1.8 (git+https://github.com/tailhook/rust-quire?rev=719d201)",
  "rustc-serialize 0.3.19 (registry+https://github.com/rust-lang/crates.io-index)",
  "sha1 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "slab 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "time 0.1.35 (registry+https://github.com/rust-lang/crates.io-index)",
  "tk-bufstream 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tk-sendfile 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",

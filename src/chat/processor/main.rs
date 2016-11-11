@@ -11,11 +11,12 @@ pub fn run(rc: Receiver<Event>) {
     let mut pools = HashMap::new();
 
     for msg in rc.recv() {
-        match msg.action {
+        let Event { timestamp, action, pool } = msg;
+        match action {
 
             // Pool management
             EnsureSessionPool(config) => {
-                pools.insert(msg.pool.clone(), Pool::new(msg.pool, config));
+                pools.insert(pool.clone(), Pool::new(pool, config));
             }
             StopSessionPool => {
                 unimplemented!();
@@ -23,9 +24,9 @@ pub fn run(rc: Receiver<Event>) {
 
             // Connection management
             NewConnection { user_id, conn_id, metadata } => {
-                let pool = msg.pool;
                 pools.get_mut(&pool)
-                .map(|p| p.add_connection(user_id, conn_id, metadata))
+                .map(|p| p.add_connection(timestamp,
+                                          user_id, conn_id, metadata))
                 .unwrap_or_else(|| debug!("Undefined pool {:?}", pool))
             }
         }
