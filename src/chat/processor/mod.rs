@@ -23,6 +23,7 @@ mod pool;
 mod public;
 mod session;
 mod heap;
+mod try_iter;  // temporary
 
 pub use self::public::{Processor, ProcessorPool};
 
@@ -40,11 +41,6 @@ pub enum Action {
     //   For all actions session pool name is passed in event structure
     EnsureSessionPool(Arc<config::SessionPool>),
     StopSessionPool,
-    /// Cleanup old sessions from this connection pool up to the
-    /// event timestamp
-    ///
-    /// This is expected to be periodically triggered from the main loop
-    Cleanup,
 
     // ------ Connection management ------
     NewConnection {

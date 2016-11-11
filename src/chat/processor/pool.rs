@@ -62,7 +62,7 @@ impl Pool {
         }
     }
 
-    pub fn cleanup(&mut self, timestamp: Instant) {
+    pub fn cleanup(&mut self, timestamp: Instant) -> Option<Instant> {
         while self.active_sessions.peek()
             .map(|(_, &x, _)| x < timestamp).unwrap_or(false)
         {
@@ -70,6 +70,7 @@ impl Pool {
             let val = self.inactive_sessions.insert(user_id, session);
             debug_assert!(val.is_none());
         }
+        self.active_sessions.peek().map(|(_, &x, _)| x)
     }
 }
 
