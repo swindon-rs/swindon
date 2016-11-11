@@ -98,10 +98,14 @@ pub fn main() {
 
     let chat_pro = chat::Processor::new();
     let mut lp = Core::new().unwrap();
-    let handler = Main {
+    let main_handler = Main {
         config: cfg.clone(),
         handle: lp.handle(),
         http_client: HttpClient::new(lp.handle()),
+        chat_processor: chat_pro.clone(),
+    };
+    let chat_handler = ChatAPI {
+        config: cfg.clone(),
         chat_processor: chat_pro.clone(),
     };
     // TODO(tailhook) do something when config updates
@@ -111,13 +115,10 @@ pub fn main() {
                 if verbose {
                     println!("Listening at {}", addr);
                 }
-                minihttp::serve(&lp.handle(), addr, handler.clone());
+                minihttp::serve(&lp.handle(), addr, main_handler.clone());
             }
         }
     }
-    let chat_handler = ChatAPI {
-        config: cfg.clone(),
-    };
     let root = cfg.get();
     for (name, h) in root.handlers.iter() {
         if let &Handler::SwindonChat(ref chat) = h {

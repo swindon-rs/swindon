@@ -15,9 +15,12 @@ use config::ConfigCell;
 use response::DebugInfo;
 use default_error_page::write_error_page;
 
+use super::Processor;
+
 #[derive(Clone)]
 pub struct ChatAPI {
     pub config: ConfigCell,
+    pub chat_processor: Processor,
 }
 
 
@@ -38,7 +41,10 @@ impl Service for ChatAPI {
                     None
                 };
                 if route.expect_data() && payload.is_some() {
-                // TODO: send message to processor;
+                    // TODO: send message to processor;
+
+                    //self.chat_processor.send_action()
+
                     Status::NoContent
                 } else {
                     Status::BadRequest
