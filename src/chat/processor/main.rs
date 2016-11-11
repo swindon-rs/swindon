@@ -21,6 +21,11 @@ pub fn run(rc: Receiver<Event>) {
             StopSessionPool => {
                 unimplemented!();
             }
+            Cleanup => {
+                pools.get_mut(&pool)
+                .map(|p| p.cleanup(timestamp))
+                .unwrap_or_else(|| debug!("Undefined pool {:?}", pool))
+            }
 
             // Connection management
             NewConnection { user_id, conn_id, metadata } => {

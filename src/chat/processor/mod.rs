@@ -36,12 +36,17 @@ pub struct Event {
 #[derive(Debug)]
 pub enum Action {
 
-    // Session pool management
+    // ------ Session pool management ------
     //   For all actions session pool name is passed in event structure
     EnsureSessionPool(Arc<config::SessionPool>),
     StopSessionPool,
+    /// Cleanup old sessions from this connection pool up to the
+    /// event timestamp
+    ///
+    /// This is expected to be periodically triggered from the main loop
+    Cleanup,
 
-    // Connection management
+    // ------ Connection management ------
     NewConnection {
         user_id: Atom,
         conn_id: Cid,
