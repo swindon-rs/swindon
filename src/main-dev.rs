@@ -44,7 +44,6 @@ mod startup;
 mod short_circuit;
 mod either;
 
-use std::time::Duration;
 use std::process::exit;
 
 use argparse::{ArgumentParser, Parse, StoreTrue, Print, List, StoreFalse};
