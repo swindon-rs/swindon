@@ -30,10 +30,17 @@ impl FromStr for Route {
     type Err = String;
     fn from_str(val: &str) -> Result<Route, String> {
         if let Some(path_start) = val.find('/') {
-            Ok(Route {
-                host: val[..path_start].to_string(),
-                path: Some(val[path_start..].to_string()),
-            })
+            if &val[path_start..] == "/" {
+                Ok(Route {
+                    host: val[..path_start].to_string(),
+                    path: None,
+                })
+            } else {
+                Ok(Route {
+                    host: val[..path_start].to_string(),
+                    path: Some(val[path_start..].to_string()),
+                })
+            }
         } else {
             Ok(Route {
                 host: val.to_string(),

@@ -58,7 +58,7 @@ pub fn main() {
     let mut verbose = true;
     let mut show_config = false;
     let mut port = 8000;
-    let mut routes = Vec::<String>::new();
+    let mut routes = Vec::<dev::Route>::new();
     {
         let mut ap = ArgumentParser::new();
         ap.set_description("
