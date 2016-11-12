@@ -66,7 +66,7 @@ pub fn main() {
     let mut verbose = false;
     {
         let mut ap = ArgumentParser::new();
-        ap.set_description("Runs tree of processes");
+        ap.set_description("Runs a web server");
         ap.refer(&mut config)
           .add_option(&["-c", "--config"], Parse,
             "Configuration file name")
