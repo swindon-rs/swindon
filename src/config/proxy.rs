@@ -12,7 +12,7 @@ pub enum Mode {
 #[derive(RustcDecodable, Debug, PartialEq, Eq)]
 pub struct Proxy {
     pub mode: Mode,
-    pub ip_header: String,
+    pub ip_header: Option<String>,
     pub destination: http::Destination,
 }
 
@@ -21,6 +21,6 @@ pub fn validator<'x>() -> Structure<'x> {
     .member("mode", Enum::new()
         .option("forward", Nothing)
         .allow_plain())
-    .member("ip_header", Scalar::new())
+    .member("ip_header", Scalar::new().optional())
     .member("destination", http::destination_validator())
 }

@@ -37,15 +37,17 @@ pub fn prepare(mut request: Request, hostport: String,
         format!("http://{}{}", hostport, request.path).as_str());
 
     let ip_addr = format!("{}", request.peer_addr.ip());
-    client.add_header(
-        Header::from(settings.ip_header.as_str()), ip_addr.as_str());
+
+    if let Some(ref ip_header) = settings.ip_header {
+        client.add_header(Header::from(&ip_header[..]), ip_addr.as_str());
+    }
 
     // Copy headers
     for &(ref name, ref value) in &request.headers {
         // TODO: validate headers
         match name {
             &Header::Host => client.add_header(Header::Host, value),
-            &Header::Raw(ref name) => client.add_header(    
+            &Header::Raw(ref name) => client.add_header(
                 Header::from(name.as_str()), value),
             _ => continue,
         };

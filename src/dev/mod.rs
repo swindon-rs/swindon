@@ -93,7 +93,25 @@ fn _generate_config(buf: &mut String, port: u16, routes: &[Route])
                 writeln!(buf, "    path: {:?}", path)?;
                 writeln!(buf, "    text-charset: utf-8")?;
             }
-            _ => unimplemented!(),
+            Route { destination: Destination::Http(_, ref path), .. } => {
+                writeln!(buf, "")?;
+                writeln!(buf, "  h{}: !Proxy", idx)?;
+                writeln!(buf, "    mode: forward")?;
+                writeln!(buf, "    destination: d{}/{}", idx, path)?;
+            }
+        }
+    }
+    writeln!(buf, "")?;
+    writeln!(buf, "http-destinations:")?;
+    for (idx, route) in routes.iter().enumerate() {
+        match *route {
+            Route { destination: Destination::Path(_), .. } => {}
+            Route { destination: Destination::Http(ref host, _), .. } => {
+                writeln!(buf, "")?;
+                writeln!(buf, "  d{}:", idx)?;
+                writeln!(buf, "    load-balancing: queue")?;
+                writeln!(buf, "    addresses: [{}]", host)?;
+            }
         }
     }
     Ok(())
