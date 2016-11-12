@@ -28,6 +28,7 @@ pub use self::disk::Disk;
 pub use self::empty_gif::EmptyGif;
 pub use self::session_pools::SessionPool;
 
+use quire::{parse_string, Options};
 
 pub struct Configurator {
     path: PathBuf,
@@ -40,6 +41,14 @@ pub struct Configurator {
 pub struct ConfigCell(Arc<RwLock<Arc<Config>>>);
 
 impl ConfigCell {
+    fn new(cfg: Config) -> ConfigCell {
+        ConfigCell(Arc::new(RwLock::new(Arc::new(cfg))))
+    }
+    pub fn from_string(data: &str, name: &str) -> Result<ConfigCell, Error> {
+        let v = root::config_validator();
+        let o = Options::default();
+        Ok(ConfigCell::new(parse_string(name, data, &v, &o)?))
+    }
     pub fn get(&self) -> Arc<Config> {
         self.0.read()
             .expect("config exists")
@@ -54,7 +63,7 @@ impl Configurator {
         Ok(Configurator {
             path: path.to_path_buf(),
             file_metadata: meta,
-            cell: ConfigCell(Arc::new(RwLock::new(Arc::new(cfg)))),
+            cell: ConfigCell::new(cfg),
         })
     }
     pub fn config(&self) -> ConfigCell {

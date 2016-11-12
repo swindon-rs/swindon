@@ -35,3 +35,11 @@ slab = "0.3.0"
 "tokio-core:0.1.0" = { git="https://github.com/tokio-rs/tokio-core", rev="62514fc" }
 "tokio-service:0.1.0" = { git="https://github.com/tokio-rs/tokio-service" }
 "minihttp:0.1.0" = { git = "https://github.com/popravich/minihttp", rev="b44c59e" }
+
+[[bin]]
+name = "swindon"
+path = "src/main.rs"
+
+[[bin]]
+name = "swindon-dev"
+path = "src/main-dev.rs"

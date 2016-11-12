@@ -81,9 +81,19 @@ commands:
     run:
     - cargo
     - run
+    - --bin=swindon
     - "--"
     - --verbose
     - --config=example.yaml
+
+  devd: !Command
+    container: ubuntu
+    description: Run swindon-dev (useless without parameters)
+    run:
+    - cargo
+    - run
+    - --bin=swindon-dev
+    - "--"
 
   debug-run: !Command
     container: ubuntu

@@ -37,6 +37,7 @@ mod default_error_page;
 mod response;
 mod websocket;
 mod chat;
+mod startup;
 
 // Utils
 mod short_circuit;
@@ -50,11 +51,7 @@ use futures::stream::Stream;
 use argparse::{ArgumentParser, Parse, StoreTrue, Print};
 use tokio_core::reactor::Core;
 use tokio_core::reactor::Interval;
-use minihttp::client::HttpClient;
 
-use config::{ListenSocket, Handler};
-use handler::Main;
-use chat::handler::ChatAPI;
 pub use response::Pickler;
 
 
@@ -96,47 +93,8 @@ pub fn main() {
         exit(0);
     }
 
-    let chat_pro = chat::Processor::new();
     let mut lp = Core::new().unwrap();
-    let main_handler = Main {
-        config: cfg.clone(),
-        handle: lp.handle(),
-        http_client: HttpClient::new(lp.handle()),
-        chat_processor: chat_pro.clone(),
-    };
-    // TODO(tailhook) do something when config updates
-    for sock in &cfg.get().listen {
-        match sock {
-            &ListenSocket::Tcp(addr) => {
-                if verbose {
-                    println!("Listening at {}", addr);
-                }
-                minihttp::serve(&lp.handle(), addr, main_handler.clone());
-            }
-        }
-    }
-    let root = cfg.get();
-    for (name, h) in root.handlers.iter() {
-        if let &Handler::SwindonChat(ref chat) = h {
-            let sess = root.session_pools
-                .get(&chat.session_pool).unwrap();
-            match sess.listen {
-                ListenSocket::Tcp(addr) => {
-                    if verbose {
-                        println!("Listening {} at {}", name, addr);
-                    }
-                    let chat_handler = ChatAPI {
-                        config: cfg.clone(),
-                        chat_pool: chat_pro.pool(&chat.session_pool),
-                    };
-                    minihttp::serve(&lp.handle(), addr,
-                        chat_handler.clone());
-                }
-            }
-        }
-    }
-    handlers::files::update_pools(&cfg.get().disk_pools);
-    chat_pro.update_pools(&cfg.get().session_pools);
+    let loop_state = startup::populate_loop(&lp.handle(), &cfg, verbose);
 
     let config_updater = Interval::new(Duration::new(10, 0), &lp.handle())
         .expect("interval created")
@@ -146,8 +104,7 @@ pub fn main() {
                 Ok(true) => {
                     // TODO(tailhook) update listening sockets
                     info!("Updated config");
-                    handlers::files::update_pools(&cfg.get().disk_pools);
-                    chat_pro.update_pools(&cfg.get().session_pools);
+                    startup::update_loop(&loop_state, &cfg)
                 }
                 Err(e) => {
                     error!("{}", e);
