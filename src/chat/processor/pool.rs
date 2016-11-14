@@ -3,10 +3,12 @@ use std::time::{Instant, Duration};
 use std::collections::HashMap;
 
 use rustc_serialize::json::Json;
+use tokio_core::channel::Sender;
 
 use intern::Atom;
 use config;
 use chat::Cid;
+use super::ConnectionMessage;
 use super::session::Session;
 use super::connection::{NewConnection, Connection};
 use super::heap::HeapMap;
@@ -49,9 +51,11 @@ impl Pool {
         }
     }
 
-    pub fn add_connection(&mut self, conn_id: Cid) {
+    pub fn add_connection(&mut self, conn_id: Cid,
+        channel: Sender<ConnectionMessage>)
+    {
         let old = self.pending_connections.insert(conn_id,
-            NewConnection::new(conn_id));
+            NewConnection::new(conn_id, channel));
         debug_assert!(old.is_none());
     }
 
@@ -231,6 +235,8 @@ mod test {
     use std::sync::Arc;
     use std::time::{Instant, Duration};
     use rustc_serialize::json::Json;
+    use tokio_core::channel::channel;
+    use tokio_core::reactor::Core;
     use intern::Atom;
     use config;
     use chat::Cid;
@@ -248,7 +254,9 @@ mod test {
     fn add_conn() {
         let mut pool = pool();
         let cid = Cid::new();
-        pool.add_connection(cid);
+        let lp = Core::new().unwrap();
+        let (tx, _rx) = channel(&lp.handle()).unwrap();
+        pool.add_connection(cid, tx);
         pool.associate(cid, Atom::from("user1"), Instant::now(),
             Arc::new(Json::Object(vec![
                 ("user_id", "user1"),
@@ -261,7 +269,9 @@ mod test {
     fn disconnect_after_inactive() {
         let mut pool = pool();
         let cid = Cid::new();
-        pool.add_connection(cid);
+        let lp = Core::new().unwrap();
+        let (tx, _rx) = channel(&lp.handle()).unwrap();
+        pool.add_connection(cid, tx);
         pool.associate(cid, Atom::from("user1"), Instant::now(),
             Arc::new(Json::Object(vec![
                 ("user_id", "user1"),
@@ -286,7 +296,9 @@ mod test {
     fn disconnect_before_inactive() {
         let mut pool = pool();
         let cid = Cid::new();
-        pool.add_connection(cid);
+        let lp = Core::new().unwrap();
+        let (tx, _rx) = channel(&lp.handle()).unwrap();
+        pool.add_connection(cid, tx);
         pool.associate(cid, Atom::from("user1"), Instant::now(),
             Arc::new(Json::Object(vec![
                 ("user_id", "user1"),

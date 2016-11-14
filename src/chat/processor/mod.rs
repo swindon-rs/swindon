@@ -12,7 +12,7 @@ use std::time::Instant;
 use std::sync::Arc;
 
 use rustc_serialize::json::Json;
-use tokio_core::channel::channel as tokio_channel;
+use tokio_core::channel::Sender;
 
 use config;
 use intern::Atom;
@@ -35,7 +35,10 @@ pub struct Event {
     action: Action,
 }
 
-#[derive(Debug)]
+pub enum ConnectionMessage {
+    Publish(Arc<Json>),
+}
+
 pub enum Action {
 
     // ------ Session pool management ------
@@ -46,6 +49,7 @@ pub enum Action {
     // ------ Connection management ------
     NewConnection {
         conn_id: Cid,
+        channel: Sender<ConnectionMessage>,
     },
     Associate {
         conn_id: Cid,
