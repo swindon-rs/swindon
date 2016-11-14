@@ -16,16 +16,16 @@ use tk_bufstream::IoBuf;
 use tokio_core::io::Io;
 use futures_cpupool::CpuPool;
 
-use intern::Atom;
+use intern::{DiskPoolName};
 use config;
 use config::static_files::{Static, Mode, SingleFile};
 use {Pickler};
 
 
 lazy_static! {
-    static ref POOLS: RwLock<HashMap<Atom, (u64, DiskPool)>> =
+    static ref POOLS: RwLock<HashMap<DiskPoolName, (u64, DiskPool)>> =
         RwLock::new(HashMap::new());
-    static ref DEFAULT: Atom = Atom::from("default");
+    static ref DEFAULT: DiskPoolName = DiskPoolName::from("default");
 }
 
 
@@ -121,7 +121,7 @@ fn new_pool(cfg: &config::Disk) -> DiskPool {
     DiskPool::new(CpuPool::new(cfg.num_threads))
 }
 
-fn get_pool(name: &Atom) -> DiskPool {
+fn get_pool(name: &DiskPoolName) -> DiskPool {
     let pools = POOLS.read().expect("readlock for pools");
     match pools.get(name) {
         Some(&(_, ref x)) => x.clone(),
@@ -132,7 +132,7 @@ fn get_pool(name: &Atom) -> DiskPool {
     }
 }
 
-pub fn update_pools(config: &HashMap<Atom, config::Disk>) {
+pub fn update_pools(config: &HashMap<DiskPoolName, config::Disk>) {
     let mut pools = POOLS.write().expect("writelock for pools");
     for (name, props) in config {
         let mut hasher = SipHasher::new();

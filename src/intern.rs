@@ -1,97 +1,99 @@
 use std::fmt;
-use std::ops::Deref;
-use std::str::FromStr;
-use std::borrow::Borrow;
-use std::sync::{Arc, RwLock};
-use std::collections::HashSet;
+use std::ascii::AsciiExt;
+use string_intern::{Symbol, Validator};
 
-use rustc_serialize::{Decoder, Decodable};
 
-lazy_static! {
-    static ref ATOMS: RwLock<HashSet<Atom>> = RwLock::new(HashSet::new());
-}
+struct UpstreamValidator;
+pub type Upstream = Symbol<UpstreamValidator>;
 
-// TODO(tailhook) optimize Eq to compare pointers
-#[derive(Clone, PartialEq, Eq, Hash)]
-pub struct Atom(Arc<String>);
+struct HandlerValidator;
+pub type HandlerName = Symbol<HandlerValidator>;
+
+struct DiskPoolValidator;
+pub type DiskPoolName = Symbol<DiskPoolValidator>;
+
+struct SessionPoolValidator;
+pub type SessionPoolName = Symbol<SessionPoolValidator>;
+
+struct OldValidator;
+pub type Atom = Symbol<OldValidator>;
 
 quick_error! {
     #[derive(Debug)]
-    pub enum InvalidAtom {
+    pub enum BadIdent {
         InvalidChar {
-            description("invalid character in atom")
+            description("invalid character in identifier")
         }
     }
 }
 
-fn is_valid(val: &str) -> bool {
-    val.chars().all(|c| c.is_alphanumeric() || c == '-' || c == '_')
+fn valid_ident(val: &str) -> bool {
+    val.chars().all(|c| c.is_ascii() &&
+        (c.is_alphanumeric() || c == '-' || c == '_'))
 }
 
-impl FromStr for Atom {
-    type Err = InvalidAtom;
-    fn from_str(s: &str) -> Result<Atom, InvalidAtom> {
-        if let Some(a) = ATOMS.read().expect("atoms locked").get(s) {
-            return Ok(a.clone());
+impl Validator for UpstreamValidator {
+    type Err = BadIdent;
+    fn validate_symbol(val: &str) -> Result<(), Self::Err> {
+        if !valid_ident(val) {
+            return Err(BadIdent::InvalidChar);
         }
-        if !is_valid(s) {
-            return Err(InvalidAtom::InvalidChar);
+        Ok(())
+    }
+    fn display(value: &Symbol<Self>, fmt: &mut fmt::Formatter) -> fmt::Result {
+        write!(fmt, "upstream{:?}", value.as_ref())
+    }
+}
+
+impl Validator for HandlerValidator {
+    type Err = BadIdent;
+    fn validate_symbol(val: &str) -> Result<(), Self::Err> {
+        if !valid_ident(val) {
+            return Err(BadIdent::InvalidChar);
         }
-        let newatom = Atom(Arc::new(String::from(s)));
-        let mut atoms = ATOMS.write().expect("atoms locked");
-        if !atoms.insert(newatom.clone()) {
-            // Race condition happened, but now we are still holding lock
-            // so it's safe to unwrap
-            return Ok(atoms.get(s).unwrap().clone());
-        } else {
-            return Ok(newatom);
+        Ok(())
+    }
+    fn display(value: &Symbol<Self>, fmt: &mut fmt::Formatter) -> fmt::Result {
+        write!(fmt, "handler{:?}", value.as_ref())
+    }
+}
+
+impl Validator for DiskPoolValidator {
+    type Err = BadIdent;
+    fn validate_symbol(val: &str) -> Result<(), Self::Err> {
+        if !valid_ident(val) {
+            return Err(BadIdent::InvalidChar);
         }
+        Ok(())
+    }
+    fn display(value: &Symbol<Self>, fmt: &mut fmt::Formatter) -> fmt::Result {
+        write!(fmt, "disk{:?}", value.as_ref())
     }
 }
 
-impl Borrow<str> for Atom {
-    fn borrow(&self) -> &str {
-        &self.0[..]
+impl Validator for SessionPoolValidator {
+    type Err = BadIdent;
+    fn validate_symbol(val: &str) -> Result<(), Self::Err> {
+        if !valid_ident(val) {
+            return Err(BadIdent::InvalidChar);
+        }
+        Ok(())
+    }
+    fn display(value: &Symbol<Self>, fmt: &mut fmt::Formatter) -> fmt::Result {
+        write!(fmt, "sessionpool{:?}", value.as_ref())
     }
 }
 
-impl Borrow<String> for Atom {
-    fn borrow(&self) -> &String {
-        &self.0
+impl Validator for OldValidator {
+    type Err = BadIdent;
+    fn validate_symbol(val: &str) -> Result<(), Self::Err> {
+        if !valid_ident(val) {
+            return Err(BadIdent::InvalidChar);
+        }
+        Ok(())
+    }
+    fn display(value: &Symbol<Self>, fmt: &mut fmt::Formatter) -> fmt::Result {
+        write!(fmt, "old{:?}", value.as_ref())
     }
 }
 
-impl fmt::Debug for Atom {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        write!(fmt, "a{:?}", self.0)
-    }
-}
-
-impl fmt::Display for Atom {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        self.0.fmt(fmt)
-    }
-}
-
-impl Decodable for Atom {
-    fn decode<D: Decoder>(d: &mut D) -> Result<Self, D::Error> {
-        use std::error::Error;
-        d.read_str()?
-        .parse::<Atom>()
-        .map_err(|e| d.error(e.description()))
-    }
-}
-
-impl Deref for Atom {
-    type Target = str;
-    fn deref(&self) -> &str {
-        &self.0
-    }
-}
-
-impl Atom {
-    pub fn from(s: &'static str) -> Atom {
-        FromStr::from_str(s)
-        .expect("static strings used as atom is invalid")
-    }
-}

@@ -11,7 +11,7 @@ use routing::{parse_host, route};
 use serializer::{Response, Serializer};
 use config::Handler;
 use handlers::{files, proxy};
-use intern::Atom;
+use intern::{Upstream, HandlerName};
 use chat::{self, MessageRouter};
 use websocket;
 
@@ -59,7 +59,7 @@ impl Main {
         }
     }
 
-    fn match_handler(&self, route: &Atom, suffix: &str, req: &Request)
+    fn match_handler(&self, route: &HandlerName, suffix: &str, req: &Request)
         -> Response
     {
         let cfg = self.config.get();
@@ -117,7 +117,7 @@ impl Main {
                     }
                     Err(_) => {
                         // internal redirect
-                        let ref route = chat.http_route.upstream;
+                        let ref route = chat.http_route;
                         self.match_handler(route, suffix, req)
                     }
                 }

@@ -3,13 +3,13 @@ use std::collections::BTreeMap;
 use quire::validate::{Structure, Scalar, Mapping};
 
 use super::http;
-use intern::Atom;
+use intern::{HandlerName, SessionPoolName};
 
 
 #[derive(RustcDecodable, Debug, PartialEq, Eq)]
 pub struct Chat {
-    pub session_pool: Atom,
-    pub http_route: http::Destination,
+    pub session_pool: SessionPoolName,
+    pub http_route: HandlerName,
     pub message_handlers: BTreeMap<String, http::Destination>,
 }
 

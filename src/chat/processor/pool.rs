@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use rustc_serialize::json::Json;
 use tokio_core::channel::Sender;
 
-use intern::Atom;
+use intern::{Atom, SessionPoolName};
 use config;
 use chat::Cid;
 use super::{ConnectionMessage, PoolMessage};
@@ -22,7 +22,7 @@ enum Subscription {
 
 
 pub struct Pool {
-    name: Atom,
+    name: SessionPoolName,
     channel: Sender<PoolMessage>,
     active_sessions: HeapMap<Atom, Instant, Session>,
     inactive_sessions: HashMap<Atom, Session>,
@@ -38,7 +38,7 @@ pub struct Pool {
 
 impl Pool {
 
-    pub fn new(name: Atom, _cfg: Arc<config::SessionPool>,
+    pub fn new(name: SessionPoolName, _cfg: Arc<config::SessionPool>,
         channel: Sender<PoolMessage>)
         -> Pool
     {
@@ -248,7 +248,7 @@ mod test {
     use futures::stream::Stream;
     use tokio_core::channel::{channel, Receiver};
     use tokio_core::reactor::{Core, Handle};
-    use intern::Atom;
+    use intern::{Atom, SessionPoolName};
     use config;
     use chat::Cid;
 
@@ -257,7 +257,7 @@ mod test {
 
     fn pool(h: &Handle) -> (Pool, Receiver<PoolMessage>) {
         let (tx, rx) = channel(h).unwrap();
-        let pool = Pool::new(Atom::from("test_pool"),
+        let pool = Pool::new(SessionPoolName::from("test_pool"),
             Arc::new(config::SessionPool {
                 listen: config::ListenSocket::Tcp(
                     "127.0.0.1:65535".parse().unwrap())

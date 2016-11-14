@@ -3,7 +3,7 @@ use std::collections::HashMap;
 
 use quire::validate::{Nothing, Enum, Structure, Scalar, Mapping};
 
-use intern::Atom;
+use intern::DiskPoolName;
 
 
 #[derive(RustcDecodable, Debug, PartialEq, Eq)]
@@ -19,7 +19,7 @@ pub struct Static {
     pub mode: Mode,
     pub path: PathBuf,
     pub text_charset: Option<String>,
-    pub pool: Atom,
+    pub pool: DiskPoolName,
     pub extra_headers: HashMap<String, String>,
 }
 
@@ -27,7 +27,7 @@ pub struct Static {
 pub struct SingleFile {
     pub path: PathBuf,
     pub content_type: String,
-    pub pool: Atom,
+    pub pool: DiskPoolName,
     pub extra_headers: HashMap<String, String>,
 }
 

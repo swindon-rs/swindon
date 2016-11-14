@@ -31,7 +31,7 @@ httparse = "1.1.2"
 httpbin = { git="https://github.com/tailhook/httpbin-rs", rev="afb7f68" }
 slab = "0.3.0"
 matches = "0.1.4"
-string-intern = "0.1.0"
+string-intern = "0.1.2"
 
 [replace]
 "tokio-core:0.1.0" = { git="https://github.com/tokio-rs/tokio-core", rev="62514fc" }

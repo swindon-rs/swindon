@@ -6,20 +6,20 @@ use std::collections::HashSet;
 
 use tokio_core::channel::Sender as TokioSender;
 
-use intern::Atom;
+use intern::SessionPoolName;
 use config;
 use super::{Event, Action, PoolMessage};
 use super::main;
 
 
 pub struct Processor {
-    pools: HashSet<Atom>,
+    pools: HashSet<SessionPoolName>,
     queue: Sender<Event>,
 }
 
 #[derive(Clone)]
 pub struct ProcessorPool {
-    pool_name: Atom,
+    pool_name: SessionPoolName,
     queue: Sender<Event>,
 }
 
@@ -50,10 +50,12 @@ impl Processor {
         self.pools.insert(name.clone());
     }
 
-    pub fn pool(&self, name: &Atom)
+    pub fn pool(&self, name: &SessionPoolName)
         -> ProcessorPool
     {
-        assert!(self.pools.contains(name));
+        if !self.pools.contains(name) {
+            panic!("No pool {} defined", name);
+        }
         ProcessorPool {
             pool_name: name.clone(),
             // TODO(tailhook) Should we reference Processor instead
@@ -61,7 +63,7 @@ impl Processor {
         }
     }
 
-    pub fn has_pool(&self, name: &Atom) -> bool {
+    pub fn has_pool(&self, name: &SessionPoolName) -> bool {
         self.pools.contains(name)
     }
 }

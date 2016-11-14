@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use quire::validate::{Structure, Sequence, Mapping, Scalar};
 
-use intern::Atom;
+use intern::{HandlerName, Upstream, SessionPoolName, DiskPoolName};
 use super::listen::{self, ListenSocket};
 use super::routing::{self, Routing};
 use super::handlers::{self, Handler};
@@ -16,15 +16,15 @@ use super::disk::{self, Disk};
 pub struct Config {
     pub listen: Vec<ListenSocket>,
     pub routing: Routing,
-    pub handlers: HashMap<Atom, Handler>,
-    pub session_pools: HashMap<Atom, Arc<SessionPool>>,
-    pub http_destinations: HashMap<Atom, Destination>,
+    pub handlers: HashMap<HandlerName, Handler>,
+    pub session_pools: HashMap<SessionPoolName, Arc<SessionPool>>,
+    pub http_destinations: HashMap<Upstream, Destination>,
     pub debug_routing: bool,
     pub server_name: Option<String>,
     /// Note: "default" disk pool is always created, the only thing you can
     /// do is to update it's pool size, It's pool size can't be less than
     /// one, however.
-    pub disk_pools: HashMap<Atom, Disk>,
+    pub disk_pools: HashMap<DiskPoolName, Disk>,
 }
 
 pub fn config_validator<'a>() -> Structure<'a> {

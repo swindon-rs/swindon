@@ -15,7 +15,7 @@ use rustc_serialize::json::Json;
 use tokio_core::channel::Sender;
 
 use config;
-use intern::Atom;
+use intern::{Atom, SessionPoolName};
 use chat::Cid;
 
 mod main;
@@ -30,7 +30,7 @@ pub use self::public::{Processor, ProcessorPool};
 
 
 pub struct Event {
-    pool: Atom,
+    pool: SessionPoolName,
     timestamp: Instant,
     action: Action,
 }

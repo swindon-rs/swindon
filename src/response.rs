@@ -12,11 +12,11 @@ use tk_bufstream::{IoBuf, Flushed};
 use minihttp::{ResponseWriter, Error};
 
 use config::Config;
-use intern::Atom;
+use intern::HandlerName;
 
 
 pub struct DebugInfo {
-    route: Option<Atom>,
+    route: Option<HandlerName>,
 }
 
 
@@ -102,7 +102,7 @@ impl DebugInfo {
     /// # Panics
     ///
     /// Panics if route is already set (only in debug mode)
-    pub fn set_route(&mut self, route: &Atom) {
+    pub fn set_route(&mut self, route: &HandlerName) {
         debug_assert!(self.route.is_none());
         self.route = Some(route.clone());
     }
