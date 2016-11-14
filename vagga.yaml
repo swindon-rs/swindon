@@ -64,6 +64,7 @@ commands:
   test: !Command
     container: ubuntu
     description: Test project
+    environ: { RUST_BACKTRACE: 1 }
     run: [cargo, test]
 
   ci-test: !Command

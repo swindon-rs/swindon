@@ -39,11 +39,23 @@ pub enum ConnectionMessage {
     Publish(Arc<Json>),
 }
 
+pub enum PoolMessage {
+    InactiveSession {
+        session_id: Atom,
+        // This is mostly for debugging for now
+        connections_active: usize,
+        metadata: Arc<Json>,
+    },
+}
+
 pub enum Action {
 
     // ------ Session pool management ------
     //   For all actions session pool name is passed in event structure
-    EnsureSessionPool(Arc<config::SessionPool>),
+    NewSessionPool {
+        config: Arc<config::SessionPool>,
+        channel: Sender<PoolMessage>,
+    },
     StopSessionPool,
 
     // ------ Connection management ------

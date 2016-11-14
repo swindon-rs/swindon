@@ -10,7 +10,7 @@ fn pool_action(pool: &mut Pool, ts: Instant, action: Action) {
     use super::Action::*;
     match action {
         // handled earlier
-        EnsureSessionPool(_) => unreachable!(),
+        NewSessionPool {..} => unreachable!(),
         StopSessionPool => unreachable!(),
         // Connection management
         NewConnection { conn_id, channel } => {
@@ -64,8 +64,9 @@ pub fn run(rx: Receiver<Event>) {
             let Event { timestamp, action, pool } = msg;
             match action {
                 // Pool management
-                EnsureSessionPool(config) => {
-                    pools.insert(pool.clone(), Pool::new(pool, config));
+                NewSessionPool { config, channel } => {
+                    pools.insert(pool.clone(),
+                        Pool::new(pool, config, channel));
                 }
                 StopSessionPool => {
                     unimplemented!();

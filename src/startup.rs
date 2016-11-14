@@ -1,4 +1,5 @@
 use tokio_core::reactor::Handle;
+use tokio_core::channel::channel;
 use minihttp::client::HttpClient;
 
 use config::{ListenSocket, Handler, ConfigCell};
@@ -21,7 +22,6 @@ pub fn populate_loop(handle: &Handle, cfg: &ConfigCell, verbose: bool)
         config: cfg.clone(),
         handle: handle.clone(),
         http_client: HttpClient::new(handle.clone()),
-        chat_processor: chat_pro.clone(),
     };
     // TODO(tailhook) do something when config updates
     for sock in &cfg.get().listen {
@@ -35,6 +35,11 @@ pub fn populate_loop(handle: &Handle, cfg: &ConfigCell, verbose: bool)
                     move || Ok(main_handler.clone()));
             }
         }
+    }
+    for (name, cfg) in &cfg.get().session_pools {
+        let (tx, rx) = channel(handle).expect("create channel");
+        chat_pro.create_pool(name, cfg, tx);
+        // TODO(tailhook) read from rx
     }
     let root = cfg.get();
     for (name, h) in root.handlers.iter() {
@@ -57,13 +62,20 @@ pub fn populate_loop(handle: &Handle, cfg: &ConfigCell, verbose: bool)
         }
     }
     handlers::files::update_pools(&cfg.get().disk_pools);
-    chat_pro.update_pools(&cfg.get().session_pools);
     State {
         chat: chat_pro,
     }
 }
 
-pub fn update_loop(state: &State, cfg: &ConfigCell) {
+pub fn update_loop(state: &mut State, cfg: &ConfigCell, handle: &Handle) {
+    // TODO(tailhook) update listening sockets
     handlers::files::update_pools(&cfg.get().disk_pools);
-    state.chat.update_pools(&cfg.get().session_pools);
+    for (name, cfg) in &cfg.get().session_pools {
+        if !state.chat.has_pool(name) {
+            let (tx, rx) = channel(&handle).expect("create channel");
+            state.chat.create_pool(name, cfg, tx);
+            // TODO(tailhook) read from rx
+        }
+    }
+    // TODO(tailhook) update chat handlers
 }

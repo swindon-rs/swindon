@@ -2,6 +2,7 @@
 #![allow(dead_code)]
 
 #[macro_use] extern crate log;
+#[macro_use] extern crate matches;
 #[macro_use] extern crate quick_error;
 #[macro_use] extern crate lazy_static;
 extern crate env_logger;
@@ -94,7 +95,8 @@ pub fn main() {
     }
 
     let mut lp = Core::new().unwrap();
-    let loop_state = startup::populate_loop(&lp.handle(), &cfg, verbose);
+    let uhandle = lp.handle();
+    let mut loop_state = startup::populate_loop(&lp.handle(), &cfg, verbose);
 
     let config_updater = Interval::new(Duration::new(10, 0), &lp.handle())
         .expect("interval created")
@@ -102,9 +104,8 @@ pub fn main() {
             match configurator.try_update() {
                 Ok(false) => {}
                 Ok(true) => {
-                    // TODO(tailhook) update listening sockets
                     info!("Updated config");
-                    startup::update_loop(&loop_state, &cfg)
+                    startup::update_loop(&mut loop_state, &cfg, &uhandle);
                 }
                 Err(e) => {
                     error!("{}", e);

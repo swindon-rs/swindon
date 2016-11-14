@@ -8,7 +8,7 @@ use tokio_core::channel::Sender;
 use intern::Atom;
 use config;
 use chat::Cid;
-use super::ConnectionMessage;
+use super::{ConnectionMessage, PoolMessage};
 use super::session::Session;
 use super::connection::{NewConnection, Connection};
 use super::heap::HeapMap;
@@ -23,6 +23,7 @@ enum Subscription {
 
 pub struct Pool {
     name: Atom,
+    channel: Sender<PoolMessage>,
     active_sessions: HeapMap<Atom, Instant, Session>,
     inactive_sessions: HashMap<Atom, Session>,
 
@@ -37,9 +38,13 @@ pub struct Pool {
 
 impl Pool {
 
-    pub fn new(name: Atom, _cfg: Arc<config::SessionPool>) -> Pool {
+    pub fn new(name: Atom, _cfg: Arc<config::SessionPool>,
+        channel: Sender<PoolMessage>)
+        -> Pool
+    {
         Pool {
             name: name,
+            channel: channel,
             active_sessions: HeapMap::new(),
             inactive_sessions: HashMap::new(),
             pending_connections: HashMap::new(),
@@ -149,11 +154,17 @@ impl Pool {
         while self.active_sessions.peek()
             .map(|(_, &x, _)| x < timestamp).unwrap_or(false)
         {
-            let (user_id, _, session) = self.active_sessions.pop().unwrap();
+            let (sess_id, _, session) = self.active_sessions.pop().unwrap();
+            println!("SENDING INACTIVE {}", sess_id);
+            self.channel.send(PoolMessage::InactiveSession {
+                session_id: sess_id.clone(),
+                connections_active: session.connections.len(),
+                metadata: session.metadata.clone(),
+            }).expect("can't send pool message");
             if session.connections.len() == 0 {
                 // TODO(tailhook) Maybe do session cleanup ?
             } else {
-                let val = self.inactive_sessions.insert(user_id, session);
+                let val = self.inactive_sessions.insert(sess_id, session);
                 debug_assert!(val.is_none());
             }
             // TODO(tailhook) send inactiity message to IO thread
@@ -235,26 +246,32 @@ mod test {
     use std::sync::Arc;
     use std::time::{Instant, Duration};
     use rustc_serialize::json::Json;
-    use tokio_core::channel::channel;
-    use tokio_core::reactor::Core;
+    use futures::stream::Stream;
+    use tokio_core::channel::{channel, Receiver};
+    use tokio_core::reactor::{Core, Handle};
     use intern::Atom;
     use config;
     use chat::Cid;
 
     use super::Pool;
+    use super::super::PoolMessage;
 
-    fn pool() -> Pool {
-        Pool::new(Atom::from("test_pool"), Arc::new(config::SessionPool {
-            listen: config::ListenSocket::Tcp(
-                "127.0.0.1:65535".parse().unwrap())
-        }))
+    fn pool(h: &Handle) -> (Pool, Receiver<PoolMessage>) {
+        let (tx, rx) = channel(h).unwrap();
+        let pool = Pool::new(Atom::from("test_pool"),
+            Arc::new(config::SessionPool {
+                listen: config::ListenSocket::Tcp(
+                    "127.0.0.1:65535".parse().unwrap())
+            }),
+            tx);
+        return (pool, rx);
     }
 
     #[test]
     fn add_conn() {
-        let mut pool = pool();
-        let cid = Cid::new();
         let lp = Core::new().unwrap();
+        let (mut pool, _rx) = pool(&lp.handle());
+        let cid = Cid::new();
         let (tx, _rx) = channel(&lp.handle()).unwrap();
         pool.add_connection(cid, tx);
         pool.associate(cid, Atom::from("user1"), Instant::now(),
@@ -267,9 +284,9 @@ mod test {
 
     #[test]
     fn disconnect_after_inactive() {
-        let mut pool = pool();
+        let mut lp = Core::new().unwrap();
+        let (mut pool, mut rx) = pool(&lp.handle());
         let cid = Cid::new();
-        let lp = Core::new().unwrap();
         let (tx, _rx) = channel(&lp.handle()).unwrap();
         pool.add_connection(cid, tx);
         pool.associate(cid, Atom::from("user1"), Instant::now(),
@@ -285,6 +302,11 @@ mod test {
         assert_eq!(pool.active_sessions.len(), 1);
         assert_eq!(pool.inactive_sessions.len(), 0);
         pool.cleanup(Instant::now() + Duration::new(120, 0));
+        let val = lp.run(rx.into_future())
+            .map(|(m, _)| m).map_err(|(e, _)| e).unwrap();
+        assert!(matches!(val.unwrap(),
+            PoolMessage::InactiveSession { ref session_id, ..}
+            if *session_id == Atom::from("user1")));
         assert_eq!(pool.active_sessions.len(), 0);
         assert_eq!(pool.inactive_sessions.len(), 1);
         pool.del_connection(cid);
@@ -294,9 +316,9 @@ mod test {
 
     #[test]
     fn disconnect_before_inactive() {
-        let mut pool = pool();
+        let mut lp = Core::new().unwrap();
+        let (mut pool, mut rx) = pool(&lp.handle());
         let cid = Cid::new();
-        let lp = Core::new().unwrap();
         let (tx, _rx) = channel(&lp.handle()).unwrap();
         pool.add_connection(cid, tx);
         pool.associate(cid, Atom::from("user1"), Instant::now(),
@@ -315,6 +337,11 @@ mod test {
         assert_eq!(pool.active_sessions.len(), 1);
         assert_eq!(pool.inactive_sessions.len(), 0);
         pool.cleanup(Instant::now() + Duration::new(120, 0));
+        let val = lp.run(rx.into_future())
+            .map(|(m, _)| m).map_err(|(e, _)| e).unwrap();
+        assert!(matches!(val.unwrap(),
+            PoolMessage::InactiveSession { ref session_id, ..}
+            if *session_id == Atom::from("user1")));
         assert_eq!(pool.active_sessions.len(), 0);
         assert_eq!(pool.inactive_sessions.len(), 0);
     }

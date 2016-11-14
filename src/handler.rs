@@ -20,7 +20,6 @@ pub struct Main {
     pub config: ConfigCell,
     pub handle: Handle,
     pub http_client: HttpClient,
-    pub chat_processor: chat::Processor,
 }
 
 impl Service for Main {

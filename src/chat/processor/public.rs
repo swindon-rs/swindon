@@ -2,16 +2,18 @@ use std::thread::spawn;
 use std::sync::Arc;
 use std::time::Instant;
 use std::sync::mpsc::{channel, Sender};
-use std::collections::HashMap;
+use std::collections::HashSet;
+
+use tokio_core::channel::Sender as TokioSender;
 
 use intern::Atom;
 use config;
-use super::{Event, Action};
+use super::{Event, Action, PoolMessage};
 use super::main;
 
 
-#[derive(Clone)]
 pub struct Processor {
+    pools: HashSet<Atom>,
     queue: Sender<Event>,
 }
 
@@ -30,26 +32,36 @@ impl Processor {
         });
         return Processor {
             queue: tx,
+            pools: HashSet::new(),
         }
     }
 
-    pub fn update_pools(&self, pools: &HashMap<Atom, Arc<config::SessionPool>>)
+    pub fn create_pool(&self, name: &Atom,
+        config: &Arc<config::SessionPool>, channel: TokioSender<PoolMessage>)
     {
-        for (name, props) in pools {
-            self.queue.send(Event {
-                pool: name.clone(),
-                timestamp: Instant::now(),
-                action: Action::EnsureSessionPool(props.clone()),
-            }).map_err(|e| panic!("Processor loop send error: {}", e)).ok();
-        }
+        self.queue.send(Event {
+            pool: name.clone(),
+            timestamp: Instant::now(),
+            action: Action::NewSessionPool {
+                config: config.clone(),
+                channel: channel,
+            },
+        }).map_err(|e| panic!("Processor loop send error: {}", e)).ok();
     }
 
-    pub fn pool(&self, name: &Atom) -> ProcessorPool {
+    pub fn pool(&self, name: &Atom)
+        -> ProcessorPool
+    {
+        assert!(self.pools.contains(name));
         ProcessorPool {
             pool_name: name.clone(),
             // TODO(tailhook) Should we reference Processor instead
             queue: self.queue.clone(),
         }
+    }
+
+    pub fn has_pool(&self, name: &Atom) -> bool {
+        self.pools.contains(name)
     }
 }
 
