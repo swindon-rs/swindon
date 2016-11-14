@@ -45,12 +45,15 @@ pub enum Action {
 
     // ------ Connection management ------
     NewConnection {
-        user_id: Atom,
         conn_id: Cid,
+    },
+    Associate {
+        conn_id: Cid,
+        session_id: Atom,
         metadata: Arc<Json>
     },
     UpdateActivity {
-        user_id: Atom,
+        conn_id: Cid,
         // We receive duration from client, but we expect request handling
         // code to validate and normalize it for us
         timestamp: Instant,

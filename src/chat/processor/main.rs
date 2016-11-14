@@ -13,11 +13,14 @@ fn pool_action(pool: &mut Pool, ts: Instant, action: Action) {
         EnsureSessionPool(_) => unreachable!(),
         StopSessionPool => unreachable!(),
         // Connection management
-        NewConnection { user_id, conn_id, metadata } => {
-            pool.add_connection(ts, user_id, conn_id, metadata);
+        NewConnection { conn_id } => {
+            pool.add_connection(conn_id);
         }
-        UpdateActivity { user_id, timestamp } => {
-            pool.update_activity(user_id, timestamp);
+        Associate { session_id, conn_id, metadata } => {
+            pool.associate(conn_id, session_id, ts, metadata);
+        }
+        UpdateActivity { conn_id, timestamp } => {
+            pool.update_activity(conn_id, timestamp);
         }
         Disconnect { conn_id } => {
             pool.del_connection(conn_id);

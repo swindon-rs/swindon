@@ -1,6 +1,6 @@
 use std::sync::Arc;
 use std::time::{Instant, Duration};
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 use rustc_serialize::json::Json;
 
@@ -8,16 +8,25 @@ use intern::Atom;
 use config;
 use chat::Cid;
 use super::session::Session;
-use super::connection::Connection;
+use super::connection::{NewConnection, Connection};
 use super::heap::HeapMap;
+
+
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+enum Subscription {
+    Pending,
+    Session,
+}
 
 
 pub struct Pool {
     name: Atom,
     active_sessions: HeapMap<Atom, Instant, Session>,
     inactive_sessions: HashMap<Atom, Session>,
+
+    pending_connections: HashMap<Cid, NewConnection>,
     connections: HashMap<Cid, Connection>,
-    topics: HashMap<Atom, HashSet<Cid>>,
+    topics: HashMap<Atom, HashMap<Cid, Subscription>>,
 
     // Setings
     new_connection_timeout: Duration,
@@ -31,6 +40,7 @@ impl Pool {
             name: name,
             active_sessions: HeapMap::new(),
             inactive_sessions: HashMap::new(),
+            pending_connections: HashMap::new(),
             connections: HashMap::new(),
             topics: HashMap::new(),
 
@@ -39,9 +49,30 @@ impl Pool {
         }
     }
 
-    pub fn add_connection(&mut self, timestamp: Instant,
-        session_id: Atom, conn_id: Cid, metadata: Arc<Json>)
+    pub fn add_connection(&mut self, conn_id: Cid) {
+        let old = self.pending_connections.insert(conn_id,
+            NewConnection::new(conn_id));
+        debug_assert!(old.is_none());
+    }
+
+    pub fn associate(&mut self, conn_id: Cid, session_id: Atom,
+        timestamp: Instant, metadata: Arc<Json>)
     {
+        let conn = if let Some(p) = self.pending_connections.remove(&conn_id) {
+            p.associate(session_id.clone())
+        } else {
+            debug!("Connection {:?} does not exist any more", conn_id);
+            return;
+        };
+
+        for top in &conn.topics {
+            let ptr = self.topics
+                .get_mut(top)
+                .and_then(|m| m.get_mut(&conn_id))
+                .expect("topics are consistent");
+            *ptr = Subscription::Session;
+        }
+
         let expire = timestamp + self.new_connection_timeout;
         if let Some(mut session) = self.inactive_sessions.remove(&session_id) {
             session.connections.insert(conn_id);
@@ -61,12 +92,17 @@ impl Pool {
             self.active_sessions.insert(session_id.clone(), expire, session);
         }
 
-        let ins = self.connections.insert(conn_id,
-            Connection::new(conn_id, session_id));
+        let ins = self.connections.insert(conn_id, conn);
         debug_assert!(ins.is_none());
     }
 
     pub fn del_connection(&mut self, conn_id: Cid) {
+        if let Some(conn) = self.pending_connections.remove(&conn_id) {
+            for top in &conn.topics {
+                unsubscribe(&mut self.topics, top, conn_id);
+            }
+            return;
+        }
         let conn = self.connections.remove(&conn_id)
             .expect("valid connection");
         for topic in &conn.topics {
@@ -91,12 +127,17 @@ impl Pool {
         }
     }
 
-    pub fn update_activity(&mut self, user_id: Atom, activity_ts: Instant)
+    pub fn update_activity(&mut self, conn_id: Cid, activity_ts: Instant)
     {
-        if let Some(session) = self.inactive_sessions.remove(&user_id) {
-            self.active_sessions.insert(user_id, activity_ts, session);
+        let sess_id = if let Some(conn) = self.connections.get(&conn_id) {
+            &conn.session_id
         } else {
-            self.active_sessions.update_if_smaller(&user_id, activity_ts)
+            return;
+        };
+        if let Some(session) = self.inactive_sessions.remove(sess_id) {
+            self.active_sessions.insert(sess_id.clone(), activity_ts, session);
+        } else {
+            self.active_sessions.update_if_smaller(sess_id, activity_ts)
         }
     }
 
@@ -117,45 +158,72 @@ impl Pool {
     }
 
     pub fn subscribe(&mut self, cid: Cid, topic: Atom) {
-        self.connections.get_mut(&cid)
-            // TODO(tailhook) Should we allow invalid connections?
-            .expect("valid cid")
-            .topics.insert(topic.clone());
-        self.topics.entry(topic).or_insert_with(HashSet::new)
-            .insert(cid);
+        if let Some(conn) = self.connections.get_mut(&cid) {
+            conn.topics.insert(topic.clone());
+            self.topics.entry(topic).or_insert_with(HashMap::new)
+                .insert(cid, Subscription::Session);
+        } else if let Some(conn) = self.pending_connections.get_mut(&cid) {
+            conn.topics.insert(topic.clone());
+            self.topics.entry(topic).or_insert_with(HashMap::new)
+                .insert(cid, Subscription::Pending);
+        } else {
+            debug!("Connection {:?} does not exist any more", cid);
+        }
     }
 
     pub fn unsubscribe(&mut self, cid: Cid, topic: Atom) {
-        self.connections.get_mut(&cid)
-            // TODO(tailhook) Should we allow invalid connections?
-            .expect("valid cid")
-            .topics.remove(&topic);
-        unsubscribe(&mut self.topics, &topic, cid);
+        match unsubscribe(&mut self.topics, &topic, cid) {
+            Some(Subscription::Pending) => {
+                self.pending_connections.get_mut(&cid)
+                    .expect("pending conns and topics are in sync")
+                    .topics.remove(&topic);
+            }
+            Some(Subscription::Session) => {
+                self.connections.get_mut(&cid)
+                    .expect("pending conns and topics are in sync")
+                    .topics.remove(&topic);
+            }
+            None => {
+                debug!("Connection {:?} does not exist any more", cid);
+            }
+        }
     }
 
     pub fn publish(&mut self, topic: Atom, data: Arc<Json>) {
         if let Some(cids) = self.topics.get(&topic) {
-            for cid in cids {
-                self.connections.get(cid)
-                    .expect("subscriptions out of sync")
-                    .message(data.clone())
+            for (cid, typ) in cids {
+                match *typ {
+                    Subscription::Pending => {
+                        self.pending_connections.get_mut(cid)
+                            .expect("subscriptions out of sync")
+                            .message(data.clone())
+                    }
+                    Subscription::Session => {
+                        self.connections.get(cid)
+                            .expect("subscriptions out of sync")
+                            .message(data.clone())
+                    }
+                }
             }
         }
     }
 
 }
 
-fn unsubscribe(topics: &mut HashMap<Atom, HashSet<Cid>>,
+fn unsubscribe(topics: &mut HashMap<Atom, HashMap<Cid, Subscription>>,
     topic: &Atom, cid: Cid)
+    -> Option<Subscription>
 {
     let left = topics.get_mut(topic)
         .map(|set| {
-            set.remove(&cid);
-            set.len()
+            (set.remove(&cid), set.len())
         });
-    if left == Some(0) {
-        topics.remove(topic);
-    }
+    left.and_then(|(sub, len)| {
+        if len == 0 {
+            topics.remove(topic);
+        }
+        return sub;
+    })
 }
 
 #[cfg(test)]
@@ -179,7 +247,9 @@ mod test {
     #[test]
     fn add_conn() {
         let mut pool = pool();
-        pool.add_connection(Instant::now(), Atom::from("user1"), Cid::new(),
+        let cid = Cid::new();
+        pool.add_connection(cid);
+        pool.associate(cid, Atom::from("user1"), Instant::now(),
             Arc::new(Json::Object(vec![
                 ("user_id", "user1"),
             ].into_iter().map(|(x, y)| {
@@ -191,7 +261,8 @@ mod test {
     fn disconnect_after_inactive() {
         let mut pool = pool();
         let cid = Cid::new();
-        pool.add_connection(Instant::now(), Atom::from("user1"), cid,
+        pool.add_connection(cid);
+        pool.associate(cid, Atom::from("user1"), Instant::now(),
             Arc::new(Json::Object(vec![
                 ("user_id", "user1"),
             ].into_iter().map(|(x, y)| {
@@ -215,7 +286,8 @@ mod test {
     fn disconnect_before_inactive() {
         let mut pool = pool();
         let cid = Cid::new();
-        pool.add_connection(Instant::now(), Atom::from("user1"), cid,
+        pool.add_connection(cid);
+        pool.associate(cid, Atom::from("user1"), Instant::now(),
             Arc::new(Json::Object(vec![
                 ("user_id", "user1"),
             ].into_iter().map(|(x, y)| {
