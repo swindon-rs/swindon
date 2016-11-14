@@ -2,10 +2,28 @@ use std::time::Instant;
 use std::sync::mpsc::Receiver;
 use std::collections::HashMap;
 
-use super::Event;
+use super::{Event, Action};
 use super::pool::Pool;
 use super::try_iter::try_iter;
 
+fn pool_action(pool: &mut Pool, ts: Instant, action: Action) {
+    use super::Action::*;
+    match action {
+        // handled earlier
+        EnsureSessionPool(_) => unreachable!(),
+        StopSessionPool => unreachable!(),
+        // Connection management
+        NewConnection { user_id, conn_id, metadata } => {
+            pool.add_connection(ts, user_id, conn_id, metadata);
+        }
+        UpdateActivity { user_id, timestamp } => {
+            pool.update_activity(user_id, timestamp);
+        }
+        Disconnect { user_id, conn_id } => {
+            pool.del_connection(user_id, conn_id);
+        }
+    }
+}
 
 pub fn run(rx: Receiver<Event>) {
     use super::Action::*;
@@ -32,7 +50,6 @@ pub fn run(rx: Receiver<Event>) {
         for msg in value.into_iter().chain(try_iter(&rx)) {
             let Event { timestamp, action, pool } = msg;
             match action {
-
                 // Pool management
                 EnsureSessionPool(config) => {
                     pools.insert(pool.clone(), Pool::new(pool, config));
@@ -40,22 +57,10 @@ pub fn run(rx: Receiver<Event>) {
                 StopSessionPool => {
                     unimplemented!();
                 }
-
-                // Connection management
-                NewConnection { user_id, conn_id, metadata } => {
+                _ => {
+                    // For all other actions we resolve pool first
                     pools.get_mut(&pool)
-                    .map(|p| p.add_connection(timestamp,
-                                              user_id, conn_id, metadata))
-                    .unwrap_or_else(|| debug!("Undefined pool {:?}", pool))
-                }
-                UpdateActivity { user_id, timestamp } => {
-                    pools.get_mut(&pool)
-                    .map(|p| p.update_activity(user_id, timestamp))
-                    .unwrap_or_else(|| debug!("Undefined pool {:?}", pool))
-                }
-                Disconnect { user_id, conn_id } => {
-                    pools.get_mut(&pool)
-                    .map(|p| p.del_connection(user_id, conn_id))
+                    .map(|p| pool_action(p, timestamp, action))
                     .unwrap_or_else(|| debug!("Undefined pool {:?}", pool))
                 }
             }
