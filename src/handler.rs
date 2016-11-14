@@ -40,10 +40,6 @@ impl Service for Main {
         response.serve(req, cfg.clone(), debug,
                        &self.handle, &self.http_client)
     }
-
-    fn poll_ready(&self) -> Async<()> {
-        Async::Ready(())
-    }
 }
 
 impl Main {

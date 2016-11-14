@@ -9,12 +9,12 @@ dependencies = [
  "futures 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "futures-cpupool 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "httparse 1.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "httpbin 0.1.0 (git+https://github.com/tailhook/httpbin-rs?rev=ca39b37)",
+ "httpbin 0.1.0 (git+https://github.com/tailhook/httpbin-rs?rev=afb7f68)",
  "lazy_static 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.3.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "mime 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "mime_guess 1.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "minihttp 0.1.0 (git+https://github.com/popravich/minihttp?rev=b44c59e)",
+ "minihttp 0.1.0 (git+https://github.com/popravich/minihttp?rev=f40ee0d)",
  "netbuf 0.3.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "quick-error 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "quire 0.1.8 (git+https://github.com/tailhook/rust-quire?rev=719d201)",
@@ -26,7 +26,7 @@ dependencies = [
  "tk-sendfile 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio-core 0.1.0 (git+https://github.com/tokio-rs/tokio-core?rev=62514fc)",
  "tokio-curl 0.1.3 (registry+https://github.com/rust-lang/crates.io-index)",
- "tokio-service 0.1.0 (git+https://github.com/tokio-rs/tokio-service)",
+ "tokio-service 0.1.0 (git+https://github.com/tokio-rs/tokio-service?rev=da47a93)",
 ]
 
 [[package]]
@@ -140,7 +140,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 [[package]]
 name = "httpbin"
 version = "0.1.0"
-source = "git+https://github.com/tailhook/httpbin-rs?rev=ca39b37#ca39b370f3cd461a5eb7f994bb9f474763ae554e"
+source = "git+https://github.com/tailhook/httpbin-rs?rev=afb7f68#afb7f687fa16e109b835bc96c78fe11384f60e8d"
 dependencies = [
  "argparse 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "env_logger 0.3.5 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -153,7 +153,7 @@ dependencies = [
  "time 0.1.35 (registry+https://github.com/rust-lang/crates.io-index)",
  "tk-bufstream 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio-core 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "tokio-service 0.1.0 (git+https://github.com/tokio-rs/tokio-service?rev=92eccdc)",
+ "tokio-service 0.1.0 (git+https://github.com/tokio-rs/tokio-service?rev=da47a93)",
 ]
 
 [[package]]
@@ -263,6 +263,12 @@ dependencies = [
  "tokio-curl 0.1.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio-service 0.1.0 (git+https://github.com/tokio-rs/tokio-service)",
 ]
+
+[[package]]
+name = "minihttp"
+version = "0.1.0"
+source = "git+https://github.com/popravich/minihttp?rev=f40ee0d#f40ee0dc17547f7f626c2d74126da75c0dda4f15"
+replace = "minihttp 0.1.0 (git+https://github.com/popravich/minihttp?rev=b44c59e)"
 
 [[package]]
 name = "mio"
@@ -592,15 +598,15 @@ dependencies = [
 name = "tokio-service"
 version = "0.1.0"
 source = "git+https://github.com/tokio-rs/tokio-service#92eccdc149111deb4d1b621effd2422976ed95e8"
-dependencies = [
- "futures 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
-]
+replace = "tokio-service 0.1.0 (git+https://github.com/tokio-rs/tokio-service?rev=da47a93)"
 
 [[package]]
 name = "tokio-service"
 version = "0.1.0"
-source = "git+https://github.com/tokio-rs/tokio-service?rev=92eccdc#92eccdc149111deb4d1b621effd2422976ed95e8"
-replace = "tokio-service 0.1.0 (git+https://github.com/tokio-rs/tokio-service)"
+source = "git+https://github.com/tokio-rs/tokio-service?rev=da47a93#da47a933d03b58d4cbb7f467f7c3a0426b58044f"
+dependencies = [
+ "futures 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
+]
 
 [[package]]
 name = "unicase"
@@ -664,7 +670,7 @@ dependencies = [
 "checksum gcc 0.3.37 (registry+https://github.com/rust-lang/crates.io-index)" = "41337e9dc80ebadf36b4f252bf7440f61bcf34f99caa170e50dcd0f9a0cdb5d8"
 "checksum gdi32-sys 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "0912515a8ff24ba900422ecda800b52f4016a56251922d397c576bf92c690518"
 "checksum httparse 1.1.2 (registry+https://github.com/rust-lang/crates.io-index)" = "46534074dbb80b070d60a5cb8ecadd8963a00a438ae1a95268850a7ef73b67ae"
-"checksum httpbin 0.1.0 (git+https://github.com/tailhook/httpbin-rs?rev=ca39b37)" = "<none>"
+"checksum httpbin 0.1.0 (git+https://github.com/tailhook/httpbin-rs?rev=afb7f68)" = "<none>"
 "checksum itoa 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)" = "ae3088ea4baeceb0284ee9eea42f591226e6beaecf65373e41b38d95a1b8e7a1"
 "checksum kernel32-sys 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)" = "7507624b29483431c0ba2d82aece8ca6cdba9382bff4ddd0f7490560c056098d"
 "checksum lazy_static 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)" = "49247ec2a285bb3dcb23cbd9c35193c025e7251bfce77c1d5da97e6362dffe7f"
@@ -679,6 +685,7 @@ dependencies = [
 "checksum mime_guess 1.8.0 (registry+https://github.com/rust-lang/crates.io-index)" = "e9a7d89cb3bce9145b0d0339a0588b044e3e3e3faa1dcd74822ebdc36bfac020"
 "checksum minihttp 0.1.0 (git+git://github.com/popravich/minihttp?rev=7bf2c56)" = "<none>"
 "checksum minihttp 0.1.0 (git+https://github.com/popravich/minihttp?rev=b44c59e)" = "<none>"
+"checksum minihttp 0.1.0 (git+https://github.com/popravich/minihttp?rev=f40ee0d)" = "<none>"
 "checksum mio 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)" = "2dadd39d4b47343e10513ac2a731c979517a4761224ecb6bbd243602300c9537"
 "checksum miow 0.1.3 (registry+https://github.com/rust-lang/crates.io-index)" = "d5bfc6782530ac8ace97af10a540054a37126b63b0702ddaaa243b73b5745b9a"
 "checksum net2 0.2.26 (registry+https://github.com/rust-lang/crates.io-index)" = "5edf9cb6be97212423aed9413dd4729d62b370b5e1c571750e882cebbbc1e3e2"
@@ -717,7 +724,7 @@ dependencies = [
 "checksum tokio-core 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "659cbae6c954dee37352853816c6a52180e47feb70be73bbfeec6d58c4da4a71"
 "checksum tokio-curl 0.1.3 (registry+https://github.com/rust-lang/crates.io-index)" = "7cf863fd2ae8982b480c5ffdcf9870bee087477fa228613fe419dcd39042f578"
 "checksum tokio-service 0.1.0 (git+https://github.com/tokio-rs/tokio-service)" = "<none>"
-"checksum tokio-service 0.1.0 (git+https://github.com/tokio-rs/tokio-service?rev=92eccdc)" = "<none>"
+"checksum tokio-service 0.1.0 (git+https://github.com/tokio-rs/tokio-service?rev=da47a93)" = "<none>"
 "checksum unicase 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)" = "13a5906ca2b98c799f4b1ab4557b76367ebd6ae5ef14930ec841c74aed5f3764"
 "checksum user32-sys 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "4ef4711d107b21b410a3a974b1204d9accc8b10dad75d8324b5d755de1617d47"
 "checksum utf8-ranges 0.1.3 (registry+https://github.com/rust-lang/crates.io-index)" = "a1ca13c08c41c9c3e04224ed9ff80461d97e121589ff27c753a16cb10830ae0f"

@@ -59,10 +59,6 @@ impl Service for ChatAPI {
             write_error_page(status, res).done()
         }))
     }
-
-    fn poll_ready(&self) -> Async<()> {
-        Async::Ready(())
-    }
 }
 
 

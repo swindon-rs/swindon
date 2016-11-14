@@ -30,7 +30,9 @@ pub fn populate_loop(handle: &Handle, cfg: &ConfigCell, verbose: bool)
                 if verbose {
                     println!("Listening at {}", addr);
                 }
-                minihttp::serve(handle, addr, main_handler.clone());
+                let main_handler = main_handler.clone();
+                minihttp::serve(handle, addr,
+                    move || Ok(main_handler.clone()));
             }
         }
     }
@@ -49,7 +51,7 @@ pub fn populate_loop(handle: &Handle, cfg: &ConfigCell, verbose: bool)
                         chat_pool: chat_pro.pool(&chat.session_pool),
                     };
                     minihttp::serve(handle, addr,
-                        chat_handler.clone());
+                        move || Ok(chat_handler.clone()));
                 }
             }
         }
