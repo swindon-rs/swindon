@@ -27,6 +27,7 @@ extern crate byteorder;
 extern crate httparse;
 extern crate httpbin;
 extern crate slab;
+extern crate string_intern;
 
 mod intern;
 mod config;
