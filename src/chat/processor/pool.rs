@@ -155,7 +155,6 @@ impl Pool {
             .map(|(_, &x, _)| x < timestamp).unwrap_or(false)
         {
             let (sess_id, _, session) = self.active_sessions.pop().unwrap();
-            println!("SENDING INACTIVE {}", sess_id);
             self.channel.send(PoolMessage::InactiveSession {
                 session_id: sess_id.clone(),
                 connections_active: session.connections.len(),
