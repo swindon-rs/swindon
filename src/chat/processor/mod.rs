@@ -24,6 +24,7 @@ mod public;
 mod session;
 mod heap;
 mod try_iter;  // temporary
+mod connection;
 
 pub use self::public::{Processor, ProcessorPool};
 
@@ -55,7 +56,20 @@ pub enum Action {
         timestamp: Instant,
     },
     Disconnect {
-        user_id: Atom,
         conn_id: Cid,
+    },
+
+    // ------ Subscriptions ------
+    Subscribe {
+        conn_id: Cid,
+        topic: Atom,
+    },
+    Unsubscribe {
+        conn_id: Cid,
+        topic: Atom,
+    },
+    Publish {
+        topic: Atom,
+        data: Arc<Json>,
     },
 }

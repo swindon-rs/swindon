@@ -19,8 +19,18 @@ fn pool_action(pool: &mut Pool, ts: Instant, action: Action) {
         UpdateActivity { user_id, timestamp } => {
             pool.update_activity(user_id, timestamp);
         }
-        Disconnect { user_id, conn_id } => {
-            pool.del_connection(user_id, conn_id);
+        Disconnect { conn_id } => {
+            pool.del_connection(conn_id);
+        }
+        // Subscriptions
+        Subscribe { conn_id, topic } => {
+            pool.subscribe(conn_id, topic);
+        }
+        Unsubscribe { conn_id, topic } => {
+            pool.unsubscribe(conn_id, topic);
+        }
+        Publish { topic, data } => {
+            pool.publish(topic, data);
         }
     }
 }
