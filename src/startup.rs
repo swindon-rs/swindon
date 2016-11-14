@@ -17,7 +17,7 @@ pub struct State {
 pub fn populate_loop(handle: &Handle, cfg: &ConfigCell, verbose: bool)
     -> State
 {
-    let chat_pro = chat::Processor::new();
+    let mut chat_pro = chat::Processor::new();
     let main_handler = Main {
         config: cfg.clone(),
         handle: handle.clone(),

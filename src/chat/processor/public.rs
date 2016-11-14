@@ -36,7 +36,7 @@ impl Processor {
         }
     }
 
-    pub fn create_pool(&self, name: &Atom,
+    pub fn create_pool(&mut self, name: &SessionPoolName,
         config: &Arc<config::SessionPool>, channel: TokioSender<PoolMessage>)
     {
         self.queue.send(Event {
@@ -47,6 +47,7 @@ impl Processor {
                 channel: channel,
             },
         }).map_err(|e| panic!("Processor loop send error: {}", e)).ok();
+        self.pools.insert(name.clone());
     }
 
     pub fn pool(&self, name: &Atom)
