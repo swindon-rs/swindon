@@ -18,6 +18,15 @@ pub type SessionPoolName = Symbol<SessionPoolValidator>;
 struct OldValidator;
 pub type Atom = Symbol<OldValidator>;
 
+struct SessionIdValidator;
+pub type SessionId = Symbol<SessionIdValidator>;
+
+struct TopicValidator;
+pub type TopicName = Symbol<TopicValidator>;
+
+struct LatticeNamespaceValidator;
+pub type LatticeName = Symbol<LatticeNamespaceValidator>;
+
 quick_error! {
     #[derive(Debug)]
     pub enum BadIdent {
@@ -30,6 +39,16 @@ quick_error! {
 fn valid_ident(val: &str) -> bool {
     val.chars().all(|c| c.is_ascii() &&
         (c.is_alphanumeric() || c == '-' || c == '_'))
+}
+
+fn valid_namespace(val: &str) -> bool {
+    val.chars().all(|c| c.is_ascii() &&
+        (c.is_alphanumeric() || c == '-' || c == '_' || c == '.'))
+}
+
+fn valid_sid(val: &str) -> bool {
+    val.chars().all(|c| c.is_ascii() &&
+        (c.is_alphanumeric() || c == '-' || c == '_' || c == ':'))
 }
 
 impl Validator for UpstreamValidator {
@@ -97,3 +116,41 @@ impl Validator for OldValidator {
     }
 }
 
+impl Validator for TopicValidator {
+    type Err = BadIdent;
+    fn validate_symbol(val: &str) -> Result<(), Self::Err> {
+        if !valid_namespace(val) {
+            return Err(BadIdent::InvalidChar);
+        }
+        Ok(())
+    }
+    fn display(value: &Symbol<Self>, fmt: &mut fmt::Formatter) -> fmt::Result {
+        write!(fmt, "topic{:?}", value.as_ref())
+    }
+}
+
+impl Validator for LatticeNamespaceValidator {
+    type Err = BadIdent;
+    fn validate_symbol(val: &str) -> Result<(), Self::Err> {
+        if !valid_namespace(val) {
+            return Err(BadIdent::InvalidChar);
+        }
+        Ok(())
+    }
+    fn display(value: &Symbol<Self>, fmt: &mut fmt::Formatter) -> fmt::Result {
+        write!(fmt, "lattice{:?}", value.as_ref())
+    }
+}
+
+impl Validator for SessionIdValidator {
+    type Err = BadIdent;
+    fn validate_symbol(val: &str) -> Result<(), Self::Err> {
+        if !valid_sid(val) {
+            return Err(BadIdent::InvalidChar);
+        }
+        Ok(())
+    }
+    fn display(value: &Symbol<Self>, fmt: &mut fmt::Formatter) -> fmt::Result {
+        write!(fmt, "sessionid{:?}", value.as_ref())
+    }
+}

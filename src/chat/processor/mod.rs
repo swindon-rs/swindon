@@ -15,7 +15,7 @@ use rustc_serialize::json::Json;
 use tokio_core::channel::Sender;
 
 use config;
-use intern::{Atom, SessionPoolName};
+use intern::{TopicName, SessionId, SessionPoolName};
 use chat::Cid;
 
 mod main;
@@ -37,11 +37,21 @@ pub struct Event {
 
 pub enum ConnectionMessage {
     Publish(Arc<Json>),
+    Raw(String),    // XXX; implement variants below
+
+    // // Websocket message result;
+    // Result(Arc<Meta>, Arc<Json>),
+    // // Result of Auth call;
+    // Hello(Arc<Json>),
+    // // Lattice update message;
+    // Lattice(Arc<Json>),
+    // // Some Error
+    // Error(Arc<Meta>, Arc<Json>),
 }
 
 pub enum PoolMessage {
     InactiveSession {
-        session_id: Atom,
+        session_id: SessionId,
         // This is mostly for debugging for now
         connections_active: usize,
         metadata: Arc<Json>,
@@ -65,7 +75,7 @@ pub enum Action {
     },
     Associate {
         conn_id: Cid,
-        session_id: Atom,
+        session_id: SessionId,
         metadata: Arc<Json>
     },
     UpdateActivity {
@@ -81,14 +91,14 @@ pub enum Action {
     // ------ Subscriptions ------
     Subscribe {
         conn_id: Cid,
-        topic: Atom,
+        topic: TopicName,
     },
     Unsubscribe {
         conn_id: Cid,
-        topic: Atom,
+        topic: TopicName,
     },
     Publish {
-        topic: Atom,
+        topic: TopicName,
         data: Arc<Json>,
     },
 }

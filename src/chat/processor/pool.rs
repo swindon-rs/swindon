@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use rustc_serialize::json::Json;
 use tokio_core::channel::Sender;
 
-use intern::{Atom, SessionPoolName};
+use intern::{TopicName, SessionId, SessionPoolName};
 use config;
 use chat::Cid;
 use super::{ConnectionMessage, PoolMessage};
@@ -24,12 +24,12 @@ enum Subscription {
 pub struct Pool {
     name: SessionPoolName,
     channel: Sender<PoolMessage>,
-    active_sessions: HeapMap<Atom, Instant, Session>,
-    inactive_sessions: HashMap<Atom, Session>,
+    active_sessions: HeapMap<SessionId, Instant, Session>,
+    inactive_sessions: HashMap<SessionId, Session>,
 
     pending_connections: HashMap<Cid, NewConnection>,
     connections: HashMap<Cid, Connection>,
-    topics: HashMap<Atom, HashMap<Cid, Subscription>>,
+    topics: HashMap<TopicName, HashMap<Cid, Subscription>>,
 
     // Setings
     new_connection_timeout: Duration,
@@ -64,7 +64,7 @@ impl Pool {
         debug_assert!(old.is_none());
     }
 
-    pub fn associate(&mut self, conn_id: Cid, session_id: Atom,
+    pub fn associate(&mut self, conn_id: Cid, session_id: SessionId,
         timestamp: Instant, metadata: Arc<Json>)
     {
         let conn = if let Some(p) = self.pending_connections.remove(&conn_id) {
@@ -171,7 +171,7 @@ impl Pool {
         self.active_sessions.peek().map(|(_, &x, _)| x)
     }
 
-    pub fn subscribe(&mut self, cid: Cid, topic: Atom) {
+    pub fn subscribe(&mut self, cid: Cid, topic: TopicName) {
         if let Some(conn) = self.connections.get_mut(&cid) {
             conn.topics.insert(topic.clone());
             self.topics.entry(topic).or_insert_with(HashMap::new)
@@ -185,7 +185,7 @@ impl Pool {
         }
     }
 
-    pub fn unsubscribe(&mut self, cid: Cid, topic: Atom) {
+    pub fn unsubscribe(&mut self, cid: Cid, topic: TopicName) {
         match unsubscribe(&mut self.topics, &topic, cid) {
             Some(Subscription::Pending) => {
                 self.pending_connections.get_mut(&cid)
@@ -203,7 +203,7 @@ impl Pool {
         }
     }
 
-    pub fn publish(&mut self, topic: Atom, data: Arc<Json>) {
+    pub fn publish(&mut self, topic: TopicName, data: Arc<Json>) {
         if let Some(cids) = self.topics.get(&topic) {
             for (cid, typ) in cids {
                 match *typ {
@@ -224,8 +224,8 @@ impl Pool {
 
 }
 
-fn unsubscribe(topics: &mut HashMap<Atom, HashMap<Cid, Subscription>>,
-    topic: &Atom, cid: Cid)
+fn unsubscribe(topics: &mut HashMap<TopicName, HashMap<Cid, Subscription>>,
+    topic: &TopicName, cid: Cid)
     -> Option<Subscription>
 {
     let left = topics.get_mut(topic)
@@ -248,7 +248,7 @@ mod test {
     use futures::stream::Stream;
     use tokio_core::channel::{channel, Receiver};
     use tokio_core::reactor::{Core, Handle};
-    use intern::{Atom, SessionPoolName};
+    use intern::{SessionId, SessionPoolName};
     use config;
     use chat::Cid;
 
@@ -273,7 +273,7 @@ mod test {
         let cid = Cid::new();
         let (tx, _rx) = channel(&lp.handle()).unwrap();
         pool.add_connection(cid, tx);
-        pool.associate(cid, Atom::from("user1"), Instant::now(),
+        pool.associate(cid, SessionId::from("user1"), Instant::now(),
             Arc::new(Json::Object(vec![
                 ("user_id", "user1"),
             ].into_iter().map(|(x, y)| {
@@ -288,7 +288,7 @@ mod test {
         let cid = Cid::new();
         let (tx, _rx) = channel(&lp.handle()).unwrap();
         pool.add_connection(cid, tx);
-        pool.associate(cid, Atom::from("user1"), Instant::now(),
+        pool.associate(cid, SessionId::from("user1"), Instant::now(),
             Arc::new(Json::Object(vec![
                 ("user_id", "user1"),
             ].into_iter().map(|(x, y)| {
@@ -305,7 +305,7 @@ mod test {
             .map(|(m, _)| m).map_err(|(e, _)| e).unwrap();
         assert!(matches!(val.unwrap(),
             PoolMessage::InactiveSession { ref session_id, ..}
-            if *session_id == Atom::from("user1")));
+            if *session_id == SessionId::from("user1")));
         assert_eq!(pool.active_sessions.len(), 0);
         assert_eq!(pool.inactive_sessions.len(), 1);
         pool.del_connection(cid);
@@ -320,7 +320,7 @@ mod test {
         let cid = Cid::new();
         let (tx, _rx) = channel(&lp.handle()).unwrap();
         pool.add_connection(cid, tx);
-        pool.associate(cid, Atom::from("user1"), Instant::now(),
+        pool.associate(cid, SessionId::from("user1"), Instant::now(),
             Arc::new(Json::Object(vec![
                 ("user_id", "user1"),
             ].into_iter().map(|(x, y)| {
@@ -340,7 +340,7 @@ mod test {
             .map(|(m, _)| m).map_err(|(e, _)| e).unwrap();
         assert!(matches!(val.unwrap(),
             PoolMessage::InactiveSession { ref session_id, ..}
-            if *session_id == Atom::from("user1")));
+            if *session_id == SessionId::from("user1")));
         assert_eq!(pool.active_sessions.len(), 0);
         assert_eq!(pool.inactive_sessions.len(), 0);
     }

@@ -12,7 +12,7 @@ use minihttp::{Error, Request};
 
 use super::base64::Base64;
 use super::proto::WebsockProto;
-use super::{Kind};
+use super::{Kind, RemoteReplier};
 use super::echo;
 use {Pickler};
 
@@ -89,10 +89,11 @@ pub fn negotiate<S>(mut response: Pickler<S>, init: Init, remote: Remote,
     response.steal_socket()
     .and_then(move |socket: IoBuf<S>| {
         remote.spawn(move |handle| {
+            let (tx, rx) = RemoteReplier::pair(&handle);
             let dispatcher = match kind {
-                Kind::Echo => echo::Echo(handle.clone()),
+                Kind::Echo => echo::Echo(handle.clone(), tx),
             };
-            WebsockProto::new(socket, dispatcher, handle)
+            WebsockProto::new(socket, dispatcher, rx)
             .map_err(|e| info!("Websocket error: {}", e))
         });
         Err(io::Error::new(io::ErrorKind::BrokenPipe,

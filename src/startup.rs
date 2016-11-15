@@ -1,27 +1,29 @@
+use std::sync::{Arc, RwLock};
+
 use tokio_core::reactor::Handle;
 use tokio_core::channel::channel;
 use minihttp::client::HttpClient;
 
 use config::{ListenSocket, Handler, ConfigCell};
 use handler::Main;
-use chat::handler::ChatAPI;
-use chat;
+use chat::{ChatBackend, Processor};
 use minihttp;
 use handlers;
 
 pub struct State {
-    chat: chat::Processor,
+    chat: Arc<RwLock<Processor>>,
 }
 
 
 pub fn populate_loop(handle: &Handle, cfg: &ConfigCell, verbose: bool)
     -> State
 {
-    let mut chat_pro = chat::Processor::new();
+    let chat_pro = Arc::new(RwLock::new(Processor::new()));
     let main_handler = Main {
         config: cfg.clone(),
         handle: handle.clone(),
         http_client: HttpClient::new(handle.clone()),
+        chat_processor: chat_pro.clone(),
     };
     // TODO(tailhook) do something when config updates
     for sock in &cfg.get().listen {
@@ -38,7 +40,7 @@ pub fn populate_loop(handle: &Handle, cfg: &ConfigCell, verbose: bool)
     }
     for (name, cfg) in &cfg.get().session_pools {
         let (tx, rx) = channel(handle).expect("create channel");
-        chat_pro.create_pool(name, cfg, tx);
+        chat_pro.write().unwrap().create_pool(name, cfg, tx);
         // TODO(tailhook) read from rx
     }
     let root = cfg.get();
@@ -51,9 +53,10 @@ pub fn populate_loop(handle: &Handle, cfg: &ConfigCell, verbose: bool)
                     if verbose {
                         println!("Listening {} at {}", name, addr);
                     }
-                    let chat_handler = ChatAPI {
+                    let chat_handler = ChatBackend {
                         config: cfg.clone(),
-                        chat_pool: chat_pro.pool(&chat.session_pool),
+                        chat_pool: chat_pro.read().unwrap().pool(
+                            &chat.session_pool),
                     };
                     minihttp::serve(handle, addr,
                         move || Ok(chat_handler.clone()));
@@ -70,10 +73,11 @@ pub fn populate_loop(handle: &Handle, cfg: &ConfigCell, verbose: bool)
 pub fn update_loop(state: &mut State, cfg: &ConfigCell, handle: &Handle) {
     // TODO(tailhook) update listening sockets
     handlers::files::update_pools(&cfg.get().disk_pools);
+    let mut chat_pro = state.chat.write().unwrap();
     for (name, cfg) in &cfg.get().session_pools {
-        if !state.chat.has_pool(name) {
+        if !chat_pro.has_pool(name) {
             let (tx, rx) = channel(&handle).expect("create channel");
-            state.chat.create_pool(name, cfg, tx);
+            chat_pro.create_pool(name, cfg, tx);
             // TODO(tailhook) read from rx
         }
     }

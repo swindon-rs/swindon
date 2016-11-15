@@ -8,7 +8,7 @@ use tokio_core::channel::Sender as TokioSender;
 
 use intern::SessionPoolName;
 use config;
-use super::{Event, Action, PoolMessage};
+use super::{Event, Action, ConnectionMessage, PoolMessage};
 use super::main;
 
 

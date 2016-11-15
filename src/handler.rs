@@ -1,4 +1,6 @@
-use futures::{Async, BoxFuture};
+use std::sync::{Arc, RwLock};
+
+use futures::{BoxFuture};
 use tokio_service::Service;
 use tokio_core::reactor::Handle;
 use minihttp::request::Request;
@@ -20,6 +22,7 @@ pub struct Main {
     pub config: ConfigCell,
     pub handle: Handle,
     pub http_client: HttpClient,
+    pub chat_processor: Arc<RwLock<chat::Processor>>,
 }
 
 impl Service for Main {
@@ -111,9 +114,13 @@ impl Main {
             Some(&Handler::SwindonChat(ref chat)) => {
                 match websocket::prepare(&req) {
                     Ok(init) => {
-                        use super::chat::ChatInit::Prepare;
                         let router = MessageRouter(chat.clone(), cfg.clone());
-                        Response::WebsocketChat(Prepare(init, router))
+                        let pool = self.chat_processor.read().unwrap()
+                            .pool(&chat.session_pool);
+                        let chat_api = chat::ChatAPI::new(
+                            self.http_client.clone(), router, pool);
+                        Response::WebsocketChat(
+                            chat::ChatInit::Prepare(init, chat_api))
                     }
                     Err(_) => {
                         // internal redirect

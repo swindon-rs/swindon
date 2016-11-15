@@ -13,8 +13,7 @@ pub enum OutFrame {
 
 pub trait Dispatcher {
     /// Temporary solution is to output data directly
-    fn dispatch(&mut self, frame: Frame,
-        replier: &mut ImmediateReplier, remote: &RemoteReplier)
+    fn dispatch(&mut self, frame: Frame, replier: &mut ImmediateReplier)
         -> Result<(), Error>;
 }
 
