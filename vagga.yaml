@@ -25,6 +25,7 @@ containers:
     - !Alpine v3.4
     - !Repo edge/main
     - !Install [py-sphinx, py-imagesize, make]
+    - !Py2Requirements "docs/requirements.txt"
     auto-clean: true
 
   httpbin:
@@ -145,7 +146,8 @@ commands:
     description: Create New Crate lib
     work-dir: /work/deps
     run: [cargo, new, --vcs, git]
-  docs: !Command
+
+  doc: !Command
     container: sphinx
     description: Build documentation
     prerequisites: [_copy-doc]

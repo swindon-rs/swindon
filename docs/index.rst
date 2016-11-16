@@ -6,18 +6,19 @@
 Welcome to Swindon's documentation!
 ===================================
 
+
 Contents:
 
 .. toctree::
    :maxdepth: 2
 
    rust_api/swindon/index
+   config/index
 
 
 Indices and tables
 ==================
 
 * :ref:`genindex`
-* :ref:`modindex`
 * :ref:`search`
 
