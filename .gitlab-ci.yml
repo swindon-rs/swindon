@@ -13,7 +13,7 @@ build_docs:
   only:
   - master
   script:
-  - vagga docs
+  - vagga doc
   - gitlab-publish docs/_build/html doc.swindon
 
 cleanup:
