@@ -1,7 +1,8 @@
 //! Pull API handler.
 use std::str;
+use std::sync::Arc;
 
-use futures::{Async, Finished, finished};
+use futures::{Finished, finished};
 use tokio_service::Service;
 use tokio_core::net::TcpStream;
 use tk_bufstream::IoBuf;
@@ -14,17 +15,21 @@ use {Pickler};
 use config::ConfigCell;
 use response::DebugInfo;
 use default_error_page::write_error_page;
+use intern::{TopicName, LatticeName};
 
-use super::ProcessorPool;
+use super::{parse_cid, ProcessorPool};
+use super::processor::Action;
 
+
+/// Chat Backend Http handler.
 #[derive(Clone)]
-pub struct ChatAPI {
+pub struct ChatBackend {
     pub config: ConfigCell,
     pub chat_pool: ProcessorPool,
 }
 
 
-impl Service for ChatAPI {
+impl Service for ChatBackend {
     type Request = Request;
     type Response = ResponseFn<Finished<IoBuf<TcpStream>, Error>, TcpStream>;
     type Error = Error;
@@ -32,38 +37,76 @@ impl Service for ChatAPI {
 
     fn call(&self, req: Request) -> Self::Future {
         let cfg = self.config.get();
-        let status = match match_route(&req.method, req.path.as_str()) {
-            Some(route) => {
-                let payload = if let Some(ref body) = req.body {
-                    str::from_utf8(&body.data[..]).ok()
-                        .and_then(|s| Json::from_str(s).ok())
-                } else {
-                    None
-                };
-                if route.expect_data() && payload.is_some() {
-                    // TODO: send message to processor;
-
-                    //self.chat_processor.send_action()
-
-                    Status::NoContent
-                } else {
-                    Status::BadRequest
-                }
-            }
-            None => {
-                Status::NotFound
-            }
-        };
-        finished(ResponseFn::new(move |mut res| {
-            let mut res = Pickler(res, cfg.clone(), DebugInfo::new(&req));
+        let status = self.serve(&req);
+        finished(ResponseFn::new(move |res| {
+            let res = Pickler(res, cfg.clone(), DebugInfo::new(&req));
             write_error_page(status, res).done()
         }))
     }
 }
 
+impl ChatBackend {
+
+    fn serve(&self, req: &Request) -> Status {
+        use self::ChatRoute::*;
+
+        let route = match match_route(&req.method, req.path.as_str()) {
+            Some(r) => r,
+            None => return Status::NotFound
+        };
+        let payload = match req.body {
+            Some(ref body) => {
+                str::from_utf8(&body.data[..]).ok()
+                    .and_then(|s| Json::from_str(s).ok())
+            }
+            None => None
+        };
+        if route.expect_data() && payload.is_none() {
+            return Status::BadRequest;
+        }
+        let action = match route {
+            TopicSubscribe(client_id, topic) => {
+                let cid = parse_cid(client_id);
+                Action::Subscribe {
+                    conn_id: cid,
+                    topic: topic,
+                }
+            }
+            TopicUnsubscribe(client_id, topic) => {
+                let cid = parse_cid(client_id);
+                Action::Unsubscribe {
+                    conn_id: cid,
+                    topic: topic,
+                }
+            }
+            LatticeSubscribe(_client_id, _namespace) => {
+                // do not panic;
+                return Status::NotImplemented;
+            }
+            LatticeUnsubscribe(_client_id, _namespace) => {
+                // do not panic;
+                return Status::NotImplemented;
+            }
+            TopicPublish(topic) => {
+                let data = Arc::new(payload.unwrap());
+                Action::Publish {
+                    topic: topic,
+                    data: data,
+                }
+            }
+            LatticeUpdate(_namespace) => {
+                // do not panic;
+                return Status::NotImplemented;
+            }
+        };
+        self.chat_pool.send(action);
+        Status::NoContent
+    }
+}
 
 fn match_route(method: &Method, path: &str) -> Option<ChatRoute> {
     use minihttp::enums::Method::*;
+    use self::ChatRoute::*;
 
     if !path.starts_with("/v1/") {
         return None
@@ -77,11 +120,15 @@ fn match_route(method: &Method, path: &str) -> Option<ChatRoute> {
             match kind {
                 "lattice" => {
                     let (_, namespace) = path.split_at("/v1/lattice/".len());
-                    ChatRoute::LatticeUpdate(namespace.replace("/", "."))
+                    let namespace = namespace.replace("/", ".")
+                        .parse().unwrap();
+                    ChatRoute::LatticeUpdate(namespace)
                 }
-                "topic" => {
-                    let (_, topic) = path.split_at("/v1/topic/".len());
-                    ChatRoute::TopicPublish(topic.replace("/", "."))
+                "publish" => {
+                    let (_, topic) = path.split_at("/v1/publish/".len());
+                    let topic = topic.replace("/", ".")
+                        .parse().unwrap();
+                    TopicPublish(topic)
                 }
                 _ => return None
             }
@@ -98,23 +145,27 @@ fn match_route(method: &Method, path: &str) -> Option<ChatRoute> {
             }
             match kind {
                 Some("subscriptions") => {
-                    let (_, topic) = path.split_at(30 + id.len());
+                    let (_, topic) = path.split_at(
+                        "/v1/connection//subscriptions/".len() + id.len());
+                    let topic = topic.replace("/", ".")
+                        .parse().unwrap();
                     if method == &Put {
-                        ChatRoute::TopicSubscribe(
-                            id.to_string(), topic.replace("/", "."))
+                        TopicSubscribe(id.to_string(), topic)
                     } else {
-                        ChatRoute::TopicUnsubscribe(
-                            id.to_string(), topic.replace("/", "."))
+                        TopicUnsubscribe(id.to_string(), topic)
                     }
                 }
                 Some("lattices") => {
-                    let (_, namespace) = path.split_at(25 + id.len());
+                    let (_, namespace) = path.split_at(
+                        "/v1/connection//lattices/".len() + id.len());
+                    let namespace = namespace.replace("/", ".")
+                        .parse().unwrap();
                     if method == &Put {
-                        ChatRoute::LatticeSubscribe(
-                            id.to_string(), namespace.replace("/", "."))
+                        LatticeSubscribe(
+                            id.to_string(), namespace)
                     } else {
-                        ChatRoute::LatticeUnsubscribe(
-                            id.to_string(), namespace.replace("/", "."))
+                        LatticeUnsubscribe(
+                            id.to_string(), namespace)
                     }
                 }
                 _ => return None
@@ -128,12 +179,12 @@ fn match_route(method: &Method, path: &str) -> Option<ChatRoute> {
 
 #[derive(Debug, PartialEq)]
 pub enum ChatRoute {
-    TopicSubscribe(String, String),
-    TopicUnsubscribe(String, String),
-    LatticeSubscribe(String, String),
-    LatticeUnsubscribe(String, String),
-    TopicPublish(String),
-    LatticeUpdate(String),
+    TopicSubscribe(String, TopicName),
+    TopicUnsubscribe(String, TopicName),
+    LatticeSubscribe(String, LatticeName),
+    LatticeUnsubscribe(String, LatticeName),
+    TopicPublish(TopicName),
+    LatticeUpdate(LatticeName),
 }
 
 impl ChatRoute {
@@ -154,22 +205,23 @@ impl ChatRoute {
 #[cfg(test)]
 mod test {
     use minihttp::enums::Method;
+    use string_intern::{Symbol, Validator};
 
     use super::match_route;
     use super::ChatRoute::*;
 
     #[test]
     fn match_topic_publish() {
-        let path = "/v1/topic/test-chat/room1";
+        let path = "/v1/publish/test-chat/room1";
         let route = match_route(&Method::Post, path).unwrap();
-        assert_eq!(route, TopicPublish("test-chat.room1".into()));
+        assert_eq!(route, TopicPublish(Symbol::from("test-chat.room1")));
     }
 
     #[test]
     fn match_lattice_update() {
         let path = "/v1/lattice/test-chat/rooms";
         let route = match_route(&Method::Post, path).unwrap();
-        assert_eq!(route, LatticeUpdate("test-chat.rooms".into()));
+        assert_eq!(route, LatticeUpdate(Symbol::from("test-chat.rooms")));
     }
 
     #[test]
@@ -177,7 +229,7 @@ mod test {
         let path = "/v1/connection/abcde/subscriptions/test-chat/room1";
         let route = match_route(&Method::Put, path).unwrap();
         assert_eq!(route, TopicSubscribe(
-            "abcde".to_string(), "test-chat.room1".to_string()));
+            "abcde".to_string(), Symbol::from("test-chat.room1")));
     }
 
     #[test]
@@ -185,7 +237,7 @@ mod test {
         let path = "/v1/connection/abcde/subscriptions/test-chat/room1";
         let route = match_route(&Method::Delete, path).unwrap();
         assert_eq!(route, TopicUnsubscribe(
-            "abcde".to_string(), "test-chat.room1".to_string()));
+            "abcde".to_string(), Symbol::from("test-chat.room1")));
     }
 
     #[test]
@@ -193,7 +245,7 @@ mod test {
         let path = "/v1/connection/abcde/lattices/test-chat/room1";
         let route = match_route(&Method::Put, path).unwrap();
         assert_eq!(route, LatticeSubscribe(
-            "abcde".to_string(), "test-chat.room1".to_string()));
+            "abcde".to_string(), Symbol::from("test-chat.room1")));
     }
 
     #[test]
@@ -201,7 +253,7 @@ mod test {
         let path = "/v1/connection/abcde/lattices/test-chat/room1";
         let route = match_route(&Method::Delete, path).unwrap();
         assert_eq!(route, LatticeUnsubscribe(
-            "abcde".to_string(), "test-chat.room1".to_string()));
+            "abcde".to_string(), Symbol::from("test-chat.room1")));
     }
 
     #[test]
@@ -220,21 +272,21 @@ mod test {
         assert!(match_route(&Method::Patch, path).is_none());
         assert!(match_route(&Method::Delete, path).is_none());
 
-        let path = "/v1/topic";
+        let path = "/v1/publish";
         assert!(match_route(&Method::Get, path).is_none());
         assert!(match_route(&Method::Put, path).is_none());
         assert!(match_route(&Method::Post, path).is_none());
         assert!(match_route(&Method::Patch, path).is_none());
         assert!(match_route(&Method::Delete, path).is_none());
 
-        let path = "/v1/topic/";
+        let path = "/v1/publish/";
         assert!(match_route(&Method::Get, path).is_none());
         assert!(match_route(&Method::Put, path).is_none());
         assert!(match_route(&Method::Post, path).is_none());
         assert!(match_route(&Method::Patch, path).is_none());
         assert!(match_route(&Method::Delete, path).is_none());
 
-        let path = "/v1/topic/test-chat/room1";
+        let path = "/v1/publish/test-chat/room1";
         assert!(match_route(&Method::Get, path).is_none());
         assert!(match_route(&Method::Put, path).is_none());
         assert!(match_route(&Method::Patch, path).is_none());

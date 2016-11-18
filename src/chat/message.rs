@@ -9,7 +9,7 @@ use rustc_serialize::json::{self, Json, ParserError};
 use rustc_serialize::{Encodable, Encoder};
 
 use minihttp::enums::Status;
-
+use intern::SessionId;
 
 pub type Meta = BTreeMap<String, Json>;
 pub type Args = Vec<Json>;
@@ -28,7 +28,7 @@ pub enum Message {
     /// Message::Call result
     Result(Json),
     /// Auth result
-    Hello(Json),
+    Hello(SessionId, Json),
     /// Backend "topic publish" message
     Message(Json),
     /// Lattice update Kind
@@ -76,16 +76,6 @@ impl Message {
             }
             _ => {}
         }
-    }
-
-    /// Return value of user_id field for Hello message type;
-    pub fn get_user_id(&self) -> Option<&String> {
-        if let Message::Hello(Json::Object(ref info)) = *self {
-            if let Some(&Json::String(ref s)) = info.get("user_id".into()) {
-                return Some(s)
-            }
-        }
-        None
     }
 }
 
@@ -241,7 +231,7 @@ impl<'a> Encodable for Payload<'a> {
                     s.emit_seq_elt(1, |s| self.encode_meta(s))?;
                     s.emit_seq_elt(2, |s| value.encode(s))?;
                 }
-                &Hello(ref value) => {
+                &Hello(_, ref value) => {
                     s.emit_seq_elt(0, |s| s.emit_str("result"))?;
                     s.emit_seq_elt(1, |s| self.encode_meta(s))?;
                     s.emit_seq_elt(2, |s| value.encode(s))?;

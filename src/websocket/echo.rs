@@ -6,12 +6,11 @@ use tokio_core::reactor::{Handle, Timeout};
 use super::{Dispatcher, Frame, Error, ImmediateReplier, RemoteReplier};
 
 
-pub struct Echo(pub Handle);
+pub struct Echo(pub Handle, pub RemoteReplier);
 
 
 impl Dispatcher for Echo {
-    fn dispatch(&mut self, frame: Frame, replier: &mut ImmediateReplier,
-        remote: &RemoteReplier)
+    fn dispatch(&mut self, frame: Frame, replier: &mut ImmediateReplier)
         -> Result<(), Error>
     {
         match frame {
@@ -23,7 +22,7 @@ impl Dispatcher for Echo {
             Frame::Text(data) => {
                 if data.starts_with("alarm ") {
                     if let Ok(num) = data[6..].parse() {
-                        let remote = remote.clone();
+                        let remote = self.1.clone();
                         let timeout = Timeout::new(Duration::new(num, 0),
                                                    &self.0)
                             .expect("can set timeout")

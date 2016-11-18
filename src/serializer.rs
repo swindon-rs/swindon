@@ -5,13 +5,12 @@ use std::os::unix::io::AsRawFd;
 use futures::{BoxFuture, Future, Async, finished};
 use tokio_core::io::Io;
 use tokio_core::reactor::{Handle, Remote};
+use tokio_core::channel::channel;
 use tokio_service::Service;
 use tk_bufstream::IoBuf;
 use minihttp::{Error, GenericResponse, ResponseWriter, Status, Request};
-use minihttp::enums::Method;
 use minihttp::client::HttpClient;
 use httpbin::HttpBin;
-use rustc_serialize::json::Json;
 
 use config::{Config, EmptyGif};
 use config::static_files::{Static, SingleFile};
@@ -77,52 +76,28 @@ impl Response {
                         })
                     }).boxed()
             }
-            WebsocketChat(Prepare(init, router)) => {
+            WebsocketChat(Prepare(init, chat_api)) => {
                 let remote = handle.remote().clone();
-                let client = http_client.clone();
+                let cid = chat::Cid::new();
+                let (tx, rx) = channel(handle).expect("create channel");
 
-                let url = router.get_url("tangle.authorize_connection".into());
-                let http_cookies = req.headers.iter()
-                    .filter(|&&(ref k, _)| k == "Cookie")
-                    .map(|&(_, ref v)| v.clone())
-                    .collect::<String>();
-                let http_auth = req.headers.iter()
-                    .find(|&&(ref k, _)| k == "Authorization")
-                    .map(|&(_, ref v)| v.clone())
-                    .unwrap_or("".to_string());
-
-                let mut data = chat::Kwargs::new();
-                // TODO: parse cookie string to hashmap;
-                data.insert("http_cookie".into(),
-                    Json::String(http_cookies));
-                data.insert("http_authorization".into(),
-                    Json::String(http_auth));
-                let payload = chat::Message::Auth(data).encode();
-
-                let mut auth = http_client.clone();
-                auth.request(Method::Post, url.as_str());
-                // TODO: write auth message with cookies
-                //  get request's headers (cookie & authorization)
-                //  TODO: connection with id;
-                auth.add_header("Content-Type".into(), "application/json");
-                auth.add_length(payload.as_bytes().len() as u64);
-                auth.done_headers();
-                auth.write_body(payload.as_bytes());
-                auth.done()
+                chat_api.authorize_connection(&req, cid, tx.clone())
                 .map_err(|e| e.into())
                 .and_then(move |resp| {
+                    // TODO: parse response
                     let resp = if resp.status == Status::Ok {
-                        match chat::parse_userinfo(resp.status, resp.body) {
-                            userinfo @ chat::Message::Hello(_) => {
-                                WebsocketChat(
-                                    Ready(init, client, router, userinfo))
+                        match chat::parse_userinfo(resp) {
+                            chat::Message::Hello(sess_id, userinfo) => {
+                                let session_api = chat_api.session_api(
+                                    sess_id, cid, userinfo, tx);
+                                WebsocketChat(Ready(init, session_api, rx))
                             }
                             other => {
                                 WebsocketChat(AuthError(init, other))
                             }
                         }
                     } else {
-                        Response::ErrorPage(Status::InternalServerError)
+                        ErrorPage(Status::InternalServerError)
                     };
                     finished(Serializer {
                         config: cfg,
@@ -180,9 +155,9 @@ impl<S: Io + AsRawFd + Send + 'static> GenericResponse<S> for Serializer {
                 websocket::negotiate(writer, init, self.handle,
                     websocket::Kind::Echo)
             }
-            Response::WebsocketChat(Ready(init, client, router, userinfo)) => {
-                chat::negotiate(writer, init, self.handle, client,
-                    router, userinfo)
+            Response::WebsocketChat(Ready(init, session_api, rx)) =>
+            {
+                chat::negotiate(writer, init, self.handle, session_api, rx)
             }
             Response::WebsocketChat(_) => {
                 write_error_page(Status::BadRequest, writer).done().boxed()

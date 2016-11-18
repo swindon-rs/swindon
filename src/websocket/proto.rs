@@ -6,12 +6,10 @@ use futures::{Future, Async, Poll};
 use futures::Async::{Ready, NotReady};
 use futures::stream::{Stream};
 use tokio_core::io::Io;
-use tokio_core::channel::Receiver;
-use tokio_core::reactor::Handle;
 use tk_bufstream::IoBuf;
 use byteorder::{BigEndian, ByteOrder};
 
-use super::{Dispatcher, ImmediateReplier, RemoteReplier, OutFrame};
+use super::{Dispatcher, ImmediateReplier, OutFrame};
 use self::Frame::*;
 
 const MAX_MESSAGE_SIZE: u64 = 128 << 10;
@@ -48,11 +46,10 @@ quick_error! {
 }
 
 
-pub struct WebsockProto<S: Io, D: Dispatcher> {
+pub struct WebsockProto<S: Io, D: Dispatcher, R> {
     dispatcher: D,
     io: IoBuf<S>,
-    remote: RemoteReplier,
-    recv: Receiver<OutFrame>,
+    recv: R,
 }
 
 pub enum Frame<'a> {
@@ -119,8 +116,9 @@ fn parse_frame<'x>(buf: &'x mut Buf) -> Poll<(Frame<'x>, usize), Error> {
 }
 
 
-impl<D, S: Io> Future for WebsockProto<S, D>
+impl<D, S: Io, R> Future for WebsockProto<S, D, R>
     where D: Dispatcher,
+          R: Stream<Item=OutFrame, Error=io::Error>,
 {
     type Item = ();
     type Error = Error;
@@ -132,8 +130,7 @@ impl<D, S: Io> Future for WebsockProto<S, D>
                 parse_frame(&mut self.io.in_buf)?
             {
                 self.dispatcher.dispatch(frame,
-                    &mut ImmediateReplier::new(&mut self.io.out_buf),
-                    &self.remote)?;
+                    &mut ImmediateReplier::new(&mut self.io.out_buf))?;
                 Some(bytes)
             } else {
                 None
@@ -156,18 +153,17 @@ impl<D, S: Io> Future for WebsockProto<S, D>
     }
 }
 
-impl<S: Io, D> WebsockProto<S, D>
+impl<S: Io, D, R> WebsockProto<S, D, R>
     where D: Dispatcher,
+          R: Stream<Item=OutFrame, Error=io::Error>,
 {
-    pub fn new(sock: IoBuf<S>, dispatcher: D, handle: &Handle)
-        -> WebsockProto<S, D>
+    pub fn new(sock: IoBuf<S>, dispatcher: D, remote: R)
+        -> WebsockProto<S, D, R>
     {
-        let (tx, rx) = RemoteReplier::pair(handle);
         WebsockProto {
             io: sock,
             dispatcher: dispatcher,
-            remote: tx,
-            recv: rx,
+            recv: remote,
         }
     }
 

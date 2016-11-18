@@ -10,7 +10,9 @@ pub struct MessageRouter(pub Arc<Chat>, pub Arc<Config>);
 impl MessageRouter {
 
     /// Builds target url for specified method.
-    pub fn get_url(&self, method: &str) -> String {
+    pub fn resolve(&self, method: &str) -> String {
+        // TODO: optimize this method
+
         let default = self.0.message_handlers.get("*".into()).unwrap();
 
         let dest = self.0.message_handlers.iter()
@@ -31,6 +33,13 @@ impl MessageRouter {
             format!("http://{}{}/{}",
                 addr, dest.path, method.replace(".", "/"))
         }
+    }
+
+    // Predefined urls
+
+    /// Tangle Authorization URL
+    pub fn get_auth_url(&self) -> String {
+        self.resolve("tangle.authorize_connection")
     }
 }
 
@@ -90,23 +99,23 @@ mod test {
         };
 
         let router = MessageRouter(chat_cfg, cfg);
-        let result = router.get_url("some.method");
+        let result = router.resolve("some.method");
         assert_eq!(result,
             "http://example.com:5000/chat/some/method".to_string());
 
-        let result = router.get_url("sub.chat");
+        let result = router.resolve("sub.chat");
         assert_eq!(result,
             "http://example.com:5000/sub/sub/chat".to_string());
 
-        let result = router.get_url("sub.chat2");
+        let result = router.resolve("sub.chat2");
         assert_eq!(result,
             "http://example.com:5000/chat/sub/chat2".to_string());
 
-        let result = router.get_url("sub.chat.room1");
+        let result = router.resolve("sub.chat.room1");
         assert_eq!(result,
             "http://example.com:5000/sub_chat/sub/chat/room1".to_string());
 
-        let result = router.get_url("other.method");
+        let result = router.resolve("other.method");
         assert_eq!(result,
             "http://example.com:5000/other/method".to_string());
     }
