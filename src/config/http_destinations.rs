@@ -20,7 +20,8 @@ pub fn validator<'x>() -> Structure<'x> {
     Structure::new()
     .member("load_balancing", Enum::new()
         .option("queue", Nothing)
-        .allow_plain())
+        .allow_plain()
+        .plain_default("queue"))
     .member("queue_size_for_503",
         Numeric::new().min(10).max(1 << 32).default(100_000))
     .member("backend_connections_per_ip_port",

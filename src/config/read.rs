@@ -5,7 +5,7 @@ use std::cell::RefCell;
 use std::path::{PathBuf, Path, Component};
 
 use quire::{self, Pos, Include, ErrorCollector, Options, parse_config};
-use quire::parser::{parse as parse_yaml};
+use quire::{raw_parse as parse_yaml};
 use quire::ast::{Ast, process as process_ast};
 
 use super::Config;

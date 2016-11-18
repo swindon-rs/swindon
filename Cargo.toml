@@ -13,7 +13,7 @@ log = "0.3.6"
 env_logger = "0.3.5"
 rustc-serialize = "0.3.19"
 tokio-service = { git = "https://github.com/tokio-rs/tokio-service", rev="da47a93" }
-quire = { git="https://github.com/tailhook/rust-quire", rev="719d201" }
+quire = "0.2.0"
 argparse = "0.2.1"
 time = "0.1.35"
 lazy_static = "0.2.1"

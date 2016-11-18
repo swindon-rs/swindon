@@ -20,7 +20,8 @@ pub fn validator<'x>() -> Structure<'x> {
     Structure::new()
     .member("mode", Enum::new()
         .option("forward", Nothing)
-        .allow_plain())
+        .allow_plain()
+        .plain_default("forward"))
     .member("ip_header", Scalar::new().optional())
     .member("destination", http::destination_validator())
 }
