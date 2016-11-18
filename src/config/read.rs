@@ -10,6 +10,7 @@ use quire::ast::{Ast, process as process_ast};
 
 use super::Config;
 use super::root::config_validator;
+use super::Handler;
 
 
 quick_error! {
@@ -23,6 +24,11 @@ quick_error! {
         Config(err: quire::ErrorList) {
             display("config error: {}", err)
             description("config error")
+            from()
+        }
+        Validation(err: String) {
+            display("validation error: {}", err)
+            description("validation error")
             from()
         }
     }
@@ -81,13 +87,22 @@ pub fn read_config<P: AsRef<Path>>(filename: P)
     let filename = filename.as_ref();
     let mut files = Vec::new();
     files.push((filename.to_path_buf(), metadata(filename)?));
-    let cfg = {
+    let cfg: Config = {
         let cell = RefCell::new(&mut files);
         let mut opt = Options::default();
         opt.allow_include(
             |a, b, c, d| include_file(&cell, a, b, c, d));
         parse_config(filename, &config_validator(), &opt)?
-        // TODO(tailhook) additional validations
     };
+
+    for (name, h) in &cfg.handlers {
+        if let &Handler::SwindonChat(ref chat) = h {
+            if !cfg.session_pools.contains_key(&chat.session_pool) {
+                return Err(format!("No session pool {:?} defined",
+                    chat.session_pool).into());
+            }
+        }
+    }
+
     Ok((cfg, files))
 }
