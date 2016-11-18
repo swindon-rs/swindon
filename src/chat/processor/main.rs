@@ -57,7 +57,7 @@ pub fn run(rx: Receiver<Event>) {
             Ok(x) => Some(x),
             Err(Timeout) => continue,
             Err(Disconnected) => {
-                panic!("Process pools is not needed for anyone");
+                panic!("Process pools are not needed for anyone");
             }
         };
         for msg in value.into_iter().chain(try_iter(&rx)) {
