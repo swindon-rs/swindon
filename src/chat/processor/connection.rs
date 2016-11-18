@@ -5,13 +5,13 @@ use rustc_serialize::json::Json;
 use tokio_core::channel::Sender;
 
 use chat::Cid;
-use intern::{TopicName, SessionId};
+use intern::{Topic, SessionId};
 use super::ConnectionMessage;
 
 
 pub struct NewConnection {
     pub cid: Cid,
-    pub topics: HashSet<TopicName>,
+    pub topics: HashSet<Topic>,
     pub message_buffer: Vec<Arc<Json>>,
     pub channel: Sender<ConnectionMessage>,
 }
@@ -20,7 +20,7 @@ pub struct NewConnection {
 pub struct Connection {
     pub cid: Cid,
     pub session_id: SessionId,
-    pub topics: HashSet<TopicName>,
+    pub topics: HashSet<Topic>,
     pub channel: Sender<ConnectionMessage>,
 }
 

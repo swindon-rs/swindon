@@ -15,7 +15,7 @@ use rustc_serialize::json::Json;
 use tokio_core::channel::Sender;
 
 use config;
-use intern::{TopicName, SessionId, SessionPoolName};
+use intern::{Topic, SessionId, SessionPoolName};
 use chat::Cid;
 
 mod main;
@@ -91,14 +91,14 @@ pub enum Action {
     // ------ Subscriptions ------
     Subscribe {
         conn_id: Cid,
-        topic: TopicName,
+        topic: Topic,
     },
     Unsubscribe {
         conn_id: Cid,
-        topic: TopicName,
+        topic: Topic,
     },
     Publish {
-        topic: TopicName,
+        topic: Topic,
         data: Arc<Json>,
     },
 }

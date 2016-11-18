@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use rustc_serialize::json::Json;
 use tokio_core::channel::Sender;
 
-use intern::{TopicName, SessionId, SessionPoolName};
+use intern::{Topic, SessionId, SessionPoolName};
 use config;
 use chat::Cid;
 use super::{ConnectionMessage, PoolMessage};
@@ -29,7 +29,7 @@ pub struct Pool {
 
     pending_connections: HashMap<Cid, NewConnection>,
     connections: HashMap<Cid, Connection>,
-    topics: HashMap<TopicName, HashMap<Cid, Subscription>>,
+    topics: HashMap<Topic, HashMap<Cid, Subscription>>,
 
     // Setings
     new_connection_timeout: Duration,
@@ -171,7 +171,7 @@ impl Pool {
         self.active_sessions.peek().map(|(_, &x, _)| x)
     }
 
-    pub fn subscribe(&mut self, cid: Cid, topic: TopicName) {
+    pub fn subscribe(&mut self, cid: Cid, topic: Topic) {
         if let Some(conn) = self.connections.get_mut(&cid) {
             conn.topics.insert(topic.clone());
             self.topics.entry(topic).or_insert_with(HashMap::new)
@@ -185,7 +185,7 @@ impl Pool {
         }
     }
 
-    pub fn unsubscribe(&mut self, cid: Cid, topic: TopicName) {
+    pub fn unsubscribe(&mut self, cid: Cid, topic: Topic) {
         match unsubscribe(&mut self.topics, &topic, cid) {
             Some(Subscription::Pending) => {
                 self.pending_connections.get_mut(&cid)
@@ -203,7 +203,7 @@ impl Pool {
         }
     }
 
-    pub fn publish(&mut self, topic: TopicName, data: Arc<Json>) {
+    pub fn publish(&mut self, topic: Topic, data: Arc<Json>) {
         if let Some(cids) = self.topics.get(&topic) {
             for (cid, typ) in cids {
                 match *typ {
@@ -224,8 +224,8 @@ impl Pool {
 
 }
 
-fn unsubscribe(topics: &mut HashMap<TopicName, HashMap<Cid, Subscription>>,
-    topic: &TopicName, cid: Cid)
+fn unsubscribe(topics: &mut HashMap<Topic, HashMap<Cid, Subscription>>,
+    topic: &Topic, cid: Cid)
     -> Option<Subscription>
 {
     let left = topics.get_mut(topic)

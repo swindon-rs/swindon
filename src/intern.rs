@@ -22,10 +22,10 @@ struct SessionIdValidator;
 pub type SessionId = Symbol<SessionIdValidator>;
 
 struct TopicValidator;
-pub type TopicName = Symbol<TopicValidator>;
+pub type Topic = Symbol<TopicValidator>;
 
 struct LatticeNamespaceValidator;
-pub type LatticeName = Symbol<LatticeNamespaceValidator>;
+pub type Lattice = Symbol<LatticeNamespaceValidator>;
 
 quick_error! {
     #[derive(Debug)]

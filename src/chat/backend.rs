@@ -15,7 +15,7 @@ use {Pickler};
 use config::ConfigCell;
 use response::DebugInfo;
 use default_error_page::write_error_page;
-use intern::{TopicName, LatticeName};
+use intern::{Topic, Lattice};
 
 use super::{parse_cid, ProcessorPool};
 use super::processor::Action;
@@ -179,12 +179,12 @@ fn match_route(method: &Method, path: &str) -> Option<ChatRoute> {
 
 #[derive(Debug, PartialEq)]
 pub enum ChatRoute {
-    TopicSubscribe(String, TopicName),
-    TopicUnsubscribe(String, TopicName),
-    LatticeSubscribe(String, LatticeName),
-    LatticeUnsubscribe(String, LatticeName),
-    TopicPublish(TopicName),
-    LatticeUpdate(LatticeName),
+    TopicSubscribe(String, Topic),
+    TopicUnsubscribe(String, Topic),
+    LatticeSubscribe(String, Lattice),
+    LatticeUnsubscribe(String, Lattice),
+    TopicPublish(Topic),
+    LatticeUpdate(Lattice),
 }
 
 impl ChatRoute {
