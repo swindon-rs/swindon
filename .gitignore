@@ -2,3 +2,4 @@
 docs/_build
 target
 .cargo
+__pycache__

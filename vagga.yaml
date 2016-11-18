@@ -45,6 +45,13 @@ containers:
     - !Install
       - wrk
 
+  message-board:
+    setup:
+    - !Alpine v3.4
+    - !Install [ca-certificates]
+    - !PipConfig { dependencies: true }
+    - !Py3Requirements "examples/message-board/requirements.txt"
+
 commands:
 
   rustc: !Command
@@ -162,3 +169,22 @@ commands:
     container: wrk
     description: Run wrk tool
     run: [wrk]
+
+  example-message-board: !Supervise
+    description: Run swindon and message board example
+    prerequisites: [build]
+    children:
+      swindon: !Command
+        container: ubuntu
+        work-dir: examples/message-board
+        run:
+        - ../../target/debug/swindon
+        - --verbose
+        - --config=swindon.yaml
+      board: !Command
+        container: message-board
+        work-dir: examples/message-board
+        run:
+        - python3
+        - -m
+        - messageboard
