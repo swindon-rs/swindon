@@ -29,17 +29,19 @@ class Connection(object):
 
 class Request(object):
 
-    def __init__(self, auth, *, request_id, connection_id, **_unused):
+    def __init__(self, auth, *, request_id=None, connection_id, **_unused):
         self.request_id = request_id
         self.connection = Connection(connection_id)
-        kind, value = auth.split(' ')
-        assert kind == 'Tangle'
-        auth = json.loads(
-            base64.b64decode(value.encode('ascii')).decode('utf-8'))
-        self.user = User(**auth)
+        if auth:
+            kind, value = auth.split(' ')
+            assert kind == 'Tangle'
+            auth = json.loads(
+                base64.b64decode(value.encode('ascii')).decode('utf-8'))
+            self.user = User(**auth)
 
     def __repr__(self):
-        return "<Request of {!r}>".format(self.user)
+        return "<Request of {!r}>".format(
+            getattr(self, 'user', self.connection))
 
 
 
