@@ -24,8 +24,11 @@ containers:
     setup:
     - !Alpine v3.4
     - !Repo edge/main
-    - !Install [py-sphinx, py-imagesize, make]
+    # XXX: Alpine py*-shinx (1.4.8-r0) is broken — adds symlink but not source;
+    - !Install [py2-sphinx, py2-imagesize, make]
     - !Py2Requirements "docs/requirements.txt"
+    - !Sh |
+        ln -s /usr/bin/sphinx-build-2 /usr/bin/sphinx-build
     auto-clean: true
 
   httpbin:
