@@ -17,7 +17,8 @@ use super::{Cid, ProcessorPool};
 use super::{serialize_cid};
 use super::router::MessageRouter;
 use super::processor::{Action, ConnectionMessage};
-use super::message::{Meta, Kwargs, Message, MessageError};
+use super::message::{Meta, Kwargs, Message};
+use super::error::MessageError;
 
 pub struct ChatAPI {
     // shared between connections
@@ -160,10 +161,13 @@ impl SessionAPI {
         let call = self.api.post(message.method(),
             self.auth_token.as_str(), payload.as_bytes());
         handle.spawn(call
-            .and_then(move |json| {
-                tx.send(ConnectionMessage::Result(meta, json))
-                .map_err(|e| e.into())
-            }).map_err(|e| info!("Remote send error: {:?}", e))
+            .then(move |result| {
+                let res = match result {
+                    Ok(json) => tx.send(ConnectionMessage::Result(meta, json)),
+                    Err(err) => tx.send(ConnectionMessage::Error(meta, Json::Null)),
+                };
+                res.map_err(|e| info!("Remote send error: {:?}", e))
+            })
         );
     }
 }
@@ -194,8 +198,8 @@ fn parse_response(response: ClientResponse) -> Result<Json, MessageError>
 pub fn parse_userinfo(response: ClientResponse)
     -> Result<(SessionId, Json), MessageError>
 {
-    use super::message::ValidationError::*;
-    use super::message::MessageError::*;
+    use super::error::ValidationError::*;
+    use super::error::MessageError::*;
     match parse_response(response) {
         Ok(Json::Object(data)) => {
             let sess_id = match data.get("user_id".into()) {

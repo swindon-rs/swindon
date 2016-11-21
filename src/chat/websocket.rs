@@ -12,7 +12,7 @@ use tk_bufstream::IoBuf;
 use rustc_serialize::json;
 
 use websocket as ws;
-use super::message::{self, Message, MessageError};
+use super::message::{self, Message};
 use super::processor::ConnectionMessage;
 use super::api::SessionAPI;
 use Pickler;

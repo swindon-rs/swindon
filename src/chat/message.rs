@@ -10,7 +10,10 @@ use rustc_serialize::json::{self, Json, ParserError};
 use rustc_serialize::{Encodable, Encoder};
 
 use minihttp::enums::Status;
+
+use websocket as ws;
 use intern::SessionId;
+use super::error::MessageError;
 
 pub type Meta = BTreeMap<String, Json>;
 pub type Args = Vec<Json>;
@@ -63,7 +66,7 @@ impl Message {
 
     /// Adds extra fields to Meta object depending on self type.
     pub fn update_meta(&self, meta: &mut Meta) {
-        use self::MessageError::*;
+        use super::error::MessageError::*;
         match *self {
             Message::Error(HttpError(status, _)) => {
                 meta.insert(
@@ -86,7 +89,7 @@ pub fn decode_message(s: &str)
 {
     // TODO: replace MessageError here with ProtocolError
     //      ProtocolError can't be sent back.
-    use self::ValidationError::*;
+    use super::error::ValidationError::*;
     let invalid_method = |m: &str| {
         m.starts_with("tangle.") | m.find("/").is_some()
     };
@@ -129,84 +132,6 @@ pub fn decode_message(s: &str)
         }
         Ok(_) => Err(ArrayExpected.into()),
         Err(e) => Err(e.into())
-    }
-}
-
-
-#[derive(Debug, PartialEq)]
-pub enum ValidationError {
-    /// Invalid message length;
-    InvalidLength,
-    /// Invalid method ("tangle." or contains ".");
-    InvalidMethod,
-    /// request_id is missing or invalid in request_meta object;
-    InvalidRequestId,
-    /// user_id is missing or invalid in request_meta object;
-    InvalidUserId,
-    /// Array of args expected;
-    ArrayExpected,
-    /// Meta/Kwargs object expected;
-    ObjectExpected,
-}
-
-quick_error! {
-    #[derive(Debug)]
-    pub enum MessageError {
-        IoError(err: io::Error) {
-            description(err.description())
-            display("I/O error: {:?}", err)
-            from()
-        }
-        /// Message validation error;
-        ValidationError(err: ValidationError) {
-            description("Message validation error")
-            display("Validation error: {:?}", err)
-            from()
-        }
-        /// Utf8 decoding error;
-        Utf8Error(err: Utf8Error) {
-            description(err.description())
-            display("Decode error {}", err)
-            from()
-        }
-        /// JSON Parser Error;
-        JsonError(err: ParserError) {
-            description(err.description())
-            display("JSON error: {}", err)
-            from()
-        }
-        /// Response Http Error;
-        HttpError(status: Status, body: Option<Json>) {
-            // from()
-            description("Http error")
-            display("Http error: {}: {:?}", status.code(), body)
-        }
-    }
-}
-
-impl Encodable for MessageError {
-    fn encode<S: Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
-        use self::MessageError::*;
-        match *self {
-            HttpError(_, None) => {
-                s.emit_nil()
-            }
-            HttpError(_, Some(ref j)) => {
-                j.encode(s)
-            }
-            Utf8Error(ref err) => {
-                s.emit_str(format!("{}", err).as_str())
-            }
-            JsonError(ref err) => {
-                s.emit_str(format!("{}", err).as_str())
-            }
-            ValidationError(ref err) => {
-                s.emit_str(format!("{:?}", err).as_str())
-            }
-            IoError(ref err) => {
-                s.emit_str(format!("{:?}", err).as_str())
-            }
-        }
     }
 }
 
