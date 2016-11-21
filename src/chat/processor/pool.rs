@@ -210,12 +210,12 @@ impl Pool {
                     Subscription::Pending => {
                         self.pending_connections.get_mut(cid)
                             .expect("subscriptions out of sync")
-                            .message(data.clone())
+                            .message(topic.clone(), data.clone())
                     }
                     Subscription::Session => {
                         self.connections.get(cid)
                             .expect("subscriptions out of sync")
-                            .message(data.clone())
+                            .message(topic.clone(), data.clone())
                     }
                 }
             }

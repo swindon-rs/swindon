@@ -26,13 +26,13 @@ quick_error! {
             display("JSON error: {}", err)
             from()
         }
-        /// Message validation error;
+        /// Protocol Message validation error;
         ValidationError(err: ValidationError) {
             description("Message validation error")
             display("Validation error: {:?}", err)
             from()
         }
-        /// Response Http Error;
+        /// Backend application Error;
         HttpError(status: Status, body: Option<Json>) {
             // from()
             description("Http error")

@@ -12,7 +12,7 @@ use super::ConnectionMessage;
 pub struct NewConnection {
     pub cid: Cid,
     pub topics: HashSet<Topic>,
-    pub message_buffer: Vec<Arc<Json>>,
+    pub message_buffer: Vec<(Topic, Arc<Json>)>,
     pub channel: Sender<ConnectionMessage>,
 }
 
@@ -42,19 +42,19 @@ impl NewConnection {
             topics: self.topics,
             channel: self.channel,
         };
-        for m in self.message_buffer {
-            conn.message(m);
+        for (t, m) in self.message_buffer {
+            conn.message(t, m);
         }
         return conn;
     }
-    pub fn message(&mut self, data: Arc<Json>) {
-        self.message_buffer.push(data);
+    pub fn message(&mut self, topic: Topic, data: Arc<Json>) {
+        self.message_buffer.push((topic, data));
     }
 }
 
 impl Connection {
-    pub fn message(&self, data: Arc<Json>) {
-        self.channel.send(ConnectionMessage::Publish(data))
+    pub fn message(&self, topic: Topic, data: Arc<Json>) {
+        self.channel.send(ConnectionMessage::Publish(topic, data))
             .expect("send connection message");
     }
 }

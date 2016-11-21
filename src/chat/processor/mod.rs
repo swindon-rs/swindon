@@ -38,10 +38,13 @@ pub struct Event {
 }
 
 pub enum ConnectionMessage {
-    Publish(Arc<Json>),
-    /// Auth response message: `["hello", {}, json_data]`
+    /// Topic publish message:
+    /// `["message", {"topic": topic}, data]`
+    Publish(Topic, Arc<Json>),
+    /// Auth response message:
+    /// `["hello", {}, json_data]`
     Hello(Arc<Json>),
-    /// Websocket message result;
+    /// Websocket call result;
     Result(Meta, Json),
     // // Result of Auth call;
     // Hello(Arc<Json>),
@@ -111,9 +114,15 @@ impl Encodable for ConnectionMessage {
         use self::ConnectionMessage::*;
         s.emit_seq(3, |s| {
             match *self {
-                Publish(ref json) => {
+                Publish(ref topic, ref json) => {
+                    #[derive(RustcEncodable)]
+                    struct Meta<'a> {
+                        topic: &'a Topic,
+                    }
                     s.emit_seq_elt(0, |s| s.emit_str("message"))?;
-                    s.emit_seq_elt(1, |s| s.emit_map(0, |s| Ok(())))?;
+                    s.emit_seq_elt(1, |s| {
+                        Meta { topic: topic }.encode(s)
+                    })?;
                     s.emit_seq_elt(2, |s| json.encode(s))
                 }
                 Hello(ref json) => {
