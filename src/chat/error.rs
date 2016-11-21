@@ -2,7 +2,7 @@ use std::io;
 use std::str::Utf8Error;
 
 use rustc_serialize::{Encodable, Encoder};
-use rustc_serialize::json::{self, Json, ParserError};
+use rustc_serialize::json::{Json, ParserError};
 use minihttp::enums::Status;
 
 quick_error! {

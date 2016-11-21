@@ -12,7 +12,7 @@ use tk_bufstream::IoBuf;
 use rustc_serialize::json;
 
 use websocket as ws;
-use super::message::{self, Message};
+use super::message;
 use super::processor::ConnectionMessage;
 use super::api::SessionAPI;
 use Pickler;
@@ -49,18 +49,21 @@ struct ChatDispatcher(SessionAPI, Handle);
 impl ws::Dispatcher for ChatDispatcher {
 
     fn dispatch(&mut self, frame: ws::Frame,
-        replier: &mut ws::ImmediateReplier)
+        _replier: &mut ws::ImmediateReplier)
         -> Result<(), ws::Error>
     {
         if let ws::Frame::Text(data) = frame {
             match message::decode_message(data) {
                 Ok((meta, msg)) => {
+                    if message::is_active(&meta) {
+                        // TODO: send UpdateActivity
+                    }
                     self.0.method_call(meta, msg, &self.1);
                 }
-                Err(error) => {
+                Err(_error) => {
                     // TODO:
                     //  do not use replier; send ConnectionMessage;
-                    replier.text(Message::Error(error).encode().as_str());
+                    //replier.text(Message::Error(error).encode().as_str());
                 }
             }
         };

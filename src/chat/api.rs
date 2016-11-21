@@ -93,6 +93,7 @@ impl ChatAPI {
         req.done()
     }
 
+    /// API call to backend.
     fn post(&self, method: &str, auth: &str, payload: &[u8])
         -> BoxFuture<Json, MessageError>
     {
@@ -129,7 +130,8 @@ impl ChatAPI {
         }
 
         let userinfo = Arc::new(userinfo);
-        channel.send(ConnectionMessage::Hello(userinfo.clone()));
+        channel.send(ConnectionMessage::Hello(userinfo.clone()))
+        .expect("message sent");
 
         self.proc_pool.send(Action::Associate {
             conn_id: conn_id,
@@ -149,6 +151,7 @@ impl ChatAPI {
 
 // only difference from ChatAPI -> Bound to concrete SessionId
 impl SessionAPI {
+
     /// Send disconnect to processor.
     pub fn disconnect(&self) {
         self.api.proc_pool.send(Action::Disconnect { conn_id: self.conn_id });
@@ -157,11 +160,14 @@ impl SessionAPI {
     pub fn method_call(&self, mut meta: Meta, message: Message, handle: &Handle)
     {
         let tx = self.channel.clone();
+        meta.insert("connection_id".to_string(),
+            Json::String(serialize_cid(&self.conn_id)));
         let payload = message.encode_with(&meta);
         let call = self.api.post(message.method(),
             self.auth_token.as_str(), payload.as_bytes());
         handle.spawn(call
             .then(move |result| {
+                meta.remove(&"connection_id".to_string());
                 let res = match result {
                     Ok(json) => tx.send(ConnectionMessage::Result(meta, json)),
                     Err(err) => tx.send(ConnectionMessage::Error(meta, Json::Null)),
@@ -205,7 +211,7 @@ pub fn parse_userinfo(response: ClientResponse)
             let sess_id = match data.get("user_id".into()) {
                 Some(&Json::String(ref s)) => {
                     SessionId::from_str(s.as_str())
-                    .map_err(|e| ValidationError(InvalidUserId))?
+                    .map_err(|_| ValidationError(InvalidUserId))?
                 }
                 _ => return Err(ValidationError(InvalidUserId)),
             };

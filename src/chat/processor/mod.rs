@@ -46,11 +46,9 @@ pub enum ConnectionMessage {
     Hello(Arc<Json>),
     /// Websocket call result;
     Result(Meta, Json),
-    // // Result of Auth call;
-    // Hello(Arc<Json>),
     // // Lattice update message;
     // Lattice(Arc<Json>),
-    // // Some Error
+    /// Error response to websocket call
     Error(Meta, Json),
 }
 
@@ -127,7 +125,7 @@ impl Encodable for ConnectionMessage {
                 }
                 Hello(ref json) => {
                     s.emit_seq_elt(0, |s| s.emit_str("hello"))?;
-                    s.emit_seq_elt(1, |s| s.emit_map(0, |s| Ok(())))?;
+                    s.emit_seq_elt(1, |s| s.emit_map(0, |_| Ok(())))?;
                     s.emit_seq_elt(2, |s| json.encode(s))
                 }
                 Result(ref meta, ref json) => {
@@ -137,7 +135,7 @@ impl Encodable for ConnectionMessage {
                 }
                 Error(ref meta, ref json) => {
                     s.emit_seq_elt(0, |s| s.emit_str("Error"))?;
-                    s.emit_seq_elt(1, |s| s.emit_map(0, |s| Ok(())))?;  // meta.encode(s))?;
+                    s.emit_seq_elt(1, |s| meta.encode(s))?;
                     s.emit_seq_elt(2, |s| json.encode(s))
                 }
             }
