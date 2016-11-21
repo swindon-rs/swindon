@@ -84,20 +84,15 @@ impl Response {
                 chat_api.authorize_connection(&req, cid, tx.clone())
                 .map_err(|e| e.into())
                 .and_then(move |resp| {
-                    // TODO: parse response
-                    let resp = if resp.status == Status::Ok {
-                        match chat::parse_userinfo(resp) {
-                            chat::Message::Hello(sess_id, userinfo) => {
-                                let session_api = chat_api.session_api(
-                                    sess_id, cid, userinfo, tx);
-                                WebsocketChat(Ready(init, session_api, rx))
-                            }
-                            other => {
-                                WebsocketChat(AuthError(init, other))
-                            }
+                    let resp = match chat::parse_userinfo(resp) {
+                        Ok((sess_id, userinfo)) => {
+                            let session_api = chat_api.session_api(
+                                sess_id, cid, userinfo, tx);
+                            WebsocketChat(Ready(init, session_api, rx))
                         }
-                    } else {
-                        ErrorPage(Status::InternalServerError)
+                        Err(other) => {
+                            WebsocketChat(AuthError(init, other))
+                        }
                     };
                     finished(Serializer {
                         config: cfg,

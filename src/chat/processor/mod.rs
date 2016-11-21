@@ -12,11 +12,13 @@ use std::time::Instant;
 use std::sync::Arc;
 
 use rustc_serialize::json::Json;
+use rustc_serialize::{Encodable, Encoder};
 use tokio_core::channel::Sender;
 
 use config;
 use intern::{Topic, SessionId, SessionPoolName};
 use chat::Cid;
+use chat::message::Meta;
 
 mod main;
 mod pool;
@@ -37,16 +39,16 @@ pub struct Event {
 
 pub enum ConnectionMessage {
     Publish(Arc<Json>),
-    Raw(String),    // XXX; implement variants below
-
-    // // Websocket message result;
-    // Result(Arc<Meta>, Arc<Json>),
+    /// Auth response message: `["hello", {}, json_data]`
+    Hello(Arc<Json>),
+    /// Websocket message result;
+    Result(Meta, Json),
     // // Result of Auth call;
     // Hello(Arc<Json>),
     // // Lattice update message;
     // Lattice(Arc<Json>),
     // // Some Error
-    // Error(Arc<Meta>, Arc<Json>),
+    Error(Json),
 }
 
 pub enum PoolMessage {
@@ -101,4 +103,35 @@ pub enum Action {
         topic: Topic,
         data: Arc<Json>,
     },
+}
+
+impl Encodable for ConnectionMessage {
+    fn encode<S: Encoder>(&self, s: &mut S) -> Result<(), S::Error>
+    {
+        use self::ConnectionMessage::*;
+        s.emit_seq(3, |s| {
+            match *self {
+                Publish(ref json) => {
+                    s.emit_seq_elt(0, |s| s.emit_str("message"))?;
+                    s.emit_seq_elt(1, |s| s.emit_map(0, |s| Ok(())))?;
+                    s.emit_seq_elt(2, |s| json.encode(s))
+                }
+                Hello(ref json) => {
+                    s.emit_seq_elt(0, |s| s.emit_str("hello"))?;
+                    s.emit_seq_elt(1, |s| s.emit_map(0, |s| Ok(())))?;
+                    s.emit_seq_elt(2, |s| json.encode(s))
+                }
+                Result(ref meta, ref json) => {
+                    s.emit_seq_elt(0, |s| s.emit_str("result"))?;
+                    s.emit_seq_elt(1, |s| meta.encode(s))?;
+                    s.emit_seq_elt(2, |s| json.encode(s))
+                }
+                Error(ref json) => {
+                    s.emit_seq_elt(0, |s| s.emit_str("Error"))?;
+                    s.emit_seq_elt(1, |s| s.emit_map(0, |s| Ok(())))?;  // meta.encode(s))?;
+                    s.emit_seq_elt(2, |s| json.encode(s))
+                }
+            }
+        })
+    }
 }

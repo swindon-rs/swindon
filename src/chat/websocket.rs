@@ -9,6 +9,7 @@ use tokio_core::channel::Receiver;
 use minihttp::enums::Status;
 use minihttp::Error as HttpError;
 use tk_bufstream::IoBuf;
+use rustc_serialize::json;
 
 use websocket as ws;
 use super::message::{self, Message, MessageError};
@@ -29,9 +30,11 @@ pub fn negotiate<S>(mut response: Pickler<S>, init: ws::Init, remote: Remote,
     response.steal_socket()
     .and_then(move |socket: IoBuf<S>| {
         remote.spawn(move |handle| {
+            let channel = channel.map(|msg| {
+                ws::OutFrame::Text(json::encode(&msg).unwrap())
+            });
             let dispatcher = ChatDispatcher(session_api, handle.clone());
-            ws::WebsockProto::new(
-                socket, dispatcher, channel.map(message_serializer))
+            ws::WebsockProto::new(socket, dispatcher, channel)
             .map_err(|e| info!("Websocket error: {}", e))
         });
         Err(io::Error::new(io::ErrorKind::BrokenPipe,
@@ -64,18 +67,3 @@ impl ws::Dispatcher for ChatDispatcher {
         Ok(())
     }
 }
-
-fn message_serializer(message: ConnectionMessage) -> ws::OutFrame {
-    use super::processor::ConnectionMessage::*;
-    match message {
-        Publish(json) => {
-            // serialize to ["message", {"topic": <topic>}, json]
-            ws::OutFrame::Text(json.to_string())
-        }
-        Raw(s) => {
-            ws::OutFrame::Text(s)
-        }
-    }
-}
-
-

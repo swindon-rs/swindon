@@ -3,7 +3,7 @@ use std::io;
 use std::str::{self, FromStr};
 use std::sync::Arc;
 
-use futures::{Future, BoxFuture};
+use futures::{Future, BoxFuture, done};
 use tokio_core::channel::Sender;
 use tokio_core::reactor::Handle;
 use minihttp::Request;
@@ -93,7 +93,7 @@ impl ChatAPI {
     }
 
     fn post(&self, method: &str, auth: &str, payload: &[u8])
-        -> BoxFuture<ClientResponse, io::Error>
+        -> BoxFuture<Json, MessageError>
     {
         let url = self.router.resolve(method);
         let mut req = self.client.clone();
@@ -104,11 +104,14 @@ impl ChatAPI {
         req.done_headers();
         req.write_body(payload);
         req.done()
-        // Result value must be either parsed message or parsed error;
+        .map_err(|e| e.into())
+        .and_then(|resp| done(parse_response(resp)))
+        .boxed()
     }
 
     /// Make instance of Session API (api bound to cid/ssid/tx-channel)
     /// and associate this session with ws connection
+    /// (send `Action::Associate`)
     pub fn session_api(self, session_id: SessionId, conn_id: Cid,
         userinfo: Json, channel: Sender<ConnectionMessage>)
         -> SessionAPI
@@ -124,10 +127,13 @@ impl ChatAPI {
             }).unwrap().as_bytes()))
         }
 
+        let userinfo = Arc::new(userinfo);
+        channel.send(ConnectionMessage::Hello(userinfo.clone()));
+
         self.proc_pool.send(Action::Associate {
             conn_id: conn_id,
             session_id: session_id.clone(),
-            metadata: Arc::new(userinfo),
+            metadata: userinfo,
         });
 
         SessionAPI {
@@ -154,20 +160,10 @@ impl SessionAPI {
         let call = self.api.post(message.method(),
             self.auth_token.as_str(), payload.as_bytes());
         handle.spawn(call
-            .map_err(|e| info!("Http Error: {:?}", e))
-            .and_then(move |resp| {
-                let result = parse_response(resp)
-                    .map(|data| Message::Result(data))
-                    .unwrap_or_else(|e| {
-                        let e = Message::Error(e);
-                        e.update_meta(&mut meta);
-                        e
-                    })
-                    .encode_with(&meta);
-                // XXX: use proper ConnectionMessage
-                tx.send(ConnectionMessage::Raw(result))
-                .map_err(|e| info!("Remote send error: {:?}", e))
-            })
+            .and_then(move |json| {
+                tx.send(ConnectionMessage::Result(meta, json))
+                .map_err(|e| e.into())
+            }).map_err(|e| info!("Remote send error: {:?}", e))
         );
     }
 }
@@ -195,20 +191,27 @@ fn parse_response(response: ClientResponse) -> Result<Json, MessageError>
 }
 
 /// Parse userinfo received on Auth call;
-pub fn parse_userinfo(response: ClientResponse) -> Message {
+pub fn parse_userinfo(response: ClientResponse)
+    -> Result<(SessionId, Json), MessageError>
+{
     use super::message::ValidationError::*;
     use super::message::MessageError::*;
     match parse_response(response) {
         Ok(Json::Object(data)) => {
             let sess_id = match data.get("user_id".into()) {
                 Some(&Json::String(ref s)) => {
-                    SessionId::from_str(s.as_str()).unwrap()  // XXX
+                    SessionId::from_str(s.as_str())
+                    .map_err(|e| ValidationError(InvalidUserId))?
                 }
-                _ => return Message::Error(ValidationError(InvalidUserId)),
+                _ => return Err(ValidationError(InvalidUserId)),
             };
-            Message::Hello(sess_id, Json::Object(data))
+            Ok((sess_id, Json::Object(data)))
         }
-        Ok(_) => Message::Error(ValidationError(ObjectExpected)),
-        Err(err) => Message::Error(err),
+        Ok(_) => {
+            Err(ValidationError(ObjectExpected))
+        }
+        Err(err) => {
+            Err(err)
+        }
     }
 }

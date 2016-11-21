@@ -3,6 +3,7 @@
 /// ```javascript
 /// ["chat.send_message", {"request_id": "123"}, ["text"], {}]
 /// ```
+use std::io;
 use std::str::{self, Utf8Error};
 use std::collections::BTreeMap;
 use rustc_serialize::json::{self, Json, ParserError};
@@ -149,8 +150,13 @@ pub enum ValidationError {
 }
 
 quick_error! {
-    #[derive(Debug, PartialEq)]
+    #[derive(Debug)]
     pub enum MessageError {
+        IoError(err: io::Error) {
+            description(err.description())
+            display("I/O error: {:?}", err)
+            from()
+        }
         /// Message validation error;
         ValidationError(err: ValidationError) {
             description("Message validation error")
@@ -197,7 +203,9 @@ impl Encodable for MessageError {
             ValidationError(ref err) => {
                 s.emit_str(format!("{:?}", err).as_str())
             }
-
+            IoError(ref err) => {
+                s.emit_str(format!("{:?}", err).as_str())
+            }
         }
     }
 }

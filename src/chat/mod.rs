@@ -25,7 +25,7 @@ pub struct Cid(u64);
 pub enum ChatInit {
     Prepare(Init, ChatAPI),
     Ready(Init, SessionAPI, Receiver<ConnectionMessage>),
-    AuthError(Init, Message),
+    AuthError(Init, MessageError),
 }
 
 
