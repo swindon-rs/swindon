@@ -115,9 +115,13 @@ impl ChatAPI {
     {
         // XXX: symbol cant be encoded in simple way
         fn encode(s: &SessionId) -> String {
-            let auth = format!("{{\"user_id\":{}}}",
-                json::encode(&s[..].to_string()).unwrap());
-            format!("Tangle {}", Base64(auth.as_bytes()))
+            #[derive(RustcEncodable)]
+            struct Auth<'a> {
+                user_id: &'a SessionId,
+            }
+            format!("Tangle {}", Base64(json::encode(&Auth {
+                user_id: s,
+            }).unwrap().as_bytes()))
         }
 
         self.proc_pool.send(Action::Associate {
