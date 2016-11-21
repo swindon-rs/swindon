@@ -19,13 +19,22 @@
     }
     ws.onmessage = function(ev) {
         var data = JSON.parse(ev.data)
-        if(data[0] == 'hello') {
-            my_user_id = data[2]['user_id']
-            log('info', "Your name is " + data[2]['username'])
-            input.style.visibility = 'visible'
-            input.focus()
-        } else {
-            console.error("Unknown message", data)
+        switch(data[0]) {
+            case 'hello':
+                my_user_id = data[2]['user_id']
+                log('info', "Your name is " + data[2]['username'])
+                input.style.visibility = 'visible'
+                input.focus()
+                break;
+            case 'message':
+                if(data[1].topic == 'message-board') {
+                    var author = data[2]['author']
+                    var text = data[2]['text']
+                    log('text', "[" + author + "] " + text)
+                    break;
+                }
+            default:
+                console.error("Skipping message", data)
         }
     }
     input.onkeydown = function(ev) {

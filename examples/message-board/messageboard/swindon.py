@@ -26,7 +26,7 @@ class Swindon(object):
 
     async def publish(self, topic, data):
         assert TOPIC_RE.match(topic)
-        async with self.session.put(self.prefix + 'publish/' + topic,
+        async with self.session.post(self.prefix + 'publish/' + topic,
                 data=json.dumps(data)) as req:
             await req.read()
 
