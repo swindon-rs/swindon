@@ -168,7 +168,7 @@ impl<S: Io, D, R> WebsockProto<S, D, R>
     }
 
     fn poll_recv(&mut self) -> Result<(), Error> {
-        if let Ready(Some(frame)) = self.recv.poll()? {
+        while let Ready(Some(frame)) = self.recv.poll()? {
             let mut imm = ImmediateReplier::new(&mut self.io.out_buf);
             match frame {
                 OutFrame::Text(val) => {
