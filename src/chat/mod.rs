@@ -14,7 +14,7 @@ pub use self::backend::ChatBackend;
 pub use self::processor::{Processor, ProcessorPool, Action};
 pub use self::websocket::{negotiate};
 pub use self::router::MessageRouter;
-pub use self::message::{Message, Meta, Args, Kwargs};
+pub use self::message::{Meta, Args, Kwargs};
 pub use self::api::{ChatAPI, SessionAPI, parse_userinfo};
 pub use self::error::MessageError;
 

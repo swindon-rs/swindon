@@ -19,7 +19,7 @@ use super::{Cid, ProcessorPool};
 use super::{serialize_cid};
 use super::router::MessageRouter;
 use super::processor::{Action, ConnectionMessage};
-use super::message::{Meta, Kwargs, Message};
+use super::message::{self, Meta, Args, Kwargs};
 use super::error::MessageError;
 
 // min & max session activity seconds;
@@ -62,8 +62,6 @@ impl ChatAPI {
     pub fn authorize_connection(&self, req: &Request, conn_id: Cid,
         channel: Sender<ConnectionMessage>)
         -> BoxFuture<ClientResponse, io::Error>
-        // TODO: convert ClientResponse to Json or ConnectionMessage;
-        //  Error to Status?
     {
         let http_cookies = req.headers.iter()
             .filter(|&&(ref k, _)| k == "Cookie")
@@ -73,23 +71,21 @@ impl ChatAPI {
             .find(|&&(ref k, _)| k == "Authorization")
             .map(|&(_, ref v)| v.clone())
             .unwrap_or("".to_string());
-        let mut meta = Meta::new();
-        let mut data = Kwargs::new();
 
-        meta.insert("connection_id".to_string(),
-            Json::String(serialize_cid(&conn_id)));
+        let mut data = Kwargs::new();
         // TODO: parse cookie string to hashmap;
         data.insert("http_cookie".into(),
             Json::String(http_cookies));
         data.insert("http_authorization".into(),
             Json::String(http_auth));
 
+        let payload = message::encode_auth(&serialize_cid(&conn_id), &data);
+
         self.proc_pool.send(Action::NewConnection {
             conn_id: conn_id,
             channel: channel,
         });
 
-        let payload = Message::Auth(data).encode_with(&meta);
         let mut req = self.client.clone();
         req.request(Method::Post,
             self.router.get_auth_url().as_str());
@@ -181,13 +177,14 @@ impl SessionAPI {
     }
 
     /// Backend method call.
-    pub fn method_call(&self, mut meta: Meta, message: Message, handle: &Handle)
+    pub fn method_call(&self, method: String, mut meta: Meta,
+        args: &Args, kwargs: &Kwargs, handle: &Handle)
     {
         let tx = self.channel.clone();
         meta.insert("connection_id".to_string(),
             Json::String(serialize_cid(&self.conn_id)));
-        let payload = message.encode_with(&meta);
-        let call = self.api.post(message.method(),
+        let payload = message::encode_call(&meta, &args, &kwargs);
+        let call = self.api.post(method.as_str(),
             self.auth_token.as_str(), payload.as_bytes());
         handle.spawn(call
             .then(move |result| {

@@ -53,18 +53,12 @@ impl ws::Dispatcher for ChatDispatcher {
         -> Result<(), ws::Error>
     {
         if let ws::Frame::Text(data) = frame {
-            match message::decode_message(data) {
-                Ok((meta, msg)) => {
-                    if let Some(duration) = message::get_active(&meta) {
-                        self.0.update_activity(duration)
-                    }
-                    self.0.method_call(meta, msg, &self.1);
+            let result = message::decode_message(data);
+            if let Ok((method, meta, args, kwargs)) = result {
+                if let Some(duration) = message::get_active(&meta) {
+                    self.0.update_activity(duration)
                 }
-                Err(_error) => {
-                    // TODO:
-                    //  do not use replier; send ConnectionMessage;
-                    //replier.text(Message::Error(error).encode().as_str());
-                }
+                self.0.method_call(method, meta, &args, &kwargs, &self.1);
             }
         };
         Ok(())
