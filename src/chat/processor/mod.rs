@@ -10,13 +10,14 @@
 
 use std::time::Instant;
 use std::sync::Arc;
+use std::collections::HashMap;
 
 use rustc_serialize::json::Json;
 use rustc_serialize::{Encodable, Encoder};
 use tokio_core::channel::Sender;
 
 use config;
-use intern::{Topic, SessionId, SessionPoolName};
+use intern::{Topic, SessionId, SessionPoolName, Lattice};
 use chat::Cid;
 use chat::message::Meta;
 use chat::error::MessageError;
@@ -28,6 +29,7 @@ mod session;
 mod heap;
 mod try_iter;  // temporary
 mod connection;
+mod lattice;
 
 pub use self::public::{Processor, ProcessorPool};
 
@@ -47,8 +49,8 @@ pub enum ConnectionMessage {
     Hello(Arc<Json>),
     /// Websocket call result;
     Result(Meta, Json),
-    // // Lattice update message;
-    // Lattice(Arc<Json>),
+    /// Lattice update message
+    Lattice(Arc<Json>),
     /// Error response to websocket call
     Error(Meta, MessageError),
 }
@@ -105,15 +107,30 @@ pub enum Action {
         topic: Topic,
         data: Arc<Json>,
     },
+
+    // ------ Lattices ------
+    Attach {
+        namespace: Lattice,
+        conn_id: Cid,
+    },
+    Lattice {
+        namespace: Lattice,
+        private: lattice::Values,
+        public: HashMap<SessionId, lattice::Values>,
+    },
+    Detach {
+        namespace: Lattice,
+        conn_id: Cid,
+    },
 }
 
 impl Encodable for ConnectionMessage {
     fn encode<S: Encoder>(&self, s: &mut S) -> Result<(), S::Error>
     {
         use self::ConnectionMessage::*;
-        s.emit_seq(3, |s| {
-            match *self {
-                Publish(ref topic, ref json) => {
+        match *self {
+            Publish(ref topic, ref json) => {
+                s.emit_seq(3, |s| {
                     #[derive(RustcEncodable)]
                     struct Meta<'a> {
                         topic: &'a Topic,
@@ -123,23 +140,35 @@ impl Encodable for ConnectionMessage {
                         Meta { topic: topic }.encode(s)
                     })?;
                     s.emit_seq_elt(2, |s| json.encode(s))
-                }
-                Hello(ref json) => {
+                })
+            }
+            Hello(ref json) => {
+                s.emit_seq(3, |s| {
                     s.emit_seq_elt(0, |s| s.emit_str("hello"))?;
                     s.emit_seq_elt(1, |s| s.emit_map(0, |_| Ok(())))?;
                     s.emit_seq_elt(2, |s| json.encode(s))
-                }
-                Result(ref meta, ref json) => {
+                })
+            }
+            Lattice(ref json) => {
+                s.emit_seq(2, |s| {
+                    s.emit_seq_elt(0, |s| s.emit_str("lattice"))?;
+                    s.emit_seq_elt(1, |s| json.encode(s))
+                })
+            }
+            Result(ref meta, ref json) => {
+                s.emit_seq(3, |s| {
                     s.emit_seq_elt(0, |s| s.emit_str("result"))?;
                     s.emit_seq_elt(1, |s| meta.encode(s))?;
                     s.emit_seq_elt(2, |s| json.encode(s))
-                }
-                Error(ref meta, ref err) => {
+                })
+            }
+            Error(ref meta, ref err) => {
+                s.emit_seq(3, |s| {
                     s.emit_seq_elt(0, |s| s.emit_str("Error"))?;
                     s.emit_seq_elt(1, |s| meta.encode(s))?;
                     s.emit_seq_elt(2, |s| err.encode(s))
-                }
+                })
             }
-        })
+        }
     }
 }

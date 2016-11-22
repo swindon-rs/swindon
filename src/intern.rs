@@ -27,6 +27,9 @@ pub type Topic = Symbol<TopicValidator>;
 struct LatticeNamespaceValidator;
 pub type Lattice = Symbol<LatticeNamespaceValidator>;
 
+struct LatticeKeyValidator;
+pub type LatticeKey = Symbol<LatticeKeyValidator>;
+
 quick_error! {
     #[derive(Debug)]
     pub enum BadIdent {
@@ -39,6 +42,15 @@ quick_error! {
 fn valid_ident(val: &str) -> bool {
     val.chars().all(|c| c.is_ascii() &&
         (c.is_alphanumeric() || c == '-' || c == '_'))
+}
+
+fn valid_key(val: &str) -> bool {
+    if val.len() == 0 {
+        return false;
+    }
+    let first = val.chars().next().unwrap();
+    return (first.is_ascii() && first.is_alphabetic() || first == '_') &&
+        val.chars().all(|c| c.is_ascii() && (c.is_alphanumeric() || c == '_'))
 }
 
 fn valid_namespace(val: &str) -> bool {
@@ -139,6 +151,19 @@ impl Validator for LatticeNamespaceValidator {
     }
     fn display(value: &Symbol<Self>, fmt: &mut fmt::Formatter) -> fmt::Result {
         write!(fmt, "lattice{:?}", value.as_ref())
+    }
+}
+
+impl Validator for LatticeKeyValidator {
+    type Err = BadIdent;
+    fn validate_symbol(val: &str) -> Result<(), Self::Err> {
+        if !valid_key(val) {
+            return Err(BadIdent::InvalidChar);
+        }
+        Ok(())
+    }
+    fn display(value: &Symbol<Self>, fmt: &mut fmt::Formatter) -> fmt::Result {
+        write!(fmt, "key{:?}", value.as_ref())
     }
 }
 

@@ -35,6 +35,16 @@ fn pool_action(pool: &mut Pool, ts: Instant, action: Action) {
         Publish { topic, data } => {
             pool.publish(topic, data);
         }
+        // Lattices
+        Attach { conn_id, namespace } => {
+            unimplemented!();
+        }
+        Lattice { namespace, private, public } => {
+            unimplemented!();
+        }
+        Detach { conn_id, namespace } => {
+            unimplemented!();
+        }
     }
 }
 
