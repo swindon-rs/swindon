@@ -5,6 +5,8 @@ use rustc_serialize::{Encodable, Encoder};
 use rustc_serialize::json::{Json, ParserError};
 use minihttp::enums::Status;
 
+use super::message::Meta;
+
 quick_error! {
     #[derive(Debug)]
     pub enum MessageError {
@@ -81,5 +83,21 @@ impl Encodable for MessageError {
                 s.emit_str(format!("{:?}", err).as_str())
             }
         }
+    }
+}
+
+impl MessageError {
+    pub fn update_meta(&self, meta: &mut Meta) {
+        use self::MessageError::*;
+        let kind = match *self {
+            HttpError(s, _) => {
+                meta.insert("http_error".to_string(),
+                    Json::U64(s.code() as u64));
+                "http_error"
+            }
+            IoError(_) | Utf8Error(_) | JsonError(_) => "invalid_content",
+            ValidationError(_) => "protocol_error",
+        };
+        meta.insert("error_kind".to_string(), Json::String(kind.to_string()));
     }
 }

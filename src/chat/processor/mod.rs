@@ -19,6 +19,7 @@ use config;
 use intern::{Topic, SessionId, SessionPoolName};
 use chat::Cid;
 use chat::message::Meta;
+use chat::error::MessageError;
 
 mod main;
 mod pool;
@@ -49,7 +50,7 @@ pub enum ConnectionMessage {
     // // Lattice update message;
     // Lattice(Arc<Json>),
     /// Error response to websocket call
-    Error(Meta, Json),
+    Error(Meta, MessageError),
 }
 
 pub enum PoolMessage {
@@ -133,10 +134,10 @@ impl Encodable for ConnectionMessage {
                     s.emit_seq_elt(1, |s| meta.encode(s))?;
                     s.emit_seq_elt(2, |s| json.encode(s))
                 }
-                Error(ref meta, ref json) => {
+                Error(ref meta, ref err) => {
                     s.emit_seq_elt(0, |s| s.emit_str("Error"))?;
                     s.emit_seq_elt(1, |s| meta.encode(s))?;
-                    s.emit_seq_elt(2, |s| json.encode(s))
+                    s.emit_seq_elt(2, |s| err.encode(s))
                 }
             }
         })

@@ -170,7 +170,10 @@ impl SessionAPI {
                 meta.remove(&"connection_id".to_string());
                 let res = match result {
                     Ok(json) => tx.send(ConnectionMessage::Result(meta, json)),
-                    Err(err) => tx.send(ConnectionMessage::Error(meta, Json::Null)),
+                    Err(err) => {
+                        err.update_meta(&mut meta);
+                        tx.send(ConnectionMessage::Error(meta, err))
+                    }
                 };
                 res.map_err(|e| info!("Remote send error: {:?}", e))
             })

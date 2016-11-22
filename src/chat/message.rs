@@ -51,8 +51,6 @@ impl Message {
 pub fn decode_message(s: &str)
     -> Result<(Meta, Message), MessageError>
 {
-    // TODO: replace MessageError here with ProtocolError
-    //      ProtocolError can't be sent back.
     use super::error::ValidationError::*;
     let invalid_method = |m: &str| {
         m.starts_with("tangle.") | m.find("/").is_some()
@@ -118,19 +116,17 @@ impl<'a> Encodable for Payload<'a> {
         use self::Message::*;
 
         s.emit_seq(3, |s| {
+            s.emit_seq_elt(0, |s| self.encode_meta(s))?;
             match self.1 {
                 &Call(_, ref args, ref kwargs) => {
-                    s.emit_seq_elt(0, |s| self.encode_meta(s))?;
                     s.emit_seq_elt(1, |s| args.encode(s))?;
                     s.emit_seq_elt(2, |s| kwargs.encode(s))?;
                 }
                 &Auth(ref kwargs) => {
-                    s.emit_seq_elt(0, |s| self.encode_meta(s))?;
                     s.emit_seq_elt(1, |s| s.emit_seq(0, |_| Ok(())) )?;
                     s.emit_seq_elt(2, |s| kwargs.encode(s))?;
                 }
                 &Inactive => {
-                    s.emit_seq_elt(0, |s| self.encode_meta(s))?;
                     s.emit_seq_elt(1, |s| s.emit_seq(0, |_| Ok(())) )?;
                     s.emit_seq_elt(2, |s| s.emit_map(0, |_| Ok(())) )?;
                 }
