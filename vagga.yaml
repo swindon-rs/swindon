@@ -55,6 +55,17 @@ containers:
     - !PipConfig { dependencies: true }
     - !Py3Requirements "examples/message-board/requirements.txt"
 
+  multi-user-chat:
+    setup:
+    - !Alpine v3.4
+    - !Install [ca-certificates]
+    - !PipConfig { dependencies: true }
+    - !Py3Requirements "examples/multi-user-chat/requirements.txt"
+    - !NpmDependencies
+      file: "examples/multi-user-chat/package.json"
+    environ:
+      NODE_PATH: /usr/lib/node_modules
+
 commands:
 
   rustc: !Command
@@ -191,3 +202,28 @@ commands:
         - python3
         - -m
         - messageboard
+
+  example-multi-user-chat: !Supervise
+    description: Run swindon and multi-user-chat example
+    prerequisites: [build]
+    children:
+      swindon: !Command
+        container: ubuntu
+        work-dir: examples/multi-user-chat
+        run:
+        - ../../target/debug/swindon
+        - --verbose
+        - --config=swindon.yaml
+      #chat: !Command
+      #  container: multi-user-chat
+      #  work-dir: examples/multi-user-chat
+      #  run:
+      #  - python3
+      #  - -m
+      #  - muc
+      react-app: !Command
+        container: multi-user-chat
+        work-dir: examples/multi-user-chat
+        run:
+        - npm
+        - start
