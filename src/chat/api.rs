@@ -1,7 +1,9 @@
 //! Chat API implementation.
 use std::io;
+use std::cmp;
 use std::str::{self, FromStr};
 use std::sync::Arc;
+use std::time::{Instant, Duration};
 
 use futures::{Future, BoxFuture, done};
 use tokio_core::channel::Sender;
@@ -19,6 +21,11 @@ use super::router::MessageRouter;
 use super::processor::{Action, ConnectionMessage};
 use super::message::{Meta, Kwargs, Message};
 use super::error::MessageError;
+
+// min & max session activity seconds;
+// TODO: get from config; store in ChatAPI
+const MIN_SESSION_ACTIVE: u64 = 1;
+const MAX_SESSION_ACTIVE: u64 = 30;
 
 pub struct ChatAPI {
     // shared between connections
@@ -93,24 +100,6 @@ impl ChatAPI {
         req.done()
     }
 
-    /// API call to backend.
-    fn post(&self, method: &str, auth: &str, payload: &[u8])
-        -> BoxFuture<Json, MessageError>
-    {
-        let url = self.router.resolve(method);
-        let mut req = self.client.clone();
-        req.request(Method::Post, url.as_str());
-        req.add_header("Content-Type".into(), "application/json");
-        req.add_header("Authorization".into(), auth);
-        req.add_length(payload.len() as u64);
-        req.done_headers();
-        req.write_body(payload);
-        req.done()
-        .map_err(|e| e.into())
-        .and_then(|resp| done(parse_response(resp)))
-        .boxed()
-    }
-
     /// Make instance of Session API (api bound to cid/ssid/tx-channel)
     /// and associate this session with ws connection
     /// (send `Action::Associate`)
@@ -118,7 +107,6 @@ impl ChatAPI {
         userinfo: Json, channel: Sender<ConnectionMessage>)
         -> SessionAPI
     {
-        // XXX: symbol cant be encoded in simple way
         fn encode(s: &SessionId) -> String {
             #[derive(RustcEncodable)]
             struct Auth<'a> {
@@ -147,6 +135,36 @@ impl ChatAPI {
             channel: channel,
         }
     }
+
+    /// API call to backend.
+    fn post(&self, method: &str, auth: &str, payload: &[u8])
+        -> BoxFuture<Json, MessageError>
+    {
+        let url = self.router.resolve(method);
+        let mut req = self.client.clone();
+        req.request(Method::Post, url.as_str());
+        req.add_header("Content-Type".into(), "application/json");
+        req.add_header("Authorization".into(), auth);
+        req.add_length(payload.len() as u64);
+        req.done_headers();
+        req.write_body(payload);
+        req.done()
+        .map_err(|e| e.into())
+        .and_then(|resp| done(parse_response(resp)))
+        .boxed()
+    }
+
+    /// Update session activity timeout.
+    fn update_activity(&self, conn_id: Cid, seconds: u64) {
+        let seconds = cmp::max(
+            cmp::min(seconds, MAX_SESSION_ACTIVE),
+            MIN_SESSION_ACTIVE);
+        let timestamp = Instant::now() + Duration::from_secs(seconds);
+        self.proc_pool.send(Action::UpdateActivity {
+            conn_id: conn_id,
+            timestamp: timestamp,
+        })
+    }
 }
 
 // only difference from ChatAPI -> Bound to concrete SessionId
@@ -157,6 +175,12 @@ impl SessionAPI {
         self.api.proc_pool.send(Action::Disconnect { conn_id: self.conn_id });
     }
 
+    /// 'Session active' notification for chat processor.
+    pub fn update_activity(&self, sec: u64) {
+        self.api.update_activity(self.conn_id.clone(), sec)
+    }
+
+    /// Backend method call.
     pub fn method_call(&self, mut meta: Meta, message: Message, handle: &Handle)
     {
         let tx = self.channel.clone();

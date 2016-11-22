@@ -99,10 +99,11 @@ pub fn decode_message(s: &str)
 
 
 /// Returns true if Meta object contains 'active' flag and is set to true.
-pub fn is_active(meta: &Meta) -> bool {
-    match meta.get(&"active".to_string()) {
-        Some(&Json::Boolean(v)) => v,
-        _ => false,
+pub fn get_active(meta: &Meta) -> Option<u64> {
+    let duration = meta.get(&"active".to_string());
+    match duration {
+        Some(&Json::U64(v)) => Some(v),
+        _ => None,
     }
 }
 

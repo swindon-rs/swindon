@@ -55,8 +55,8 @@ impl ws::Dispatcher for ChatDispatcher {
         if let ws::Frame::Text(data) = frame {
             match message::decode_message(data) {
                 Ok((meta, msg)) => {
-                    if message::is_active(&meta) {
-                        // TODO: send UpdateActivity
+                    if let Some(duration) = message::get_active(&meta) {
+                        self.0.update_activity(duration)
                     }
                     self.0.method_call(meta, msg, &self.1);
                 }
