@@ -228,7 +228,7 @@ fn parse_response(response: ClientResponse) -> Result<Json, MessageError>
 pub fn parse_userinfo(response: ClientResponse)
     -> Result<(SessionId, Json), MessageError>
 {
-    use super::error::ValidationError::*;
+    use super::message::ValidationError::*;
     use super::error::MessageError::*;
     match parse_response(response) {
         Ok(Json::Object(data)) => {

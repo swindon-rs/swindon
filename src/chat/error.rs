@@ -5,7 +5,7 @@ use rustc_serialize::{Encodable, Encoder};
 use rustc_serialize::json::{Json, ParserError};
 use minihttp::enums::Status;
 
-use super::message::Meta;
+use super::message::{Meta, ValidationError};
 
 quick_error! {
     #[derive(Debug)]
@@ -41,23 +41,6 @@ quick_error! {
             display("Http error: {}: {:?}", status.code(), body)
         }
     }
-}
-
-
-#[derive(Debug, PartialEq)]
-pub enum ValidationError {
-    /// Invalid message length;
-    InvalidLength,
-    /// Invalid method ("tangle." or contains ".");
-    InvalidMethod,
-    /// request_id is missing or invalid in request_meta object;
-    InvalidRequestId,
-    /// user_id is missing or invalid in request_meta object;
-    InvalidUserId,
-    /// Array of args expected;
-    ArrayExpected,
-    /// Meta/Kwargs object expected;
-    ObjectExpected,
 }
 
 impl Encodable for MessageError {
