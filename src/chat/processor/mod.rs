@@ -17,7 +17,7 @@ use rustc_serialize::{Encodable, Encoder};
 use tokio_core::channel::Sender;
 
 use config;
-use intern::{Topic, SessionId, SessionPoolName, Lattice};
+use intern::{Topic, SessionId, SessionPoolName, Lattice as Namespace};
 use chat::Cid;
 use chat::message::Meta;
 use chat::error::MessageError;
@@ -50,7 +50,7 @@ pub enum ConnectionMessage {
     /// Websocket call result;
     Result(Meta, Json),
     /// Lattice update message
-    Lattice(Arc<Json>),
+    Lattice(Namespace, Arc<Json>),
     /// Error response to websocket call
     Error(Meta, MessageError),
 }
@@ -110,16 +110,16 @@ pub enum Action {
 
     // ------ Lattices ------
     Attach {
-        namespace: Lattice,
+        namespace: Namespace,
         conn_id: Cid,
     },
     Lattice {
-        namespace: Lattice,
+        namespace: Namespace,
         private: lattice::Values,
         public: HashMap<SessionId, lattice::Values>,
     },
     Detach {
-        namespace: Lattice,
+        namespace: Namespace,
         conn_id: Cid,
     },
 }
@@ -149,10 +149,17 @@ impl Encodable for ConnectionMessage {
                     s.emit_seq_elt(2, |s| json.encode(s))
                 })
             }
-            Lattice(ref json) => {
-                s.emit_seq(2, |s| {
+            Lattice(ref namespace, ref json) => {
+                s.emit_seq(3, |s| {
+                    #[derive(RustcEncodable)]
+                    struct Meta<'a> {
+                        namespace: &'a Namespace,
+                    }
                     s.emit_seq_elt(0, |s| s.emit_str("lattice"))?;
-                    s.emit_seq_elt(1, |s| json.encode(s))
+                    s.emit_seq_elt(1, |s| {
+                        Meta { namespace: namespace }.encode(s)
+                    });
+                    s.emit_seq_elt(2, |s| json.encode(s))
                 })
             }
             Result(ref meta, ref json) => {
