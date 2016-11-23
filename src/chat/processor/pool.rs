@@ -5,13 +5,14 @@ use std::collections::HashMap;
 use rustc_serialize::json::Json;
 use tokio_core::channel::Sender;
 
-use intern::{Topic, SessionId, SessionPoolName};
+use intern::{Topic, SessionId, SessionPoolName, Lattice as Namespace};
 use config;
 use chat::Cid;
 use super::{ConnectionMessage, PoolMessage};
 use super::session::Session;
 use super::connection::{NewConnection, Connection};
 use super::heap::HeapMap;
+use super::lattice::{Lattice, Values, Delta};
 
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
@@ -30,6 +31,7 @@ pub struct Pool {
     pending_connections: HashMap<Cid, NewConnection>,
     connections: HashMap<Cid, Connection>,
     topics: HashMap<Topic, HashMap<Cid, Subscription>>,
+    lattices: HashMap<Namespace, Lattice>,
 
     // Setings
     new_connection_timeout: Duration,
@@ -50,6 +52,7 @@ impl Pool {
             pending_connections: HashMap::new(),
             connections: HashMap::new(),
             topics: HashMap::new(),
+            lattices: HashMap::new(),
 
             // TODO(tailhook) from config
             new_connection_timeout: Duration::new(60, 0),
@@ -222,6 +225,43 @@ impl Pool {
         }
     }
 
+    pub fn lattice_attach(&mut self, cid: Cid, namespace: Namespace) {
+        let conn = if let Some(conn) = self.connections.get_mut(&cid) {
+            conn
+        } else {
+            error!("Attach of {:?} for non-existing connection {:?}",
+                   namespace, cid);
+            return
+        };
+        conn.lattices.insert(namespace.clone());
+        let lat = if let Some(lat) = self.lattices.get(&namespace) {
+            lat
+        } else {
+            error!("No lattice {:?} at the time of attach (connection {:?})",
+                   namespace, cid);
+            return
+        };
+        let mut data = lat.private.get(&conn.session_id)
+            .map(|x| x.clone())
+            .unwrap_or_else(HashMap::new);
+        for (key, values) in &mut data {
+            let pubval = lat.public.get(&key[..]).unwrap();
+            values.update(pubval);
+        }
+        conn.channel.send(ConnectionMessage::Lattice(
+            namespace.clone(), Arc::new(data))
+        ).map_err(|e| info!("Can't send lattice delta")).ok();
+    }
+
+    pub fn lattice_detach(&mut self, cid: Cid, namespace: Namespace) {
+        unimplemented!();
+    }
+
+    pub fn lattice_update(&mut self,
+        namespace: Namespace, delta: Delta)
+    {
+        unimplemented!();
+    }
 }
 
 fn unsubscribe(topics: &mut HashMap<Topic, HashMap<Cid, Subscription>>,

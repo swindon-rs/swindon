@@ -37,13 +37,13 @@ fn pool_action(pool: &mut Pool, ts: Instant, action: Action) {
         }
         // Lattices
         Attach { conn_id, namespace } => {
-            unimplemented!();
+            pool.lattice_attach(conn_id, namespace);
         }
-        Lattice { namespace, private, public } => {
-            unimplemented!();
+        Lattice { namespace, delta } => {
+            pool.lattice_update(namespace, delta);
         }
         Detach { conn_id, namespace } => {
-            unimplemented!();
+            pool.lattice_detach(conn_id, namespace);
         }
     }
 }

@@ -18,6 +18,7 @@ use tokio_core::channel::Sender;
 
 use config;
 use intern::{Topic, SessionId, SessionPoolName, Lattice as Namespace};
+use intern::LatticeKey;
 use chat::Cid;
 use chat::message::Meta;
 use chat::error::MessageError;
@@ -50,7 +51,7 @@ pub enum ConnectionMessage {
     /// Websocket call result;
     Result(Meta, Json),
     /// Lattice update message
-    Lattice(Namespace, Arc<Json>),
+    Lattice(Namespace, Arc<HashMap<LatticeKey, lattice::Values>>),
     /// Error response to websocket call
     Error(Meta, MessageError),
 }
@@ -109,14 +110,25 @@ pub enum Action {
     },
 
     // ------ Lattices ------
+    /// Attaches (subscribes to) lattice for this user
+    ///
+    /// Sends current lattice data to this connection immediately
+    ///
+    /// Note: data must *already* be in there
     Attach {
         namespace: Namespace,
         conn_id: Cid,
     },
+    /// Updates data in lattice
+    ///
+    /// This works both for initial attach (subscription) of lattice and
+    /// for subsequent updates
+    ///
+    /// Note: this message must be sent *before* Attach when connection
+    /// initially attaches to the lattice
     Lattice {
         namespace: Namespace,
-        private: lattice::Values,
-        public: HashMap<SessionId, lattice::Values>,
+        delta: lattice::Delta,
     },
     Detach {
         namespace: Namespace,
@@ -158,7 +170,7 @@ impl Encodable for ConnectionMessage {
                     s.emit_seq_elt(0, |s| s.emit_str("lattice"))?;
                     s.emit_seq_elt(1, |s| {
                         Meta { namespace: namespace }.encode(s)
-                    });
+                    })?;
                     s.emit_seq_elt(2, |s| json.encode(s))
                 })
             }
