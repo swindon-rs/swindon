@@ -1,11 +1,12 @@
 use std::sync::Arc;
 use std::time::{Instant, Duration};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use rustc_serialize::json::Json;
 use tokio_core::channel::Sender;
 
 use intern::{Topic, SessionId, SessionPoolName, Lattice as Namespace};
+use intern::LatticeKey;
 use config;
 use chat::Cid;
 use super::{ConnectionMessage, PoolMessage};
@@ -245,8 +246,9 @@ impl Pool {
             .map(|x| x.clone())
             .unwrap_or_else(HashMap::new);
         for (key, values) in &mut data {
-            let pubval = lat.public.get(&key[..]).unwrap();
-            values.update(pubval);
+            lat.public.get(key).map(|pubval| {
+                values.update(pubval);
+            });
         }
         conn.channel.send(ConnectionMessage::Lattice(
             namespace.clone(), Arc::new(data))
@@ -260,7 +262,74 @@ impl Pool {
     pub fn lattice_update(&mut self,
         namespace: Namespace, delta: Delta)
     {
-        unimplemented!();
+        let delta = {
+            let lat = self.lattices.entry(namespace.clone())
+                .or_insert_with(Lattice::new);
+
+            // Update subscriptions on **original delta**
+            for (session_id, rooms) in delta.private.iter() {
+                for key in rooms.keys() {
+                    lat.subscriptions.entry(key.clone())
+                        .or_insert_with(HashSet::new)
+                        .insert(session_id.clone());
+                }
+            }
+
+            // Then make minimal delta
+            lat.update(delta)
+        };
+
+        // Fighting with borrow checker
+        let lat = self.lattices.get(&namespace).unwrap();
+
+        // Send public-only changes
+        let pubdata = Arc::new(delta.public);
+        let mut already_sent = HashSet::new();
+        for room in pubdata.keys() {
+            if let Some(sessions) = lat.subscriptions.get(room) {
+                for sid in sessions {
+                    if !already_sent.contains(sid) &&
+                       !delta.private.contains_key(sid)
+                    {
+                        self.send_lattice(
+                            sid, &namespace, &pubdata);
+                        already_sent.insert(sid.clone());
+                    }
+                }
+            }
+        }
+
+        // Send public *and* private
+        for (session_id, mut rooms) in delta.private.into_iter() {
+            for (room, values) in rooms.iter_mut() {
+                pubdata.get(room).map(|pubval| {
+                    values.update(pubval);
+                });
+            }
+            self.send_lattice(&session_id, &namespace, &Arc::new(rooms));
+        }
+    }
+
+    fn send_lattice(&self, sid: &SessionId, ns: &Namespace,
+        update: &Arc<HashMap<LatticeKey, Values>>)
+    {
+        let sess = if let Some(sess) = self.active_sessions.get(sid) {
+            sess
+        } else if let Some(sess) = self.inactive_sessions.get(sid) {
+            sess
+        } else {
+            return;
+        };
+        if let Some(connections) = sess.lattices.get(ns) {
+            for cid in connections {
+                if let Some(conn) = self.connections.get(cid) {
+                    let msg = ConnectionMessage::Lattice(
+                        ns.clone(), update.clone());
+                    conn.channel.send(msg)
+                    .map_err(|e| info!("Error sending lattice: {}", e)).ok();
+                }
+            }
+        }
     }
 }
 
