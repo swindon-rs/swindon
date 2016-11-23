@@ -97,9 +97,20 @@ pub fn read_config<P: AsRef<Path>>(filename: P)
 
     for (name, h) in &cfg.handlers {
         if let &Handler::SwindonChat(ref chat) = h {
-            if !cfg.session_pools.contains_key(&chat.session_pool) {
-                return Err(format!("No session pool {:?} defined",
-                    chat.session_pool).into());
+            match cfg.session_pools.get(&chat.session_pool) {
+                None => {
+                    return Err(format!("No session pool {:?} defined",
+                        chat.session_pool).into());
+                }
+                Some(ref pool) => {
+                    let dest = chat.find_destination(
+                        "tangle.session_inactive");
+                    if !pool.inactivity_handlers.contains(dest) {
+                        return Err(format!(
+                            "Inactivity destinations mismatch for {:?}: {:?}",
+                            name, dest).into())
+                    }
+                }
             }
         }
     }

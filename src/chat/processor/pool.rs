@@ -300,7 +300,8 @@ mod test {
         let pool = Pool::new(SessionPoolName::from("test_pool"),
             Arc::new(config::SessionPool {
                 listen: config::ListenSocket::Tcp(
-                    "127.0.0.1:65535".parse().unwrap())
+                    "127.0.0.1:65535".parse().unwrap()),
+                inactivity_handlers: Vec::new(),
             }),
             tx);
         return (pool, rx);

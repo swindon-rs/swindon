@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use config::Config;
-use config::chat::Chat;
+use config::chat::{Chat};
 
 
 #[derive(Clone)]
@@ -13,16 +13,7 @@ impl MessageRouter {
     pub fn resolve(&self, method: &str) -> String {
         // TODO: optimize this method
 
-        let default = self.0.message_handlers.get("*".into()).unwrap();
-
-        let dest = self.0.message_handlers.iter()
-        .rev()
-        .find(|&(k, _)| {
-            let p = Pattern::from_string(k);
-            !p.is_default() && p.matches(method)
-        })
-        .map(|(_, v)| v)
-        .unwrap_or(default);
+        let dest = self.0.find_destination(method);
 
         let target = self.1.http_destinations.get(&dest.upstream).unwrap();
         let addr = target.addresses.first().unwrap();
@@ -40,43 +31,6 @@ impl MessageRouter {
     /// Tangle Authorization URL
     pub fn get_auth_url(&self) -> String {
         self.resolve("tangle.authorize_connection")
-    }
-}
-
-
-#[derive(Debug)]
-pub enum Pattern<'a> {
-    Default,
-    Glob(&'a str),
-    Exact(&'a str),
-}
-
-
-impl<'a> Pattern<'a> {
-    pub fn from_string(s: &'a String) -> Pattern<'a> {
-        if s.as_str() == "*" {
-            Pattern::Default
-        } else if s.ends_with(".*") {
-            let (p, _) = s.split_at(s.len()-1);
-            Pattern::Glob(p)
-        } else {
-            Pattern::Exact(s.as_str())
-        }
-    }
-
-    pub fn matches(&self, other: &str) -> bool {
-        match self {
-            &Pattern::Default => true,
-            &Pattern::Glob(s) => other.starts_with(s) && other.len() > s.len(),
-            &Pattern::Exact(s) => other == s,
-        }
-    }
-
-    pub fn is_default(&self) -> bool {
-        match self {
-            &Pattern::Default => true,
-            _ => false,
-        }
     }
 }
 
