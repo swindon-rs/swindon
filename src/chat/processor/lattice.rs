@@ -26,13 +26,13 @@ pub struct Values {
 }
 
 pub struct Lattice {
-    pub public: HashMap<Key, Values>,
+    pub shared: HashMap<Key, Values>,
     pub private: HashMap<SessionId, HashMap<Key, Values>>,
     pub subscriptions: HashMap<Key, HashSet<SessionId>>,
 }
 
 pub struct Delta {
-    pub public: HashMap<Key, Values>,
+    pub shared: HashMap<Key, Values>,
     pub private: HashMap<SessionId, HashMap<Key, Values>>,
 }
 
@@ -79,7 +79,7 @@ impl Encodable for Values {
 impl Lattice {
     pub fn new() -> Lattice {
         Lattice {
-            public: HashMap::new(),
+            shared: HashMap::new(),
             private: HashMap::new(),
             subscriptions: HashMap::new(),
         }
@@ -88,8 +88,8 @@ impl Lattice {
     /// that contains only data that really changed and not out of date
     pub fn update(&mut self, mut delta: Delta) -> Delta {
         let mut del = Vec::new();
-        for (room, values) in &mut delta.public {
-            let mine = self.public.entry(room.clone())
+        for (room, values) in &mut delta.shared {
+            let mine = self.shared.entry(room.clone())
                         .or_insert_with(Values::new);
 
             crdt_update(&mut mine.counters, &mut values.counters);
@@ -100,7 +100,7 @@ impl Lattice {
             }
         }
         for key in &del {
-            delta.public.remove(key);
+            delta.shared.remove(key);
         }
 
         let mut del = Vec::new();

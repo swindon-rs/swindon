@@ -245,7 +245,7 @@ impl Pool {
             .map(|x| x.clone())
             .unwrap_or_else(HashMap::new);
         for (key, values) in &mut data {
-            lat.public.get(key).map(|pubval| {
+            lat.shared.get(key).map(|pubval| {
                 values.update(pubval);
             });
         }
@@ -279,8 +279,8 @@ impl Pool {
         // Fighting with borrow checker
         let lat = self.lattices.get(&namespace).unwrap();
 
-        // Send public-only changes
-        let pubdata = Arc::new(delta.public);
+        // Send shared-only changes
+        let pubdata = Arc::new(delta.shared);
         let mut already_sent = HashSet::new();
         for room in pubdata.keys() {
             if let Some(sessions) = lat.subscriptions.get(room) {
@@ -309,7 +309,7 @@ impl Pool {
             }
         }
 
-        // Send public *and* private
+        // Send shared *and* private
         for (session_id, mut rooms) in delta.private.into_iter() {
             for (room, values) in rooms.iter_mut() {
                 pubdata.get(room).map(|pubval| {
