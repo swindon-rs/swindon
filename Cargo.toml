@@ -21,8 +21,8 @@ mime = "0.2.2"
 mime_guess = "1.8.0"
 tk-sendfile = "0.3.0"
 tk-bufstream = "0.1.0"
-minihttp = { git = "https://github.com/popravich/minihttp", rev="f40ee0d" }
-netbuf = "0.3.6"
+minihttp = { git = "https://github.com/popravich/minihttp", rev="75d6056" }
+netbuf = "0.3.7"
 sha1 = "0.2.0"
 curl = "0.3.8"
 tokio-curl = "0.1.3"
@@ -36,7 +36,7 @@ string-intern = "0.1.3"
 
 [replace]
 "tokio-service:0.1.0" = { git="https://github.com/tokio-rs/tokio-service", rev="da47a93" }
-"minihttp:0.1.0" = { git = "https://github.com/popravich/minihttp", rev="b44c59e" }
+"minihttp:0.1.0" = { git = "https://github.com/popravich/minihttp", rev="75d6056" }
 
 [[bin]]
 name = "swindon"
