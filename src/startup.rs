@@ -1,7 +1,7 @@
 use std::sync::{Arc, RwLock};
 
 use tokio_core::reactor::Handle;
-use tokio_core::channel::channel;
+use futures::sync::mpsc::{unbounded as channel};
 use minihttp::client::HttpClient;
 
 use config::{ListenSocket, Handler, ConfigCell};
@@ -39,7 +39,7 @@ pub fn populate_loop(handle: &Handle, cfg: &ConfigCell, verbose: bool)
         }
     }
     for (name, cfg) in &cfg.get().session_pools {
-        let (tx, rx) = channel(handle).expect("create channel");
+        let (tx, rx) = channel();
         chat_pro.write().unwrap().create_pool(name, cfg, tx);
         // TODO(tailhook) read from rx
     }
@@ -76,7 +76,7 @@ pub fn update_loop(state: &mut State, cfg: &ConfigCell, handle: &Handle) {
     let mut chat_pro = state.chat.write().unwrap();
     for (name, cfg) in &cfg.get().session_pools {
         if !chat_pro.has_pool(name) {
-            let (tx, rx) = channel(&handle).expect("create channel");
+            let (tx, rx) = channel();
             chat_pro.create_pool(name, cfg, tx);
             // TODO(tailhook) read from rx
         }

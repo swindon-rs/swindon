@@ -1,5 +1,6 @@
-use tokio_core::channel::{channel, Receiver, Sender};
-use tokio_core::reactor::Handle;
+use futures::sync::mpsc::{unbounded as channel};
+use futures::sync::mpsc::{UnboundedSender as Sender};
+use futures::sync::mpsc::{UnboundedReceiver as Receiver};
 use tk_bufstream::{Buf};
 
 use super::{Frame, Error};
@@ -40,20 +41,23 @@ impl<'a> ImmediateReplier<'a> {
 }
 
 impl RemoteReplier {
-    pub fn pair(handle: &Handle) -> (RemoteReplier, Receiver<OutFrame>) {
-        let (tx, rx) = channel(handle).expect("channel created");
+    pub fn pair() -> (RemoteReplier, Receiver<OutFrame>) {
+        let (tx, rx) = channel();
         return (
             RemoteReplier {
                 channel: tx,
             },
             rx);
     }
-    pub fn send_text<S: Into<String>>(&self, s: S) -> Result<(), Error> {
+    pub fn send_text<S: Into<String>>(&mut self, s: S) -> Result<(), Error> {
         // TODO(tailhook) this error type is misleading
-        self.channel.send(OutFrame::Text(s.into())).map_err(|e| e.into())
+        self.channel.send(OutFrame::Text(s.into()))
+            .map_err(|_| Error::Closed)
     }
-    pub fn send_binary<B: Into<Vec<u8>>>(&self, b: B) -> Result<(), Error> {
+    pub fn send_binary<B: Into<Vec<u8>>>(&mut self, b: B) -> Result<(), Error>
+    {
         // TODO(tailhook) this error type is misleading
-        self.channel.send(OutFrame::Binary(b.into())).map_err(|e| e.into())
+        self.channel.send(OutFrame::Binary(b.into()))
+            .map_err(|_| Error::Closed)
     }
 }

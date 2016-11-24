@@ -6,7 +6,7 @@ use std::sync::Arc;
 use std::time::{Instant, Duration};
 
 use futures::{Future, BoxFuture, done};
-use tokio_core::channel::Sender;
+use futures::sync::mpsc::{UnboundedSender as Sender};
 use tokio_core::reactor::Handle;
 use minihttp::Request;
 use minihttp::enums::{Status, Method};
@@ -100,7 +100,7 @@ impl ChatAPI {
     /// and associate this session with ws connection
     /// (send `Action::Associate`)
     pub fn session_api(self, session_id: SessionId, conn_id: Cid,
-        userinfo: Json, channel: Sender<ConnectionMessage>)
+        userinfo: Json, mut channel: Sender<ConnectionMessage>)
         -> SessionAPI
     {
         fn encode(s: &SessionId) -> String {
@@ -180,7 +180,7 @@ impl SessionAPI {
     pub fn method_call(&self, method: String, mut meta: Meta,
         args: &Args, kwargs: &Kwargs, handle: &Handle)
     {
-        let tx = self.channel.clone();
+        let mut tx = self.channel.clone();
         meta.insert("connection_id".to_string(),
             Json::String(serialize_cid(&self.conn_id)));
         let payload = message::encode_call(&meta, &args, &kwargs);

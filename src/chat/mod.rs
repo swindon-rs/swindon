@@ -1,4 +1,4 @@
-use tokio_core::channel::Receiver;
+use futures::sync::mpsc::{UnboundedReceiver as Receiver};
 
 use super::websocket::Init;
 

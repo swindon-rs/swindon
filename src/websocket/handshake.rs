@@ -89,7 +89,7 @@ pub fn negotiate<S>(mut response: Pickler<S>, init: Init, remote: Remote,
     response.steal_socket()
     .and_then(move |socket: IoBuf<S>| {
         remote.spawn(move |handle| {
-            let (tx, rx) = RemoteReplier::pair(&handle);
+            let (tx, rx) = RemoteReplier::pair();
             let dispatcher = match kind {
                 Kind::Echo => echo::Echo(handle.clone(), tx),
             };

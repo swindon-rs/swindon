@@ -3,7 +3,7 @@ use std::time::{Instant, Duration};
 use std::collections::{HashMap, HashSet};
 
 use rustc_serialize::json::Json;
-use tokio_core::channel::Sender;
+use futures::sync::mpsc::{UnboundedSender as Sender};
 
 use intern::{Topic, SessionId, SessionPoolName, Lattice as Namespace};
 use intern::LatticeKey;
@@ -217,7 +217,7 @@ impl Pool {
                             .message(topic.clone(), data.clone())
                     }
                     Subscription::Session => {
-                        self.connections.get(cid)
+                        self.connections.get_mut(cid)
                             .expect("subscriptions out of sync")
                             .message(topic.clone(), data.clone())
                     }
@@ -291,8 +291,21 @@ impl Pool {
                     if !already_sent.contains(sid) &&
                        !delta.private.contains_key(sid)
                     {
-                        self.send_lattice(
-                            sid, &namespace, &pubdata);
+                        // Can't easily abstract all this away because of borrow checker
+                        let sess = if let Some(sess) = self.active_sessions.get(sid) {
+                            sess
+                        } else if let Some(sess) = self.inactive_sessions.get(sid) {
+                            sess
+                        } else {
+                            continue;
+                        };
+                        if let Some(connections) = sess.lattices.get(&namespace) {
+                            for cid in connections {
+                                if let Some(conn) = self.connections.get_mut(cid) {
+                                    conn.lattice(&namespace, &pubdata);
+                                }
+                            }
+                        }
                         already_sent.insert(sid.clone());
                     }
                 }
@@ -306,27 +319,20 @@ impl Pool {
                     values.update(pubval);
                 });
             }
-            self.send_lattice(&session_id, &namespace, &Arc::new(rooms));
-        }
-    }
-
-    fn send_lattice(&self, sid: &SessionId, ns: &Namespace,
-        update: &Arc<HashMap<LatticeKey, Values>>)
-    {
-        let sess = if let Some(sess) = self.active_sessions.get(sid) {
-            sess
-        } else if let Some(sess) = self.inactive_sessions.get(sid) {
-            sess
-        } else {
-            return;
-        };
-        if let Some(connections) = sess.lattices.get(ns) {
-            for cid in connections {
-                if let Some(conn) = self.connections.get(cid) {
-                    let msg = ConnectionMessage::Lattice(
-                        ns.clone(), update.clone());
-                    conn.channel.send(msg)
-                    .map_err(|e| info!("Error sending lattice: {}", e)).ok();
+            // Can't easily abstract all this away because of borrow checker
+            let sess = if let Some(sess) = self.active_sessions.get(&session_id) {
+                sess
+            } else if let Some(sess) = self.inactive_sessions.get(&session_id) {
+                sess
+            } else {
+                continue;
+            };
+            if let Some(connections) = sess.lattices.get(&namespace) {
+                let update = Arc::new(rooms);
+                for cid in connections {
+                    if let Some(conn) = self.connections.get_mut(cid) {
+                        conn.lattice(&namespace, &update);
+                    }
                 }
             }
         }
@@ -355,7 +361,8 @@ mod test {
     use std::time::{Instant, Duration};
     use rustc_serialize::json::Json;
     use futures::stream::Stream;
-    use tokio_core::channel::{channel, Receiver};
+    use futures::sync::mpsc::{unbounded as channel};
+    use futures::sync::mpsc::{UnboundedReceiver as Receiver};
     use tokio_core::reactor::{Core, Handle};
     use intern::{SessionId, SessionPoolName};
     use config;
@@ -364,8 +371,8 @@ mod test {
     use super::Pool;
     use super::super::PoolMessage;
 
-    fn pool(h: &Handle) -> (Pool, Receiver<PoolMessage>) {
-        let (tx, rx) = channel(h).unwrap();
+    fn pool() -> (Pool, Receiver<PoolMessage>) {
+        let (tx, rx) = channel();
         let pool = Pool::new(SessionPoolName::from("test_pool"),
             Arc::new(config::SessionPool {
                 listen: config::ListenSocket::Tcp(
@@ -378,10 +385,9 @@ mod test {
 
     #[test]
     fn add_conn() {
-        let lp = Core::new().unwrap();
-        let (mut pool, _rx) = pool(&lp.handle());
+        let (mut pool, _rx) = pool();
         let cid = Cid::new();
-        let (tx, _rx) = channel(&lp.handle()).unwrap();
+        let (tx, _rx) = channel();
         pool.add_connection(cid, tx);
         pool.associate(cid, SessionId::from("user1"), Instant::now(),
             Arc::new(Json::Object(vec![
@@ -394,9 +400,9 @@ mod test {
     #[test]
     fn disconnect_after_inactive() {
         let mut lp = Core::new().unwrap();
-        let (mut pool, mut rx) = pool(&lp.handle());
+        let (mut pool, mut rx) = pool();
         let cid = Cid::new();
-        let (tx, _rx) = channel(&lp.handle()).unwrap();
+        let (tx, _rx) = channel();
         pool.add_connection(cid, tx);
         pool.associate(cid, SessionId::from("user1"), Instant::now(),
             Arc::new(Json::Object(vec![
@@ -426,9 +432,9 @@ mod test {
     #[test]
     fn disconnect_before_inactive() {
         let mut lp = Core::new().unwrap();
-        let (mut pool, mut rx) = pool(&lp.handle());
+        let (mut pool, mut rx) = pool();
         let cid = Cid::new();
-        let (tx, _rx) = channel(&lp.handle()).unwrap();
+        let (tx, _rx) = channel();
         pool.add_connection(cid, tx);
         pool.associate(cid, SessionId::from("user1"), Instant::now(),
             Arc::new(Json::Object(vec![

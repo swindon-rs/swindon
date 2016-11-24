@@ -3,9 +3,9 @@ use std::path::PathBuf;
 use std::os::unix::io::AsRawFd;
 
 use futures::{BoxFuture, Future, Async, finished};
+use futures::sync::mpsc::{unbounded as channel};
 use tokio_core::io::Io;
 use tokio_core::reactor::{Handle, Remote};
-use tokio_core::channel::channel;
 use tokio_service::Service;
 use tk_bufstream::IoBuf;
 use minihttp::{Error, GenericResponse, ResponseWriter, Status, Request};
@@ -79,7 +79,7 @@ impl Response {
             WebsocketChat(Prepare(init, chat_api)) => {
                 let remote = handle.remote().clone();
                 let cid = chat::Cid::new();
-                let (tx, rx) = channel(handle).expect("create channel");
+                let (tx, rx) = channel();
 
                 chat_api.authorize_connection(&req, cid, tx.clone())
                 .map_err(|e| e.into())

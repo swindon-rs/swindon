@@ -42,6 +42,17 @@ quick_error! {
         TooLong {
             description("Received frame that is too long")
         }
+        /// Currently this error means that channel to/from websocket closed
+        ///
+        /// In future we expect this condition (processor dropping channel) to
+        /// happen when we forced killing connection by backend, so processor
+        /// got rid of all object that refer to the connection.
+        ///
+        /// Another case: we are trying to use RemoteReplier for connection
+        /// that already closed
+        Closed {
+            description("Forced connection close")
+        }
     }
 }
 
@@ -118,7 +129,7 @@ fn parse_frame<'x>(buf: &'x mut Buf) -> Poll<(Frame<'x>, usize), Error> {
 
 impl<D, S: Io, R> Future for WebsockProto<S, D, R>
     where D: Dispatcher,
-          R: Stream<Item=OutFrame, Error=io::Error>,
+          R: Stream<Item=OutFrame, Error=()>,
 {
     type Item = ();
     type Error = Error;
@@ -155,7 +166,7 @@ impl<D, S: Io, R> Future for WebsockProto<S, D, R>
 
 impl<S: Io, D, R> WebsockProto<S, D, R>
     where D: Dispatcher,
-          R: Stream<Item=OutFrame, Error=io::Error>,
+          R: Stream<Item=OutFrame, Error=()>
 {
     pub fn new(sock: IoBuf<S>, dispatcher: D, remote: R)
         -> WebsockProto<S, D, R>
@@ -168,7 +179,9 @@ impl<S: Io, D, R> WebsockProto<S, D, R>
     }
 
     fn poll_recv(&mut self) -> Result<(), Error> {
-        while let Ready(Some(frame)) = self.recv.poll()? {
+        while let Ready(Some(frame)) = self.recv.poll()
+            .map_err(|()| Error::Closed)?
+        {
             let mut imm = ImmediateReplier::new(&mut self.io.out_buf);
             match frame {
                 OutFrame::Text(val) => {

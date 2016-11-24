@@ -1,12 +1,13 @@
 use std::sync::Arc;
-use std::collections::HashSet;
+use std::collections::{HashSet, HashMap};
 
 use rustc_serialize::json::Json;
-use tokio_core::channel::Sender;
+use futures::sync::mpsc::{UnboundedSender as Sender};
 
 use chat::Cid;
-use intern::{Topic, SessionId, Lattice as Namespace};
+use intern::{Topic, SessionId, Lattice as Namespace, LatticeKey};
 use super::ConnectionMessage;
+use super::lattice;
 
 
 pub struct NewConnection {
@@ -39,7 +40,7 @@ impl NewConnection {
         }
     }
     pub fn associate(self, session_id: SessionId) -> Connection {
-        let conn = Connection {
+        let mut conn = Connection {
             cid: self.cid,
             session_id: session_id,
             topics: self.topics,
@@ -57,8 +58,18 @@ impl NewConnection {
 }
 
 impl Connection {
-    pub fn message(&self, topic: Topic, data: Arc<Json>) {
+
+    pub fn message(&mut self, topic: Topic, data: Arc<Json>) {
         self.channel.send(ConnectionMessage::Publish(topic, data))
             .expect("send connection message");
+    }
+
+    pub fn lattice(&mut self, namespace: &Namespace,
+        update: &Arc<HashMap<LatticeKey, lattice::Values>>)
+    {
+        let msg = ConnectionMessage::Lattice(
+            namespace.clone(), update.clone());
+        self.channel.send(msg)
+            .map_err(|e| info!("Error sending lattice: {}", e)).ok();
     }
 }

@@ -22,7 +22,7 @@ impl Dispatcher for Echo {
             Frame::Text(data) => {
                 if data.starts_with("alarm ") {
                     if let Ok(num) = data[6..].parse() {
-                        let remote = self.1.clone();
+                        let mut remote = self.1.clone();
                         let timeout = Timeout::new(Duration::new(num, 0),
                                                    &self.0)
                             .expect("can set timeout")

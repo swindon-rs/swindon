@@ -3,9 +3,9 @@ use std::io;
 
 use futures::{Future, BoxFuture};
 use futures::stream::Stream;
+use futures::sync::mpsc::{UnboundedReceiver as Receiver};
 use tokio_core::io::Io;
 use tokio_core::reactor::{Handle, Remote};
-use tokio_core::channel::Receiver;
 use minihttp::enums::Status;
 use minihttp::Error as HttpError;
 use tk_bufstream::IoBuf;

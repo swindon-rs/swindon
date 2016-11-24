@@ -2,9 +2,9 @@ use std::thread::spawn;
 use std::sync::Arc;
 use std::time::Instant;
 use std::sync::mpsc::{channel, Sender};
+use futures::sync::mpsc::{UnboundedSender as ChannelSender};
 use std::collections::HashSet;
 
-use tokio_core::channel::Sender as TokioSender;
 
 use intern::SessionPoolName;
 use config;
@@ -37,7 +37,7 @@ impl Processor {
     }
 
     pub fn create_pool(&mut self, name: &SessionPoolName,
-        config: &Arc<config::SessionPool>, channel: TokioSender<PoolMessage>)
+        config: &Arc<config::SessionPool>, channel: ChannelSender<PoolMessage>)
     {
         self.queue.send(Event {
             pool: name.clone(),

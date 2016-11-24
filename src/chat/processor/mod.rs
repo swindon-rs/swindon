@@ -14,7 +14,7 @@ use std::collections::HashMap;
 
 use rustc_serialize::json::Json;
 use rustc_serialize::{Encodable, Encoder};
-use tokio_core::channel::Sender;
+use futures::sync::mpsc::{UnboundedSender as Sender};
 
 use config;
 use intern::{Topic, SessionId, SessionPoolName, Lattice as Namespace};
