@@ -357,10 +357,10 @@ mod test {
     use std::sync::Arc;
     use std::time::{Instant, Duration};
     use rustc_serialize::json::Json;
+    use futures::Future;
     use futures::stream::Stream;
     use futures::sync::mpsc::{unbounded as channel};
     use futures::sync::mpsc::{UnboundedReceiver as Receiver};
-    use tokio_core::reactor::Core;
     use intern::{SessionId, SessionPoolName};
     use config;
     use chat::Cid;
@@ -394,9 +394,14 @@ mod test {
             }).collect())));
     }
 
+    fn first_item<S: Stream>(s: S) -> S::Item {
+        s.into_future().wait().map(|(x, _)| x).map_err(|_|{})
+            .expect("stream error")
+            .expect("stream eof")
+    }
+
     #[test]
     fn disconnect_after_inactive() {
-        let mut lp = Core::new().unwrap();
         let (mut pool, rx) = pool();
         let cid = Cid::new();
         let (tx, _rx) = channel();
@@ -414,9 +419,7 @@ mod test {
         assert_eq!(pool.active_sessions.len(), 1);
         assert_eq!(pool.inactive_sessions.len(), 0);
         pool.cleanup(Instant::now() + Duration::new(120, 0));
-        let val = lp.run(rx.into_future())
-            .map(|(m, _)| m).map_err(|(e, _)| e).unwrap();
-        assert!(matches!(val.unwrap(),
+        assert!(matches!(first_item(rx),
             PoolMessage::InactiveSession { ref session_id, ..}
             if *session_id == SessionId::from("user1")));
         assert_eq!(pool.active_sessions.len(), 0);
@@ -428,7 +431,6 @@ mod test {
 
     #[test]
     fn disconnect_before_inactive() {
-        let mut lp = Core::new().unwrap();
         let (mut pool, rx) = pool();
         let cid = Cid::new();
         let (tx, _rx) = channel();
@@ -449,9 +451,7 @@ mod test {
         assert_eq!(pool.active_sessions.len(), 1);
         assert_eq!(pool.inactive_sessions.len(), 0);
         pool.cleanup(Instant::now() + Duration::new(120, 0));
-        let val = lp.run(rx.into_future())
-            .map(|(m, _)| m).map_err(|(e, _)| e).unwrap();
-        assert!(matches!(val.unwrap(),
+        assert!(matches!(first_item(rx),
             PoolMessage::InactiveSession { ref session_id, ..}
             if *session_id == SessionId::from("user1")));
         assert_eq!(pool.active_sessions.len(), 0);
