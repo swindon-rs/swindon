@@ -6,18 +6,18 @@ import './chat.css';
 export default class Chat extends Component {
 
   render() {
-    const { className, children, params: {roomName} } = this.props;
+    const { className, title, children } = this.props;
     return (
       <div className={classnames('Chat', className)}>
         <div className="roster">
           ROSTER
         </div>
         <div className="chat-body">
-          <h1 className="room-title">
-            { React.Children.only(this.children).render_title() }
-          </h1>
+          <div className="title-block">
+            { title || <h1>No room selected</h1> }
+          </div>
           <div className="messages">
-            { this.children }
+            { children }
           </div>
         </div>
       </div>

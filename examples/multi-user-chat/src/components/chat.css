@@ -5,7 +5,7 @@
     width: 100%;
     height: 100%;
 }
-.room-title {
+.title-block {
     border-bottom: solid gray 1px;
     padding-bottom: 8px;
 }
@@ -24,4 +24,22 @@
     min-width: 250px;
     border-right: dashed gray 1px;
     margin-right: 8px
+}
+.big-arrow {
+    display: inline-block;
+    font-size: 500%;
+    width: 1em;
+    text-align: center;
+}
+
+.select-room-input-box {
+    display: inline-flex;
+    width: 15em;
+    flex-wrap: wrap;
+}
+.select-room-input-box > input {
+    width: 100%;
+}
+.select-room-input-box > a {
+    padding: 3px
 }

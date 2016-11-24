@@ -1,22 +1,35 @@
 // src/routes.js
-import React from 'react';
-import { Router, Route, IndexRoute } from 'react-router';
+import React from 'react'
+import { Router, Route, IndexRoute } from 'react-router'
 
-import Login from './components/Login';
-import Chat from './components/Login';
-import Room from './components/Room';
-import SelectRoom from './components/SelectRoom';
+import * as websocket from './websocket'
+import Login from './components/Login'
+import Chat from './components/Chat'
+import * as room from './components/Room'
+import * as select from './components/SelectRoom'
+import {get_login} from './login'
 
-const Routes = ({login, ...props}) => (
-  <Router {...props}>
-    {!login && <IndexRoute component={Login} />}
-    {login && <Route path="/login" component={Login} /> }
-    {login &&
-      <Route path="/" compoent={Chat}>
-        <IndexRoute component={SelectRoom} />}
-        <Route path=":roomName" component={Room} />
-      </Route>}
+
+function check_login(route, replace) {
+  let {location: {pathname}} = route;
+  if(pathname !== '/login' && !get_login()) {
+    replace('/login')
+  }
+}
+
+const Routes = ({history, ...props}) => (
+  <Router history={history}>
+    <Route path="/" onEnter={check_login}>
+      <Route path="/login" component={Login} />
+      <Route component={Chat}
+            onEnter={websocket.start} onLeave={websocket.stop}>
+        <IndexRoute component={select.Main} />
+        <Route path=":roomName"
+                    component={room.Main}
+                    components={{ title: room.Title }} />
+      </Route>
+    </Route>
   </Router>
-);
+)
 
-export default Routes;
+export default Routes

@@ -1,15 +1,20 @@
 import React, { Component } from 'react';
 import classnames from 'classnames';
-import { IndexLink } from 'react-router';
+import { Link } from 'react-router';
+import render from '../render';
+import {get_login} from '../login'
 
+import "./login.css"
 
-export default class Room extends Component {
+export default class Login extends Component {
 
   setLogin(event) {
     document.cookie = "swindon_muc_login=" + event.target.value;
+    render()
   }
   render() {
-    const { className, login } = this.props;
+    const { className } = this.props;
+    const login = get_login();
     return (
       <div className={ classnames('Login', className) }>
         <h1>
@@ -18,9 +23,9 @@ export default class Room extends Component {
         <input type="text" placeholder="Your Name"
           onInput={this.setLogin}
           value={login} />
-        <IndexLink to="/">
-          <button>Sign in</button>
-        </IndexLink>
+        {login && <Link to="/">
+                    <button>Sign in</button>
+                  </Link>}
       </div>
     );
   }
