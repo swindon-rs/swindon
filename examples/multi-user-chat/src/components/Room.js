@@ -1,27 +1,23 @@
 import React, { Component } from 'react';
 import classnames from 'classnames';
 
-import './room.css';
 
 export default class Room extends Component {
 
+  render_title() {
+    return <h1>No room selected</h1>
+  }
   render() {
-    const { className, params: {roomName} } = this.props;
-    let room = roomName || 'general';
-    return (
-      <div className={classnames('Room', className)}>
-        <div className="roster">
-          ROSTER
-        </div>
-        <div className="chat-body">
-          <h1 className="room-title">
-            {room}
-          </h1>
-          <div className="messages">
-              MESSAGES
-          </div>
-        </div>
-      </div>
-    );
+    const { className } = this.props;
+    return <div className={ classnames(className) }>
+        <p>
+          <span style={{ fontSize: '500%' }}>↑</span>
+            Enter room name in address bar
+        </p>
+        <p>
+          <span style={{ fontSize: '500%' }}>←</span>
+            Or select room from your room list (if you've visited before)
+        </p>
+       </div>
   }
 }

@@ -1,13 +1,21 @@
 // src/routes.js
 import React from 'react';
-import { Router, Route } from 'react-router';
+import { Router, Route, IndexRoute } from 'react-router';
 
+import Login from './components/Login';
+import Chat from './components/Login';
 import Room from './components/Room';
+import SelectRoom from './components/SelectRoom';
 
-const Routes = (props) => (
+const Routes = ({login, ...props}) => (
   <Router {...props}>
-    <Route path="/" component={Room} />
-    <Route path=":roomName" component={Room} />
+    {!login && <IndexRoute component={Login} />}
+    {login && <Route path="/login" component={Login} /> }
+    {login &&
+      <Route path="/" compoent={Chat}>
+        <IndexRoute component={SelectRoom} />}
+        <Route path=":roomName" component={Room} />
+      </Route>}
   </Router>
 );
 
