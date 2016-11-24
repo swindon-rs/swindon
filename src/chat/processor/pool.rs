@@ -366,7 +366,7 @@ mod test {
     use chat::Cid;
 
     use super::Pool;
-    use super::super::PoolMessage;
+    use super::super::{PoolMessage, ConnectionMessage};
 
     fn pool() -> (Pool, Receiver<PoolMessage>) {
         let (tx, rx) = channel();
@@ -380,11 +380,9 @@ mod test {
         return (pool, rx);
     }
 
-    #[test]
-    fn add_conn() {
-        let (mut pool, _rx) = pool();
+    fn add_u1(pool: &mut Pool) -> (Cid, Receiver<ConnectionMessage>) {
         let cid = Cid::new();
-        let (tx, _rx) = channel();
+        let (tx, rx) = channel();
         pool.add_connection(cid, tx);
         pool.associate(cid, SessionId::from("user1"), Instant::now(),
             Arc::new(Json::Object(vec![
@@ -392,6 +390,13 @@ mod test {
             ].into_iter().map(|(x, y)| {
                 (x.into(), Json::String(y.into()))
             }).collect())));
+        return (cid, rx);
+    }
+
+    #[test]
+    fn add_conn() {
+        let (mut pool, _rx) = pool();
+        add_u1(&mut pool);
     }
 
     fn first_item<S: Stream>(s: S) -> S::Item {
@@ -403,15 +408,7 @@ mod test {
     #[test]
     fn disconnect_after_inactive() {
         let (mut pool, rx) = pool();
-        let cid = Cid::new();
-        let (tx, _rx) = channel();
-        pool.add_connection(cid, tx);
-        pool.associate(cid, SessionId::from("user1"), Instant::now(),
-            Arc::new(Json::Object(vec![
-                ("user_id", "user1"),
-            ].into_iter().map(|(x, y)| {
-                (x.into(), Json::String(y.into()))
-            }).collect())));
+        let (cid, _) = add_u1(&mut pool);
         assert_eq!(pool.active_sessions.len(), 1);
         assert_eq!(pool.inactive_sessions.len(), 0);
         pool.cleanup(Instant::now() + Duration::new(10, 0));
@@ -432,15 +429,7 @@ mod test {
     #[test]
     fn disconnect_before_inactive() {
         let (mut pool, rx) = pool();
-        let cid = Cid::new();
-        let (tx, _rx) = channel();
-        pool.add_connection(cid, tx);
-        pool.associate(cid, SessionId::from("user1"), Instant::now(),
-            Arc::new(Json::Object(vec![
-                ("user_id", "user1"),
-            ].into_iter().map(|(x, y)| {
-                (x.into(), Json::String(y.into()))
-            }).collect())));
+        let (cid, _) = add_u1(&mut pool);
         assert_eq!(pool.active_sessions.len(), 1);
         assert_eq!(pool.inactive_sessions.len(), 0);
         pool.cleanup(Instant::now() + Duration::new(10, 0));
