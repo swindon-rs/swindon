@@ -70,12 +70,24 @@ impl Pool {
     pub fn associate(&mut self, conn_id: Cid, session_id: SessionId,
         timestamp: Instant, metadata: Arc<Json>)
     {
-        let conn = if let Some(p) = self.pending_connections.remove(&conn_id) {
-            p.associate(session_id.clone())
-        } else {
-            debug!("Connection {:?} does not exist any more", conn_id);
-            return;
-        };
+        let mut conn =
+            if let Some(p) = self.pending_connections.remove(&conn_id) {
+                p.associate(session_id.clone())
+            } else {
+                debug!("Connection {:?} does not exist any more", conn_id);
+                return;
+            };
+
+        for namespace in &conn.lattices {
+            if let Some(lat) = self.lattices.get(namespace) {
+                lattice_from(&mut conn.channel, namespace, &session_id, lat);
+            } else {
+                error!("No lattice {:?} at the time \
+                    of connection association (connection {:?})",
+                    namespace, conn_id);
+                return
+            };
+        }
 
         for top in &conn.topics {
             let ptr = self.topics
@@ -228,28 +240,22 @@ impl Pool {
     pub fn lattice_attach(&mut self, cid: Cid, namespace: Namespace) {
         let conn = if let Some(conn) = self.connections.get_mut(&cid) {
             conn
+        } else if let Some(conn) = self.pending_connections.get_mut(&cid) {
+            conn.lattices.insert(namespace);
+            return
         } else {
             error!("Attach of {:?} for non-existing connection {:?}",
                    namespace, cid);
             return
         };
         conn.lattices.insert(namespace.clone());
-        let lat = if let Some(lat) = self.lattices.get(&namespace) {
-            lat
+        if let Some(lat) = self.lattices.get(&namespace) {
+            lattice_from(&mut conn.channel, &namespace, &conn.session_id, lat);
         } else {
             error!("No lattice {:?} at the time of attach (connection {:?})",
                    namespace, cid);
             return
         };
-        let mut data = lat.private.get(&conn.session_id)
-            .map(|x| x.clone())
-            .unwrap_or_else(HashMap::new);
-        for (key, values) in &mut data {
-            lat.shared.get(key).map(|pubval| {
-                values.update(pubval);
-            });
-        }
-        conn.lattice(&namespace, &Arc::new(data));
     }
 
     pub fn lattice_detach(&mut self, cid: Cid, namespace: Namespace) {
@@ -350,6 +356,22 @@ fn unsubscribe(topics: &mut HashMap<Topic, HashMap<Cid, Subscription>>,
         }
         return sub;
     })
+}
+
+fn lattice_from(channel: &mut Sender<ConnectionMessage>,
+    namespace: &Namespace, session: &SessionId, lattice: &Lattice)
+{
+    let mut data = lattice.private.get(session)
+        .map(|x| x.clone())
+        .unwrap_or_else(HashMap::new);
+    for (key, values) in &mut data {
+        lattice.shared.get(key).map(|pubval| {
+            values.update(pubval);
+        });
+    }
+    let msg = ConnectionMessage::Lattice(namespace.clone(), Arc::new(data));
+    channel.send(msg)
+        .map_err(|e| info!("Error sending lattice: {}", e)).ok();
 }
 
 #[cfg(test)]
@@ -486,6 +508,27 @@ mod test {
 
     fn builder<S: Validator, V>() -> HashMap<Symbol<S>, V> {
         HashMap::new()
+    }
+
+    #[test]
+    fn attach_before_associate() {
+        let (mut pool, _rx) = pool();
+        let cid = Cid::new();
+        let (tx, mut rx) = channel();
+        pool.add_connection(cid, tx);
+        pool.lattice_update(Ns::from("rooms"), Delta {
+            shared: builder(),
+            private: builder().add("user1", builder()),
+        });
+        pool.lattice_attach(cid, Ns::from("rooms"));
+        pool.associate(cid, SessionId::from("user1"), Instant::now(),
+            Arc::new(Json::Object(vec![
+                ("user_id", "user1"),
+            ].into_iter().map(|(x, y)| {
+                (x.into(), Json::String(y.into()))
+            }).collect())));
+        assert_matches!(get_item(&mut rx),
+            ConnectionMessage::Lattice(..)); // TODO(tailhook)
     }
 
     #[test]
