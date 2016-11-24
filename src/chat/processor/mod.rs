@@ -33,6 +33,7 @@ mod connection;
 mod lattice;
 
 pub use self::public::{Processor, ProcessorPool};
+pub use self::lattice::Delta;
 
 
 pub struct Event {

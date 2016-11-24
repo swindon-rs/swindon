@@ -1,6 +1,7 @@
 //! Pull API handler.
 use std::str;
 use std::sync::Arc;
+use std::collections::HashMap;
 
 use futures::{Finished, finished};
 use tokio_service::Service;
@@ -18,7 +19,7 @@ use default_error_page::write_error_page;
 use intern::{Topic, Lattice};
 
 use super::{parse_cid, ProcessorPool};
-use super::processor::Action;
+use super::processor::{Action, Delta};
 
 
 /// Chat Backend Http handler.
@@ -79,13 +80,26 @@ impl ChatBackend {
                     topic: topic,
                 }
             }
-            LatticeSubscribe(_client_id, _namespace) => {
-                // do not panic;
-                return Status::NotImplemented;
+            LatticeSubscribe(client_id, namespace) => {
+                let cid = parse_cid(client_id);
+                Action::Attach {
+                    namespace: namespace,
+                    conn_id: cid,
+                }
             }
-            LatticeUnsubscribe(_client_id, _namespace) => {
-                // do not panic;
-                return Status::NotImplemented;
+            LatticeUnsubscribe(client_id, namespace) => {
+                let cid = parse_cid(client_id);
+                self.chat_pool.send(Action::Lattice {
+                    namespace: namespace.clone(),
+                    delta: Delta {  // XXX dummy delta
+                        shared: HashMap::new(),
+                        private: HashMap::new(),
+                    },
+                });
+                Action::Detach {
+                    namespace: namespace,
+                    conn_id: cid,
+                }
             }
             TopicPublish(topic) => {
                 let data = Arc::new(payload.unwrap());
@@ -94,9 +108,14 @@ impl ChatBackend {
                     data: data,
                 }
             }
-            LatticeUpdate(_namespace) => {
-                // do not panic;
-                return Status::NotImplemented;
+            LatticeUpdate(namespace) => {
+                Action::Lattice {
+                    namespace: namespace,
+                    delta: Delta {  // XXX dummy delta
+                        shared: HashMap::new(),
+                        private: HashMap::new(),
+                    },
+                }
             }
         };
         self.chat_pool.send(action);
