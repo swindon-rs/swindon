@@ -1,4 +1,4 @@
-use quire::validate::{Structure, Sequence, Numeric};
+use quire::validate::{Structure, Sequence};
 
 use super::listen::{self, ListenSocket};
 use super::http;

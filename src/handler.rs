@@ -13,7 +13,7 @@ use routing::{parse_host, route};
 use serializer::{Response, Serializer};
 use config::Handler;
 use handlers::{files, proxy};
-use intern::{Upstream, HandlerName};
+use intern::{HandlerName};
 use chat::{self, MessageRouter};
 use websocket;
 

@@ -6,14 +6,13 @@ use rustc_serialize::json::Json;
 use futures::sync::mpsc::{UnboundedSender as Sender};
 
 use intern::{Topic, SessionId, SessionPoolName, Lattice as Namespace};
-use intern::LatticeKey;
 use config;
 use chat::Cid;
 use super::{ConnectionMessage, PoolMessage};
 use super::session::Session;
 use super::connection::{NewConnection, Connection};
 use super::heap::HeapMap;
-use super::lattice::{Lattice, Values, Delta};
+use super::lattice::{Lattice, Delta};
 
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
@@ -250,9 +249,7 @@ impl Pool {
                 values.update(pubval);
             });
         }
-        conn.channel.send(ConnectionMessage::Lattice(
-            namespace.clone(), Arc::new(data))
-        ).map_err(|e| info!("Can't send lattice delta")).ok();
+        conn.lattice(&namespace, &Arc::new(data));
     }
 
     pub fn lattice_detach(&mut self, cid: Cid, namespace: Namespace) {
@@ -363,7 +360,7 @@ mod test {
     use futures::stream::Stream;
     use futures::sync::mpsc::{unbounded as channel};
     use futures::sync::mpsc::{UnboundedReceiver as Receiver};
-    use tokio_core::reactor::{Core, Handle};
+    use tokio_core::reactor::Core;
     use intern::{SessionId, SessionPoolName};
     use config;
     use chat::Cid;
@@ -400,7 +397,7 @@ mod test {
     #[test]
     fn disconnect_after_inactive() {
         let mut lp = Core::new().unwrap();
-        let (mut pool, mut rx) = pool();
+        let (mut pool, rx) = pool();
         let cid = Cid::new();
         let (tx, _rx) = channel();
         pool.add_connection(cid, tx);
@@ -432,7 +429,7 @@ mod test {
     #[test]
     fn disconnect_before_inactive() {
         let mut lp = Core::new().unwrap();
-        let (mut pool, mut rx) = pool();
+        let (mut pool, rx) = pool();
         let cid = Cid::new();
         let (tx, _rx) = channel();
         pool.add_connection(cid, tx);

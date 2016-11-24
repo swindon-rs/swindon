@@ -8,7 +8,7 @@ use std::collections::HashSet;
 
 use intern::SessionPoolName;
 use config;
-use super::{Event, Action, ConnectionMessage, PoolMessage};
+use super::{Event, Action, PoolMessage};
 use super::main;
 
 

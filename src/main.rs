@@ -1,6 +1,11 @@
 // TODO(tailhook) until we fill all stabs
 #![allow(dead_code)]
 
+// I don't see **any** reason for this waring to enabled. We only build binary
+// and most of these warnings do not apply to real visibility of types inside
+// the crate
+#![allow(private_in_public)]
+
 #[macro_use] extern crate log;
 #[macro_use] extern crate matches;
 #[macro_use] extern crate quick_error;

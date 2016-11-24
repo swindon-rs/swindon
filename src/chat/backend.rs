@@ -205,7 +205,7 @@ impl ChatRoute {
 #[cfg(test)]
 mod test {
     use minihttp::enums::Method;
-    use string_intern::{Symbol, Validator};
+    use string_intern::Symbol;
 
     use super::match_route;
     use super::ChatRoute::*;

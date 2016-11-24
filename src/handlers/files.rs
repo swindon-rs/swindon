@@ -3,7 +3,8 @@ use std::path::{Path, PathBuf, Component};
 use std::collections::HashMap;
 use std::collections::hash_map::Entry::{Occupied, Vacant};
 use std::os::unix::io::AsRawFd;
-use std::hash::{Hash, Hasher, SipHasher};
+use std::hash::{Hash, Hasher};
+use std::collections::hash_map::DefaultHasher;
 
 use futures::{BoxFuture, Future};
 use either::Either;
@@ -135,7 +136,7 @@ fn get_pool(name: &DiskPoolName) -> DiskPool {
 pub fn update_pools(config: &HashMap<DiskPoolName, config::Disk>) {
     let mut pools = POOLS.write().expect("writelock for pools");
     for (name, props) in config {
-        let mut hasher = SipHasher::new();
+        let mut hasher = DefaultHasher::new();
         props.hash(&mut hasher);
         let new_hash = hasher.finish();
         match pools.entry(name.clone()) {
@@ -156,7 +157,7 @@ pub fn update_pools(config: &HashMap<DiskPoolName, config::Disk>) {
         let cfg = config::Disk {
             num_threads: 40,
         };
-        let mut hasher = SipHasher::new();
+        let mut hasher = DefaultHasher::new();
         cfg.hash(&mut hasher);
         let hash = hasher.finish();
         pools.insert(DEFAULT.clone(), (hash, new_pool(&cfg)));

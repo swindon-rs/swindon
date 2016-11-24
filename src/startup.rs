@@ -70,7 +70,7 @@ pub fn populate_loop(handle: &Handle, cfg: &ConfigCell, verbose: bool)
     }
 }
 
-pub fn update_loop(state: &mut State, cfg: &ConfigCell, handle: &Handle) {
+pub fn update_loop(state: &mut State, cfg: &ConfigCell, _handle: &Handle) {
     // TODO(tailhook) update listening sockets
     handlers::files::update_pools(&cfg.get().disk_pools);
     let mut chat_pro = state.chat.write().unwrap();
