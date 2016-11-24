@@ -81,6 +81,17 @@ impl ChatBackend {
             }
             LatticeSubscribe(client_id, namespace) => {
                 let cid = parse_cid(client_id);
+                let delta = match decode_delta(req) {
+                    Ok(delta) => delta,
+                    Err(err) => {
+                        info!("Error {:?}", err);
+                        return Status::BadRequest
+                    }
+                };
+                self.chat_pool.send(Action::Lattice {
+                    namespace: namespace.clone(),
+                    delta: delta,
+                });
                 Action::Attach {
                     namespace: namespace,
                     conn_id: cid,
@@ -88,14 +99,6 @@ impl ChatBackend {
             }
             LatticeUnsubscribe(client_id, namespace) => {
                 let cid = parse_cid(client_id);
-                let delta = match decode_delta(req) {
-                    Ok(delta) => delta,
-                    Err(_) => return Status::BadRequest,
-                };
-                self.chat_pool.send(Action::Lattice {
-                    namespace: namespace.clone(),
-                    delta: delta,
-                });
                 Action::Detach {
                     namespace: namespace,
                     conn_id: cid,
@@ -111,7 +114,10 @@ impl ChatBackend {
             LatticeUpdate(namespace) => {
                 let delta = match decode_delta(req) {
                     Ok(delta) => delta,
-                    Err(_) => return Status::BadRequest,
+                    Err(err) => {
+                        info!("Error {:?}", err);
+                        return Status::BadRequest
+                    }
                 };
                 Action::Lattice {
                     namespace: namespace,
