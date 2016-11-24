@@ -42,6 +42,7 @@ pub struct Event {
     action: Action,
 }
 
+#[derive(Debug)]
 pub enum ConnectionMessage {
     /// Topic publish message:
     /// `["message", {"topic": topic}, data]`

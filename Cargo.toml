@@ -31,6 +31,7 @@ httparse = "1.1.2"
 httpbin = { git="https://github.com/tailhook/httpbin-rs", rev="afb7f68" }
 slab = "0.3.0"
 matches = "0.1.4"
+assert_matches = "1.0.1"
 string-intern = "0.1.3"
 
 [replace]

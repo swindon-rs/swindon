@@ -356,17 +356,21 @@ fn unsubscribe(topics: &mut HashMap<Topic, HashMap<Cid, Subscription>>,
 mod test {
     use std::sync::Arc;
     use std::time::{Instant, Duration};
+    use std::collections::HashMap;
     use rustc_serialize::json::Json;
-    use futures::Future;
+    use futures::{Async};
     use futures::stream::Stream;
     use futures::sync::mpsc::{unbounded as channel};
     use futures::sync::mpsc::{UnboundedReceiver as Receiver};
-    use intern::{SessionId, SessionPoolName};
+    use intern::{SessionId, SessionPoolName, Lattice as Ns};
+    use string_intern::{Symbol, Validator};
     use config;
     use chat::Cid;
 
     use super::Pool;
+    use super::super::lattice::{Delta, Values};
     use super::super::{PoolMessage, ConnectionMessage};
+
 
     fn pool() -> (Pool, Receiver<PoolMessage>) {
         let (tx, rx) = channel();
@@ -393,21 +397,35 @@ mod test {
         return (cid, rx);
     }
 
+    fn add_u2(pool: &mut Pool) -> (Cid, Receiver<ConnectionMessage>) {
+        let cid = Cid::new();
+        let (tx, rx) = channel();
+        pool.add_connection(cid, tx);
+        pool.associate(cid, SessionId::from("user2"), Instant::now(),
+            Arc::new(Json::Object(vec![
+                ("user_id", "user2"),
+            ].into_iter().map(|(x, y)| {
+                (x.into(), Json::String(y.into()))
+            }).collect())));
+        return (cid, rx);
+    }
+
     #[test]
     fn add_conn() {
         let (mut pool, _rx) = pool();
         add_u1(&mut pool);
     }
 
-    fn first_item<S: Stream>(s: S) -> S::Item {
-        s.into_future().wait().map(|(x, _)| x).map_err(|_|{})
-            .expect("stream error")
-            .expect("stream eof")
+    fn get_item<S: Stream>(s: &mut S) -> S::Item {
+        match s.poll().map_err(|_|{}).expect("stream error") {
+            Async::Ready(v) => v.expect("stream eof"),
+            Async::NotReady => panic!("stream not ready"),
+        }
     }
 
     #[test]
     fn disconnect_after_inactive() {
-        let (mut pool, rx) = pool();
+        let (mut pool, mut rx) = pool();
         let (cid, _) = add_u1(&mut pool);
         assert_eq!(pool.active_sessions.len(), 1);
         assert_eq!(pool.inactive_sessions.len(), 0);
@@ -416,7 +434,7 @@ mod test {
         assert_eq!(pool.active_sessions.len(), 1);
         assert_eq!(pool.inactive_sessions.len(), 0);
         pool.cleanup(Instant::now() + Duration::new(120, 0));
-        assert!(matches!(first_item(rx),
+        assert!(matches!(get_item(&mut rx),
             PoolMessage::InactiveSession { ref session_id, ..}
             if *session_id == SessionId::from("user1")));
         assert_eq!(pool.active_sessions.len(), 0);
@@ -428,7 +446,7 @@ mod test {
 
     #[test]
     fn disconnect_before_inactive() {
-        let (mut pool, rx) = pool();
+        let (mut pool, mut rx) = pool();
         let (cid, _) = add_u1(&mut pool);
         assert_eq!(pool.active_sessions.len(), 1);
         assert_eq!(pool.inactive_sessions.len(), 0);
@@ -440,10 +458,69 @@ mod test {
         assert_eq!(pool.active_sessions.len(), 1);
         assert_eq!(pool.inactive_sessions.len(), 0);
         pool.cleanup(Instant::now() + Duration::new(120, 0));
-        assert!(matches!(first_item(rx),
+        assert!(matches!(get_item(&mut rx),
             PoolMessage::InactiveSession { ref session_id, ..}
             if *session_id == SessionId::from("user1")));
         assert_eq!(pool.active_sessions.len(), 0);
         assert_eq!(pool.inactive_sessions.len(), 0);
+    }
+
+    trait Builder {
+        type Key;
+        type Value;
+        fn new() -> Self;
+        fn add(self, key: &'static str, val: Self::Value) -> Self;
+    }
+
+    impl<S: Validator, V> Builder for HashMap<Symbol<S>, V> {
+        type Key = Symbol<S>;
+        type Value = V;
+        fn new() -> HashMap<Symbol<S>, V> {
+            HashMap::new()
+        }
+        fn add(mut self, key: &'static str, val: V) -> Self {
+            self.insert(Symbol::from(key), val);
+            self
+        }
+    }
+
+    fn builder<S: Validator, V>() -> HashMap<Symbol<S>, V> {
+        HashMap::new()
+    }
+
+    #[test]
+    fn empty_lattices() {
+        let (mut pool, _rx) = pool();
+        let lat = Ns::from("rooms");
+        let (c1, mut rx1) = add_u1(&mut pool);
+        pool.lattice_update(lat.clone(), Delta {
+            shared: builder()
+                    .add("room1", Values::new()),
+            private: builder()
+                .add("user1", builder()
+                    .add("room1", Values::new())),
+        });
+        pool.lattice_attach(c1, lat.clone());
+        assert_matches!(get_item(&mut rx1),
+            ConnectionMessage::Lattice(..)); // TODO(tailhook)
+        let (c2, mut rx2) = add_u2(&mut pool);
+        pool.lattice_update(lat.clone(), Delta {
+            shared: builder()
+                    .add("room2", Values::new()),
+            private: builder()
+                    .add("user2", builder()
+                        .add("room2", Values::new())),
+        });
+        pool.lattice_attach(c2, lat.clone());
+        assert_matches!(get_item(&mut rx2),
+            ConnectionMessage::Lattice(..)); // TODO(tailhook)
+        pool.lattice_update(lat.clone(), Delta {
+            shared: builder()
+                    // TODO(tailhook)
+                    .add("room1", Values::new())
+                    .add("room2", Values::new()),
+            private: builder(),
+        });
+        // TODO(tailhook)
     }
 }
