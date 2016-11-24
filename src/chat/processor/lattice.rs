@@ -3,7 +3,7 @@ use std::hash::Hash;
 use std::collections::{HashMap, HashSet};
 use std::collections::hash_map::Entry::{Occupied, Vacant};
 
-use rustc_serialize::{Encodable, Encoder};
+use rustc_serialize::{Encodable, Encoder, Decodable, Decoder};
 
 use intern::{LatticeKey as Key, SessionId};
 
@@ -191,5 +191,124 @@ fn crdt_update<K, V>(original: &mut HashMap<K, V>, delta: &mut HashMap<K, V>)
     }
     for key in &del {
         original.remove(key);
+    }
+}
+
+impl Decodable for Delta {
+    fn decode<D: Decoder>(d: &mut D) -> Result<Self, D::Error>
+    {
+        d.read_map(|d, size| {
+            if size > 2 {
+                return Err(d.error(
+                    format!("expected at most 2 elements, got {:?}", size).as_str()))
+            }
+            let mut shared = HashMap::new();
+            let mut private = HashMap::new();
+            let mut prevkey = "";
+            for idx in 0..size {
+                let key = d.read_map_elt_key(idx, |d| d.read_str())?;
+                prevkey = match (key.as_str(), prevkey) {
+                    ("shared", "") | ("shared", "private") => {
+                        shared = d.read_map_elt_val(idx, |d| {
+                            HashMap::<Key, Values>::decode(d)
+                        })?;
+                        "shared"
+                    }
+                    ("private", "") | ("private", "shared") => {
+                        private = d.read_map_elt_val(idx, |d| {
+                            HashMap::<SessionId, HashMap<Key, Values>>::decode(d)
+                        })?;
+                        "private"
+                    }
+                    (other, _) => {
+                        return Err(d.error(
+                            format!("unexpected key {}", other).as_str()))
+                    }
+                };
+            }
+            Ok(Delta {
+                shared: shared,
+                private: private,
+            })
+        })
+    }
+}
+
+impl Decodable for Values {
+    fn decode<D: Decoder>(d: &mut D) -> Result<Self, D::Error>
+    {
+        let mut values = Values {
+            counters: HashMap::new(),
+            sets: HashMap::new(),
+        };
+        d.read_map(|d, size| {
+            for idx in 0..size {
+                let key = d.read_map_elt_key(idx, |d| Key::decode(d))?;
+                if key.as_ref().ends_with("_counter") {
+                    let val = d.read_map_elt_val(idx, |d| d.read_u64())?;
+                    values.counters.insert(key, Counter(val));
+                } else if key.as_ref().ends_with("_set") {
+                    let val = d.read_map_elt_val(idx, |d| Set::decode(d))?;
+                    values.sets.insert(key, val);
+                } else {
+                    return Err(d.error(format!(
+                        "Unsupported key {:?}", key).as_str()))
+                }
+            }
+            Ok(values)
+        })
+    }
+}
+
+impl Decodable for Set {
+    fn decode<D: Decoder>(d: &mut D) -> Result<Self, D::Error>
+    {
+        d.read_seq(|d, size| {
+            let mut set = HashSet::new();
+            for idx in 0..size {
+                set.insert(d.read_seq_elt(idx, |d| d.read_str())?);
+            }
+            Ok(Set(Arc::new(set)))
+        })
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use std::str::FromStr;
+    use rustc_serialize::json;
+
+    use super::{Delta, Values, Set};
+    use intern::LatticeKey as Key;
+
+    #[test]
+    fn decode_delta() {
+        let val = r#"{"shared": {"room_1": {"last_message_counter": 125}},
+            "private": {"user:1": {"room_1": {
+                "last_seen_set": ["123", "124"]
+            }}}}"#;
+
+        let delta: Delta = json::decode(val).unwrap();
+        assert_eq!(delta.shared.len(), 1);
+        assert_eq!(delta.private.len(), 1);
+        assert!(delta.shared.contains_key(&Key::from_str("room_1").unwrap()));
+    }
+
+    #[test]
+    fn decode_values() {
+        let val = r#"{"last_message_counter": 123}"#;
+        let val: Values = json::decode(val).unwrap();
+        assert_eq!(val.counters.len(), 1);
+        assert_eq!(val.sets.len(), 0);
+
+        let key = Key::from_str("last_message_counter").unwrap();
+        assert!(val.counters.contains_key(&key));
+        assert_eq!(val.counters.get(&key).unwrap().0, 123u64);
+    }
+
+    #[test]
+    fn decode_set() {
+        let set: Set = json::decode(r#"["123", "123", "abc"]"#).unwrap();
+        assert_eq!(set.0.len(), 2);
     }
 }

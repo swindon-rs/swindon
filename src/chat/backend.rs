@@ -1,7 +1,6 @@
 //! Pull API handler.
 use std::str;
 use std::sync::Arc;
-use std::collections::HashMap;
 
 use futures::{Finished, finished};
 use tokio_service::Service;
@@ -10,7 +9,7 @@ use tk_bufstream::IoBuf;
 use minihttp::{Error, Request};
 use minihttp::{ResponseFn, Status};
 use minihttp::enums::Method;
-use rustc_serialize::json::Json;
+use rustc_serialize::json::{self, Json};
 
 use {Pickler};
 use config::ConfigCell;
@@ -89,12 +88,13 @@ impl ChatBackend {
             }
             LatticeUnsubscribe(client_id, namespace) => {
                 let cid = parse_cid(client_id);
+                let delta = match decode_delta(req) {
+                    Ok(delta) => delta,
+                    Err(_) => return Status::BadRequest,
+                };
                 self.chat_pool.send(Action::Lattice {
                     namespace: namespace.clone(),
-                    delta: Delta {  // XXX dummy delta
-                        shared: HashMap::new(),
-                        private: HashMap::new(),
-                    },
+                    delta: delta,
                 });
                 Action::Detach {
                     namespace: namespace,
@@ -109,18 +109,27 @@ impl ChatBackend {
                 }
             }
             LatticeUpdate(namespace) => {
+                let delta = match decode_delta(req) {
+                    Ok(delta) => delta,
+                    Err(_) => return Status::BadRequest,
+                };
                 Action::Lattice {
                     namespace: namespace,
-                    delta: Delta {  // XXX dummy delta
-                        shared: HashMap::new(),
-                        private: HashMap::new(),
-                    },
+                    delta: delta,
                 }
             }
         };
         self.chat_pool.send(action);
         Status::NoContent
     }
+
+}
+
+fn decode_delta(req: &Request) -> Result<Delta, json::DecoderError>
+{
+    let body = req.body.as_ref().unwrap();
+    let body = str::from_utf8(&body.data[..]).unwrap();
+    json::decode::<Delta>(body)
 }
 
 fn match_route(method: &Method, path: &str) -> Option<ChatRoute> {
