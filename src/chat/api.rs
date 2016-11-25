@@ -15,9 +15,10 @@ use rustc_serialize::json::{self, Json};
 
 use intern::SessionId;
 use websocket::Base64;
+use config::{Config, SessionPool};
 use super::{Cid, ProcessorPool};
 use super::{serialize_cid};
-use super::router::MessageRouter;
+use super::router::{MessageRouter, url_for};
 use super::processor::{Action, ConnectionMessage, PoolMessage};
 use super::message::{self, Meta, Args, Kwargs};
 use super::error::MessageError;
@@ -103,15 +104,6 @@ impl ChatAPI {
         userinfo: Json, mut channel: Sender<ConnectionMessage>)
         -> SessionAPI
     {
-        fn encode(s: &SessionId) -> String {
-            #[derive(RustcEncodable)]
-            struct Auth<'a> {
-                user_id: &'a SessionId,
-            }
-            format!("Tangle {}", Base64(json::encode(&Auth {
-                user_id: s,
-            }).unwrap().as_bytes()))
-        }
 
         let userinfo = Arc::new(userinfo);
         channel.send(ConnectionMessage::Hello(userinfo.clone()))
@@ -125,7 +117,7 @@ impl ChatAPI {
 
         SessionAPI {
             api: self,
-            auth_token: encode(&session_id),
+            auth_token: encode_sid(&session_id),
             session_id: session_id,
             conn_id: conn_id,
             channel: channel,
@@ -250,12 +242,68 @@ pub fn parse_userinfo(response: ClientResponse)
     }
 }
 
-pub fn handle_pool_message(msg: PoolMessage)
-{
-    use super::processor::PoolMessage::*;
-    match msg {
-        m @ InactiveSession { .. } => {
-            info!("Send inactivity: {:?}", m);
+pub struct MaintenanceAPI {
+    config: Arc<Config>,
+    sessions_cfg: Arc<SessionPool>,
+    http_client: HttpClient,
+    handle: Handle,
+}
+
+impl MaintenanceAPI {
+
+    pub fn new(cfg: Arc<Config>, sessions_cfg: Arc<SessionPool>,
+        http_client: HttpClient, handle: Handle)
+        -> MaintenanceAPI
+    {
+        MaintenanceAPI {
+            config: cfg,
+            sessions_cfg: sessions_cfg,
+            http_client: http_client,
+            handle: handle,
         }
     }
+
+    pub fn handle(&self, message: PoolMessage) {
+        use super::processor::PoolMessage::*;
+        match message {
+            InactiveSession { session_id, .. } => {
+                info!("Send inactivity: {:?}", session_id);
+
+                let auth = encode_sid(&session_id);
+
+                for dest in &self.sessions_cfg.inactivity_handlers {
+                    if let Some(url) = url_for(
+                        "tangle/session_inactive",
+                        &dest, &self.config.http_destinations)
+                    {
+                        let mut req = self.http_client.clone();
+                        req.request(Method::Post, url.as_str());
+                        req.add_header("Content-Type".into(),
+                            "application/json");
+                        req.add_header("Authorization".into(), auth.as_str());
+                        // TODO: add empty message
+                        req.add_length(0);
+                        req.done_headers();
+                        self.handle.spawn(req.done()
+                        .map(|r| info!("Resp status: {:?}", r.status))
+                        .map_err(|e| info!("Error sending inactivity {:?}", e))
+                        );
+                        // TODO: better messages
+                    } else {
+                        info!("No url for {:?}", dest);
+                    }
+                }
+            }
+        }
+    }
+}
+
+fn encode_sid(s: &SessionId) -> String {
+    #[derive(RustcEncodable)]
+    struct Auth<'a> {
+        user_id: &'a SessionId,
+    }
+    format!("Tangle {}", Base64(json::encode(&Auth {
+        user_id: s,
+    }).unwrap().as_bytes()))
 }

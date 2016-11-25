@@ -1,7 +1,11 @@
 use std::sync::Arc;
+use std::collections::HashMap;
 
+use intern::Upstream;
 use config::Config;
 use config::chat::{Chat};
+use config::Destination;
+use config::http_destinations::Destination as Target;
 
 
 #[derive(Clone)]
@@ -14,16 +18,9 @@ impl MessageRouter {
         // TODO: optimize this method
 
         let dest = self.0.find_destination(method);
-
-        let target = self.1.http_destinations.get(&dest.upstream).unwrap();
-        let addr = target.addresses.first().unwrap();
-        if dest.path.ends_with("/") {
-            format!("http://{}{}{}",
-                addr, dest.path, method.replace(".", "/"))
-        } else {
-            format!("http://{}{}/{}",
-                addr, dest.path, method.replace(".", "/"))
-        }
+        // XXX: do not unwrap()
+        url_for(method.replace(".", "/").as_str(), &dest,
+            &self.1.http_destinations).unwrap()
     }
 
     // Predefined urls
@@ -34,6 +31,24 @@ impl MessageRouter {
     }
 }
 
+pub fn url_for(path: &str, dest: &Destination,
+    table: &HashMap<Upstream, Target>)
+    -> Option<String>
+{
+    // XXX: We currently use first address of http_destination;
+    //  also we dont resolve DNS, it lended to Curl.
+    let result = table.get(&dest.upstream).and_then(|d| d.addresses.first());
+    if let Some(addr) = result {
+        let url = if dest.path.ends_with("/") {
+            format!("http://{}{}{}", addr, dest.path, path)
+        } else {
+            format!("http://{}{}/{}", addr, dest.path, path)
+        };
+        Some(url)
+    } else {
+        None
+    }
+}
 
 #[cfg(test)]
 mod test {

@@ -15,8 +15,7 @@ pub use self::processor::{Processor, ProcessorPool, Action};
 pub use self::websocket::{negotiate};
 pub use self::router::MessageRouter;
 pub use self::message::{Meta, Args, Kwargs};
-pub use self::api::{ChatAPI, SessionAPI, parse_userinfo};
-pub use self::api::handle_pool_message;
+pub use self::api::{ChatAPI, SessionAPI, MaintenanceAPI, parse_userinfo};
 pub use self::error::MessageError;
 
 use self::processor::ConnectionMessage;
