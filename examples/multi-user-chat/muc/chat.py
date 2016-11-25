@@ -12,9 +12,14 @@ class Room(object):
         self.counter = 0
         self.messages = deque(maxlen=64)
 
-    def add(self, text):
+    def add(self, author, text):
         self.counter += 1
-        self.messages.append({'id': self.counter, 'text': text})
+        data = {'id': self.counter, 'text': text}
+        self.messages.append(data)
+        return data
+
+    def get_history(self, first_id):
+        return [m for m in self.messages if m['id'] > first_id]
 
 
 class User(object):
@@ -70,3 +75,6 @@ def ensure_user(uid, **meta):
 
 def get_user(uid):
     return USERS.get(uid)
+
+def get_room(room):
+    return ROOMS.get(room)

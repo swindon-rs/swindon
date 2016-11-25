@@ -27,8 +27,7 @@ const Routes = ({history, ...props}) => (
         <Route path=":roomName"
                     onEnter={websocket.enter_room}
                     onLeave={websocket.leave_room}
-                    component={room.Main}
-                    components={{ title: room.Title }} />
+                    components={{ title: room.Title, children: room.Main }} />
       </Route>
     </Route>
   </Router>

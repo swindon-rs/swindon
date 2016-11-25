@@ -4,10 +4,14 @@ let websocket = null
 let timeout = 50
 let timeout_token = null
 let current_room = null
+export var current_room_messages = null
 export var metadata = {}
 export var state = ""
 export var room_list = []
-var rooms = {}
+let rooms = {}
+
+let next_request_id = 0
+let promises = {}
 
 function open() {
     state = "Connected. Authenticating..."
@@ -19,6 +23,29 @@ function open() {
     timeout = 50
     if(current_room) {
         call('enter_room', current_room)
+        let room = current_room
+        call('get_history', room).then(function(messages) {
+            if(current_room !== room) {
+                return
+            }
+            let existing = {}
+            for(let msg of current_room_messages) {
+                existing[msg.id] = msg
+            }
+            for(let msg of messages) {
+                let old = existing[msg.id]
+                if(old) {
+                    for(var k of Object.keys(msg)) {
+                        old[k] = msg[k]
+                    }
+                } else {
+                    current_room_messages.push(msg)
+                }
+            }
+            current_room_messages.sort(function(a, b) {
+                return b.id - a.id
+            })
+        })
     }
 }
 
@@ -100,6 +127,22 @@ function message(ev) {
         case 'message':
             console.debug("Message", data)
             break;
+        case 'result': {
+            let rid = data[1].request_id
+            let prom = promises[rid]
+            delete promises[rid]
+            prom.resolve(data[2])
+            break;
+        }
+        case 'error': {
+            let rid = data[1].request_id
+            if(rid) {
+                let prom = promises[rid]
+                delete promises[rid]
+                prom.reject(data[2])
+            }
+            break;
+        }
         case 'lattice':
             console.debug("Lattice", data)
             switch(data[1].namespace) {
@@ -118,8 +161,16 @@ function message(ev) {
 }
 
 function call(method, ...args) {
+    next_request_id += 1
+    var prom = new Promise(function(resolve, reject) {
+        promises[next_request_id] = {
+            resolve: resolve,
+            reject: reject,
+        }
+    })
     websocket.send(JSON.stringify(
-        ['muc.' + method, {'request_id': 0}, args, {}]))
+        ['muc.' + method, {'request_id': next_request_id}, args, {}]))
+    return prom
 }
 
 export function start() {
@@ -141,7 +192,6 @@ export function stop() {
 
 export function enter_room(route) {
     let { params: {roomName}} = route;
-    console.log("ENTER", roomName, websocket.readyState)
     if(websocket.readyState === WebSocket.OPEN) {
         if(current_room) {
             call('switch_room', current_room, roomName)
@@ -150,9 +200,15 @@ export function enter_room(route) {
         }
     }
     current_room = roomName
+    current_room_messages = []
 }
 
 export function leave_room(route) {
     call('leave_room', current_room)
     current_room = null
+    current_room_messages = null
+}
+
+export function send_message(text) {
+    call('message', current_room, text)
 }

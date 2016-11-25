@@ -1,6 +1,7 @@
 import React, { Component } from 'react';
-import { Link } from 'react-router';
+import { Link, browserHistory } from 'react-router';
 import classnames from 'classnames';
+
 
 export class Main extends Component {
   render() {
@@ -10,13 +11,20 @@ export class Main extends Component {
           <span className="big-arrow">↑</span>
           Enter room name in address bar or here:
           &nbsp;
-          <span className="select-room-input-box">
+          <span className="select-room-input-block">
+            <span className="select-room-input-box">
             <input type="text" placeholder="Room Name"
-                onChange={ e => this.setState({roomName: e.target.value}) } />
+                onChange={ e => this.setState({roomName: e.target.value}) }
+                onKeyDown={ e => {
+                    if(e.which === 13 && this.state && this.state.roomName) {
+                        browserHistory.push('/' + this.state.roomName)
+                    }
+                }}/>
             {this.state && this.state.roomName &&
                 <Link to={"/" + this.state.roomName}>
                     <button>Go</button>
                 </Link>}
+            </span>
             <Link to="/kittens">/kittens</Link>
             <Link to="/cars">/cars</Link>
           </span>

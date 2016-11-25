@@ -31,7 +31,7 @@ export default class Chat extends Component {
             { title || <h1>No room selected</h1> }
            <span className="connection-status">[{ websocket.state }]</span>
           </div>
-          <div className="messages">
+          <div className="message-field">
             { children }
           </div>
         </div>

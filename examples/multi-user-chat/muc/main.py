@@ -56,12 +56,16 @@ def main():
 
     @app.route("/muc/message", methods=['POST'])
     @swindon_convention
-    async def message(req, text):
-        await swindon.publish('message-board', {
-            'author': req.user.username,
-            'text': text,
-            })
-        return True
+    async def message(req, room, text):
+        msg = chat.get_room(room).add(
+            chat.get_user(req.user_id).username,
+            text)
+        await swindon.publish('muc.' + room, msg)
+        return msg['id']
 
+    @app.route("/muc/get_history", methods=['POST'])
+    @swindon_convention
+    async def get_history(req, room, start=0):
+        return chat.get_room(room).get_history(start)
 
     app.run(host="0.0.0.0", port=8082, loop=loop)
