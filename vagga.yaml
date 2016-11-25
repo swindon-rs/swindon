@@ -191,6 +191,7 @@ commands:
       swindon: !Command
         container: ubuntu
         work-dir: examples/message-board
+        environ: { RUST_BACKTRACE: 1 }
         run:
         - ../../target/debug/swindon
         - --verbose
@@ -210,6 +211,7 @@ commands:
       swindon: !Command
         container: ubuntu
         work-dir: examples/multi-user-chat
+        environ: { RUST_BACKTRACE: 1 }
         run:
         - ../../target/debug/swindon
         - --verbose
