@@ -82,7 +82,6 @@ pub fn serialize<S>(mut response: Pickler<S>, resp: Response)
     for (ref header, ref value) in resp.headers {
         match header {
             &Header::TransferEncoding => {
-                println!("Adding Chunked response");
                 response.add_chunked();
             }
             &Header::Raw(ref name) => {
