@@ -13,6 +13,7 @@
 }
 .title-block > h1 {
     flex-grow: 1;
+    margin-left: 32px;
 }
 .room-title:before {
     content: "«";
@@ -23,8 +24,11 @@
 .chat-body {
     flex-grow: 1;
 }
+.connection-status {
+    padding: 12px;
+}
 
-.roster {
+.room-list {
     width: 18%;
     min-width: 250px;
     border-right: dashed gray 1px;
@@ -48,6 +52,12 @@
 .select-room-input-box > a {
     padding: 3px
 }
-.connection-status {
-    padding: 8px;
+.room-list--room {
+    display: flex;
+}
+.room-list--room-name {
+    flex-grow: 1;
+}
+.room-list--unread {
+    padding: 2px 8px;
 }

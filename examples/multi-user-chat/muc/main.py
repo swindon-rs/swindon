@@ -25,13 +25,36 @@ def main():
         name = SimpleCookie(http_cookie)['swindon_muc_login'].value
         uid = NON_ALPHA.sub('_', name.lower())
         user = chat.ensure_user(uid, username=name)
-        await swindon.lattice(req.connection, 'muc', user.initial_lattice())
+        await swindon.attach(req.connection, 'muc', user.initial_lattice())
         return {
             'user_id': uid,
             'username': name,
         }
 
-    @app.route("/message", methods=['POST'])
+    @app.route("/muc/enter_room", methods=['POST'])
+    @swindon_convention
+    async def enter_room(req, room_name):
+        user  = chat.get_user(req.user_id)
+        await swindon.subscribe(req.connection, 'muc.' + room_name)
+        await swindon.lattice('muc', user.add_room(room_name))
+        return True
+
+    @app.route("/muc/leave_room", methods=['POST'])
+    @swindon_convention
+    async def enter_room(req, room_name):
+        await swindon.unsubscribe(req.connection, 'muc.' + room_name)
+        return True
+
+    @app.route("/muc/switch_room", methods=['POST'])
+    @swindon_convention
+    async def enter_room(req, old_room, new_room):
+        user = chat.get_user(req.user_id)
+        await swindon.unsubscribe(req.connection, 'muc.' + old_room)
+        await swindon.subscribe(req.connection, 'muc.' + new_room)
+        await swindon.lattice('muc', user.add_room(new_room))
+        return True
+
+    @app.route("/muc/message", methods=['POST'])
     @swindon_convention
     async def message(req, text):
         await swindon.publish('message-board', {

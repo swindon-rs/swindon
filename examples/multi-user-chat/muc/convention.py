@@ -7,16 +7,6 @@ from sanic.response import json as response
 
 log = logging.getLogger(__name__)
 
-class User(object):
-
-    def __init__(self, user_id):
-        self.user_id = user_id
-        # this is a hack to get rid of DB
-        self.username = user_id.replace('_', ' ').title()
-
-    def __repr__(self):
-        return "<User {}>".format(self.user_id)
-
 
 class Connection(object):
 
@@ -37,7 +27,7 @@ class Request(object):
             assert kind == 'Tangle'
             auth = json.loads(
                 base64.b64decode(value.encode('ascii')).decode('utf-8'))
-            self.user = User(**auth)
+            self.user_id = auth['user_id']
 
     def __repr__(self):
         return "<Request of {!r}>".format(

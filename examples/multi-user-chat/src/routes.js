@@ -25,6 +25,8 @@ const Routes = ({history, ...props}) => (
             onEnter={websocket.start} onLeave={websocket.stop}>
         <IndexRoute component={select.Main} />
         <Route path=":roomName"
+                    onEnter={websocket.enter_room}
+                    onLeave={websocket.leave_room}
                     component={room.Main}
                     components={{ title: room.Title }} />
       </Route>

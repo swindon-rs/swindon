@@ -1,8 +1,9 @@
-import React, { Component } from 'react';
-import classnames from 'classnames';
-import * as websocket from '../websocket';
+import React, { Component } from 'react'
+import { Link } from 'react-router'
+import classnames from 'classnames'
+import * as websocket from '../websocket'
 
-import './chat.css';
+import './chat.css'
 
 export default class Chat extends Component {
 
@@ -10,8 +11,20 @@ export default class Chat extends Component {
     const { className, title, children } = this.props;
     return (
       <div className={classnames('Chat', className)}>
-        <div className="roster">
-          ROSTER
+        <div className="room-list">
+          <ul className="room-list--list">
+          {
+            websocket.room_list.map(room => (
+              <li key={room.name} className="room-list--room">
+                <Link className="room-list--room-name"
+                  to={"/"+room.name}
+                  >{ room.name }</Link>
+                <span className="room-list--unread"
+                  >{ room.unseen }</span>
+              </li>
+            ))
+          }
+          </ul>
         </div>
         <div className="chat-body">
           <div className="title-block">
