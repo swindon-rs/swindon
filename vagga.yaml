@@ -48,14 +48,14 @@ containers:
     - !Install
       - wrk
 
-  message-board:
+  message-board:  # example
     setup:
     - !Alpine v3.4
     - !Install [ca-certificates]
     - !PipConfig { dependencies: true }
     - !Py3Requirements "examples/message-board/requirements.txt"
 
-  multi-user-chat:
+  multi-user-chat:  # example
     setup:
     - !Alpine v3.4
     - !Install [ca-certificates]
@@ -214,13 +214,13 @@ commands:
         - ../../target/debug/swindon
         - --verbose
         - --config=swindon.yaml
-      #chat: !Command
-      #  container: multi-user-chat
-      #  work-dir: examples/multi-user-chat
-      #  run:
-      #  - python3
-      #  - -m
-      #  - muc
+      chat: !Command
+        container: multi-user-chat
+        work-dir: examples/multi-user-chat
+        run:
+        - python3
+        - -m
+        - muc
       react-app: !Command
         container: multi-user-chat
         work-dir: examples/multi-user-chat

@@ -10,7 +10,7 @@ export class Main extends Component {
           <span className="big-arrow">↑</span>
           Enter room name in address bar or here:
           &nbsp;
-          <div className="select-room-input-box">
+          <span className="select-room-input-box">
             <input type="text" placeholder="Room Name"
                 onChange={ e => this.setState({roomName: e.target.value}) } />
             {this.state && this.state.roomName &&
@@ -19,7 +19,7 @@ export class Main extends Component {
                 </Link>}
             <Link to="/kittens">/kittens</Link>
             <Link to="/cars">/cars</Link>
-          </div>
+          </span>
         </p>
         <p>
           <span className="big-arrow">←</span>

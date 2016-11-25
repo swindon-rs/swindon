@@ -8,6 +8,11 @@
 .title-block {
     border-bottom: solid gray 1px;
     padding-bottom: 8px;
+    display: flex;
+    flex-direction: row;
+}
+.title-block > h1 {
+    flex-grow: 1;
 }
 .room-title:before {
     content: "«";
@@ -42,4 +47,7 @@
 }
 .select-room-input-box > a {
     padding: 3px
+}
+.connection-status {
+    padding: 8px;
 }
