@@ -61,7 +61,7 @@ impl Connection {
 
     pub fn message(&mut self, topic: Topic, data: Arc<Json>) {
         self.channel.send(ConnectionMessage::Publish(topic, data))
-            .expect("send connection message");
+            .map_err(|e| info!("Error sending message: {}", e)).ok();
     }
 
     pub fn lattice(&mut self, namespace: &Namespace,
