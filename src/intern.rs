@@ -25,10 +25,17 @@ struct TopicValidator;
 pub type Topic = Symbol<TopicValidator>;
 
 struct LatticeNamespaceValidator;
+/// Name of the lattice namespace (set of keys)
 pub type Lattice = Symbol<LatticeNamespaceValidator>;
 
 struct LatticeKeyValidator;
+/// Key in lattice namespace (set of CRDT variables),
+/// logically should validate same as Topic
 pub type LatticeKey = Symbol<LatticeKeyValidator>;
+
+struct LatticeVarValidator;
+/// CRDT variable name in lattice
+pub type LatticeVar = Symbol<LatticeVarValidator>;
 
 quick_error! {
     #[derive(Debug)]
@@ -44,7 +51,7 @@ fn valid_ident(val: &str) -> bool {
         (c.is_alphanumeric() || c == '-' || c == '_'))
 }
 
-fn valid_key(val: &str) -> bool {
+fn valid_var(val: &str) -> bool {
     if val.len() == 0 {
         return false;
     }
@@ -56,6 +63,11 @@ fn valid_key(val: &str) -> bool {
 fn valid_namespace(val: &str) -> bool {
     val.chars().all(|c| c.is_ascii() &&
         (c.is_alphanumeric() || c == '-' || c == '_' || c == '.'))
+}
+
+fn valid_topic(val: &str) -> bool {
+    val.chars().all(|c| c.is_ascii() &&
+        (c.is_alphanumeric() || c == '-' || c == '_' || c == '.' || c == ':'))
 }
 
 fn valid_sid(val: &str) -> bool {
@@ -131,13 +143,26 @@ impl Validator for OldValidator {
 impl Validator for TopicValidator {
     type Err = BadIdent;
     fn validate_symbol(val: &str) -> Result<(), Self::Err> {
-        if !valid_namespace(val) {
+        if !valid_topic(val) {
             return Err(BadIdent::InvalidChar);
         }
         Ok(())
     }
     fn display(value: &Symbol<Self>, fmt: &mut fmt::Formatter) -> fmt::Result {
         write!(fmt, "topic{:?}", value.as_ref())
+    }
+}
+
+impl Validator for LatticeKeyValidator {
+    type Err = BadIdent;
+    fn validate_symbol(val: &str) -> Result<(), Self::Err> {
+        if !valid_topic(val) {
+            return Err(BadIdent::InvalidChar);
+        }
+        Ok(())
+    }
+    fn display(value: &Symbol<Self>, fmt: &mut fmt::Formatter) -> fmt::Result {
+        write!(fmt, "latkey{:?}", value.as_ref())
     }
 }
 
@@ -154,10 +179,10 @@ impl Validator for LatticeNamespaceValidator {
     }
 }
 
-impl Validator for LatticeKeyValidator {
+impl Validator for LatticeVarValidator {
     type Err = BadIdent;
     fn validate_symbol(val: &str) -> Result<(), Self::Err> {
-        if !valid_key(val) {
+        if !valid_var(val) {
             return Err(BadIdent::InvalidChar);
         }
         Ok(())

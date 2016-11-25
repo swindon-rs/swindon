@@ -5,7 +5,7 @@ use std::collections::hash_map::Entry::{Occupied, Vacant};
 
 use rustc_serialize::{Encodable, Encoder, Decodable, Decoder};
 
-use intern::{LatticeKey as Key, SessionId};
+use intern::{LatticeKey as Key, LatticeVar as Var, SessionId};
 
 #[derive(Debug, Clone)]
 pub struct Counter(u64);
@@ -21,8 +21,8 @@ trait Crdt: Clone + Sized {
 
 #[derive(Debug, Clone)]
 pub struct Values {
-    counters: HashMap<Key, Counter>,
-    sets: HashMap<Key, Set>,
+    counters: HashMap<Var, Counter>,
+    sets: HashMap<Var, Set>,
 }
 
 pub struct Lattice {
@@ -31,6 +31,7 @@ pub struct Lattice {
     pub subscriptions: HashMap<Key, HashSet<SessionId>>,
 }
 
+#[derive(Debug)]
 pub struct Delta {
     pub shared: HashMap<Key, Values>,
     pub private: HashMap<SessionId, HashMap<Key, Values>>,
@@ -103,24 +104,9 @@ impl Lattice {
             delta.shared.remove(key);
         }
 
-        let mut del = Vec::new();
         for (session_id, rooms) in &mut delta.private {
-            let mysess =
-                if let Some(s) = self.private.get_mut(session_id) {
-                    s
-                } else {
-                    // There is no such session, don't need to store data for
-                    // it
-                    //
-                    // Note:
-                    // * we remove non-existent sessions
-                    // * but keep sessions with empty rooms in the delta
-                    //
-                    // This is intentional! Refer to the protocol
-                    // documentation for more information.
-                    del.push(session_id.clone());
-                    continue;
-                };
+            let mysess = self.private.entry(session_id.clone())
+                .or_insert_with(HashMap::new);
             let mut del_rooms = Vec::new();
             for (room, values) in rooms.iter_mut() {
                 let mine = mysess.entry(room.clone())
@@ -136,9 +122,6 @@ impl Lattice {
             for key in &del_rooms {
                 rooms.remove(key);
             }
-        }
-        for key in &del {
-            delta.private.remove(key);
         }
         return delta
     }
@@ -174,7 +157,7 @@ impl Crdt for Set {
 }
 
 fn crdt_update<K, V>(original: &mut HashMap<K, V>, delta: &mut HashMap<K, V>)
-    where K: Clone + Hash + Eq, V: Crdt
+    where K: Clone + Hash + Eq + ::std::fmt::Debug, V: Crdt
 {
     let mut del = Vec::new();
     for (key, crdt) in delta {
@@ -197,39 +180,15 @@ fn crdt_update<K, V>(original: &mut HashMap<K, V>, delta: &mut HashMap<K, V>)
 impl Decodable for Delta {
     fn decode<D: Decoder>(d: &mut D) -> Result<Self, D::Error>
     {
-        d.read_map(|d, size| {
-            if size > 2 {
-                return Err(d.error(
-                    format!("expected at most 2 elements, got {:?}", size).as_str()))
-            }
-            let mut shared = HashMap::new();
-            let mut private = HashMap::new();
-            let mut prevkey = "";
-            for idx in 0..size {
-                let key = d.read_map_elt_key(idx, |d| d.read_str())?;
-                prevkey = match (key.as_str(), prevkey) {
-                    ("shared", "") | ("shared", "private") => {
-                        shared = d.read_map_elt_val(idx, |d| {
-                            HashMap::<Key, Values>::decode(d)
-                        })?;
-                        "shared"
-                    }
-                    ("private", "") | ("private", "shared") => {
-                        private = d.read_map_elt_val(idx, |d| {
-                            HashMap::<SessionId, HashMap<Key, Values>>::decode(d)
-                        })?;
-                        "private"
-                    }
-                    (other, _) => {
-                        return Err(d.error(
-                            format!("unexpected key {}", other).as_str()))
-                    }
-                };
-            }
-            Ok(Delta {
-                shared: shared,
-                private: private,
-            })
+        #[derive(RustcDecodable)]
+        struct DeltaOpt {
+            pub shared: Option<HashMap<Key, Values>>,
+            pub private: Option<HashMap<SessionId, HashMap<Key, Values>>>,
+        }
+        let tmp = DeltaOpt::decode(d)?;
+        Ok(Delta {
+            shared: tmp.shared.unwrap_or_else(HashMap::new),
+            private: tmp.private.unwrap_or_else(HashMap::new),
         })
     }
 }
@@ -243,12 +202,16 @@ impl Decodable for Values {
         };
         d.read_map(|d, size| {
             for idx in 0..size {
-                let key = d.read_map_elt_key(idx, |d| Key::decode(d))?;
-                if key.as_ref().ends_with("_counter") {
+                let key = d.read_map_elt_key(idx, |d| d.read_str())?;
+                if key[..].ends_with("_counter") {
                     let val = d.read_map_elt_val(idx, |d| d.read_u64())?;
+                    let key = key[..key.len() - "_counter".len()].parse()
+                        .map_err(|_| d.error("invalid lattice var"))?;
                     values.counters.insert(key, Counter(val));
-                } else if key.as_ref().ends_with("_set") {
+                } else if key[..].ends_with("_set") {
                     let val = d.read_map_elt_val(idx, |d| Set::decode(d))?;
+                    let key = key[..key.len() - "_set".len()].parse()
+                        .map_err(|_| d.error("invalid lattice var"))?;
                     values.sets.insert(key, val);
                 } else {
                     return Err(d.error(format!(
@@ -261,15 +224,8 @@ impl Decodable for Values {
 }
 
 impl Decodable for Set {
-    fn decode<D: Decoder>(d: &mut D) -> Result<Self, D::Error>
-    {
-        d.read_seq(|d, size| {
-            let mut set = HashSet::new();
-            for idx in 0..size {
-                set.insert(d.read_seq_elt(idx, |d| d.read_str())?);
-            }
-            Ok(Set(Arc::new(set)))
-        })
+    fn decode<D: Decoder>(d: &mut D) -> Result<Self, D::Error> {
+        Ok(Set(Decodable::decode(d)?))
     }
 }
 
@@ -279,7 +235,7 @@ mod test {
     use rustc_serialize::json;
 
     use super::{Delta, Values, Set};
-    use intern::LatticeKey as Key;
+    use intern::{LatticeKey as Key, LatticeVar as Var};
 
     #[test]
     fn decode_delta() {
@@ -301,7 +257,7 @@ mod test {
         assert_eq!(val.counters.len(), 1);
         assert_eq!(val.sets.len(), 0);
 
-        let key = Key::from_str("last_message_counter").unwrap();
+        let key = Var::from_str("last_message").unwrap();
         assert!(val.counters.contains_key(&key));
         assert_eq!(val.counters.get(&key).unwrap().0, 123u64);
     }

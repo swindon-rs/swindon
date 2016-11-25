@@ -101,18 +101,21 @@ impl Pool {
         if let Some(mut session) = self.inactive_sessions.remove(&session_id) {
             session.connections.insert(conn_id);
             session.metadata = metadata;
+            copy_attachments(&mut session, &conn.lattices, conn_id);
             let val = self.active_sessions.insert(session_id.clone(),
                 timestamp, session);
             debug_assert!(val.is_none());
         } else if self.active_sessions.contains_key(&session_id) {
             self.active_sessions.update(&session_id, expire);
-            let session = self.active_sessions.get_mut(&session_id).unwrap();
+            let mut session = self.active_sessions.get_mut(&session_id).unwrap();
             session.connections.insert(conn_id);
             session.metadata = metadata;
+            copy_attachments(&mut session, &conn.lattices, conn_id);
         } else {
             let mut session = Session::new();
             session.connections.insert(conn_id);
             session.metadata = metadata;
+            copy_attachments(&mut session, &conn.lattices, conn_id);
             self.active_sessions.insert(session_id.clone(), expire, session);
         }
 
@@ -248,7 +251,22 @@ impl Pool {
                    namespace, cid);
             return
         };
+
+        let sess = if let Some(sess) = self.active_sessions.get_mut(&conn.session_id) {
+            sess
+        } else if let Some(sess) = self.inactive_sessions.get_mut(&conn.session_id) {
+            sess
+        } else {
+            error!("Connection {:?} doesn't have corresponding session {:?}",
+                cid, conn.session_id);
+            return
+        };
+        sess.lattices.entry(namespace.clone())
+            .or_insert_with(HashSet::new)
+            .insert(cid);
+
         conn.lattices.insert(namespace.clone());
+
         if let Some(lat) = self.lattices.get(&namespace) {
             lattice_from(&mut conn.channel, &namespace, &conn.session_id, lat);
         } else {
@@ -291,26 +309,27 @@ impl Pool {
         for room in pubdata.keys() {
             if let Some(sessions) = lat.subscriptions.get(room) {
                 for sid in sessions {
-                    if !already_sent.contains(sid) &&
-                       !delta.private.contains_key(sid)
+                    if already_sent.contains(sid) ||
+                       delta.private.contains_key(sid)
                     {
-                        // Can't easily abstract all this away because of borrow checker
-                        let sess = if let Some(sess) = self.active_sessions.get(sid) {
-                            sess
-                        } else if let Some(sess) = self.inactive_sessions.get(sid) {
-                            sess
-                        } else {
-                            continue;
-                        };
-                        if let Some(connections) = sess.lattices.get(&namespace) {
-                            for cid in connections {
-                                if let Some(conn) = self.connections.get_mut(cid) {
-                                    conn.lattice(&namespace, &pubdata);
-                                }
+                        continue;
+                    }
+                    // Can't easily abstract all this away because of borrow checker
+                    let sess = if let Some(sess) = self.active_sessions.get(sid) {
+                        sess
+                    } else if let Some(sess) = self.inactive_sessions.get(sid) {
+                        sess
+                    } else {
+                        continue;
+                    };
+                    if let Some(connections) = sess.lattices.get(&namespace) {
+                        for cid in connections {
+                            if let Some(conn) = self.connections.get_mut(cid) {
+                                conn.lattice(&namespace, &pubdata);
                             }
                         }
-                        already_sent.insert(sid.clone());
                     }
+                    already_sent.insert(sid.clone());
                 }
             }
         }
@@ -372,6 +391,14 @@ fn lattice_from(channel: &mut Sender<ConnectionMessage>,
     let msg = ConnectionMessage::Lattice(namespace.clone(), Arc::new(data));
     channel.send(msg)
         .map_err(|e| info!("Error sending lattice: {}", e)).ok();
+}
+
+fn copy_attachments(sess: &mut Session, list: &HashSet<Namespace>, cid: Cid) {
+    for namespace in list {
+        sess.lattices.entry(namespace.clone())
+            .or_insert_with(HashSet::new)
+            .insert(cid);
+    }
 }
 
 #[cfg(test)]
