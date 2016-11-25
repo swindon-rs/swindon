@@ -58,6 +58,7 @@ pub enum ConnectionMessage {
     Error(Meta, MessageError),
 }
 
+#[derive(Debug)]
 pub enum PoolMessage {
     InactiveSession {
         session_id: SessionId,

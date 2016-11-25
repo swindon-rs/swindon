@@ -18,7 +18,7 @@ use websocket::Base64;
 use super::{Cid, ProcessorPool};
 use super::{serialize_cid};
 use super::router::MessageRouter;
-use super::processor::{Action, ConnectionMessage};
+use super::processor::{Action, ConnectionMessage, PoolMessage};
 use super::message::{self, Meta, Args, Kwargs};
 use super::error::MessageError;
 
@@ -246,6 +246,16 @@ pub fn parse_userinfo(response: ClientResponse)
         }
         Err(err) => {
             Err(err)
+        }
+    }
+}
+
+pub fn handle_pool_message(msg: PoolMessage)
+{
+    use super::processor::PoolMessage::*;
+    match msg {
+        m @ InactiveSession { .. } => {
+            info!("Send inactivity: {:?}", m);
         }
     }
 }

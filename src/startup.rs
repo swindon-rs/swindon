@@ -1,12 +1,13 @@
 use std::sync::{Arc, RwLock};
 
 use tokio_core::reactor::Handle;
+use futures::Stream;
 use futures::sync::mpsc::{unbounded as channel};
 use minihttp::client::HttpClient;
 
 use config::{ListenSocket, Handler, ConfigCell};
 use handler::Main;
-use chat::{ChatBackend, Processor};
+use chat::{ChatBackend, Processor, handle_pool_message};
 use minihttp;
 use handlers;
 
@@ -41,7 +42,10 @@ pub fn populate_loop(handle: &Handle, cfg: &ConfigCell, verbose: bool)
     for (name, cfg) in &cfg.get().session_pools {
         let (tx, rx) = channel();
         chat_pro.write().unwrap().create_pool(name, cfg, tx);
-        // TODO(tailhook) read from rx
+        handle.spawn(rx.for_each(move |msg| {
+            handle_pool_message(msg);
+            Ok(())
+        }))
     }
     let root = cfg.get();
     for (name, h) in root.handlers.iter() {
@@ -70,7 +74,7 @@ pub fn populate_loop(handle: &Handle, cfg: &ConfigCell, verbose: bool)
     }
 }
 
-pub fn update_loop(state: &mut State, cfg: &ConfigCell, _handle: &Handle) {
+pub fn update_loop(state: &mut State, cfg: &ConfigCell, handle: &Handle) {
     // TODO(tailhook) update listening sockets
     handlers::files::update_pools(&cfg.get().disk_pools);
     let mut chat_pro = state.chat.write().unwrap();
@@ -78,7 +82,10 @@ pub fn update_loop(state: &mut State, cfg: &ConfigCell, _handle: &Handle) {
         if !chat_pro.has_pool(name) {
             let (tx, rx) = channel();
             chat_pro.create_pool(name, cfg, tx);
-            // TODO(tailhook) read from rx
+            handle.spawn(rx.for_each(move |msg| {
+                handle_pool_message(msg);
+                Ok(())
+            }));
         }
     }
     // TODO(tailhook) update chat handlers
