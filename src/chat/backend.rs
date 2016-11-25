@@ -15,7 +15,7 @@ use {Pickler};
 use config::ConfigCell;
 use response::DebugInfo;
 use default_error_page::write_error_page;
-use intern::{Topic, Lattice};
+use intern::{Topic, Lattice, BadIdent};
 
 use super::{parse_cid, ProcessorPool};
 use super::processor::{Action, Delta};
@@ -51,8 +51,8 @@ impl ChatBackend {
         use self::ChatRoute::*;
 
         let route = match match_route(&req.method, req.path.as_str()) {
-            Some(r) => r,
-            None => return Status::NotFound
+            Ok(r) => r,
+            Err(_) => return Status::NotFound
         };
         let payload = match req.body {
             Some(ref body) => {
@@ -133,56 +133,75 @@ impl ChatBackend {
 
 fn decode_delta(req: &Request) -> Result<Delta, json::DecoderError>
 {
+    // NOTE: we assume body exist and is valid json
+    //  (ie: it parsed earlier)
     let body = req.body.as_ref().unwrap();
     let body = str::from_utf8(&body.data[..]).unwrap();
     json::decode::<Delta>(body)
 }
 
-fn match_route(method: &Method, path: &str) -> Option<ChatRoute> {
+quick_error! {
+    #[derive(Debug)]
+    enum MatchError {
+        BadIdent(err: BadIdent) {
+            from()
+            display("bad ident: {}", err)
+            description(err.description())
+        }
+        UnknownRoute {
+            description("unknown route")
+        }
+        InvalidRoute {
+            description("malformed route")
+        }
+    }
+}
+
+fn match_route(method: &Method, path: &str) -> Result<ChatRoute, MatchError> {
     use minihttp::enums::Method::*;
     use self::ChatRoute::*;
+    use self::MatchError::*;
 
     if !path.starts_with("/v1/") {
-        return None
+        return Err(UnknownRoute)
     }
     let mut it = path.split("/").skip(2);   // skip '' & 'v1'
     let route = match (method, it.next()) {
         (&Post, Some(kind)) => {
             if !it.next().map(|x| x.len() > 0).unwrap_or(false) {
-                return None
+                return Err(InvalidRoute)
             }
             match kind {
                 "lattice" => {
                     let (_, namespace) = path.split_at("/v1/lattice/".len());
-                    let namespace = namespace.replace("/", ".")
-                        .parse().unwrap();
+                    let namespace = namespace.replace("/", ".").parse()?;
                     ChatRoute::LatticeUpdate(namespace)
                 }
                 "publish" => {
                     let (_, topic) = path.split_at("/v1/publish/".len());
-                    let topic = topic.replace("/", ".")
-                        .parse().unwrap();
+                    let topic = topic.replace("/", ".").parse()?;
                     TopicPublish(topic)
                 }
-                _ => return None
+                _ => return Err(UnknownRoute)
             }
         }
         (&Put, Some("connection")) |
         (&Delete, Some("connection")) => {
             let id = match it.next() {
                 Some(id) if id.len() > 0 => id,
-                _ => return None,
+                _ => return Err(InvalidRoute),
             };
+            // TODO: validate ConnectionID (/ClientID)
+
             let kind = it.next();
             if !it.next().map(|x| x.len() > 0).unwrap_or(false) {
-                return None
+                return Err(InvalidRoute)
             }
             match kind {
                 Some("subscriptions") => {
                     let (_, topic) = path.split_at(
                         "/v1/connection//subscriptions/".len() + id.len());
-                    let topic = topic.replace("/", ".")
-                        .parse().unwrap();
+                    let topic = topic.replace("/", ".").parse()?;
                     if method == &Put {
                         TopicSubscribe(id.to_string(), topic)
                     } else {
@@ -192,8 +211,7 @@ fn match_route(method: &Method, path: &str) -> Option<ChatRoute> {
                 Some("lattices") => {
                     let (_, namespace) = path.split_at(
                         "/v1/connection//lattices/".len() + id.len());
-                    let namespace = namespace.replace("/", ".")
-                        .parse().unwrap();
+                    let namespace = namespace.replace("/", ".").parse()?;
                     if method == &Put {
                         LatticeSubscribe(
                             id.to_string(), namespace)
@@ -202,12 +220,12 @@ fn match_route(method: &Method, path: &str) -> Option<ChatRoute> {
                             id.to_string(), namespace)
                     }
                 }
-                _ => return None
+                _ => return Err(UnknownRoute)
             }
         }
-        _ => return None
+        _ => return Err(UnknownRoute)
     };
-    Some(route)
+    Ok(route)
 }
 
 
@@ -225,12 +243,13 @@ impl ChatRoute {
     fn expect_data(&self) -> bool {
         use self::ChatRoute::*;
         match *self {
-            TopicSubscribe(_, _) => false,
-            TopicUnsubscribe(_, _) => false,
-            LatticeSubscribe(_, _) => true,
-            LatticeUnsubscribe(_, _) => false,
-            TopicPublish(_) => true,
+            TopicPublish(_) |
+            LatticeSubscribe(_, _) |
             LatticeUpdate(_) => true,
+
+            TopicSubscribe(_, _) |
+            TopicUnsubscribe(_, _) |
+            LatticeUnsubscribe(_, _) => false,
         }
     }
 }
@@ -243,6 +262,7 @@ mod test {
 
     use super::match_route;
     use super::ChatRoute::*;
+    use super::MatchError;
 
     #[test]
     fn match_topic_publish() {
@@ -293,57 +313,64 @@ mod test {
     #[test]
     fn no_matches() {
         let path = "/v/";
-        assert!(match_route(&Method::Get, path).is_none());
-        assert!(match_route(&Method::Put, path).is_none());
-        assert!(match_route(&Method::Post, path).is_none());
-        assert!(match_route(&Method::Patch, path).is_none());
-        assert!(match_route(&Method::Delete, path).is_none());
+        assert!(match_route(&Method::Get, path).is_err());
+        assert!(match_route(&Method::Put, path).is_err());
+        assert!(match_route(&Method::Post, path).is_err());
+        assert!(match_route(&Method::Patch, path).is_err());
+        assert!(match_route(&Method::Delete, path).is_err());
 
         let path = "/v1/";
-        assert!(match_route(&Method::Get, path).is_none());
-        assert!(match_route(&Method::Put, path).is_none());
-        assert!(match_route(&Method::Post, path).is_none());
-        assert!(match_route(&Method::Patch, path).is_none());
-        assert!(match_route(&Method::Delete, path).is_none());
+        assert!(match_route(&Method::Get, path).is_err());
+        assert!(match_route(&Method::Put, path).is_err());
+        assert!(match_route(&Method::Post, path).is_err());
+        assert!(match_route(&Method::Patch, path).is_err());
+        assert!(match_route(&Method::Delete, path).is_err());
 
         let path = "/v1/publish";
-        assert!(match_route(&Method::Get, path).is_none());
-        assert!(match_route(&Method::Put, path).is_none());
-        assert!(match_route(&Method::Post, path).is_none());
-        assert!(match_route(&Method::Patch, path).is_none());
-        assert!(match_route(&Method::Delete, path).is_none());
+        assert!(match_route(&Method::Get, path).is_err());
+        assert!(match_route(&Method::Put, path).is_err());
+        assert!(match_route(&Method::Post, path).is_err());
+        assert!(match_route(&Method::Patch, path).is_err());
+        assert!(match_route(&Method::Delete, path).is_err());
 
         let path = "/v1/publish/";
-        assert!(match_route(&Method::Get, path).is_none());
-        assert!(match_route(&Method::Put, path).is_none());
-        assert!(match_route(&Method::Post, path).is_none());
-        assert!(match_route(&Method::Patch, path).is_none());
-        assert!(match_route(&Method::Delete, path).is_none());
+        assert!(match_route(&Method::Get, path).is_err());
+        assert!(match_route(&Method::Put, path).is_err());
+        assert!(match_route(&Method::Post, path).is_err());
+        assert!(match_route(&Method::Patch, path).is_err());
+        assert!(match_route(&Method::Delete, path).is_err());
 
         let path = "/v1/publish/test-chat/room1";
-        assert!(match_route(&Method::Get, path).is_none());
-        assert!(match_route(&Method::Put, path).is_none());
-        assert!(match_route(&Method::Patch, path).is_none());
-        assert!(match_route(&Method::Delete, path).is_none());
+        assert!(match_route(&Method::Get, path).is_err());
+        assert!(match_route(&Method::Put, path).is_err());
+        assert!(match_route(&Method::Patch, path).is_err());
+        assert!(match_route(&Method::Delete, path).is_err());
 
         let path = "/v1/lattice/test-chat/rooms";
-        assert!(match_route(&Method::Get, path).is_none());
-        assert!(match_route(&Method::Put, path).is_none());
-        assert!(match_route(&Method::Patch, path).is_none());
-        assert!(match_route(&Method::Delete, path).is_none());
+        assert!(match_route(&Method::Get, path).is_err());
+        assert!(match_route(&Method::Put, path).is_err());
+        assert!(match_route(&Method::Patch, path).is_err());
+        assert!(match_route(&Method::Delete, path).is_err());
 
-        let path = "/v1/connections//subscriptions/";
-        assert!(match_route(&Method::Get, path).is_none());
-        assert!(match_route(&Method::Put, path).is_none());
-        assert!(match_route(&Method::Post, path).is_none());
-        assert!(match_route(&Method::Patch, path).is_none());
-        assert!(match_route(&Method::Delete, path).is_none());
+        let path = "/v1/connection//subscriptions/";
+        assert!(match_route(&Method::Get, path).is_err());
+        assert!(match_route(&Method::Put, path).is_err());
+        assert!(match_route(&Method::Post, path).is_err());
+        assert!(match_route(&Method::Patch, path).is_err());
+        assert!(match_route(&Method::Delete, path).is_err());
 
-        let path = "/v1/connections/abc/subscriptions/";
-        assert!(match_route(&Method::Get, path).is_none());
-        assert!(match_route(&Method::Put, path).is_none());
-        assert!(match_route(&Method::Post, path).is_none());
-        assert!(match_route(&Method::Patch, path).is_none());
-        assert!(match_route(&Method::Delete, path).is_none());
+        let path = "/v1/connection/abc/subscriptions/";
+        assert!(match_route(&Method::Get, path).is_err());
+        assert!(match_route(&Method::Put, path).is_err());
+        assert!(match_route(&Method::Post, path).is_err());
+        assert!(match_route(&Method::Patch, path).is_err());
+        assert!(match_route(&Method::Delete, path).is_err());
+
+        let path = "/v1/connection/conn_id/subscriptions/room,1";
+        assert!(match_route(&Method::Get, path).is_err());
+        assert!(match_route(&Method::Put, path).is_err());
+        assert!(match_route(&Method::Post, path).is_err());
+        assert!(match_route(&Method::Patch, path).is_err());
+        assert!(match_route(&Method::Delete, path).is_err());
     }
 }
