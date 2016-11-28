@@ -26,7 +26,7 @@ pub use self::routing::Route;
 pub use self::handlers::Handler;
 pub use self::disk::Disk;
 pub use self::empty_gif::EmptyGif;
-pub use self::session_pools::SessionPool;
+pub use self::session_pools::{SessionPool, InactivityTimeouts};
 pub use self::http::Destination;
 
 use quire::{parse_string, Options};

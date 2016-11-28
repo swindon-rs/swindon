@@ -428,6 +428,12 @@ mod test {
                 listen: config::ListenSocket::Tcp(
                     "127.0.0.1:65535".parse().unwrap()),
                 inactivity_handlers: Vec::new(),
+                inactivity: config::InactivityTimeouts {
+                    new_connection: 60,
+                    client_min: 60,
+                    client_max: 60,
+                    client_default: 60,
+                },
             }),
             tx);
         return (pool, rx);
