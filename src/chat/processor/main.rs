@@ -55,12 +55,13 @@ pub fn run(rx: Receiver<Event>) {
     let mut pools = HashMap::new();
 
     loop {
+        let now = Instant::now();
         let timeout = pools.iter_mut()
-            .map(|(_, pool): (_, &mut Pool)| pool.cleanup(Instant::now()))
+            .map(|(_, pool): (_, &mut Pool)| pool.cleanup(now))
             .flat_map(|x| x)
             .min();
         let result = match timeout {
-            Some(t) => rx.recv_timeout(t.duration_since(Instant::now())),
+            Some(t) => rx.recv_timeout(t.duration_since(now)),
             None => rx.recv().map_err(|_| Disconnected),
         };
         let value = match result {
