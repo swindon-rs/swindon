@@ -262,7 +262,6 @@ mod test {
 
     use super::match_route;
     use super::ChatRoute::*;
-    use super::MatchError;
 
     #[test]
     fn match_topic_publish() {

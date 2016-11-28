@@ -103,7 +103,7 @@ pub fn read_config<P: AsRef<Path>>(filename: P)
                         chat.session_pool).into());
                 }
                 Some(ref pool) => {
-                    let dest = chat.find_destination(
+                    let dest = chat.message_handlers.resolve(
                         "tangle.session_inactive");
                     if !pool.inactivity_handlers.contains(dest) {
                         return Err(format!(

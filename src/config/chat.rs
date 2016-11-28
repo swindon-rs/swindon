@@ -1,4 +1,5 @@
 use std::collections::BTreeMap;
+use std::ops::Deref;
 
 use rustc_serialize::{Encodable, Encoder, Decodable, Decoder};
 use quire::validate::{Structure, Scalar, Mapping};
@@ -11,7 +12,7 @@ use intern::{HandlerName, SessionPoolName};
 pub struct Chat {
     pub session_pool: SessionPoolName,
     pub http_route: HandlerName,
-    pub message_handlers: BTreeMap<Pattern, http::Destination>,
+    pub message_handlers: RoutingTable,
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
@@ -21,25 +22,18 @@ pub enum Pattern {
     Exact(String),
 }
 
+#[derive(Debug, PartialEq, Eq)]
+pub struct RoutingTable {
+    default: http::Destination,
+    map: BTreeMap<Pattern, http::Destination>,
+}
+
 pub fn validator<'x>() -> Structure<'x> {
     Structure::new()
     .member("session_pool", Scalar::new())
     .member("http_route", http::destination_validator())
     .member("message_handlers",
         Mapping::new(Scalar::new(), http::destination_validator()))
-}
-
-impl Chat {
-
-    pub fn find_destination(&self, method: &str)
-        -> &http::Destination
-    {
-        let default = self.message_handlers.get(&Pattern::Default).unwrap();
-        self.message_handlers.iter().rev()
-        .find(|&(k, _)| k.matches(method))
-        .map(|(_, v)| v)
-        .unwrap_or(default)
-    }
 }
 
 impl Encodable for Pattern {
@@ -70,7 +64,8 @@ impl Decodable for Pattern {
 impl Pattern {
     pub fn matches(&self, other: &str) -> bool {
         match self {
-            // Default pattern does not match anything, as its a special case
+            // Default pattern does not match anything,
+            //  as its a special case and MUST be used as last resort effort.
             &Pattern::Default => false,
             &Pattern::Glob(ref s) => {
                 let s = s.as_str();
@@ -80,6 +75,36 @@ impl Pattern {
                 s.as_str() == other
             }
         }
+    }
+}
+
+impl Decodable for RoutingTable {
+    fn decode<D: Decoder>(d: &mut D) -> Result<Self, D::Error> {
+        let mut tmp = BTreeMap::<Pattern, http::Destination>::decode(d)?;
+        let default = tmp.remove(&Pattern::Default)
+            .ok_or(d.error("No default route"))?;
+        Ok(RoutingTable {
+            default: default,
+            map: tmp,
+        })
+    }
+}
+
+impl Deref for RoutingTable {
+    type Target = BTreeMap<Pattern, http::Destination>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.map
+    }
+}
+
+impl RoutingTable {
+    pub fn resolve(&self, method: &str) -> &http::Destination
+    {
+        self.iter().rev()
+        .find(|&(k, _)| k.matches(method))
+        .map(|(_, v)| v)
+        .unwrap_or(&self.default)
     }
 }
 

@@ -17,7 +17,7 @@ impl MessageRouter {
     pub fn resolve(&self, method: &str) -> String {
         // TODO: optimize this method
 
-        let dest = self.0.find_destination(method);
+        let dest = self.0.message_handlers.resolve(method);
         // XXX: do not unwrap()
         url_for(method.replace(".", "/").as_str(), &dest,
             &self.1.http_destinations).unwrap()
