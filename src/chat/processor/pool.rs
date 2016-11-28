@@ -64,6 +64,7 @@ impl Pool {
     {
         let old = self.pending_connections.insert(conn_id,
             NewConnection::new(conn_id, channel));
+        debug!("Add new connection {:?}", conn_id);
         debug_assert!(old.is_none());
     }
 

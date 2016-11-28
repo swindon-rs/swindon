@@ -11,6 +11,7 @@
 use std::time::Instant;
 use std::sync::Arc;
 use std::collections::HashMap;
+use std::fmt;
 
 use rustc_serialize::json::Json;
 use rustc_serialize::{Encodable, Encoder};
@@ -190,6 +191,51 @@ impl Encodable for ConnectionMessage {
                     s.emit_seq_elt(1, |s| meta.encode(s))?;
                     s.emit_seq_elt(2, |s| err.encode(s))
                 })
+            }
+        }
+    }
+}
+
+// NOTE: UnboundSender does not derive from Debug.
+impl fmt::Debug for Action {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        use self::Action::*;
+        match self {
+            &NewSessionPool {..} => {
+                write!(f, "Action::NewSessionPool")
+            }
+            &StopSessionPool => {
+                write!(f, "Action::StopSessionPool")
+            }
+            &NewConnection { ref conn_id, .. } => {
+                write!(f, "Action::NewConnection({:?})", conn_id)
+            }
+            &Associate { ref conn_id, ref session_id, .. } => {
+                write!(f, "Action::Associate({:?}, {:?})", conn_id, session_id)
+            }
+            &UpdateActivity { ref conn_id, .. } => {
+                write!(f, "Action::UpdateActivity({:?})", conn_id)
+            }
+            &Disconnect { ref conn_id } => {
+                write!(f, "Action::Disconnect({:?})", conn_id)
+            }
+            &Subscribe { ref conn_id, ref topic } => {
+                write!(f, "Action::Subscribe({:?}, {:?})", conn_id, topic)
+            }
+            &Unsubscribe { ref conn_id, ref topic } => {
+                write!(f, "Action::Unsubscribe({:?}, {:?})", conn_id, topic)
+            }
+            &Publish { ref topic, .. } => {
+                write!(f, "Action::Publish({:?})", topic)
+            }
+            &Attach { ref conn_id, ref namespace } => {
+                write!(f, "Action::Attach({:?}, {:?})", conn_id, namespace)
+            }
+            &Lattice { ref namespace, .. } => {
+                write!(f, "Action::Lattice({:?})", namespace)
+            }
+            &Detach { ref conn_id, ref namespace } => {
+                write!(f, "Action::Detach({:?}, {:?})", conn_id, namespace)
             }
         }
     }

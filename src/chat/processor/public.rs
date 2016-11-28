@@ -70,6 +70,7 @@ impl Processor {
 
 impl ProcessorPool {
     pub fn send(&self, action: Action) {
+        debug!("Sending pool action {:?} {:?}", self.pool_name, action);
         self.queue.send(Event {
             pool: self.pool_name.clone(),
             timestamp: Instant::now(),

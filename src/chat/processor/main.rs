@@ -73,6 +73,7 @@ pub fn run(rx: Receiver<Event>) {
         };
         for msg in value.into_iter().chain(try_iter(&rx)) {
             let Event { timestamp, action, pool } = msg;
+            debug!("Received action {:?} {:?}", pool, action);
             match action {
                 // Pool management
                 NewSessionPool { config, channel } => {
