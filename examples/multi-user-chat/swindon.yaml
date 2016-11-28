@@ -8,6 +8,8 @@ routing:
   localhost/empty.gif: empty-gif
   localhost/favicon.ico: public
   localhost: chat
+  # we can't proxy websockets for now, so we disable websocket to webpack
+  localhost/sockjs-node: empty-gif
 
 
 handlers:

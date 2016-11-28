@@ -24,29 +24,31 @@ function open() {
     if(current_room) {
         call('enter_room', current_room)
         let room = current_room
-        call('get_history', room).then(function(messages) {
-            if(current_room !== room) {
-                return
-            }
-            let existing = {}
-            for(let msg of current_room_messages) {
-                existing[msg.id] = msg
-            }
-            for(let msg of messages) {
-                let old = existing[msg.id]
-                if(old) {
-                    for(var k of Object.keys(msg)) {
-                        old[k] = msg[k]
-                    }
-                } else {
-                    current_room_messages.push(msg)
-                }
-            }
-            current_room_messages.sort(function(a, b) {
-                return b.id - a.id
-            })
-        })
+        call('get_history', room).then(insert_history(room))
     }
+}
+
+let insert_history = room => messages => {
+    if(current_room !== room) {
+        return
+    }
+    let existing = {}
+    for(let msg of current_room_messages) {
+        existing[msg.id] = msg
+    }
+    for(let msg of messages) {
+        let old = existing[msg.id]
+        if(old) {
+            for(var k of Object.keys(msg)) {
+                old[k] = msg[k]
+            }
+        } else {
+            current_room_messages.push(msg)
+        }
+    }
+    current_room_messages.sort(function(a, b) {
+        return b.id - a.id
+    })
 }
 
 function error(e) {
@@ -55,8 +57,8 @@ function error(e) {
         clearTimeout(timeout_token);
     } else {
         timeout *= 2
-        if(timeout > 300) {
-            timeout = 300;
+        if(timeout > 300000) {
+            timeout = 300000;
         }
     }
     state = ("Broken. Reconnecting in " +
@@ -88,10 +90,11 @@ function reconnect(e) {
 }
 
 function update_rooms(data) {
-    for(var k of Object.keys(data)) {
-        var nroom = data[k];
+    for(let k of Object.keys(data)) {
+        let nroom = data[k];
+        let r
         if(k in rooms) {
-            let r = rooms[k]
+            r = rooms[k]
             if(!r.last_message_counter ||
                     r.last_message_counter < nroom.last_message_counter)
             {
@@ -102,19 +105,18 @@ function update_rooms(data) {
             {
                 r.last_seen_counter = nroom.last_seen_counter
             }
-            r.unseen = nroom.last_message_counter - nroom.last_seen_counter
         } else {
-            let r = nroom
+            r = nroom
             r.name = k
-            r.unseen = nroom.last_message_counter - nroom.last_seen_counter
             rooms[k] = r
             room_list.push(r)
         }
+        r.unseen = (r.last_message_counter || 0) -
+                   (r.last_seen_counter || 0)
     }
     room_list.sort(function(a, b) {
         return a.name.localeCompare(b.name)
     })
-    console.log("rooms", room_list)
 }
 
 function message(ev) {
@@ -126,6 +128,10 @@ function message(ev) {
             break;
         case 'message':
             console.debug("Message", data)
+            if(data[1].topic === 'muc.' + current_room) {
+                // TODO(tailhook) deduplicate
+                current_room_messages.unshift(data[2])
+            }
             break;
         case 'result': {
             let rid = data[1].request_id
@@ -201,6 +207,7 @@ export function enter_room(route) {
     }
     current_room = roomName
     current_room_messages = []
+    call('get_history', roomName).then(insert_history(roomName))
 }
 
 export function leave_room(route) {

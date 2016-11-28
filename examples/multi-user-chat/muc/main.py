@@ -61,6 +61,14 @@ def main():
             chat.get_user(req.user_id).username,
             text)
         await swindon.publish('muc.' + room, msg)
+        await swindon.lattice('muc', {
+            'shared': { room: { 'last_message_counter': msg['id'] }},
+            'private': {
+                # you have always seen your own message
+                req.user_id:
+                    {room: { 'last_seen_counter': msg['id']}},
+            },
+        })
         return msg['id']
 
     @app.route("/muc/get_history", methods=['POST'])

@@ -10,6 +10,7 @@
     padding-bottom: 8px;
     display: flex;
     flex-direction: row;
+    min-height: 4em;
 }
 .title-block > h1 {
     flex-grow: 1;
