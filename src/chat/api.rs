@@ -12,6 +12,7 @@ use minihttp::Request;
 use minihttp::enums::{Status, Method};
 use minihttp::client::{HttpClient, Response as ClientResponse};
 use rustc_serialize::json::{self, Json};
+use rand::thread_rng;
 
 use intern::SessionId;
 use websocket::Base64;
@@ -274,7 +275,8 @@ impl MaintenanceAPI {
                 for dest in &self.sessions_cfg.inactivity_handlers {
                     if let Some(url) = url_for(
                         "tangle/session_inactive",
-                        &dest, &self.config.http_destinations)
+                        &dest, &self.config.http_destinations,
+                        &mut thread_rng())
                     {
                         let mut req = self.http_client.clone();
                         req.request(Method::Post, url.as_str());

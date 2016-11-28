@@ -1,6 +1,8 @@
 use std::sync::Arc;
 use std::collections::HashMap;
 
+use rand::{thread_rng, ThreadRng, Rng};
+
 use intern::Upstream;
 use config::Config;
 use config::chat::{Chat};
@@ -20,7 +22,7 @@ impl MessageRouter {
         let dest = self.0.message_handlers.resolve(method);
         // XXX: do not unwrap()
         url_for(method.replace(".", "/").as_str(), &dest,
-            &self.1.http_destinations).unwrap()
+            &self.1.http_destinations, &mut thread_rng()).unwrap()
     }
 
     // Predefined urls
@@ -32,12 +34,13 @@ impl MessageRouter {
 }
 
 pub fn url_for(path: &str, dest: &Destination,
-    table: &HashMap<Upstream, Target>)
+    table: &HashMap<Upstream, Target>, rng: &mut ThreadRng)
     -> Option<String>
 {
     // XXX: We currently use first address of http_destination;
     //  also we dont resolve DNS, it lended to Curl.
-    let result = table.get(&dest.upstream).and_then(|d| d.addresses.first());
+    let result = table.get(&dest.upstream).and_then(|d| rng.choose(&d.addresses));
+
     if let Some(addr) = result {
         let url = if dest.path.ends_with("/") {
             format!("http://{}{}{}", addr, dest.path, path)

@@ -6,6 +6,7 @@ use tokio_core::reactor::Handle;
 use minihttp::request::Request;
 use minihttp::{Error, Status};
 use minihttp::client::HttpClient;
+use rand::{thread_rng, Rng};
 
 use config::ConfigCell;
 use response::DebugInfo;
@@ -98,13 +99,14 @@ impl Main {
                 }
             }
             Some(&Handler::Proxy(ref settings)) => {
-                if let Some(dest) = cfg.http_destinations
-                        .get(&settings.destination.upstream)
-                {
+                let mut rng = thread_rng();
+                let target = cfg.http_destinations
+                    .get(&settings.destination.upstream)
+                    .and_then(|dest| rng.choose(&dest.addresses));
+                if let Some(addr) = target {
                     // NOTE: use suffix as real path?
-                    let addr = dest.addresses.first().unwrap().clone();
                     Response::Proxy(proxy::ProxyCall::Prepare {
-                        hostport: addr,
+                        hostport: addr.clone(),
                         settings: settings.clone(),
                     })
                 } else {

@@ -101,6 +101,8 @@ commands:
   run: &run !Command
     container: ubuntu
     description: Run
+    environ:
+      RUST_BACKTRACE: 1
     run:
     - cargo
     - run

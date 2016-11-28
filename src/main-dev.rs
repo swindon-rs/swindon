@@ -33,6 +33,7 @@ extern crate httparse;
 extern crate httpbin;
 extern crate slab;
 extern crate string_intern;
+extern crate rand;
 
 mod intern;
 mod config;
