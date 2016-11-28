@@ -13,21 +13,6 @@ let rooms = {}
 let next_request_id = 0
 let promises = {}
 
-function open() {
-    state = "Connected. Authenticating..."
-    render()
-    if(timeout_token) {
-        clearTimeout(timeout_token)
-        timeout_token = null
-    }
-    timeout = 50
-    if(current_room) {
-        call('enter_room', current_room)
-        let room = current_room
-        call('get_history', room).then(insert_history(room))
-    }
-}
-
 let insert_history = room => messages => {
     if(current_room !== room) {
         return
@@ -49,6 +34,21 @@ let insert_history = room => messages => {
     current_room_messages.sort(function(a, b) {
         return b.id - a.id
     })
+}
+
+function open() {
+    state = "Connected. Authenticating..."
+    render()
+    if(timeout_token) {
+        clearTimeout(timeout_token)
+        timeout_token = null
+    }
+    timeout = 50
+    if(current_room) {
+        call('enter_room', current_room)
+        let room = current_room
+        call('get_history', room).then(insert_history(room))
+    }
 }
 
 function error(e) {
