@@ -12,6 +12,7 @@ use tk_bufstream::IoBuf;
 use rustc_serialize::json;
 
 use websocket as ws;
+use websocket::write::WriteExt;
 use super::message;
 use super::processor::ConnectionMessage;
 use super::api::SessionAPI;
@@ -44,6 +45,29 @@ pub fn negotiate<S>(mut response: Pickler<S>, init: ws::Init, remote: Remote,
             ws::WebsockProto::new(socket, dispatcher, channel)
             .map_err(|e| info!("Websocket error: {}", e))
         });
+        Err(io::Error::new(io::ErrorKind::BrokenPipe,
+                           "Connection is stolen for websocket"))
+    })
+    .map_err(|e: io::Error| e.into())
+    .boxed()
+}
+
+pub fn fail<S>(mut response: Pickler<S>,
+    init: ws::Init, reason: ws::CloseReason)
+    -> BoxFuture<IoBuf<S>, HttpError>
+    where S: Io + Send + 'static
+{
+    response.status(Status::SwitchingProtocol);
+    response.add_header("Upgrade", "websocket");
+    response.add_header("Connection", "upgrade");
+    response.format_header("Sec-WebSocket-Accept", init.base64());
+    response.done_headers();
+    response.steal_socket()
+    .and_then(move |mut socket| {
+        socket.out_buf.write_close(reason.code(), reason.reason());
+        socket.flushed()
+    }).and_then(|_| {
+        // Ensure that server break connection
         Err(io::Error::new(io::ErrorKind::BrokenPipe,
                            "Connection is stolen for websocket"))
     })

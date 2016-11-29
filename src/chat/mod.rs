@@ -1,4 +1,5 @@
 use futures::sync::mpsc::{UnboundedReceiver as Receiver};
+use minihttp::Status;
 
 use super::websocket::Init;
 
@@ -12,7 +13,7 @@ mod error;
 
 pub use self::backend::ChatBackend;
 pub use self::processor::{Processor, ProcessorPool, Action};
-pub use self::websocket::{negotiate};
+pub use self::websocket::{negotiate, fail};
 pub use self::router::MessageRouter;
 pub use self::message::{Meta, Args, Kwargs};
 pub use self::api::{ChatAPI, SessionAPI, MaintenanceAPI, parse_userinfo};
@@ -27,7 +28,7 @@ pub struct Cid(u64);
 pub enum ChatInit {
     Prepare(Init, ChatAPI),
     Ready(Init, SessionAPI, Receiver<ConnectionMessage>),
-    AuthError(Init, MessageError),
+    AuthError(Init, Status),
 }
 
 

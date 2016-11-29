@@ -84,14 +84,28 @@ impl Response {
                 chat_api.authorize_connection(&req, cid, tx.clone())
                 .map_err(|e| e.into())
                 .and_then(move |resp| {
-                    let resp = match chat::parse_userinfo(resp) {
-                        Ok((sess_id, userinfo)) => {
-                            let session_api = chat_api.session_api(
-                                sess_id, cid, userinfo, tx);
-                            WebsocketChat(Ready(init, session_api, rx))
+                    let resp = if resp.status != Status::Ok {
+                        if resp.status != Status::Forbidden &&
+                           resp.status != Status::Unauthorized
+                        {
+                            warn!("Bad code returned from \
+                                authorize_connection: {:?} {}",
+                                resp.status, resp.reason);
                         }
-                        Err(other) => {
-                            WebsocketChat(AuthError(init, other))
+                        WebsocketChat(AuthError(init, resp.status))
+                    } else {
+                        match chat::parse_userinfo(resp) {
+                            Ok((sess_id, userinfo)) => {
+                                let session_api = chat_api.session_api(
+                                    sess_id, cid, userinfo, tx);
+                                WebsocketChat(Ready(init, session_api, rx))
+                            }
+                            Err(e) => {
+                                error!("Bad data returned by \
+                                    authorize_connection: {}", e);
+                                WebsocketChat(AuthError(init,
+                                    Status::InternalServerError))
+                            }
                         }
                     };
                     finished(Serializer {
@@ -150,12 +164,16 @@ impl<S: Io + AsRawFd + Send + 'static> GenericResponse<S> for Serializer {
                 websocket::negotiate(writer, init, self.handle,
                     websocket::Kind::Echo)
             }
+            Response::WebsocketChat(Prepare(..)) => {
+                unreachable!();
+            }
             Response::WebsocketChat(Ready(init, session_api, rx)) =>
             {
                 chat::negotiate(writer, init, self.handle, session_api, rx)
             }
-            Response::WebsocketChat(_) => {
-                write_error_page(Status::BadRequest, writer).done().boxed()
+            Response::WebsocketChat(AuthError(init, code)) => {
+                chat::fail(writer, init,
+                    websocket::CloseReason::AuthHttp(code as u16))
             }
             Response::Proxy(ProxyCall::Ready { response }) => {
                 proxy::serialize(writer, response)

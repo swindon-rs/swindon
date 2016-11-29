@@ -2,7 +2,8 @@ mod handshake;
 mod base64;
 mod dispatcher;
 mod proto;
-mod write;
+// not sure this has to be public
+pub mod write;
 // dispatchers
 mod echo;
 
@@ -27,7 +28,7 @@ pub enum CloseReason {
 }
 
 impl CloseReason {
-    fn code(&self) -> u16 {
+    pub fn code(&self) -> u16 {
         use self::CloseReason::*;
         match *self {
             PoolStopped => 4001,
@@ -35,7 +36,7 @@ impl CloseReason {
             AuthHttp(_) => 4500,
         }
     }
-    fn reason(&self) -> &'static str {
+    pub fn reason(&self) -> &'static str {
         use self::CloseReason::*;
         match *self {
             PoolStopped => "session_pool_stopped",
