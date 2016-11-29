@@ -21,12 +21,15 @@ enum Subscription {
     Session,
 }
 
+pub struct Sessions {
+    active: HeapMap<SessionId, Instant, Session>,
+    inactive: HashMap<SessionId, Session>,
+}
 
 pub struct Pool {
     name: SessionPoolName,
     channel: Sender<PoolMessage>,
-    active_sessions: HeapMap<SessionId, Instant, Session>,
-    inactive_sessions: HashMap<SessionId, Session>,
+    sessions: Sessions,
 
     pending_connections: HashMap<Cid, NewConnection>,
     connections: HashMap<Cid, Connection>,
@@ -37,6 +40,34 @@ pub struct Pool {
     new_connection_timeout: Duration,
 }
 
+impl Sessions {
+    fn new() -> Sessions {
+        Sessions {
+            active: HeapMap::new(),
+            inactive: HashMap::new(),
+        }
+    }
+
+    fn get_mut(&mut self, id: &SessionId) -> Option<&mut Session> {
+        if let Some(sess) = self.active.get_mut(id) {
+            Some(sess)
+        } else if let Some(sess) = self.inactive.get_mut(id) {
+            Some(sess)
+        } else {
+            None
+        }
+    }
+
+    fn get(&self, id: &SessionId) -> Option<&Session> {
+        if let Some(sess) = self.active.get(id) {
+            Some(sess)
+        } else if let Some(sess) = self.inactive.get(id) {
+            Some(sess)
+        } else {
+            None
+        }
+    }
+}
 
 impl Pool {
 
@@ -47,8 +78,7 @@ impl Pool {
         Pool {
             name: name,
             channel: channel,
-            active_sessions: HeapMap::new(),
-            inactive_sessions: HashMap::new(),
+            sessions: Sessions::new(),
             pending_connections: HashMap::new(),
             connections: HashMap::new(),
             topics: HashMap::new(),
@@ -99,16 +129,16 @@ impl Pool {
         }
 
         let expire = timestamp + self.new_connection_timeout;
-        if let Some(mut session) = self.inactive_sessions.remove(&session_id) {
+        if let Some(mut session) = self.sessions.inactive.remove(&session_id) {
             session.connections.insert(conn_id);
             session.metadata = metadata;
             copy_attachments(&mut session, &conn.lattices, conn_id);
-            let val = self.active_sessions.insert(session_id.clone(),
+            let val = self.sessions.active.insert(session_id.clone(),
                 timestamp, session);
             debug_assert!(val.is_none());
-        } else if self.active_sessions.contains_key(&session_id) {
-            self.active_sessions.update(&session_id, expire);
-            let mut session = self.active_sessions.get_mut(&session_id).unwrap();
+        } else if self.sessions.active.contains_key(&session_id) {
+            self.sessions.active.update(&session_id, expire);
+            let mut session = self.sessions.active.get_mut(&session_id).unwrap();
             session.connections.insert(conn_id);
             session.metadata = metadata;
             copy_attachments(&mut session, &conn.lattices, conn_id);
@@ -117,7 +147,7 @@ impl Pool {
             session.connections.insert(conn_id);
             session.metadata = metadata;
             copy_attachments(&mut session, &conn.lattices, conn_id);
-            self.active_sessions.insert(session_id.clone(), expire, session);
+            self.sessions.active.insert(session_id.clone(), expire, session);
         }
 
         let ins = self.connections.insert(conn_id, conn);
@@ -138,17 +168,17 @@ impl Pool {
         }
         let session_id = conn.session_id;
 
-        if self.inactive_sessions.contains_key(&session_id) {
+        if self.sessions.inactive.contains_key(&session_id) {
             let conns = {
-                let mut session = self.inactive_sessions.get_mut(&session_id)
+                let mut session = self.sessions.inactive.get_mut(&session_id)
                                   .unwrap();
                 session.connections.remove(&conn_id);
                 session.connections.len()
             };
             if conns == 0 {
-                self.inactive_sessions.remove(&session_id);
+                self.sessions.inactive.remove(&session_id);
             }
-        } if let Some(mut session) = self.active_sessions.get_mut(&session_id)
+        } if let Some(mut session) = self.sessions.active.get_mut(&session_id)
         {
             session.connections.remove(&conn_id);
             // We delete it on inactivation
@@ -162,18 +192,18 @@ impl Pool {
         } else {
             return;
         };
-        if let Some(session) = self.inactive_sessions.remove(sess_id) {
-            self.active_sessions.insert(sess_id.clone(), activity_ts, session);
+        if let Some(session) = self.sessions.inactive.remove(sess_id) {
+            self.sessions.active.insert(sess_id.clone(), activity_ts, session);
         } else {
-            self.active_sessions.update_if_smaller(sess_id, activity_ts)
+            self.sessions.active.update_if_smaller(sess_id, activity_ts)
         }
     }
 
     pub fn cleanup(&mut self, timestamp: Instant) -> Option<Instant> {
-        while self.active_sessions.peek()
+        while self.sessions.active.peek()
             .map(|(_, &x, _)| x < timestamp).unwrap_or(false)
         {
-            let (sess_id, _, session) = self.active_sessions.pop().unwrap();
+            let (sess_id, _, session) = self.sessions.active.pop().unwrap();
             self.channel.send(PoolMessage::InactiveSession {
                 session_id: sess_id.clone(),
                 connections_active: session.connections.len(),
@@ -182,12 +212,11 @@ impl Pool {
             if session.connections.len() == 0 {
                 // TODO(tailhook) Maybe do session cleanup ?
             } else {
-                let val = self.inactive_sessions.insert(sess_id, session);
+                let val = self.sessions.inactive.insert(sess_id, session);
                 debug_assert!(val.is_none());
             }
-            // TODO(tailhook) send inactiity message to IO thread
         }
-        self.active_sessions.peek().map(|(_, &x, _)| x)
+        self.sessions.active.peek().map(|(_, &x, _)| x)
     }
 
     pub fn subscribe(&mut self, cid: Cid, topic: Topic) {
@@ -253,15 +282,14 @@ impl Pool {
             return
         };
 
-        let sess = if let Some(sess) = self.active_sessions.get_mut(&conn.session_id) {
-            sess
-        } else if let Some(sess) = self.inactive_sessions.get_mut(&conn.session_id) {
-            sess
-        } else {
-            error!("Connection {:?} doesn't have corresponding session {:?}",
-                cid, conn.session_id);
-            return
-        };
+        let sess = if let Some(sess) = self.sessions.get_mut(&conn.session_id)
+            {
+                sess
+            } else {
+                error!("Connection {:?} doesn't have corresponding \
+                    session {:?}", cid, conn.session_id);
+                return
+            };
         sess.lattices.entry(namespace.clone())
             .or_insert_with(HashSet::new)
             .insert(cid);
@@ -316,9 +344,7 @@ impl Pool {
                         continue;
                     }
                     // Can't easily abstract all this away because of borrow checker
-                    let sess = if let Some(sess) = self.active_sessions.get(sid) {
-                        sess
-                    } else if let Some(sess) = self.inactive_sessions.get(sid) {
+                    let sess = if let Some(sess) = self.sessions.get(sid) {
                         sess
                     } else {
                         continue;
@@ -343,9 +369,7 @@ impl Pool {
                 });
             }
             // Can't easily abstract all this away because of borrow checker
-            let sess = if let Some(sess) = self.active_sessions.get(&session_id) {
-                sess
-            } else if let Some(sess) = self.inactive_sessions.get(&session_id) {
+            let sess = if let Some(sess) = self.sessions.get(&session_id) {
                 sess
             } else {
                 continue;
@@ -483,42 +507,42 @@ mod test {
     fn disconnect_after_inactive() {
         let (mut pool, mut rx) = pool();
         let (cid, _) = add_u1(&mut pool);
-        assert_eq!(pool.active_sessions.len(), 1);
-        assert_eq!(pool.inactive_sessions.len(), 0);
+        assert_eq!(pool.sessions.active.len(), 1);
+        assert_eq!(pool.sessions.inactive.len(), 0);
         pool.cleanup(Instant::now() + Duration::new(10, 0));
         // New connection timeout is expected to be ~ 60 seconds
-        assert_eq!(pool.active_sessions.len(), 1);
-        assert_eq!(pool.inactive_sessions.len(), 0);
+        assert_eq!(pool.sessions.active.len(), 1);
+        assert_eq!(pool.sessions.inactive.len(), 0);
         pool.cleanup(Instant::now() + Duration::new(120, 0));
         assert!(matches!(get_item(&mut rx),
             PoolMessage::InactiveSession { ref session_id, ..}
             if *session_id == SessionId::from("user1")));
-        assert_eq!(pool.active_sessions.len(), 0);
-        assert_eq!(pool.inactive_sessions.len(), 1);
+        assert_eq!(pool.sessions.active.len(), 0);
+        assert_eq!(pool.sessions.inactive.len(), 1);
         pool.del_connection(cid);
-        assert_eq!(pool.active_sessions.len(), 0);
-        assert_eq!(pool.inactive_sessions.len(), 0);
+        assert_eq!(pool.sessions.active.len(), 0);
+        assert_eq!(pool.sessions.inactive.len(), 0);
     }
 
     #[test]
     fn disconnect_before_inactive() {
         let (mut pool, mut rx) = pool();
         let (cid, _) = add_u1(&mut pool);
-        assert_eq!(pool.active_sessions.len(), 1);
-        assert_eq!(pool.inactive_sessions.len(), 0);
+        assert_eq!(pool.sessions.active.len(), 1);
+        assert_eq!(pool.sessions.inactive.len(), 0);
         pool.cleanup(Instant::now() + Duration::new(10, 0));
         // New connection timeout is expected to be ~ 60 seconds
-        assert_eq!(pool.active_sessions.len(), 1);
-        assert_eq!(pool.inactive_sessions.len(), 0);
+        assert_eq!(pool.sessions.active.len(), 1);
+        assert_eq!(pool.sessions.inactive.len(), 0);
         pool.del_connection(cid);
-        assert_eq!(pool.active_sessions.len(), 1);
-        assert_eq!(pool.inactive_sessions.len(), 0);
+        assert_eq!(pool.sessions.active.len(), 1);
+        assert_eq!(pool.sessions.inactive.len(), 0);
         pool.cleanup(Instant::now() + Duration::new(120, 0));
         assert!(matches!(get_item(&mut rx),
             PoolMessage::InactiveSession { ref session_id, ..}
             if *session_id == SessionId::from("user1")));
-        assert_eq!(pool.active_sessions.len(), 0);
-        assert_eq!(pool.inactive_sessions.len(), 0);
+        assert_eq!(pool.sessions.active.len(), 0);
+        assert_eq!(pool.sessions.inactive.len(), 0);
     }
 
     trait Builder {
