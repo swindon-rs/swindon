@@ -85,9 +85,7 @@ impl Response {
                 .map_err(|e| e.into())
                 .and_then(move |resp| {
                     let resp = if resp.status != Status::Ok {
-                        if resp.status != Status::Forbidden &&
-                           resp.status != Status::Unauthorized
-                        {
+                        if !chat::good_status(resp.status) {
                             warn!("Bad code returned from \
                                 authorize_connection: {:?} {}",
                                 resp.status, resp.reason);
@@ -172,8 +170,8 @@ impl<S: Io + AsRawFd + Send + 'static> GenericResponse<S> for Serializer {
                 chat::negotiate(writer, init, self.handle, session_api, rx)
             }
             Response::WebsocketChat(AuthError(init, code)) => {
-                chat::fail(writer, init,
-                    websocket::CloseReason::AuthHttp(code as u16))
+                chat::fail(writer, init, self.handle,
+                    websocket::CloseReason::AuthHttp(code.code()))
             }
             Response::Proxy(ProxyCall::Ready { response }) => {
                 proxy::serialize(writer, response)

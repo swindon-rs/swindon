@@ -50,3 +50,17 @@ pub fn serialize_cid(cid: &Cid) -> String {
 pub fn parse_cid(raw: String) -> Cid {
     Cid(raw.parse().unwrap())
 }
+
+/// Returns true when status is one in the set which backend is allowed
+/// (and expected) to return
+///
+/// All http statuses returned from a backend that doesn't match this list
+/// will be logged.
+pub fn good_status(status: Status) -> bool {
+    matches!(status,
+        Status::Forbidden|
+        Status::Unauthorized|
+        Status::NotFound|
+        Status::Gone|
+        Status::BadRequest)
+}

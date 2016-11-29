@@ -47,6 +47,7 @@ mod websocket;
 mod chat;
 mod dev;
 mod startup;
+mod flush_and_wait;
 
 // Utils
 mod short_circuit;

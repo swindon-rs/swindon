@@ -1,5 +1,6 @@
 //! Chat protocol.
 use std::io;
+use std::time::Duration;
 
 use futures::{Future, BoxFuture};
 use futures::stream::Stream;
@@ -17,6 +18,7 @@ use super::message;
 use super::processor::ConnectionMessage;
 use super::api::SessionAPI;
 use Pickler;
+use flush_and_wait::FlushAndWait;
 
 pub fn negotiate<S>(mut response: Pickler<S>, init: ws::Init, remote: Remote,
     session_api: SessionAPI, channel: Receiver<ConnectionMessage>)
@@ -45,6 +47,7 @@ pub fn negotiate<S>(mut response: Pickler<S>, init: ws::Init, remote: Remote,
             ws::WebsockProto::new(socket, dispatcher, channel)
             .map_err(|e| info!("Websocket error: {}", e))
         });
+        // Ensure that original http server thinks connection is not useful
         Err(io::Error::new(io::ErrorKind::BrokenPipe,
                            "Connection is stolen for websocket"))
     })
@@ -52,8 +55,8 @@ pub fn negotiate<S>(mut response: Pickler<S>, init: ws::Init, remote: Remote,
     .boxed()
 }
 
-pub fn fail<S>(mut response: Pickler<S>,
-    init: ws::Init, reason: ws::CloseReason)
+pub fn fail<S>(mut response: Pickler<S>, init: ws::Init, remote: Remote,
+    reason: ws::CloseReason)
     -> BoxFuture<IoBuf<S>, HttpError>
     where S: Io + Send + 'static
 {
@@ -65,9 +68,11 @@ pub fn fail<S>(mut response: Pickler<S>,
     response.steal_socket()
     .and_then(move |mut socket| {
         socket.out_buf.write_close(reason.code(), reason.reason());
-        socket.flushed()
-    }).and_then(|_| {
-        // Ensure that server break connection
+        remote.spawn(move |handle| {
+            FlushAndWait::new(socket, handle, Duration::new(1, 0))
+        });
+
+        // Ensure that original http server thinks connection is not useful
         Err(io::Error::new(io::ErrorKind::BrokenPipe,
                            "Connection is stolen for websocket"))
     })

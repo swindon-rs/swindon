@@ -142,6 +142,9 @@ impl<D, S: Io, R> Future for WebsockProto<S, D, R>
             if self.recv.is_none() {
                 // No receiver means connection has been already closed
                 if self.io.out_buf.len() == 0 {
+                    // TODO(tailhook) unfortunately this doesn't mean that
+                    // close paacket is received on other side, we need
+                    // to use same strategy as in FlushAndWait
                     return Ok(Async::Ready(()));
                 } else {
                     return Ok(Async::NotReady);

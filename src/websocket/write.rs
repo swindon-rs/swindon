@@ -35,7 +35,7 @@ impl WriteExt for Buf {
     fn write_close(&mut self, code: u16, reason: &str) {
         let data = reason.as_bytes();
         assert!(data.len() <= 123);
-        self.extend(&[0x8, data.len() as u8,
+        self.extend(&[0x88, (data.len() + 2) as u8,
                       (code >> 8) as u8, (code & 0xFF) as u8]);
         self.extend(data);
     }
