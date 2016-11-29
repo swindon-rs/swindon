@@ -1,6 +1,7 @@
 use std::sync::Arc;
 use std::time::{Instant, Duration};
 use std::collections::{HashMap, HashSet};
+use std::collections::hash_map::Entry::Occupied;
 
 use rustc_serialize::json::Json;
 use futures::sync::mpsc::{UnboundedSender as Sender};
@@ -277,7 +278,7 @@ impl Pool {
             conn.lattices.insert(namespace);
             return
         } else {
-            error!("Attach of {:?} for non-existing connection {:?}",
+            info!("Attach of {:?} for non-existing connection {:?}",
                    namespace, cid);
             return
         };
@@ -306,7 +307,38 @@ impl Pool {
     }
 
     pub fn lattice_detach(&mut self, cid: Cid, namespace: Namespace) {
-        unimplemented!();
+        let conn = if let Some(conn) = self.connections.get_mut(&cid) {
+            conn
+        } else if let Some(conn) = self.pending_connections.get_mut(&cid) {
+            conn.lattices.insert(namespace);
+            return
+        } else {
+            info!("Detach of {:?} for non-existing connection {:?}",
+                   namespace, cid);
+            return
+        };
+
+        let sess = if let Some(sess) = self.sessions.get_mut(&conn.session_id)
+            {
+                sess
+            } else {
+                error!("Connection {:?} doesn't have corresponding \
+                    session {:?}", cid, conn.session_id);
+                return
+            };
+
+        if let Occupied(mut e) = sess.lattices.entry(namespace.clone()) {
+            e.get_mut().remove(&cid);
+            if e.get().len() == 0 {
+                e.remove_entry();
+            }
+        } else {
+            info!("Never subscribed {:?} to {:?}", cid, conn.session_id);
+        }
+
+        conn.lattices.remove(&namespace);
+
+        // TODO(tailhook) maybe cleanup lattices now
     }
 
     pub fn lattice_update(&mut self,
