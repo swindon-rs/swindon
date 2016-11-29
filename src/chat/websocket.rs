@@ -31,6 +31,7 @@ pub fn negotiate<S>(mut response: Pickler<S>, init: ws::Init, remote: Remote,
     .and_then(move |socket: IoBuf<S>| {
         remote.spawn(move |handle| {
             let channel = channel.map(|msg| {
+                
                 ws::OutFrame::Text(json::encode(&msg).unwrap())
             });
             let dispatcher = ChatDispatcher(session_api, handle.clone());

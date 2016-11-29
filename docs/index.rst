@@ -14,6 +14,7 @@ Contents:
 
    rust_api/swindon/index
    config/index
+   tangle/index
 
 
 Indices and tables

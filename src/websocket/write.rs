@@ -3,6 +3,7 @@ use tk_bufstream::Buf;
 
 pub trait WriteExt {
     fn write_packet(&mut self, opcode: u8, data: &[u8]);
+    fn write_close(&mut self, code: u16, reason: &str);
 }
 
 impl WriteExt for Buf {
@@ -29,6 +30,13 @@ impl WriteExt for Buf {
                     (len & 0xFF) as u8]);
             }
         }
+        self.extend(data);
+    }
+    fn write_close(&mut self, code: u16, reason: &str) {
+        let data = reason.as_bytes();
+        assert!(data.len() <= 123);
+        self.extend(&[0x8, data.len() as u8,
+                      (code >> 8) as u8, (code & 0xFF) as u8]);
         self.extend(data);
     }
 }

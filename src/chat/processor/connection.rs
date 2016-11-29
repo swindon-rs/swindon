@@ -6,8 +6,9 @@ use futures::sync::mpsc::{UnboundedSender as Sender};
 
 use chat::Cid;
 use intern::{Topic, SessionId, Lattice as Namespace, LatticeKey};
-use super::ConnectionMessage;
+use super::{ConnectionMessage};
 use super::lattice;
+use websocket::CloseReason;
 
 
 pub struct NewConnection {
@@ -55,6 +56,10 @@ impl NewConnection {
     pub fn message(&mut self, topic: Topic, data: Arc<Json>) {
         self.message_buffer.push((topic, data));
     }
+    pub fn stop(&mut self, reason: CloseReason) {
+        self.channel.send(ConnectionMessage::StopSocket(reason))
+            .map_err(|e| info!("Error sending stop message: {}", e)).ok();
+    }
 }
 
 impl Connection {
@@ -71,5 +76,9 @@ impl Connection {
             namespace.clone(), update.clone());
         self.channel.send(msg)
             .map_err(|e| info!("Error sending lattice: {}", e)).ok();
+    }
+    pub fn stop(&mut self, reason: CloseReason) {
+        self.channel.send(ConnectionMessage::StopSocket(reason))
+            .map_err(|e| info!("Error sending stop message: {}", e)).ok();
     }
 }

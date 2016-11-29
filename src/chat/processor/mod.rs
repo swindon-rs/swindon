@@ -23,6 +23,7 @@ use intern::LatticeKey;
 use chat::Cid;
 use chat::message::Meta;
 use chat::error::MessageError;
+use websocket::CloseReason;
 
 mod main;
 mod pool;
@@ -57,6 +58,8 @@ pub enum ConnectionMessage {
     Lattice(Namespace, Arc<HashMap<LatticeKey, lattice::Values>>),
     /// Error response to websocket call
     Error(Meta, MessageError),
+    /// Force websocket stop
+    StopSocket(CloseReason),
 }
 
 #[derive(Debug)]
@@ -187,9 +190,15 @@ impl Encodable for ConnectionMessage {
             }
             Error(ref meta, ref err) => {
                 s.emit_seq(3, |s| {
-                    s.emit_seq_elt(0, |s| s.emit_str("Error"))?;
+                    s.emit_seq_elt(0, |s| s.emit_str("error"))?;
                     s.emit_seq_elt(1, |s| meta.encode(s))?;
                     s.emit_seq_elt(2, |s| err.encode(s))
+                })
+            }
+            StopSocket(ref reason) => {
+                s.emit_seq(2, |s| {
+                    s.emit_seq_elt(0, |s| s.emit_str("stop"))?;
+                    s.emit_seq_elt(1, |s| reason.encode(s))
                 })
             }
         }

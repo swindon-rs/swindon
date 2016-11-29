@@ -3,12 +3,13 @@ use futures::sync::mpsc::{UnboundedSender as Sender};
 use futures::sync::mpsc::{UnboundedReceiver as Receiver};
 use tk_bufstream::{Buf};
 
-use super::{Frame, Error};
+use super::{Frame, Error, CloseReason};
 use websocket::write::WriteExt;
 
 pub enum OutFrame {
     Text(String),
     Binary(Vec<u8>),
+    Close(CloseReason),
 }
 
 

@@ -14,6 +14,7 @@ use super::session::Session;
 use super::connection::{NewConnection, Connection};
 use super::heap::HeapMap;
 use super::lattice::{Lattice, Delta};
+use websocket::CloseReason;
 
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
@@ -414,6 +415,14 @@ impl Pool {
                     }
                 }
             }
+        }
+    }
+    pub fn stop(self) {
+        for (_, mut conn) in self.pending_connections {
+            conn.stop(CloseReason::PoolStopped);
+        }
+        for (_, mut conn) in self.connections {
+            conn.stop(CloseReason::PoolStopped);
         }
     }
 }

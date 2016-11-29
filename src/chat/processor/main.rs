@@ -81,7 +81,9 @@ pub fn run(rx: Receiver<Event>) {
                         Pool::new(pool, config, channel));
                 }
                 StopSessionPool => {
-                    unimplemented!();
+                    if let Some(pool) = pools.remove(&pool) {
+                        pool.stop();
+                    }
                 }
                 _ => {
                     // For all other actions we resolve pool first

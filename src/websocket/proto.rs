@@ -8,6 +8,7 @@ use futures::stream::{Stream};
 use tokio_core::io::Io;
 use tk_bufstream::IoBuf;
 use byteorder::{BigEndian, ByteOrder};
+use websocket::write::WriteExt;
 
 use super::{Dispatcher, ImmediateReplier, OutFrame};
 use self::Frame::*;
@@ -60,7 +61,7 @@ quick_error! {
 pub struct WebsockProto<S: Io, D: Dispatcher, R> {
     dispatcher: D,
     io: IoBuf<S>,
-    recv: R,
+    recv: Option<R>,
 }
 
 pub enum Frame<'a> {
@@ -137,6 +138,16 @@ impl<D, S: Io, R> Future for WebsockProto<S, D, R>
         loop {
             self.poll_recv()?;
             self.io.flush()?;
+
+            if self.recv.is_none() {
+                // No receiver means connection has been already closed
+                if self.io.out_buf.len() == 0 {
+                    return Ok(Async::Ready(()));
+                } else {
+                    return Ok(Async::NotReady);
+                }
+            }
+
             let packet_len = if let Ready((frame, bytes)) =
                 parse_frame(&mut self.io.in_buf)?
             {
@@ -174,23 +185,41 @@ impl<S: Io, D, R> WebsockProto<S, D, R>
         WebsockProto {
             io: sock,
             dispatcher: dispatcher,
-            recv: remote,
+            recv: Some(remote),
         }
     }
 
     fn poll_recv(&mut self) -> Result<(), Error> {
-        while let Ready(Some(frame)) = self.recv.poll()
-            .map_err(|()| Error::Closed)?
+        let mut should_close = false;
         {
-            let mut imm = ImmediateReplier::new(&mut self.io.out_buf);
-            match frame {
-                OutFrame::Text(val) => {
-                    imm.text(&val);
-                }
-                OutFrame::Binary(val) => {
-                    imm.binary(&val);
+            let chan = if let Some(chan) = self.recv.as_mut() {
+                chan
+            } else {
+                return Ok(());
+            };
+            while let Ready(Some(frame)) = chan.poll()
+                .map_err(|()| Error::Closed)?
+            {
+                match frame {
+                    OutFrame::Text(val) => {
+                        self.io.out_buf.write_packet(0x1, val.as_bytes());
+                    }
+                    OutFrame::Binary(val) => {
+                        self.io.out_buf.write_packet(0x2, &val);
+                    }
+                    OutFrame::Close(reason) => {
+                        self.io.out_buf.write_close(
+                            reason.code(), reason.reason());
+                        // Close channel immediately
+                        should_close = true;
+                        // TODO(tailhook) set timeout for buffer flush
+                        break;
+                    }
                 }
             }
+        }
+        if should_close {
+            self.recv = None;
         }
         Ok(())
     }
