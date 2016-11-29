@@ -32,7 +32,7 @@ httpbin = { git="https://github.com/tailhook/httpbin-rs", rev="afb7f68" }
 slab = "0.3.0"
 matches = "0.1.4"
 assert_matches = "1.0.1"
-string-intern = { git="https://github.com/tailhook/string-intern", rev="ffe572b" }
+string-intern = { git="https://github.com/tailhook/string-intern", rev="d7b8c24" }
 rand = "0.3.14"
 
 [replace]
