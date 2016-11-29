@@ -43,7 +43,6 @@ function open() {
         clearTimeout(timeout_token)
         timeout_token = null
     }
-    timeout = 50
     if(current_room) {
         call('enter_room', current_room)
         let room = current_room
@@ -51,8 +50,7 @@ function open() {
     }
 }
 
-function error(e) {
-    // TODO(tailhook) update state
+function close(e) {
     if(timeout_token) {
         clearTimeout(timeout_token);
     } else {
@@ -65,16 +63,16 @@ function error(e) {
              (timeout/1000).toFixed(0) + " sec...")
     render()
     timeout_token = setTimeout(timeout, reconnect)
-    console.error("Websocket error", e)
+    console.error("Websocket closed", e)
 }
 
-function reconnect(e) {
-    if(e) {
-        console.error("Websocket close", e)
+function reconnect() {
+    if(timeout_token) {
+        clearTimeout(timeout_token);
+        timeout_token = null;
     }
     if(websocket) {
         websocket.onclose = null
-        websocket.onerror = null
         try {
             websocket.close()
         } catch(e) {}
@@ -84,8 +82,7 @@ function reconnect(e) {
     }
     websocket = new WebSocket("ws://" + location.host + "/")
     websocket.onopen = open
-    websocket.onclose = reconnect
-    websocket.onerror = error
+    websocket.onclose = close
     websocket.onmessage = message
 }
 
@@ -121,6 +118,11 @@ function update_rooms(data) {
 
 function message(ev) {
     var data = JSON.parse(ev.data)
+
+    // Not doing this on connect to be sure not to reconnect too fast
+    // when connection doesn't actually work
+    timeout = 50
+
     switch(data[0]) {
         case 'hello':
             metadata = data[2]
