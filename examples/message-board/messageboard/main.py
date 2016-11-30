@@ -1,3 +1,4 @@
+import os
 import logging
 import uvloop
 from censusname import generate as make_name
@@ -34,4 +35,9 @@ def main():
         return True
 
 
-    app.run(host="0.0.0.0", port=8082, loop=loop)
+    if os.environ.get("LISTEN_FDS") == '1':
+        import socket
+        sock = socket.fromfd(3, socket.AF_INET, socket.SOCK_STREAM)
+        app.run(host=None, port=None, sock=sock, loop=loop)
+    else:
+        app.run(host="0.0.0.0", port=8082, loop=loop)

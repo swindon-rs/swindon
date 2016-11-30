@@ -201,6 +201,9 @@ commands:
       board: !Command
         container: message-board
         work-dir: examples/message-board
+        environ:
+          LISTEN_FDS: 1
+        pass-tcp-socket: 127.0.0.1:8082
         run:
         - python3
         - -m
