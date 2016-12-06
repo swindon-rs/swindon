@@ -111,6 +111,20 @@ commands:
     - --verbose
     - --config=example.yaml
 
+  bench-run: &run !Command
+    container: ubuntu
+    description: Run swindon for benchmarks (--release and specific config)
+    environ:
+      RUST_BACKTRACE: 1
+    run:
+    - cargo
+    - run
+    - --release
+    - --bin=swindon
+    - "--"
+    - --verbose
+    - --config=example.yaml
+
   devd: !Command
     container: ubuntu
     description: Run swindon-dev (useless without parameters)
