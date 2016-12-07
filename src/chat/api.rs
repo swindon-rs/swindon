@@ -16,7 +16,7 @@ use rand::thread_rng;
 
 use intern::SessionId;
 use websocket::Base64;
-use config::{Config, SessionPool};
+use config::{Config, SessionPool, InactivityTimeouts};
 use super::{Cid, ProcessorPool};
 use super::{serialize_cid};
 use super::router::{MessageRouter, url_for};
@@ -24,17 +24,18 @@ use super::processor::{Action, ConnectionMessage, PoolMessage};
 use super::message::{self, Meta, Args, Kwargs};
 use super::error::MessageError;
 
-// min & max session activity seconds;
-// TODO: get from config; store in ChatAPI
-const MIN_SESSION_ACTIVE: u64 = 1;
-const MAX_SESSION_ACTIVE: u64 = 30;
+// TODO: make ChatAPI Pool
+//  bound to session pool config
+
 
 pub struct ChatAPI {
     // shared between connections
     client: HttpClient,         // gets cloned for each request;
     router: MessageRouter,      // singleton per handler endpoint;
     proc_pool: ProcessorPool,   // singleton per handler endpoint;
+    inactivity_timeouts: Arc<InactivityTimeouts>,
 }
+
 
 pub struct SessionAPI {
     api: ChatAPI,
@@ -46,14 +47,16 @@ pub struct SessionAPI {
 }
 
 impl ChatAPI {
+
     pub fn new(http_client: HttpClient, router: MessageRouter,
-        proc_pool: ProcessorPool)
+        proc_pool: ProcessorPool, inactivity_timeouts: Arc<InactivityTimeouts>)
         -> ChatAPI
     {
         ChatAPI {
             client: http_client,
             router: router,
             proc_pool: proc_pool,
+            inactivity_timeouts: inactivity_timeouts,
         }
     }
 
@@ -73,6 +76,8 @@ impl ChatAPI {
             .find(|&&(ref k, _)| k == "Authorization")
             .map(|&(_, ref v)| v.clone())
             .unwrap_or("".to_string());
+        // TODO: bypass extra URL params / Headers;
+        //  (make it configurable?)
 
         let mut data = Kwargs::new();
         // TODO: parse cookie string to hashmap;
@@ -144,11 +149,8 @@ impl ChatAPI {
     }
 
     /// Update session activity timeout.
-    fn update_activity(&self, conn_id: Cid, seconds: u64) {
-        let seconds = cmp::max(
-            cmp::min(seconds, MAX_SESSION_ACTIVE),
-            MIN_SESSION_ACTIVE);
-        let timestamp = Instant::now() + Duration::from_secs(seconds);
+    fn update_activity(&self, conn_id: Cid, seconds: Duration) {
+        let timestamp = Instant::now() + seconds;
         self.proc_pool.send(Action::UpdateActivity {
             conn_id: conn_id,
             timestamp: timestamp,
@@ -165,8 +167,19 @@ impl SessionAPI {
     }
 
     /// 'Session active' notification for chat processor.
-    pub fn update_activity(&self, sec: u64) {
-        self.api.update_activity(self.conn_id.clone(), sec)
+    pub fn update_activity(&self, sec: Option<u64>) {
+        let normalized = match sec {
+            Some(v) => {
+                let min = self.api.inactivity_timeouts.client_min;
+                let max = self.api.inactivity_timeouts.client_max;
+                cmp::max(cmp::min(v, max), min)
+            }
+            None => {
+                self.api.inactivity_timeouts.client_default
+            }
+        };
+        self.api.update_activity(self.conn_id.clone(),
+            Duration::from_secs(normalized))
     }
 
     /// Backend method call.

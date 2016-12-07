@@ -1,3 +1,4 @@
+use std::sync::Arc;
 use quire::validate::{Structure, Sequence, Numeric};
 
 use super::listen::{self, ListenSocket};
@@ -7,7 +8,7 @@ use super::http;
 pub struct SessionPool {
     pub listen: ListenSocket,
     pub inactivity_handlers: Vec<http::Destination>,
-    pub inactivity: InactivityTimeouts,
+    pub inactivity: Arc<InactivityTimeouts>,
 }
 
 #[derive(RustcDecodable, Debug, PartialEq, Eq)]

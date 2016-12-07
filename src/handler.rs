@@ -119,8 +119,11 @@ impl Main {
                         let router = MessageRouter(chat.clone(), cfg.clone());
                         let pool = self.chat_processor.read().unwrap()
                             .pool(&chat.session_pool);
+                        let sess_cfg = cfg.session_pools
+                            .get(&chat.session_pool).unwrap(); // FIXME: unwrap
                         let chat_api = chat::ChatAPI::new(
-                            self.http_client.clone(), router, pool);
+                            self.http_client.clone(), router, pool,
+                            sess_cfg.inactivity.clone());
                         Response::WebsocketChat(
                             chat::ChatInit::Prepare(init, chat_api))
                     }
