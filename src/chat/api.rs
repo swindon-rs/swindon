@@ -78,6 +78,7 @@ impl ChatAPI {
             .unwrap_or("".to_string());
         // TODO: bypass extra URL params / Headers;
         //  (make it configurable?)
+        let url_qs = req.path.splitn(2, "?").nth(1).unwrap_or("").to_string();
 
         let mut data = Kwargs::new();
         // TODO: parse cookie string to hashmap;
@@ -85,6 +86,8 @@ impl ChatAPI {
             Json::String(http_cookies));
         data.insert("http_authorization".into(),
             Json::String(http_auth));
+        data.insert("url_querystring".into(),
+            Json::String(url_qs));
 
         let payload = message::encode_auth(&serialize_cid(&conn_id), &data);
 

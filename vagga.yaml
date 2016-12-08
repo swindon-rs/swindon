@@ -111,7 +111,7 @@ commands:
     - --verbose
     - --config=example.yaml
 
-  bench-run: &run !Command
+  bench-run: &bench-run !Command
     container: ubuntu
     description: Run swindon for benchmarks (--release and specific config)
     environ:
