@@ -15,9 +15,6 @@ pub type DiskPoolName = Symbol<DiskPoolValidator>;
 struct SessionPoolValidator;
 pub type SessionPoolName = Symbol<SessionPoolValidator>;
 
-struct OldValidator;
-pub type Atom = Symbol<OldValidator>;
-
 struct SessionIdValidator;
 pub type SessionId = Symbol<SessionIdValidator>;
 
@@ -124,19 +121,6 @@ impl Validator for SessionPoolValidator {
     }
     fn display(value: &Symbol<Self>, fmt: &mut fmt::Formatter) -> fmt::Result {
         write!(fmt, "sessionpool{:?}", value.as_ref())
-    }
-}
-
-impl Validator for OldValidator {
-    type Err = BadIdent;
-    fn validate_symbol(val: &str) -> Result<(), Self::Err> {
-        if !valid_ident(val) {
-            return Err(BadIdent::InvalidChar);
-        }
-        Ok(())
-    }
-    fn display(value: &Symbol<Self>, fmt: &mut fmt::Formatter) -> fmt::Result {
-        write!(fmt, "old{:?}", value.as_ref())
     }
 }
 
