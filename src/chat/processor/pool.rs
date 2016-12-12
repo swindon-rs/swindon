@@ -73,7 +73,7 @@ impl Sessions {
 
 impl Pool {
 
-    pub fn new(name: SessionPoolName, _cfg: Arc<config::SessionPool>,
+    pub fn new(name: SessionPoolName, cfg: Arc<config::SessionPool>,
         channel: Sender<PoolMessage>)
         -> Pool
     {
@@ -85,9 +85,8 @@ impl Pool {
             connections: HashMap::new(),
             topics: HashMap::new(),
             lattices: HashMap::new(),
-
-            // TODO(tailhook) from config
-            new_connection_timeout: Duration::new(60, 0),
+            new_connection_timeout: Duration::from_secs(
+                cfg.inactivity.new_connection),
         }
     }
 
