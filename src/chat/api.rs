@@ -74,20 +74,14 @@ impl ChatAPI {
             .collect::<String>();
         let http_auth = req.headers.iter()
             .find(|&&(ref k, _)| k == "Authorization")
-            .map(|&(_, ref v)| v.clone())
-            .unwrap_or("".to_string());
-        // TODO: bypass extra URL params / Headers;
-        //  (make it configurable?)
+            .map(|&(_, ref v)| v.clone());
         let url_qs = req.path.splitn(2, "?").nth(1).unwrap_or("").to_string();
 
-        let mut data = Kwargs::new();
-        // TODO: parse cookie string to hashmap;
-        data.insert("http_cookie".into(),
-            Json::String(http_cookies));
-        data.insert("http_authorization".into(),
-            Json::String(http_auth));
-        data.insert("url_querystring".into(),
-            Json::String(url_qs));
+        let data = message::AuthData {
+            http_cookie: Some(http_cookies),
+            http_authorization: http_auth,
+            url_querystring: url_qs,
+        };
 
         let payload = message::encode_auth(&serialize_cid(&conn_id), &data);
 

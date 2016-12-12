@@ -97,7 +97,7 @@ pub fn get_active(meta: &Meta) -> Option<Option<u64>>   // XXX
 }
 
 /// Encode to JSON Auth message.
-pub fn encode_auth(connection_id: &String, data: &Kwargs) -> String {
+pub fn encode_auth(connection_id: &String, data: &AuthData) -> String {
     json::encode(&Auth(connection_id, data)).unwrap()
 }
 
@@ -107,9 +107,16 @@ pub fn encode_call(meta: &Meta, args: &Args, kwargs: &Kwargs) -> String {
     json::encode(&Call(meta, args, kwargs)).unwrap()
 }
 
+#[derive(RustcEncodable)]
+pub struct AuthData {
+    pub http_cookie: Option<String>,
+    pub http_authorization: Option<String>,
+    pub url_querystring: String,
+}
+
 // Private tools
 
-struct Auth<'a>(&'a String, &'a Kwargs);
+struct Auth<'a>(&'a String, &'a AuthData);
 
 impl<'a> Encodable for Auth<'a> {
     fn encode<S: Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
@@ -149,7 +156,7 @@ impl<'a> Encodable for Call<'a> {
 mod test {
     use rustc_serialize::json::Json;
 
-    use chat::message::{self, Meta, Args, Kwargs};
+    use chat::message::{self, Meta, Args, Kwargs, AuthData};
     use super::ValidationError as V;
 
     #[test]
@@ -207,16 +214,26 @@ mod test {
 
     #[test]
     fn encode_auth() {
-        let res = message::encode_auth(&"conn:1".to_string(), &Kwargs::new());
-        assert_eq!(res, r#"[{"connection_id":"conn:1"},[],{}]"#);
+        let res = message::encode_auth(&"conn:1".to_string(), &AuthData{
+            http_cookie: None, http_authorization: None,
+            url_querystring: "".to_string(),
+        });
+        assert_eq!(res, concat!(
+            r#"[{"connection_id":"conn:1"},[],{"#,
+            r#""http_cookie":null,"http_authorization":null,"#,
+            r#""url_querystring":""}]"#));
 
-        let mut kw = Kwargs::new();
-        kw.insert("http_cookie".into(), Json::String("auth=ok".into()));
+        let kw = AuthData {
+            http_cookie: Some("auth=ok".to_string()),
+            http_authorization: None,
+            url_querystring: "".to_string(),
+        };
 
         let res = message::encode_auth(&"conn:2".to_string(), &kw);
         assert_eq!(res, concat!(
             r#"[{"connection_id":"conn:2"},"#,
-            r#"[],{"http_cookie":"auth=ok"}]"#));
+            r#"[],{"http_cookie":"auth=ok","#,
+            r#""http_authorization":null,"url_querystring":""}]"#));
     }
 
     #[test]
