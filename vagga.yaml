@@ -78,7 +78,7 @@ commands:
     description: Run Cargo command
     run: [cargo]
 
-  build: !Command
+  make: !Command
     container: ubuntu
     description: Build project
     run: [cargo, build]
@@ -202,7 +202,7 @@ commands:
 
   example-message-board: !Supervise
     description: Run swindon and message board example
-    prerequisites: [build]
+    prerequisites: [make]
     children:
       swindon: !Command
         container: ubuntu
@@ -225,7 +225,7 @@ commands:
 
   example-multi-user-chat: !Supervise
     description: Run swindon and multi-user-chat example
-    prerequisites: [build]
+    prerequisites: [make]
     children:
       swindon: !Command
         container: ubuntu
