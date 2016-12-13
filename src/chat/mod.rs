@@ -1,3 +1,5 @@
+use std::str::FromStr;
+use std::num::ParseIntError;
 use futures::sync::mpsc::{UnboundedReceiver as Receiver};
 use minihttp::Status;
 
@@ -47,8 +49,12 @@ pub fn serialize_cid(cid: &Cid) -> String {
     format!("{}", cid.0)
 }
 
-pub fn parse_cid(raw: String) -> Cid {
-    Cid(raw.parse().unwrap())
+impl FromStr for Cid {
+    type Err = ParseIntError;
+
+    fn from_str(src: &str) -> Result<Cid, Self::Err> {
+        src.parse().map(|x| Cid(x))
+    }
 }
 
 /// Returns true when status is one in the set which backend is allowed

@@ -1,5 +1,5 @@
 //! Pull API handler.
-use std::str;
+use std::str::{self, FromStr};
 use std::sync::Arc;
 
 use futures::{Finished, finished};
@@ -17,7 +17,7 @@ use response::DebugInfo;
 use default_error_page::write_error_page;
 use intern::{Topic, Lattice, BadIdent};
 
-use super::{parse_cid, ProcessorPool};
+use super::{Cid, ProcessorPool};
 use super::processor::{Action, Delta};
 
 
@@ -65,22 +65,19 @@ impl ChatBackend {
             return Status::BadRequest;
         }
         let action = match route {
-            TopicSubscribe(client_id, topic) => {
-                let cid = parse_cid(client_id);
+            TopicSubscribe(conn_id, topic) => {
                 Action::Subscribe {
-                    conn_id: cid,
+                    conn_id: conn_id,
                     topic: topic,
                 }
             }
-            TopicUnsubscribe(client_id, topic) => {
-                let cid = parse_cid(client_id);
+            TopicUnsubscribe(conn_id, topic) => {
                 Action::Unsubscribe {
-                    conn_id: cid,
+                    conn_id: conn_id,
                     topic: topic,
                 }
             }
-            LatticeSubscribe(client_id, namespace) => {
-                let cid = parse_cid(client_id);
+            LatticeSubscribe(conn_id, namespace) => {
                 let delta = match decode_delta(req) {
                     Ok(delta) => delta,
                     Err(err) => {
@@ -94,14 +91,13 @@ impl ChatBackend {
                 });
                 Action::Attach {
                     namespace: namespace,
-                    conn_id: cid,
+                    conn_id: conn_id,
                 }
             }
-            LatticeUnsubscribe(client_id, namespace) => {
-                let cid = parse_cid(client_id);
+            LatticeUnsubscribe(conn_id, namespace) => {
                 Action::Detach {
                     namespace: namespace,
-                    conn_id: cid,
+                    conn_id: conn_id,
                 }
             }
             TopicPublish(topic) => {
@@ -187,11 +183,8 @@ fn match_route(method: &Method, path: &str) -> Result<ChatRoute, MatchError> {
         }
         (&Put, Some("connection")) |
         (&Delete, Some("connection")) => {
-            let id = match it.next() {
-                Some(id) if id.len() > 0 => id,
-                _ => return Err(InvalidRoute),
-            };
-            // TODO: validate ConnectionID (/ClientID)
+            let str_id = it.next().ok_or(InvalidRoute)?;
+            let conn_id = Cid::from_str(str_id).map_err(|_| InvalidRoute)?;
 
             let kind = it.next();
             if !it.next().map(|x| x.len() > 0).unwrap_or(false) {
@@ -200,24 +193,22 @@ fn match_route(method: &Method, path: &str) -> Result<ChatRoute, MatchError> {
             match kind {
                 Some("subscriptions") => {
                     let (_, topic) = path.split_at(
-                        "/v1/connection//subscriptions/".len() + id.len());
+                        "/v1/connection//subscriptions/".len() + str_id.len());
                     let topic = topic.replace("/", ".").parse()?;
                     if method == &Put {
-                        TopicSubscribe(id.to_string(), topic)
+                        TopicSubscribe(conn_id, topic)
                     } else {
-                        TopicUnsubscribe(id.to_string(), topic)
+                        TopicUnsubscribe(conn_id, topic)
                     }
                 }
                 Some("lattices") => {
                     let (_, namespace) = path.split_at(
-                        "/v1/connection//lattices/".len() + id.len());
+                        "/v1/connection//lattices/".len() + str_id.len());
                     let namespace = namespace.replace("/", ".").parse()?;
                     if method == &Put {
-                        LatticeSubscribe(
-                            id.to_string(), namespace)
+                        LatticeSubscribe(conn_id, namespace)
                     } else {
-                        LatticeUnsubscribe(
-                            id.to_string(), namespace)
+                        LatticeUnsubscribe(conn_id, namespace)
                     }
                 }
                 _ => return Err(UnknownRoute)
@@ -231,10 +222,10 @@ fn match_route(method: &Method, path: &str) -> Result<ChatRoute, MatchError> {
 
 #[derive(Debug, PartialEq)]
 pub enum ChatRoute {
-    TopicSubscribe(String, Topic),
-    TopicUnsubscribe(String, Topic),
-    LatticeSubscribe(String, Lattice),
-    LatticeUnsubscribe(String, Lattice),
+    TopicSubscribe(Cid, Topic),
+    TopicUnsubscribe(Cid, Topic),
+    LatticeSubscribe(Cid, Lattice),
+    LatticeUnsubscribe(Cid, Lattice),
     TopicPublish(Topic),
     LatticeUpdate(Lattice),
 }
@@ -257,11 +248,13 @@ impl ChatRoute {
 
 #[cfg(test)]
 mod test {
+    use std::str::FromStr;
     use minihttp::enums::Method;
     use string_intern::Symbol;
 
     use super::match_route;
     use super::ChatRoute::*;
+    use super::super::Cid;
 
     #[test]
     fn match_topic_publish() {
@@ -279,34 +272,34 @@ mod test {
 
     #[test]
     fn match_topic_subscribe() {
-        let path = "/v1/connection/abcde/subscriptions/test-chat/room1";
+        let path = "/v1/connection/123/subscriptions/test-chat/room1";
         let route = match_route(&Method::Put, path).unwrap();
         assert_eq!(route, TopicSubscribe(
-            "abcde".to_string(), Symbol::from("test-chat.room1")));
+            Cid::from_str("123").unwrap(), Symbol::from("test-chat.room1")));
     }
 
     #[test]
     fn match_topic_unsubscribe() {
-        let path = "/v1/connection/abcde/subscriptions/test-chat/room1";
+        let path = "/v1/connection/1234/subscriptions/test-chat/room1";
         let route = match_route(&Method::Delete, path).unwrap();
         assert_eq!(route, TopicUnsubscribe(
-            "abcde".to_string(), Symbol::from("test-chat.room1")));
+            Cid::from_str("1234").unwrap(), Symbol::from("test-chat.room1")));
     }
 
     #[test]
     fn match_lattice_subscribe() {
-        let path = "/v1/connection/abcde/lattices/test-chat/room1";
+        let path = "/v1/connection/1234/lattices/test-chat/room1";
         let route = match_route(&Method::Put, path).unwrap();
         assert_eq!(route, LatticeSubscribe(
-            "abcde".to_string(), Symbol::from("test-chat.room1")));
+            Cid::from_str("1234").unwrap(), Symbol::from("test-chat.room1")));
     }
 
     #[test]
     fn match_lattice_unsubscribe() {
-        let path = "/v1/connection/abcde/lattices/test-chat/room1";
+        let path = "/v1/connection/1235/lattices/test-chat/room1";
         let route = match_route(&Method::Delete, path).unwrap();
         assert_eq!(route, LatticeUnsubscribe(
-            "abcde".to_string(), Symbol::from("test-chat.room1")));
+            Cid::from_str("1235").unwrap(), Symbol::from("test-chat.room1")));
     }
 
     #[test]
@@ -359,6 +352,20 @@ mod test {
         assert!(match_route(&Method::Delete, path).is_err());
 
         let path = "/v1/connection/abc/subscriptions/";
+        assert!(match_route(&Method::Get, path).is_err());
+        assert!(match_route(&Method::Put, path).is_err());
+        assert!(match_route(&Method::Post, path).is_err());
+        assert!(match_route(&Method::Patch, path).is_err());
+        assert!(match_route(&Method::Delete, path).is_err());
+
+        let path = "/v1/connection/123/subscriptions/";
+        assert!(match_route(&Method::Get, path).is_err());
+        assert!(match_route(&Method::Put, path).is_err());
+        assert!(match_route(&Method::Post, path).is_err());
+        assert!(match_route(&Method::Patch, path).is_err());
+        assert!(match_route(&Method::Delete, path).is_err());
+
+        let path = "/v1/connection/-123/subscriptions/";
         assert!(match_route(&Method::Get, path).is_err());
         assert!(match_route(&Method::Put, path).is_err());
         assert!(match_route(&Method::Post, path).is_err());
