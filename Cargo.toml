@@ -20,24 +20,27 @@ lazy_static = "0.2.1"
 mime = "0.2.2"
 mime_guess = "1.8.0"
 tk-sendfile = "0.3.0"
-tk-bufstream = "0.1.0"
-minihttp = { git = "https://github.com/popravich/minihttp", rev="5d5a4dc" }
+tk-bufstream = "0.2.1"
+minihttp = { git = "https://github.com/popravich/minihttp", rev="767fc23" }
 netbuf = "0.3.7"
 sha1 = "0.2.0"
 curl = "0.3.8"
 tokio-curl = "0.1.3"
 byteorder = "0.5.3"
 httparse = "1.1.2"
-httpbin = { git="https://github.com/tailhook/httpbin-rs", rev="afb7f68" }
+httpbin = { git="https://github.com/tailhook/httpbin-rs", rev="e1752b5" }
 slab = "0.3.0"
 matches = "0.1.4"
 assert_matches = "1.0.1"
 string-intern = { git="https://github.com/tailhook/string-intern", rev="d7b8c24" }
 rand = "0.3.14"
+tk-pool = "0.2.2"
+abstract-ns = "0.2.4"
+ns-std-threaded = "0.1.0"
 
 [replace]
 "tokio-service:0.1.0" = { git="https://github.com/tokio-rs/tokio-service", rev="da47a93" }
-"minihttp:0.1.0" = { git = "https://github.com/popravich/minihttp", rev="5d5a4dc" }
+"minihttp:0.1.0" = { git = "https://github.com/popravich/minihttp", rev="767fc23" }
 
 [[bin]]
 name = "swindon"

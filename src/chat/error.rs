@@ -1,9 +1,11 @@
 use std::io;
 use std::str::Utf8Error;
+use futures::sync::mpsc::SendError;
 
 use rustc_serialize::{Encodable, Encoder};
 use rustc_serialize::json::{Json, ParserError};
 use minihttp::enums::Status;
+use minihttp::client;
 
 use super::message::{Meta, ValidationError};
 
@@ -40,6 +42,23 @@ quick_error! {
             description("Http error")
             display("Http error: {}: {:?}", status.code(), body)
         }
+        /// Coundn't send request by HTTP, got network or protocol error
+        Proto(err: client::Error) {
+            from()
+            description("Http error")
+            display("Http error: {}", err)
+        }
+        /// Request future was canceled for some reason (connection drop?)
+        PoolError {
+            description("could not send, \
+                         pool is either overloaded or non-existent")
+        }
+    }
+}
+
+impl<T> From<SendError<T>> for MessageError {
+    fn from(_: SendError<T>) -> MessageError {
+        MessageError::PoolError
     }
 }
 
@@ -65,6 +84,12 @@ impl Encodable for MessageError {
             IoError(ref err) => {
                 s.emit_str(format!("{:?}", err).as_str())
             }
+            Proto(_) => {
+                s.emit_str("backend_protocol_error")
+            }
+            PoolError => {
+                s.emit_str("backend_protocol_error")
+            }
         }
     }
 }
@@ -79,7 +104,7 @@ impl MessageError {
                 "http_error"
             }
             IoError(_) | Utf8Error(_) | JsonError(_) => "invalid_content",
-            ValidationError(_) => "protocol_error",
+            Proto(_) | PoolError | ValidationError(_) => "protocol_error",
         };
         meta.insert("error_kind".to_string(), Json::String(kind.to_string()));
     }

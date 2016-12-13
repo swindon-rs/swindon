@@ -1,11 +1,11 @@
 use std::sync::{Arc, RwLock};
 
-use futures::{BoxFuture};
+use futures::{BoxFuture, Future};
 use tokio_service::Service;
 use tokio_core::reactor::Handle;
 use minihttp::request::Request;
-use minihttp::{Error, Status};
-use minihttp::client::HttpClient;
+use minihttp::{Error, Status, OptFuture};
+use minihttp::client::Client;
 use rand::{thread_rng, Rng};
 
 use config::ConfigCell;
@@ -14,15 +14,16 @@ use routing::{parse_host, route};
 use serializer::{Response, Serializer};
 use config::Handler;
 use handlers::{files, proxy};
-use intern::{HandlerName};
-use chat::{self, MessageRouter};
+use intern::{HandlerName, Upstream};
+use chat;
 use websocket;
+use http_pools::HttpPools;
 
 #[derive(Clone)]
 pub struct Main {
     pub config: ConfigCell,
     pub handle: Handle,
-    pub http_client: HttpClient,
+    pub http_pools: HttpPools,
     pub chat_processor: Arc<RwLock<chat::Processor>>,
 }
 
@@ -30,7 +31,7 @@ impl Service for Main {
     type Request = Request;
     type Response = Serializer;
     type Error = Error;
-    type Future = BoxFuture<Self::Response, Error>;
+    type Future = Box<Future<Item=Self::Response, Error=Error>>;
 
     fn call(&self, req: Request) -> Self::Future {
         // We must store configuration for specific request for the case
@@ -40,8 +41,7 @@ impl Service for Main {
         let mut debug = DebugInfo::new(&req);
 
         let response = self.prepare_response(&req, &mut debug);
-        response.serve(req, cfg.clone(), debug,
-                       &self.handle, &self.http_client)
+        response.serve(req, cfg.clone(), debug, &self.handle, &self.http_pools)
     }
 }
 
@@ -99,30 +99,20 @@ impl Main {
                 }
             }
             Some(&Handler::Proxy(ref settings)) => {
-                let mut rng = thread_rng();
-                let target = cfg.http_destinations
-                    .get(&settings.destination.upstream)
-                    .and_then(|dest| rng.choose(&dest.addresses));
-                if let Some(addr) = target {
-                    // NOTE: use suffix as real path?
-                    Response::Proxy(proxy::ProxyCall::Prepare {
-                        hostport: addr.clone(),
-                        settings: settings.clone(),
-                    })
-                } else {
-                    Response::ErrorPage(Status::NotFound)
-                }
+                Response::Proxy(proxy::ProxyCall::Prepare {
+                    path: format!("{}{}", settings.destination.path, suffix),
+                    settings: settings.clone(),
+                })
             }
             Some(&Handler::SwindonChat(ref chat)) => {
                 match websocket::prepare(&req) {
                     Ok(init) => {
-                        let router = MessageRouter(chat.clone(), cfg.clone());
                         let pool = self.chat_processor.read().unwrap()
                             .pool(&chat.session_pool);
                         let sess_cfg = cfg.session_pools
                             .get(&chat.session_pool).unwrap(); // FIXME: unwrap
                         let chat_api = chat::ChatAPI::new(
-                            self.http_client.clone(), router, pool,
+                            self.http_pools.clone(), chat.clone(), pool,
                             sess_cfg.inactivity.clone());
                         Response::WebsocketChat(
                             chat::ChatInit::Prepare(init, chat_api))

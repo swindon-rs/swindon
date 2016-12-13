@@ -20,9 +20,9 @@ use super::api::SessionAPI;
 use Pickler;
 use flush_and_wait::FlushAndWait;
 
-pub fn negotiate<S>(mut response: Pickler<S>, init: ws::Init, remote: Remote,
+pub fn negotiate<S>(mut response: Pickler<S>, init: ws::Init, handle: Handle,
     session_api: SessionAPI, channel: Receiver<ConnectionMessage>)
-    -> BoxFuture<IoBuf<S>, HttpError>
+    -> Box<Future<Item=IoBuf<S>, Error=HttpError>>
     where S: Io + Send + 'static
 {
     response.status(Status::SwitchingProtocol);
@@ -30,54 +30,54 @@ pub fn negotiate<S>(mut response: Pickler<S>, init: ws::Init, remote: Remote,
     response.add_header("Connection", "upgrade");
     response.format_header("Sec-WebSocket-Accept", init.base64());
     response.done_headers();
-    response.steal_socket()
-    .and_then(move |socket: IoBuf<S>| {
-        remote.spawn(move |handle| {
-            let channel = channel.map(|msg| {
-                match msg {
-                    ConnectionMessage::StopSocket(reason) => {
-                        ws::OutFrame::Close(reason)
+    Box::new(
+        response.steal_socket()
+        .and_then(move |socket: IoBuf<S>| {
+            let h2 = handle.clone();
+            handle.spawn_fn(move || {
+                let channel = channel.map(|msg| {
+                    match msg {
+                        ConnectionMessage::StopSocket(reason) => {
+                            ws::OutFrame::Close(reason)
+                        }
+                        msg => {
+                            ws::OutFrame::Text(json::encode(&msg).unwrap())
+                        }
                     }
-                    msg => {
-                        ws::OutFrame::Text(json::encode(&msg).unwrap())
-                    }
-                }
+                });
+                let dispatcher = ChatDispatcher(session_api, h2);
+                ws::WebsockProto::new(socket, dispatcher, channel)
+                .map_err(|e| info!("Websocket error: {}", e))
             });
-            let dispatcher = ChatDispatcher(session_api, handle.clone());
-            ws::WebsockProto::new(socket, dispatcher, channel)
-            .map_err(|e| info!("Websocket error: {}", e))
-        });
-        // Ensure that original http server thinks connection is not useful
-        Err(io::Error::new(io::ErrorKind::BrokenPipe,
-                           "Connection is stolen for websocket"))
-    })
-    .map_err(|e: io::Error| e.into())
-    .boxed()
+            // Ensure that original http server thinks connection is not useful
+            Err(io::Error::new(io::ErrorKind::BrokenPipe,
+                               "Connection is stolen for websocket"))
+        })
+        .map_err(|e: io::Error| e.into()))
 }
 
-pub fn fail<S>(mut response: Pickler<S>, init: ws::Init, remote: Remote,
+pub fn fail<S>(mut response: Pickler<S>, init: ws::Init, handle: Handle,
     reason: ws::CloseReason)
-    -> BoxFuture<IoBuf<S>, HttpError>
-    where S: Io + Send + 'static
+    -> Box<Future<Item=IoBuf<S>, Error=HttpError>>
+    where S: Io + 'static
 {
     response.status(Status::SwitchingProtocol);
     response.add_header("Upgrade", "websocket");
     response.add_header("Connection", "upgrade");
     response.format_header("Sec-WebSocket-Accept", init.base64());
     response.done_headers();
-    response.steal_socket()
-    .and_then(move |mut socket| {
-        socket.out_buf.write_close(reason.code(), reason.reason());
-        remote.spawn(move |handle| {
-            FlushAndWait::new(socket, handle, Duration::new(1, 0))
-        });
+    Box::new(response.steal_socket()
+        .and_then(move |mut socket| {
+            socket.out_buf.write_close(reason.code(), reason.reason());
+            handle.spawn(
+                FlushAndWait::new(socket, &handle, Duration::new(1, 0))
+            );
 
-        // Ensure that original http server thinks connection is not useful
-        Err(io::Error::new(io::ErrorKind::BrokenPipe,
-                           "Connection is stolen for websocket"))
-    })
-    .map_err(|e: io::Error| e.into())
-    .boxed()
+            // Ensure that original http server thinks connection is not useful
+            Err(io::Error::new(io::ErrorKind::BrokenPipe,
+                               "Connection is stolen for websocket"))
+        })
+        .map_err(|e: io::Error| e.into()))
 }
 
 struct ChatDispatcher(SessionAPI, Handle);

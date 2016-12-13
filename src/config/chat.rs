@@ -1,4 +1,5 @@
 use std::collections::BTreeMap;
+use std::borrow::Cow;
 use std::ops::Deref;
 
 use rustc_serialize::{Encodable, Encoder, Decodable, Decoder};
@@ -99,8 +100,7 @@ impl Deref for RoutingTable {
 }
 
 impl RoutingTable {
-    pub fn resolve(&self, method: &str) -> &http::Destination
-    {
+    pub fn resolve(&self, method: &str) -> &http::Destination {
         self.iter().rev()
         .find(|&(k, _)| k.matches(method))
         .map(|(_, v)| v)

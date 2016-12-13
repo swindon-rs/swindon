@@ -4,7 +4,7 @@ use std::ascii::AsciiExt;
 use sha1::Sha1;
 use futures::{BoxFuture, Future};
 use tokio_core::io::Io;
-use tokio_core::reactor::Remote;
+use tokio_core::reactor::Handle;
 use tk_bufstream::IoBuf;
 
 use minihttp::enums::Status;
@@ -76,9 +76,9 @@ pub fn prepare(req: &Request) -> Result<Init, Status> {
 }
 
 #[allow(unreachable_code)]
-pub fn negotiate<S>(mut response: Pickler<S>, init: Init, remote: Remote,
+pub fn negotiate<S>(mut response: Pickler<S>, init: Init, handle: Handle,
     kind: Kind)
-    -> BoxFuture<IoBuf<S>, Error>
+    -> Box<Future<Item=IoBuf<S>, Error=Error>>
     where S: Io + Send + 'static
 {
     response.status(Status::SwitchingProtocol);
@@ -86,19 +86,19 @@ pub fn negotiate<S>(mut response: Pickler<S>, init: Init, remote: Remote,
     response.add_header("Connection", "upgrade");
     response.format_header("Sec-WebSocket-Accept", Base64(&init.accept[..]));
     response.done_headers();
-    response.steal_socket()
-    .and_then(move |socket: IoBuf<S>| {
-        remote.spawn(move |handle| {
-            let (tx, rx) = RemoteReplier::pair();
-            let dispatcher = match kind {
-                Kind::Echo => echo::Echo(handle.clone(), tx),
-            };
-            WebsockProto::new(socket, dispatcher, rx)
-            .map_err(|e| info!("Websocket error: {}", e))
-        });
-        Err(io::Error::new(io::ErrorKind::BrokenPipe,
-                           "Connection is stolen for websocket"))
-    })
-    .map_err(|e: io::Error| e.into())
-    .boxed()
+    Box::new(response.steal_socket()
+        .and_then(move |socket: IoBuf<S>| {
+            let h2 = handle.clone();
+            handle.spawn_fn(move || {
+                let (tx, rx) = RemoteReplier::pair();
+                let dispatcher = match kind {
+                    Kind::Echo => echo::Echo(h2, tx),
+                };
+                WebsockProto::new(socket, dispatcher, rx)
+                .map_err(|e| info!("Websocket error: {}", e))
+            });
+            Err(io::Error::new(io::ErrorKind::BrokenPipe,
+                               "Connection is stolen for websocket"))
+        })
+        .map_err(|e: io::Error| e.into()))
 }

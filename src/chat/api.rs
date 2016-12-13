@@ -3,35 +3,39 @@ use std::io;
 use std::cmp;
 use std::str::{self, FromStr};
 use std::sync::Arc;
+use std::borrow::Cow;
 use std::time::{Instant, Duration};
 
 use futures::{Future, BoxFuture, done};
 use futures::sync::mpsc::{UnboundedSender as Sender};
 use tokio_core::reactor::Handle;
-use minihttp::Request;
-use minihttp::enums::{Status, Method};
-use minihttp::client::{HttpClient, Response as ClientResponse};
+use minihttp::{Request, OptFuture};
+use minihttp::enums::{Status, Method, Version};
+use minihttp::client::{Error};
 use rustc_serialize::json::{self, Json};
 use rand::thread_rng;
 
 use intern::SessionId;
 use websocket::Base64;
 use config::{Config, SessionPool, InactivityTimeouts};
+use config::chat::Chat;
 use super::{Cid, ProcessorPool};
 use super::{serialize_cid};
-use super::router::{MessageRouter, url_for};
 use super::processor::{Action, ConnectionMessage, PoolMessage};
 use super::message::{self, Meta, Args, Kwargs};
 use super::error::MessageError;
+use http_pools::HttpPools;
+use json_requests::request_fn_buffered;
 
 // TODO: make ChatAPI Pool
 //  bound to session pool config
 
+const INACTIVITY_PAYLOAD: &'static [u8] = b"[{}, [], {}]";
 
 pub struct ChatAPI {
     // shared between connections
-    client: HttpClient,         // gets cloned for each request;
-    router: MessageRouter,      // singleton per handler endpoint;
+    client: HttpPools,
+    chat_config: Arc<Chat>,      // singleton per handler endpoint;
     proc_pool: ProcessorPool,   // singleton per handler endpoint;
     inactivity_timeouts: Arc<InactivityTimeouts>,
 }
@@ -48,13 +52,13 @@ pub struct SessionAPI {
 
 impl ChatAPI {
 
-    pub fn new(http_client: HttpClient, router: MessageRouter,
+    pub fn new(http_client: HttpPools, chat: Arc<Chat>,
         proc_pool: ProcessorPool, inactivity_timeouts: Arc<InactivityTimeouts>)
         -> ChatAPI
     {
         ChatAPI {
             client: http_client,
-            router: router,
+            chat_config: chat,
             proc_pool: proc_pool,
             inactivity_timeouts: inactivity_timeouts,
         }
@@ -64,9 +68,9 @@ impl ChatAPI {
     ///
     /// Send Auth message to proper backend
     /// returninng Hello/Error message.
-    pub fn authorize_connection(&self, req: &Request, conn_id: Cid,
+    pub fn authorize_connection(&mut self, req: &Request, conn_id: Cid,
         channel: Sender<ConnectionMessage>)
-        -> BoxFuture<ClientResponse, io::Error>
+        -> OptFuture<Json, Error>
     {
         let http_cookies = req.headers.iter()
             .filter(|&&(ref k, _)| k == "Cookie")
@@ -90,14 +94,22 @@ impl ChatAPI {
             channel: channel,
         });
 
-        let mut req = self.client.clone();
-        req.request(Method::Post,
-            self.router.get_auth_url().as_str());
-        req.add_header("Content-Type".into(), "application/json");
-        req.add_length(payload.as_bytes().len() as u64);
-        req.done_headers();
-        req.write_body(payload.as_bytes());
-        req.done()
+        let dest = self.chat_config.message_handlers
+            .resolve("tangle.authorize_connection");
+        let path: Cow<_> = if dest.path == "/" {
+            "/tangle/authorize_connection".into()
+        } else {
+            (dest.path.to_string() + "/tangle/authorize_connection").into()
+        };
+        request_fn_buffered(self.client.upstream(&dest.upstream),
+            move |mut e| {
+                e.request_line("POST", &path, Version::Http11);
+                e.add_header("Content-Type", "application/json").unwrap();
+                e.add_length(payload.as_bytes().len() as u64).unwrap();
+                e.done_headers().unwrap();
+                e.write_body(payload.as_bytes());
+                e.done().into()
+            })
     }
 
     /// Make instance of Session API (api bound to cid/ssid/tx-channel)
@@ -128,21 +140,22 @@ impl ChatAPI {
     }
 
     /// API call to backend.
-    fn post(&self, method: &str, auth: &str, payload: &[u8])
-        -> BoxFuture<Json, MessageError>
+    fn post(&mut self, method: &str, auth: String, payload: String)
+        -> OptFuture<Json, MessageError>
     {
-        let url = self.router.resolve(method);
-        let mut req = self.client.clone();
-        req.request(Method::Post, url.as_str());
-        req.add_header("Content-Type".into(), "application/json");
-        req.add_header("Authorization".into(), auth);
-        req.add_length(payload.len() as u64);
-        req.done_headers();
-        req.write_body(payload);
-        req.done()
-        .map_err(|e| e.into())
-        .and_then(|resp| done(parse_response(resp)))
-        .boxed()
+        let dest = self.chat_config.message_handlers.resolve(method);
+        // TODO(tailhook) replace here can be optimized
+        let path = format!("{}{}", dest.path, method.replace(".", "/"));
+        request_fn_buffered(self.client.upstream(&dest.upstream),
+            move |mut e| {
+                e.request_line("POST", &path, Version::Http11);
+                e.add_header("Content-Type", "application/json").unwrap();
+                e.add_header("Authorization", auth);
+                e.add_length(payload.as_bytes().len() as u64).unwrap();
+                e.done_headers().unwrap();
+                e.write_body(payload.as_bytes());
+                e.done().into()
+            })
     }
 
     /// Update session activity timeout.
@@ -180,7 +193,7 @@ impl SessionAPI {
     }
 
     /// Backend method call.
-    pub fn method_call(&self, method: String, mut meta: Meta,
+    pub fn method_call(&mut self, method: String, mut meta: Meta,
         args: &Args, kwargs: &Kwargs, handle: &Handle)
     {
         let mut tx = self.channel.clone();
@@ -188,7 +201,8 @@ impl SessionAPI {
             Json::String(serialize_cid(&self.conn_id)));
         let payload = message::encode_call(&meta, &args, &kwargs);
         let call = self.api.post(method.as_str(),
-            self.auth_token.as_str(), payload.as_bytes());
+            // TODO(tailhook) optimize this clone?
+            self.auth_token.clone(), payload);
         handle.spawn(call
             .then(move |result| {
                 meta.remove(&"connection_id".to_string());
@@ -206,35 +220,14 @@ impl SessionAPI {
 }
 
 
-/// Parse backend response.
-fn parse_response(response: ClientResponse) -> Result<Json, MessageError>
-{
-    // TODO: check content-type
-    let payload = match response.body {
-        Some(ref data) => {
-            str::from_utf8(&data[..])
-            .map_err(|e| MessageError::from(e))
-            .and_then(
-                |s| Json::from_str(s).map_err(|e| MessageError::from(e))
-            )?
-        }
-        None => Json::Null,
-    };
-    match (response.status, payload) {
-        (Status::Ok, payload) => Ok(payload),
-        (s, Json::Null) => Err(MessageError::HttpError(s, None)),
-        (s, payload) => Err(MessageError::HttpError(s, Some(payload))),
-    }
-}
-
 /// Parse userinfo received on Auth call;
-pub fn parse_userinfo(response: ClientResponse)
+pub fn parse_userinfo(response: Json)
     -> Result<(SessionId, Json), MessageError>
 {
     use super::message::ValidationError::*;
     use super::error::MessageError::*;
-    match parse_response(response) {
-        Ok(Json::Object(data)) => {
+    match response {
+        Json::Object(data) => {
             let sess_id = match data.get("user_id".into()) {
                 Some(&Json::String(ref s)) => {
                     SessionId::from_str(s.as_str())
@@ -244,11 +237,8 @@ pub fn parse_userinfo(response: ClientResponse)
             };
             Ok((sess_id, Json::Object(data)))
         }
-        Ok(_) => {
+        _ => {
             Err(ValidationError(ObjectExpected))
-        }
-        Err(err) => {
-            Err(err)
         }
     }
 }
@@ -256,14 +246,14 @@ pub fn parse_userinfo(response: ClientResponse)
 pub struct MaintenanceAPI {
     config: Arc<Config>,
     sessions_cfg: Arc<SessionPool>,
-    http_client: HttpClient,
+    http_client: HttpPools,
     handle: Handle,
 }
 
 impl MaintenanceAPI {
 
     pub fn new(cfg: Arc<Config>, sessions_cfg: Arc<SessionPool>,
-        http_client: HttpClient, handle: Handle)
+        http_client: HttpPools, handle: Handle)
         -> MaintenanceAPI
     {
         MaintenanceAPI {
@@ -283,27 +273,33 @@ impl MaintenanceAPI {
                 let auth = encode_sid(&session_id);
 
                 for dest in &self.sessions_cfg.inactivity_handlers {
-                    if let Some(url) = url_for(
-                        "tangle/session_inactive",
-                        &dest, &self.config.http_destinations,
-                        &mut thread_rng())
-                    {
-                        let mut req = self.http_client.clone();
-                        req.request(Method::Post, url.as_str());
-                        req.add_header("Content-Type".into(),
-                            "application/json");
-                        req.add_header("Authorization".into(), auth.as_str());
-                        // TODO: add empty message
-                        req.add_length(0);
-                        req.done_headers();
-                        self.handle.spawn(req.done()
-                        .map(|r| info!("Resp status: {:?}", r.status))
-                        .map_err(|e| info!("Error sending inactivity {:?}", e))
-                        );
-                        // TODO: better messages
+                    let path: Cow<_> = if dest.path == "/" {
+                        "/tangle/session_inactive".into()
                     } else {
-                        info!("No url for {:?}", dest);
-                    }
+                        (dest.path.to_string() +
+                            "/tangle/session_inactive").into()
+                    };
+                    // TODO(tailhook) optimize this auth.clone()
+                    let auth = auth.clone();
+                    self.handle.spawn(request_fn_buffered(
+                        self.http_client
+                            .upstream(&dest.upstream),
+                        move |mut e| {
+                            e.request_line("POST", &path, Version::Http11);
+                            e.add_header("Content-Type", "application/json")
+                                .unwrap();
+                            e.add_header("Authorization", auth).unwrap();
+                            e.add_length(INACTIVITY_PAYLOAD.len() as u64)
+                                .unwrap();
+                            e.done_headers().unwrap();
+                            e.write_body(INACTIVITY_PAYLOAD);
+                            e.done()
+                        })
+                        .map(|r| info!("Resp data: {}", r))
+                        .map_err(|e: MessageError| {
+                            info!("Error sending inactivity {}", e)
+                        })
+                    );
                 }
             }
         }

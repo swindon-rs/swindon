@@ -34,6 +34,9 @@ extern crate httpbin;
 extern crate slab;
 extern crate string_intern;
 extern crate rand;
+extern crate tk_pool;
+extern crate abstract_ns;
+extern crate ns_std_threaded;
 
 mod intern;
 mod config;
@@ -47,8 +50,10 @@ mod websocket;
 mod chat;
 mod startup;
 mod flush_and_wait;
+mod http_pools;
+mod json_requests;
 
-// Utils
+// Utils: either is in futures-rs > 0.1.6 (unreleased yet)
 mod short_circuit;
 mod either;
 
