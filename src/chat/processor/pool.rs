@@ -85,8 +85,7 @@ impl Pool {
             connections: HashMap::new(),
             topics: HashMap::new(),
             lattices: HashMap::new(),
-            new_connection_timeout: Duration::from_secs(
-                cfg.inactivity.new_connection),
+            new_connection_timeout: (*cfg.inactivity.new_connection).clone(),
         }
     }
 
@@ -477,6 +476,8 @@ mod test {
     use futures::sync::mpsc::{unbounded as channel};
     use futures::sync::mpsc::{UnboundedReceiver as Receiver};
     use intern::{SessionId, SessionPoolName, Lattice as Ns};
+    use quire::De;
+
     use string_intern::{Symbol, Validator};
     use config;
     use chat::Cid;
@@ -494,10 +495,10 @@ mod test {
                     "127.0.0.1:65535".parse().unwrap()),
                 inactivity_handlers: Vec::new(),
                 inactivity: Arc::new(config::InactivityTimeouts {
-                    new_connection: 60,
-                    client_min: 60,
-                    client_max: 60,
-                    client_default: 60,
+                    new_connection: De::new(Duration::from_secs(60)),
+                    client_min: De::new(Duration::from_secs(60)),
+                    client_max: De::new(Duration::from_secs(60)),
+                    client_default: De::new(Duration::from_secs(60)),
                 }),
             }),
             tx);

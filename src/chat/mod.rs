@@ -44,7 +44,7 @@ impl Cid {
     }
 }
 
-// TODO: make this two functions properly serialize and deserialize Cid;
+// TODO: make these two functions properly serialize and deserialize Cid;
 pub fn serialize_cid(cid: &Cid) -> String {
     format!("{}", cid.0)
 }

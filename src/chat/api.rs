@@ -167,16 +167,16 @@ impl SessionAPI {
     pub fn update_activity(&self, sec: Option<u64>) {
         let normalized = match sec {
             Some(v) => {
-                let min = self.api.inactivity_timeouts.client_min;
-                let max = self.api.inactivity_timeouts.client_max;
+                let v = Duration::from_secs(v);
+                let min = *self.api.inactivity_timeouts.client_min;
+                let max = *self.api.inactivity_timeouts.client_max;
                 cmp::max(cmp::min(v, max), min)
             }
             None => {
-                self.api.inactivity_timeouts.client_default
+                *self.api.inactivity_timeouts.client_default
             }
         };
-        self.api.update_activity(self.conn_id.clone(),
-            Duration::from_secs(normalized))
+        self.api.update_activity(self.conn_id.clone(), normalized)
     }
 
     /// Backend method call.

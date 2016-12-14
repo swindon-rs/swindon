@@ -188,4 +188,43 @@ pub mod test {
         let cfg: Config = parse_string("<inline>", raw, &v, &o).unwrap();
         Arc::new(cfg)
     }
+
+    #[test]
+    fn test_config() {
+        let cfg = make_config();
+
+        assert_eq!(cfg.listen.len(), 1);
+        assert_eq!(cfg.routing.len(), 10);
+        assert_eq!(cfg.handlers.len(), 7);
+        assert_eq!(cfg.session_pools.len(), 1);
+        assert_eq!(cfg.http_destinations.len(), 1);
+        assert_eq!(cfg.disk_pools.len(), 0);
+
+        assert_eq!(cfg.debug_routing, true);
+        assert!(cfg.server_name.is_some());
+
+        assert!(cfg.handlers.contains_key("example-chat"));
+        assert!(cfg.handlers.contains_key("example-chat-http"));
+        assert!(cfg.handlers.contains_key("empty-gif"));
+        assert!(cfg.handlers.contains_key("websocket-echo-static"));
+        assert!(cfg.handlers.contains_key("websocket-echo-html"));
+        assert!(cfg.handlers.contains_key("websocket-echo"));
+        assert!(cfg.handlers.contains_key("src"));
+
+        assert!(cfg.session_pools.contains_key("example-session"));
+
+        assert!(cfg.http_destinations.contains_key("superman"));
+    }
+
+    #[test]
+    fn inactivity_timeouts() {
+        use std::time::Duration;
+        let cfg = make_config();
+
+        let p = cfg.session_pools.get("example-session".into()).unwrap();
+        assert_eq!(*p.inactivity.new_connection, Duration::from_secs(60));
+        assert_eq!(*p.inactivity.client_min, Duration::from_secs(1));
+        assert_eq!(*p.inactivity.client_max, Duration::from_secs(7200));
+        assert_eq!(*p.inactivity.client_default, Duration::from_secs(1));
+    }
 }
