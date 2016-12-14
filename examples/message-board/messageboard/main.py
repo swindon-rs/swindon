@@ -23,7 +23,7 @@ def main():
 
     @app.route("/tangle/authorize_connection", methods=['POST'])
     @swindon_convention
-    async def auth(req, http_authorization, http_cookie):
+    async def auth(req, http_authorization, http_cookie, url_querystring):
         name = make_name()
         id = name.lower().replace(' ', '_')
         await swindon.subscribe(req.connection, 'message-board')
