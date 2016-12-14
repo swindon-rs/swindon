@@ -25,4 +25,4 @@ cleanup:
 tests:
   stage: test
   script:
-  - vagga ci-test
+  - vagga ci-test --color=always
