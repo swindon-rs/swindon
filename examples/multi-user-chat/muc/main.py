@@ -29,7 +29,7 @@ def main():
 
     @app.route("/tangle/authorize_connection", methods=['POST'])
     @swindon_convention
-    async def auth(req, http_authorization, http_cookie):
+    async def auth(req, http_authorization, http_cookie, url_querystring):
         name = SimpleCookie(http_cookie)['swindon_muc_login'].value
         uid = NON_ALPHA.sub('_', name.lower())
         user = chat.ensure_user(uid, username=name)
@@ -45,7 +45,6 @@ def main():
         user  = chat.get_user(req.user_id)
         await swindon.subscribe(req.connection, 'muc.' + room_name)
         await swindon.lattice('muc', user.add_room(room_name))
-        return True
 
     @app.route("/muc/leave_room", methods=['POST'])
     @swindon_convention
