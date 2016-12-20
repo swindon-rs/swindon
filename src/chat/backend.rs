@@ -6,8 +6,8 @@ use futures::{Finished, finished};
 use tokio_service::Service;
 use tokio_core::net::TcpStream;
 use tk_bufstream::IoBuf;
-use minihttp::{Error, Request};
-use minihttp::{ResponseFn, Status};
+use minihttp::server::{Error, Request, ResponseFn};
+use minihttp::{Status};
 use minihttp::enums::Method;
 use rustc_serialize::json::{self, Json};
 

@@ -5,11 +5,10 @@ use std::collections::HashMap;
 
 use time;
 use futures::{Finished};
-use minihttp::request::Request;
+use minihttp::server::{ResponseWriter, Error, Request};
 use tokio_core::io::Io;
 use tk_bufstream::{IoBuf, Flushed};
 
-use minihttp::{ResponseWriter, Error};
 
 use config::Config;
 use intern::HandlerName;

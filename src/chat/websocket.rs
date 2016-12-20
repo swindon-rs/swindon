@@ -7,8 +7,8 @@ use futures::stream::Stream;
 use futures::sync::mpsc::{UnboundedReceiver as Receiver};
 use tokio_core::io::Io;
 use tokio_core::reactor::{Handle, Remote};
-use minihttp::enums::Status;
-use minihttp::Error as HttpError;
+use minihttp::Status;
+use minihttp::server::Error as HttpError;
 use tk_bufstream::IoBuf;
 use rustc_serialize::json;
 

@@ -4,7 +4,8 @@ use futures::{BoxFuture, Future};
 use tokio_core::io::Io;
 use tk_bufstream::IoBuf;
 
-use minihttp::{Error, Status};
+use minihttp::server::{Error};
+use minihttp::Status;
 
 use config::EmptyGif;
 use {Pickler};

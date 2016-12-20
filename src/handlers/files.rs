@@ -8,8 +8,8 @@ use std::collections::hash_map::DefaultHasher;
 
 use futures::{BoxFuture, Future};
 use either::Either;
-use minihttp::{Error, Status};
-use minihttp::request::Request;
+use minihttp::server::{Error, Request};
+use minihttp::Status;
 use mime::TopLevel;
 use mime_guess::guess_mime_type;
 use tk_sendfile::DiskPool;

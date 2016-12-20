@@ -8,7 +8,8 @@ use tokio_core::io::Io;
 use tokio_core::reactor::{Handle, Remote};
 use tokio_service::Service;
 use tk_bufstream::IoBuf;
-use minihttp::{client, Error, GenericResponse, ResponseWriter, Status, Request};
+use minihttp::{client, Status};
+use minihttp::server::{Error, GenericResponse, ResponseWriter, Request};
 use httpbin::HttpBin;
 
 use config::{Config, EmptyGif};

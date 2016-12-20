@@ -8,7 +8,7 @@ use tokio_core::reactor::Handle;
 use tk_bufstream::IoBuf;
 
 use minihttp::enums::Status;
-use minihttp::{Error, Request};
+use minihttp::server::{Error, Request};
 
 use super::base64::Base64;
 use super::proto::WebsockProto;

@@ -9,7 +9,7 @@ use futures::sink::Sink;
 use futures::sync::mpsc::SendError;
 use tokio_core::io::Io;
 use tokio_core::net::TcpStream;
-use minihttp::{Request, Error as HttpError};
+use minihttp::server::{Request, Error as HttpError};
 use minihttp::OptFuture;
 use minihttp::enums::Header;
 use minihttp::enums::{Status, Method, Version};

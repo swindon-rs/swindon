@@ -3,8 +3,8 @@ use std::sync::{Arc, RwLock};
 use futures::{BoxFuture, Future};
 use tokio_service::Service;
 use tokio_core::reactor::Handle;
-use minihttp::request::Request;
-use minihttp::{Error, Status, OptFuture};
+use minihttp::server::{Error, Request};
+use minihttp::{Status, OptFuture};
 use minihttp::client::Client;
 use rand::{thread_rng, Rng};
 
