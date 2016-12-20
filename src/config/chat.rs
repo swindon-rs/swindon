@@ -1,5 +1,4 @@
 use std::collections::BTreeMap;
-use std::borrow::Cow;
 use std::ops::Deref;
 
 use rustc_serialize::{Encodable, Encoder, Decodable, Decoder};

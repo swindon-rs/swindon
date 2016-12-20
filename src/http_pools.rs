@@ -1,4 +1,3 @@
-use std::ops::{Deref, DerefMut};
 use std::sync::{Arc, RwLock, RwLockWriteGuard};
 use std::collections::HashMap;
 

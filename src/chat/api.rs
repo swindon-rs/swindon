@@ -1,20 +1,18 @@
 //! Chat API implementation.
-use std::io;
 use std::cmp;
 use std::str::{self, FromStr};
 use std::sync::Arc;
 use std::borrow::Cow;
 use std::time::{Instant, Duration};
 
-use futures::{Future, BoxFuture, done};
+use futures::{Future};
 use futures::sync::mpsc::{UnboundedSender as Sender};
 use tokio_core::reactor::Handle;
 use minihttp::server::{Request};
 use minihttp::{OptFuture};
-use minihttp::enums::{Status, Method, Version};
+use minihttp::enums::{Version};
 use minihttp::client::{Error};
 use rustc_serialize::json::{self, Json};
-use rand::thread_rng;
 
 use intern::SessionId;
 use websocket::Base64;
@@ -151,7 +149,7 @@ impl ChatAPI {
             move |mut e| {
                 e.request_line("POST", &path, Version::Http11);
                 e.add_header("Content-Type", "application/json").unwrap();
-                e.add_header("Authorization", auth);
+                e.add_header("Authorization", auth).unwrap();
                 e.add_length(payload.as_bytes().len() as u64).unwrap();
                 e.done_headers().unwrap();
                 e.write_body(payload.as_bytes());

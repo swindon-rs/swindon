@@ -2,11 +2,11 @@
 use std::io;
 use std::time::Duration;
 
-use futures::{Future, BoxFuture};
+use futures::{Future};
 use futures::stream::Stream;
 use futures::sync::mpsc::{UnboundedReceiver as Receiver};
 use tokio_core::io::Io;
-use tokio_core::reactor::{Handle, Remote};
+use tokio_core::reactor::{Handle};
 use minihttp::Status;
 use minihttp::server::Error as HttpError;
 use tk_bufstream::IoBuf;

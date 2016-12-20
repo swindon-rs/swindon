@@ -9,11 +9,10 @@ use futures::sink::Sink;
 use rustc_serialize::json::{Json};
 use tokio_core::io::Io;
 use tokio_core::net::TcpStream;
-use futures::sync::oneshot::{channel, Sender, Receiver};
+use futures::sync::oneshot::{channel, Sender};
 use futures::sync::mpsc::SendError;
 use minihttp::client::{Error, Codec, Encoder, EncoderDone, Head, RecvMode};
 use minihttp::OptFuture;
-use tk_pool::Pool;
 
 use http_pools::UpstreamRef;
 

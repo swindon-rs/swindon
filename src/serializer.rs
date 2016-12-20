@@ -2,10 +2,10 @@ use std::sync::Arc;
 use std::path::PathBuf;
 use std::os::unix::io::AsRawFd;
 
-use futures::{BoxFuture, Future, Async, finished, Finished};
+use futures::{Future, Async, finished};
 use futures::sync::mpsc::{unbounded as channel};
 use tokio_core::io::Io;
-use tokio_core::reactor::{Handle, Remote};
+use tokio_core::reactor::{Handle};
 use tokio_service::Service;
 use tk_bufstream::IoBuf;
 use minihttp::{client, Status};

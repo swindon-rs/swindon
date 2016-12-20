@@ -2,7 +2,7 @@ use std::io;
 use std::ascii::AsciiExt;
 
 use sha1::Sha1;
-use futures::{BoxFuture, Future};
+use futures::{Future};
 use tokio_core::io::Io;
 use tokio_core::reactor::Handle;
 use tk_bufstream::IoBuf;

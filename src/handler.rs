@@ -1,12 +1,10 @@
 use std::sync::{Arc, RwLock};
 
-use futures::{BoxFuture, Future};
+use futures::{Future};
 use tokio_service::Service;
 use tokio_core::reactor::Handle;
 use minihttp::server::{Error, Request};
-use minihttp::{Status, OptFuture};
-use minihttp::client::Client;
-use rand::{thread_rng, Rng};
+use minihttp::{Status};
 
 use config::ConfigCell;
 use response::DebugInfo;
@@ -14,7 +12,7 @@ use routing::{parse_host, route};
 use serializer::{Response, Serializer};
 use config::Handler;
 use handlers::{files, proxy};
-use intern::{HandlerName, Upstream};
+use intern::{HandlerName};
 use chat;
 use websocket;
 use http_pools::HttpPools;

@@ -1,4 +1,3 @@
-use std::io;
 use std::str;
 use std::sync::Arc;
 use std::ascii::AsciiExt;
@@ -11,13 +10,11 @@ use tokio_core::io::Io;
 use tokio_core::net::TcpStream;
 use minihttp::server::{Request, Error as HttpError};
 use minihttp::OptFuture;
-use minihttp::enums::Header;
-use minihttp::enums::{Status, Method, Version};
+use minihttp::enums::{Header, Version};
 use minihttp::client::{Error, Codec, Encoder, EncoderDone, Head, RecvMode};
-use futures::sync::oneshot::{channel, Sender, Receiver};
+use futures::sync::oneshot::{channel, Sender};
 use tk_bufstream::IoBuf;
 
-use http_pools::{HttpPools, HttpPool};
 use http_pools::UpstreamRef;
 use config::proxy::Proxy;
 use {Pickler};
@@ -123,20 +120,20 @@ impl<S: Io> Codec<S> for ProxyCodec {
 
 
         if let Some(ref ip_header) = cfg.ip_header {
-            e.format_header(&ip_header[..], req.peer_addr.ip());
+            e.format_header(&ip_header[..], req.peer_addr.ip()).unwrap();
         }
 
         for &(ref name, ref value) in &req.headers {
             // TODO(tailhook) skip connection headers
             match name {
-                &Header::Host => e.add_header("Host", value),
-                &Header::Raw(ref name) => e.add_header(name, value),
+                &Header::Host => e.add_header("Host", value).unwrap(),
+                &Header::Raw(ref name) => e.add_header(name, value).unwrap(),
                 // TODO(tailhook) why we skip all other?
                 _ => continue,
             };
         }
         if let Some(body) = req.body {
-            e.add_length(body.data.len() as u64);
+            e.add_length(body.data.len() as u64).unwrap();
             e.done_headers().unwrap();
             e.write_body(&body.data[..]);
         } else {
