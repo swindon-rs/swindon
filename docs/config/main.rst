@@ -45,6 +45,17 @@ Options
    you should bump up a file descriptor limit to something larger than this
    value + number of potential proxy/backend connections.
 
+.. opt:: pipeline-depth
+
+   (default ``2``) Accept maximum N in-flight requests for each HTTP
+   connection. Pipelined requests improve performance of your service but also
+   expose it to DoS attacks.
+
+   The possible DoS attack vector is: client can send multiple requests and
+   they will be forwarded to backends regardless of whether previous ones are
+   read from client. Which effectively means that active requests can be up
+   to ``max-connections × pipeline-depth``.
+
 .. opt:: debug-routing
 
    Enable ``X-Swindon-*`` headers in responses to debug routes chosen for

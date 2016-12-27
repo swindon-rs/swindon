@@ -16,6 +16,7 @@ use super::disk::{self, Disk};
 pub struct Config {
     pub listen: Vec<ListenSocket>,
     pub max_connections: usize,
+    pub pipeline_depth: usize,
     pub routing: Routing,
     pub handlers: HashMap<HandlerName, Handler>,
     pub session_pools: HashMap<SessionPoolName, Arc<SessionPool>>,
@@ -32,7 +33,9 @@ pub fn config_validator<'a>() -> Structure<'a> {
     Structure::new()
     .member("listen", Sequence::new(listen::validator()))
     .member("max_connections",
-        Numeric::new().min(0).max(1 << 31).default(1000))
+        Numeric::new().min(1).max(1 << 31).default(1000))
+    .member("pipeline_depth",
+        Numeric::new().min(1).max(10000).default(2))
     .member("routing", routing::validator())
     .member("handlers", Mapping::new(Scalar::new(), handlers::validator()))
     .member("session_pools",
