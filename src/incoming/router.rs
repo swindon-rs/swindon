@@ -6,7 +6,7 @@ use minihttp::server::{Dispatcher, Error, Head};
 
 use config::ConfigCell;
 use runtime::Runtime;
-use incoming::Request;
+use incoming::{Request, Debug};
 
 pub struct Router {
     addr: SocketAddr,
@@ -27,6 +27,9 @@ impl<S: Io> Dispatcher<S> for Router {
     fn headers_received(&mut self, headers: &Head)
         -> Result<Self::Codec, Error>
     {
+        // Keep config same while processing a single request
+        let cfg = self.runtime.config.get();
+        let debug = Debug::new(headers, &cfg);
         unimplemented!();
     }
 }

@@ -89,20 +89,3 @@ impl<S: Io> DerefMut for Pickler<S> {
         &mut self.0
     }
 }
-
-impl DebugInfo {
-    pub fn new(_req: &Request) -> DebugInfo {
-        DebugInfo {
-            route: None,
-        }
-    }
-    /// Add route information
-    ///
-    /// # Panics
-    ///
-    /// Panics if route is already set (only in debug mode)
-    pub fn set_route(&mut self, route: &HandlerName) {
-        debug_assert!(self.route.is_none());
-        self.route = Some(route.clone());
-    }
-}
