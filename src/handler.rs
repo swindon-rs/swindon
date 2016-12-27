@@ -1,7 +1,6 @@
 use std::sync::{Arc, RwLock};
 
 use futures::{Future};
-use tokio_service::Service;
 use tokio_core::reactor::Handle;
 use minihttp::server::{Error, Request};
 use minihttp::{Status};

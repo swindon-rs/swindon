@@ -17,7 +17,6 @@ extern crate quire;
 extern crate time;
 extern crate argparse;
 extern crate tokio_core;
-extern crate tokio_service;
 extern crate minihttp;
 extern crate netbuf;
 extern crate mime;
@@ -26,8 +25,6 @@ extern crate mime_guess;
 extern crate tk_sendfile;
 extern crate tk_bufstream;
 extern crate rustc_serialize;
-extern crate tokio_curl;
-extern crate curl;
 extern crate byteorder;
 extern crate httparse;
 extern crate httpbin;
@@ -40,23 +37,25 @@ extern crate ns_std_threaded;
 
 mod intern;
 mod config;
-mod handler;
-mod handlers;
-mod routing;
-mod serializer;
-mod default_error_page;
-mod response;
-mod websocket;
-mod chat;
+mod runtime;
+//mod handler;
+//mod handlers;
+//mod routing;
+//mod serializer;
+//mod default_error_page;
+//mod response;
+//mod websocket;
+//mod chat;
 mod dev;
 mod startup;
-mod flush_and_wait;
+mod incoming;
+//mod flush_and_wait;
 mod http_pools;
-mod json_requests;
+//mod json_requests;
 
 // Utils
-mod short_circuit;
-mod either;
+//mod short_circuit;
+//mod either;
 
 use std::process::exit;
 use std::env;
@@ -64,7 +63,7 @@ use std::env;
 use argparse::{ArgumentParser, Parse, StoreTrue, Print, List, StoreFalse};
 use tokio_core::reactor::Core;
 
-pub use response::Pickler;
+//pub use response::Pickler;
 
 
 pub fn main() {
