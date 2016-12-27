@@ -1,8 +1,10 @@
+use std::io;
 use std::fmt::Display;
 use std::sync::Arc;
 use std::collections::HashMap;
 
 use time;
+use minihttp::Status;
 use minihttp::server as http;
 use minihttp::server::{EncoderDone};
 use tokio_core::io::Io;
@@ -19,7 +21,7 @@ pub struct Encoder<S: Io> {
 }
 
 impl<S: Io> Encoder<S> {
-    fn new(enc: http::Encoder<S>, config: Arc<Config>, debug: Debug)
+    pub fn new(enc: http::Encoder<S>, config: Arc<Config>, debug: Debug)
         -> Encoder<S>
     {
         Encoder {
@@ -31,6 +33,9 @@ impl<S: Io> Encoder<S> {
 }
 
 impl<S: Io> Encoder<S> {
+    pub fn status(&mut self, status: Status) {
+        self.enc.status(status);
+    }
     pub fn add_length(&mut self, n: u64) {
         self.enc.add_length(n).unwrap();
     }
@@ -74,5 +79,14 @@ impl<S: Io> Encoder<S> {
     }
     pub fn done(self) -> EncoderDone<S> {
         self.enc.done()
+    }
+}
+
+impl<S: Io> io::Write for Encoder<S> {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        self.enc.write(buf)
+    }
+    fn flush(&mut self) -> io::Result<()> {
+        self.enc.flush()
     }
 }

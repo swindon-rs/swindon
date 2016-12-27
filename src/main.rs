@@ -42,7 +42,7 @@ mod runtime;
 //mod handlers;
 mod routing;
 //mod serializer;
-//mod default_error_page;
+mod default_error_page;
 //mod response;
 //mod websocket;
 //mod chat;

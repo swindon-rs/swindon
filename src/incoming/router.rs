@@ -2,12 +2,14 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 
 use tokio_core::io::Io;
+use minihttp::Status;
 use minihttp::server::{Dispatcher, Error, Head};
 
 use config::ConfigCell;
 use runtime::Runtime;
 use incoming::{Request, Debug};
 use routing::{parse_host, route};
+use default_error_page::error_page;
 
 
 pub struct Router {
@@ -24,7 +26,7 @@ impl Router {
     }
 }
 
-impl<S: Io> Dispatcher<S> for Router {
+impl<S: Io + 'static> Dispatcher<S> for Router {
     type Codec = Request<S>;
     fn headers_received(&mut self, headers: &Head)
         -> Result<Self::Codec, Error>
@@ -44,8 +46,8 @@ impl<S: Io> Dispatcher<S> for Router {
             println!("ROUTE {:?}", route);
             unimplemented!();
         } else {
-            //Response::ErrorPage(Status::NotFound)
-            unimplemented!();
+            // TODO(tailhook) optimize this clone
+            Ok(error_page(Status::NotFound, cfg.clone(), debug))
         }
     }
 }

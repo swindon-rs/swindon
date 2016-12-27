@@ -1,14 +1,13 @@
 use std::io::Write;
-
-use tokio_core::io::Io;
+use std::sync::Arc;
 
 use minihttp::{Status};
+use tokio_core::io::Io;
 
-pub struct Html {
-    status: Status,
-    prefix: Arc<PathBuf>,
-    data: &'static str,
-}
+use futures::future::{ok};
+use config::Config;
+use incoming::{reply, Request, Debug};
+
 
 const PART1: &'static str = "\
     <!DOCTYPE html>\
@@ -33,26 +32,28 @@ const PART3: &'static str = concat!("\
     ");
 
 
-pub fn write_error_page<S>(status: Status, mut response: Pickler<S>)
-    -> Pickler<S>
-    where S: Io + Send + 'static,
+pub fn error_page<S: Io + 'static>(status: Status,
+    cfg: Arc<Config>, debug: Debug)
+    -> Request<S>
 {
-    response.status(status);
-    if status.response_has_body() {
-        let reason = status.reason();
-        let content_length = PART1.len() + PART2.len() + PART3.len() +
-            2*(4 + reason.as_bytes().len());
-        response.add_length(content_length as u64);
-        response.add_header("Content-Type", "text/html");
-        if response.done_headers() {
-            write!(response, "\
-                {p1}{code:03} {status}{p2}{code:03} {status}{p3}",
-                    code=status.code(), status=status.reason(),
-                    p1=PART1, p2=PART2, p3=PART3)
-                .expect("writing to a buffer always succeeds");
+    reply(cfg, debug, move |mut e| {
+        e.status(status);
+        if status.response_has_body() {
+            let reason = status.reason();
+            let content_length = PART1.len() + PART2.len() + PART3.len() +
+                2*(4 + reason.as_bytes().len());
+            e.add_length(content_length as u64);
+            e.add_header("Content-Type", "text/html");
+            if e.done_headers() {
+                write!(e, "\
+                    {p1}{code:03} {status}{p2}{code:03} {status}{p3}",
+                        code=status.code(), status=status.reason(),
+                        p1=PART1, p2=PART2, p3=PART3)
+                    .expect("writing to a buffer always succeeds");
+            }
+        } else {
+            e.done_headers();
         }
-    } else {
-        response.done_headers();
-    }
-    response
+        Box::new(ok(e.done()))
+    })
 }
