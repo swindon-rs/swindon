@@ -40,7 +40,7 @@ mod config;
 mod runtime;
 //mod handler;
 //mod handlers;
-//mod routing;
+mod routing;
 //mod serializer;
 //mod default_error_page;
 //mod response;

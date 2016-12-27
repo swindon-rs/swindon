@@ -7,6 +7,8 @@ use minihttp::server::{Dispatcher, Error, Head};
 use config::ConfigCell;
 use runtime::Runtime;
 use incoming::{Request, Debug};
+use routing::{parse_host, route};
+
 
 pub struct Router {
     addr: SocketAddr,
@@ -29,7 +31,21 @@ impl<S: Io> Dispatcher<S> for Router {
     {
         // Keep config same while processing a single request
         let cfg = self.runtime.config.get();
-        let debug = Debug::new(headers, &cfg);
-        unimplemented!();
+        let mut debug = Debug::new(headers, &cfg);
+
+        // No path means either CONNECT host, or OPTIONS *
+        // in both cases we use root route for the domain to make decision
+        let path = headers.path().unwrap_or("/");
+
+        let matched_route = headers.host().map(parse_host)
+            .and_then(|host| route(host, &path, &cfg.routing));
+        if let Some((route, suffix)) = matched_route {
+            debug.set_route(route);
+            println!("ROUTE {:?}", route);
+            unimplemented!();
+        } else {
+            //Response::ErrorPage(Status::NotFound)
+            unimplemented!();
+        }
     }
 }

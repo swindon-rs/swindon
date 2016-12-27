@@ -4,7 +4,11 @@ use tokio_core::io::Io;
 
 use minihttp::{Status};
 
-use {Pickler};
+pub struct Html {
+    status: Status,
+    prefix: Arc<PathBuf>,
+    data: &'static str,
+}
 
 const PART1: &'static str = "\
     <!DOCTYPE html>\
