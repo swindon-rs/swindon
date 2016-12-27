@@ -45,6 +45,9 @@ Options
    you should bump up a file descriptor limit to something larger than this
    value + number of potential proxy/backend connections.
 
+   Note: currently max-connections is obeyed per each listening address
+   separately. We're considering to change this behavior in future.
+
 .. opt:: pipeline-depth
 
    (default ``2``) Accept maximum N in-flight requests for each HTTP
@@ -55,6 +58,13 @@ Options
    they will be forwarded to backends regardless of whether previous ones are
    read from client. Which effectively means that active requests can be up
    to ``max-connections × pipeline-depth``.
+
+.. opt:: listen-error-timeout
+
+   (default ``100ms``) Time to sleep when we caught error accepting connection,
+   mostly error is some resource shortage (usually EMFILE or ENFILE), so
+   repeating after some short timeout makes sense (chances that some connection
+   freed some resources).
 
 .. opt:: debug-routing
 

@@ -1,8 +1,10 @@
 //! Root config validator
 use std::collections::HashMap;
 use std::sync::Arc;
+use std::time::Duration;
 
 use quire::validate::{Structure, Sequence, Mapping, Scalar, Numeric};
+use quire::De;
 
 use intern::{HandlerName, Upstream, SessionPoolName, DiskPoolName};
 use super::listen::{self, ListenSocket};
@@ -17,6 +19,7 @@ pub struct Config {
     pub listen: Vec<ListenSocket>,
     pub max_connections: usize,
     pub pipeline_depth: usize,
+    pub listen_error_timeout: De<Duration>,
     pub routing: Routing,
     pub handlers: HashMap<HandlerName, Handler>,
     pub session_pools: HashMap<SessionPoolName, Arc<SessionPool>>,
@@ -36,6 +39,7 @@ pub fn config_validator<'a>() -> Structure<'a> {
         Numeric::new().min(1).max(1 << 31).default(1000))
     .member("pipeline_depth",
         Numeric::new().min(1).max(10000).default(2))
+    .member("listen_error_timeout", Scalar::new().default("100ms"))
     .member("routing", routing::validator())
     .member("handlers", Mapping::new(Scalar::new(), handlers::validator()))
     .member("session_pools",
