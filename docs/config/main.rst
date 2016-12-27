@@ -81,3 +81,9 @@ Options
      could be served if exists) for this request
 
    Note that headers are subject to change at any time.
+
+.. opt:: server-name
+
+   Server name that will be sent in ``Server`` header. By default it's
+   ``swindon/VERSION``, but it might also be ``null`` (don't send ``Server``
+   header) or any other value.
