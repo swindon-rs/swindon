@@ -39,6 +39,12 @@ Options
     - 127.0.0.1:80
     - 127.0.0.1:8080
 
+.. opt:: max-connections
+
+   (default ``1000``) Maximum number of client connections to accept. Note
+   you should bump up a file descriptor limit to something larger than this
+   value + number of potential proxy/backend connections.
+
 .. opt:: debug-routing
 
    Enable ``X-Swindon-*`` headers in responses to debug routes chosen for

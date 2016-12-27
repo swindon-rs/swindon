@@ -2,7 +2,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use quire::validate::{Structure, Sequence, Mapping, Scalar};
+use quire::validate::{Structure, Sequence, Mapping, Scalar, Numeric};
 
 use intern::{HandlerName, Upstream, SessionPoolName, DiskPoolName};
 use super::listen::{self, ListenSocket};
@@ -15,6 +15,7 @@ use super::disk::{self, Disk};
 #[derive(RustcDecodable, PartialEq, Eq, Debug)]
 pub struct Config {
     pub listen: Vec<ListenSocket>,
+    pub max_connections: usize,
     pub routing: Routing,
     pub handlers: HashMap<HandlerName, Handler>,
     pub session_pools: HashMap<SessionPoolName, Arc<SessionPool>>,
@@ -30,6 +31,8 @@ pub struct Config {
 pub fn config_validator<'a>() -> Structure<'a> {
     Structure::new()
     .member("listen", Sequence::new(listen::validator()))
+    .member("max_connections",
+        Numeric::new().min(0).max(1 << 31).default(1000))
     .member("routing", routing::validator())
     .member("handlers", Mapping::new(Scalar::new(), handlers::validator()))
     .member("session_pools",
