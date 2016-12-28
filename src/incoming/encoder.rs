@@ -6,7 +6,7 @@ use std::collections::HashMap;
 use time;
 use minihttp::Status;
 use minihttp::server as http;
-use minihttp::server::{EncoderDone};
+use minihttp::server::{EncoderDone, FutureRawBody};
 use tokio_core::io::Io;
 
 
@@ -80,6 +80,11 @@ impl<S: Io> Encoder<S> {
             enc.add_header("X-Swindon-Route", route)
                 .expect("route is a valid header");
         }
+        if let Some(path) = self.debug.get_fs_path() {
+            enc.format_header("X-Swindon-File-Path",
+                              format_args!("{:?}", path))
+                .map_err(|e| error!("Adding X-Swindon-File-Path: {}", e)).ok();
+        }
 
         enc.done_headers().unwrap()
     }
@@ -88,6 +93,9 @@ impl<S: Io> Encoder<S> {
     }
     pub fn done(self) -> EncoderDone<S> {
         self.enc.done()
+    }
+    pub fn raw_body(self) -> FutureRawBody<S> {
+        self.enc.raw_body()
     }
 }
 

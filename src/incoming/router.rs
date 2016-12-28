@@ -7,9 +7,9 @@ use minihttp::server::{Dispatcher, Error, Head};
 
 use config::ConfigCell;
 use runtime::Runtime;
-use incoming::{Request, Debug, Input};
+use incoming::{Request, Debug, Input, Transport};
 use routing::{parse_host, route};
-use default_error_page::error_page;
+use default_error_page::serve_error_page;
 
 
 pub struct Router {
@@ -26,7 +26,7 @@ impl Router {
     }
 }
 
-impl<S: Io + 'static> Dispatcher<S> for Router {
+impl<S: Transport> Dispatcher<S> for Router {
     type Codec = Request<S>;
     fn headers_received(&mut self, headers: &Head)
         -> Result<Self::Codec, Error>
@@ -61,7 +61,7 @@ impl<S: Io + 'static> Dispatcher<S> for Router {
         if let Some(handler) = handler {
             handler.serve(inp)
         } else {
-            Ok(error_page(Status::NotFound, inp))
+            Ok(serve_error_page(Status::NotFound, inp))
         }
     }
 }

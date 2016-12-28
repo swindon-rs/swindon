@@ -1,3 +1,4 @@
+use std::io;
 use std::sync::{Arc, RwLock};
 use std::path::{Path, PathBuf, Component};
 use std::collections::HashMap;
@@ -7,20 +8,20 @@ use std::hash::{Hash, Hasher};
 use std::collections::hash_map::DefaultHasher;
 
 use futures::{BoxFuture, Future};
-use either::Either;
-use minihttp::server::{Error, Request};
+use futures::future::{Either, ok};
+use minihttp::server::Error;
 use minihttp::Status;
 use mime::TopLevel;
 use mime_guess::guess_mime_type;
 use tk_sendfile::DiskPool;
-use tk_bufstream::IoBuf;
-use tokio_core::io::Io;
 use futures_cpupool::CpuPool;
 
 use intern::{DiskPoolName};
+use incoming::{Input, Request, Reply, Transport};
+use incoming::reply;
 use config;
 use config::static_files::{Static, Mode, SingleFile};
-use {Pickler};
+use default_error_page::{serve_error_page, error_page};
 
 
 lazy_static! {
@@ -30,54 +31,64 @@ lazy_static! {
 }
 
 
-pub fn serve<S>(mut response: Pickler<S>, path: PathBuf, settings: Arc<Static>)
-    -> BoxFuture<IoBuf<S>, Error>
-    where S: Io + Send + AsRawFd + 'static,
+pub fn serve_dir<S: Transport>(settings: &Arc<Static>, mut inp: Input)
+    -> Request<S>
 {
     // TODO(tailhook) check for symlink attacks
-    let mime = guess_mime_type(&path);
-    let debug_path = if response.debug_routing() {
-        Some(path.clone())
-    } else {
-        None
+    let path = match path(settings, &inp) {
+        Ok(p) => p,
+        Err(()) => {
+            return serve_error_page(Status::Forbidden, inp);
+        }
     };
-    get_pool(&settings.pool).open(path)
-    .map_err(Into::into)
-    .and_then(move |file| {
-        response.status(Status::Ok);
-        response.add_length(file.size());
-        match (&mime.0, &settings.text_charset) {
-            (&TopLevel::Text, &Some(ref enc)) => {
-                response.format_header("Content-Type", format_args!(
-                    "{}/{}; charset={}", mime.0, mime.1, enc));
-            }
-            _ => {
-                response.format_header("Content-Type", mime);
-            }
-        }
-        if response.debug_routing() {  // just to be explicit
-            if let Some(path) = debug_path {
-                response.format_header("X-Swindon-File-Path",
-                    format_args!("{:?}", path));
-            }
-        }
-        response.add_extra_headers(&settings.extra_headers);
-        if response.done_headers() {
-            Either::A(response.steal_socket()
-                .and_then(|sock| file.write_into(sock))
-                .map_err(Into::into))
-        } else {
-            Either::B(response.done())
-        }
-    }).boxed()
+    let mime = guess_mime_type(&path);
+    inp.debug.set_fs_path(&path);
+    let pool = get_pool(&settings.pool);
+    let settings = settings.clone();
+    reply(inp, move |mut e| {
+        Box::new(pool.open(path)
+            .then(move |res| match res {
+                Ok(file) => {
+                    e.status(Status::Ok);
+                    e.add_length(file.size());
+                    match (&mime.0, &settings.text_charset) {
+                        (&TopLevel::Text, &Some(ref enc)) => {
+                            e.format_header("Content-Type", format_args!(
+                                "{}/{}; charset={}", mime.0, mime.1, enc));
+                        }
+                        _ => {
+                            e.format_header("Content-Type", mime);
+                        }
+                    }
+                    e.add_extra_headers(&settings.extra_headers);
+                    if e.done_headers() {
+                        Box::new(e.raw_body()
+                            .and_then(|raw_body| file.write_into(raw_body))
+                            .map(|raw_body| raw_body.done())
+                            .map_err(Into::into))
+                        as Reply<_>
+                    } else {
+                        Box::new(ok(e.done()))
+                    }
+                }
+                Err(ref err) if err.kind() == io::ErrorKind::NotFound => {
+                    error_page(Status::NotFound, e)
+                }
+                // TODO(tailhook) find out if we want to expose other
+                // errors, for example "Permission denied" and "is a directory"
+                Err(_) => {
+                    error_page(Status::InternalServerError, e)
+                }
+            }))
+    })
 }
 
-pub fn path(settings: &Static, suffix: &str, req: &Request)
-    -> Result<PathBuf, ()>
-{
+fn path(settings: &Static, inp: &Input) -> Result<PathBuf, ()> {
     let path = match settings.mode {
-        Mode::relative_to_domain_root => &req.path,
-        Mode::relative_to_route => suffix,
+        Mode::relative_to_domain_root => {
+            inp.headers.path().unwrap_or("/")
+        }
+        Mode::relative_to_route => inp.suffix,
     };
     let path = Path::new(path.trim_left_matches('/'));
     let mut buf = settings.path.to_path_buf();
@@ -92,10 +103,11 @@ pub fn path(settings: &Static, suffix: &str, req: &Request)
     Ok(buf)
 }
 
-pub fn serve_file<S>(mut response: Pickler<S>, settings: Arc<SingleFile>)
-    -> BoxFuture<IoBuf<S>, Error>
-    where S: Io + Send + AsRawFd + 'static,
+pub fn serve_file<S: Transport>(settings: &Arc<SingleFile>, inp: Input)
+    -> Request<S>
 {
+    unimplemented!();
+    /*
     get_pool(&settings.pool).open(settings.path.clone())
     // TODO(tailhook) this is not very good error
     .map_err(Into::into)
@@ -116,6 +128,7 @@ pub fn serve_file<S>(mut response: Pickler<S>, settings: Arc<SingleFile>)
             Either::B(response.done())
         }
     }).boxed()
+    */
 }
 
 fn new_pool(cfg: &config::Disk) -> DiskPool {

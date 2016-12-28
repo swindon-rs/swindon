@@ -17,11 +17,8 @@ use minihttp::server::Proto;
 
 use config::{ListenSocket, Handler, ConfigCell};
 use incoming::Router;
-/*
-use handler::Main;
-use chat::{ChatBackend, Processor, MaintenanceAPI};
+//use chat::{ChatBackend, Processor, MaintenanceAPI};
 use handlers;
-*/
 use runtime::Runtime;
 use http_pools::{HttpPools};
 
@@ -150,8 +147,8 @@ pub fn populate_loop(handle: &Handle, cfg: &ConfigCell, verbose: bool)
             }
         }
     }
-    handlers::files::update_pools(&cfg.get().disk_pools);
     */
+    handlers::files::update_pools(&cfg.get().disk_pools);
     http_pools.update(&cfg.get().http_destinations, &resolver, handle);
     State {
         //chat: chat_pro,
@@ -161,9 +158,9 @@ pub fn populate_loop(handle: &Handle, cfg: &ConfigCell, verbose: bool)
     }
 }
 pub fn update_loop(state: &mut State, cfg: &ConfigCell, handle: &Handle) {
-/*
     // TODO(tailhook) update listening sockets
     handlers::files::update_pools(&cfg.get().disk_pools);
+/*
     state.http_pools.update(&cfg.get().http_destinations, &state.ns, handle);
     let mut chat_pro = state.chat.write().unwrap();
     let config = cfg.get();

@@ -1,3 +1,7 @@
+use std::os::unix::io::AsRawFd;
+
+use tokio_core::io::Io;
+use tk_sendfile::Destination;
 use futures::future::Future;
 use minihttp::server::{Codec, EncoderDone, Error};
 
@@ -17,3 +21,8 @@ pub use self::debug::Debug;
 pub use self::encoder::{Encoder, IntoContext};
 pub use self::quick_reply::reply;
 
+/// A transport trait. We currently include ``AsRawFd`` in it to allow
+/// sendfile to work. But in the future we want to use specialization
+/// to optimize sendfile
+pub trait Transport: Io + AsRawFd + Destination + 'static {}
+impl<T: Io + AsRawFd + Destination + 'static> Transport for T {}
