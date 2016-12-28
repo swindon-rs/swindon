@@ -6,7 +6,7 @@ use minihttp::server::{EncoderDone, Error, Codec, RecvMode};
 use minihttp::server as http;
 
 use config::Config;
-use incoming::{Request, Reply, Encoder, Debug};
+use incoming::{Request, Reply, Encoder, IntoContext, Debug};
 
 
 pub struct QuickReply<F> {
@@ -14,12 +14,14 @@ pub struct QuickReply<F> {
 }
 
 
-pub fn reply<F, S: Io + 'static>(config: Arc<Config>, debug: Debug, f: F)
+pub fn reply<F, C, S: Io + 'static>(ctx: C, f: F)
     -> Request<S>
     where F: FnOnce(Encoder<S>) -> Reply<S> + 'static,
+          C: IntoContext,
 {
+    let (cfg, debug) = ctx.into_context();
     Box::new(QuickReply {
-        inner: Some((f, config, debug)),
+        inner: Some((f, cfg, debug)),
     })
 }
 

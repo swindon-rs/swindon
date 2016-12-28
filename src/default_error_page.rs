@@ -5,8 +5,7 @@ use minihttp::{Status};
 use tokio_core::io::Io;
 
 use futures::future::{ok};
-use config::Config;
-use incoming::{reply, Request, Debug};
+use incoming::{reply, Request, Input};
 
 
 const PART1: &'static str = "\
@@ -32,11 +31,8 @@ const PART3: &'static str = concat!("\
     ");
 
 
-pub fn error_page<S: Io + 'static>(status: Status,
-    cfg: Arc<Config>, debug: Debug)
-    -> Request<S>
-{
-    reply(cfg, debug, move |mut e| {
+pub fn error_page<S: Io + 'static>(status: Status, inp: Input) -> Request<S> {
+    reply(inp, move |mut e| {
         e.status(status);
         if status.response_has_body() {
             let reason = status.reason();

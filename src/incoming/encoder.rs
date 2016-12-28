@@ -20,6 +20,12 @@ pub struct Encoder<S: Io> {
     debug: Debug,
 }
 
+/// Represents object that can be used for getting enough context for encoder
+/// from
+pub trait IntoContext: Sized {
+    fn into_context(self) -> (Arc<Config>, Debug);
+}
+
 impl<S: Io> Encoder<S> {
     pub fn new(enc: http::Encoder<S>, config: Arc<Config>, debug: Debug)
         -> Encoder<S>
@@ -76,6 +82,9 @@ impl<S: Io> Encoder<S> {
         }
 
         enc.done_headers().unwrap()
+    }
+    pub fn write_body<T: AsRef<[u8]>>(&mut self, val: T) {
+        self.enc.write_body(val.as_ref())
     }
     pub fn done(self) -> EncoderDone<S> {
         self.enc.done()

@@ -7,7 +7,7 @@ use minihttp::server::{Dispatcher, Error, Head};
 
 use config::ConfigCell;
 use runtime::Runtime;
-use incoming::{Request, Debug};
+use incoming::{Request, Debug, Input};
 use routing::{parse_host, route};
 use default_error_page::error_page;
 
@@ -41,13 +41,24 @@ impl<S: Io + 'static> Dispatcher<S> for Router {
 
         let matched_route = headers.host().map(parse_host)
             .and_then(|host| route(host, &path, &cfg.routing));
-        if let Some((route, suffix)) = matched_route {
+        let (handler, suffix) = if let Some((route, suffix)) = matched_route {
             debug.set_route(route);
-            println!("ROUTE {:?}", route);
-            unimplemented!();
+            (cfg.handlers.get(route), suffix)
         } else {
-            // TODO(tailhook) optimize this clone
-            Ok(error_page(Status::NotFound, cfg.clone(), debug))
+            (None, path)
+        };
+        let inp = Input {
+            addr: self.addr,
+            runtime: &self.runtime,
+            config: &cfg,
+            debug: debug,
+            headers: headers,
+            suffix: suffix,
+        };
+        if let Some(handler) = handler {
+            Ok(handler.serve(inp))
+        } else {
+            Ok(error_page(Status::NotFound, inp))
         }
     }
 }

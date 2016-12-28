@@ -39,7 +39,7 @@ mod intern;
 mod config;
 mod runtime;
 //mod handler;
-//mod handlers;
+mod handlers;
 mod routing;
 //mod serializer;
 mod default_error_page;
