@@ -7,15 +7,15 @@ use config::Route;
 ///
 /// Returns destination route and relative path
 pub fn route<'x, D>(host: &str, path: &'x str, table: &'x BTreeMap<Route, D>)
-    -> Option<(&'x D, &'x str)>
+    -> Option<(&'x D, &'x str, &'x str)>
 {
     // TODO(tailhook) transform into range iteration when `btree_range` is
     // stable
     for (route, result) in table.iter().rev() {
         if route.host == host && path_match(&route.path, path) {
             // Longest match is the last in reversed iteration
-            let prefix_len = route.path.as_ref().map(|x| x.len()).unwrap_or(0);
-            return Some((result, &path[prefix_len..]));
+            let prefix = route.path.as_ref().map(|x| &x[..]).unwrap_or("");
+            return Some((result, prefix, &path[prefix.len()..]));
         }
     }
     return None;

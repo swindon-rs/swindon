@@ -14,6 +14,7 @@ pub struct Input<'a> {
     pub config: &'a Arc<Config>,
     pub debug: Debug,
     pub headers: &'a Head<'a>,
+    pub prefix: &'a str,
     pub suffix: &'a str,
 }
 

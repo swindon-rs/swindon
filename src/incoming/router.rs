@@ -37,15 +37,17 @@ impl<S: Io + 'static> Dispatcher<S> for Router {
 
         // No path means either CONNECT host, or OPTIONS *
         // in both cases we use root route for the domain to make decision
+        //
+        // TODO(tailhook) strip ?, #, ; from path
         let path = headers.path().unwrap_or("/");
 
         let matched_route = headers.host().map(parse_host)
             .and_then(|host| route(host, &path, &cfg.routing));
-        let (handler, suffix) = if let Some((route, suffix)) = matched_route {
+        let (handler, pref, suf) = if let Some((route, p, s)) = matched_route {
             debug.set_route(route);
-            (cfg.handlers.get(route), suffix)
+            (cfg.handlers.get(route), p, s)
         } else {
-            (None, path)
+            (None, "", path)
         };
         let inp = Input {
             addr: self.addr,
@@ -53,10 +55,11 @@ impl<S: Io + 'static> Dispatcher<S> for Router {
             config: &cfg,
             debug: debug,
             headers: headers,
-            suffix: suffix,
+            prefix: pref,
+            suffix: suf,
         };
         if let Some(handler) = handler {
-            Ok(handler.serve(inp))
+            handler.serve(inp)
         } else {
             Ok(error_page(Status::NotFound, inp))
         }
