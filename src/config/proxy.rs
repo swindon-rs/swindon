@@ -14,7 +14,10 @@ pub struct Proxy {
     pub mode: Mode,
     pub ip_header: Option<String>,
     pub destination: http::Destination,
-    pub max_payload_size: u64,
+    // TODO(tailhook) this might needs to be u64
+    pub max_payload_size: usize,
+    pub stream_requests: bool,
+    pub response_buffer_size: usize,
 }
 
 pub fn validator<'x>() -> Structure<'x> {
@@ -25,6 +28,9 @@ pub fn validator<'x>() -> Structure<'x> {
         .plain_default("forward"))
     .member("ip_header", Scalar::new().optional())
     .member("max_payload_size",
+        Numeric::new().min(0).max(1 << 40).default(10 << 20))
+    .member("stream_requests", Scalar::new().default(false))
+    .member("response_buffer_size",
         Numeric::new().min(0).max(1 << 40).default(10 << 20))
     .member("destination", http::destination_validator())
 }
