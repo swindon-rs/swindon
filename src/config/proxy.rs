@@ -24,6 +24,7 @@ pub fn validator<'x>() -> Structure<'x> {
         .allow_plain()
         .plain_default("forward"))
     .member("ip_header", Scalar::new().optional())
-    .member("max_payload_size", Numeric::new().min(0).max(10 << 20))
+    .member("max_payload_size",
+        Numeric::new().min(0).max(1 << 40).default(10 << 20))
     .member("destination", http::destination_validator())
 }
