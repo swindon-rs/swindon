@@ -1,6 +1,6 @@
 use super::http;
 
-use quire::validate::{Nothing, Enum, Structure, Scalar};
+use quire::validate::{Nothing, Enum, Structure, Scalar, Numeric};
 
 #[derive(RustcDecodable, Debug, PartialEq, Eq)]
 #[allow(non_camel_case_types)]
@@ -14,6 +14,7 @@ pub struct Proxy {
     pub mode: Mode,
     pub ip_header: Option<String>,
     pub destination: http::Destination,
+    pub max_payload_size: u64,
 }
 
 pub fn validator<'x>() -> Structure<'x> {
@@ -23,5 +24,6 @@ pub fn validator<'x>() -> Structure<'x> {
         .allow_plain()
         .plain_default("forward"))
     .member("ip_header", Scalar::new().optional())
+    .member("max_payload_size", Numeric::new().min(0).max(10 << 20))
     .member("destination", http::destination_validator())
 }
