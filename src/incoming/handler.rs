@@ -31,7 +31,7 @@ impl Handler {
                 Ok(handlers::files::serve_file(settings, input))
             }
             Handler::WebsocketEcho => {
-                unimplemented!();
+                Ok(handlers::websocket::serve_echo(input))
             }
             Handler::Proxy(ref settings) => {
                 unimplemented!();

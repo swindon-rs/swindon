@@ -2,6 +2,7 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 
 use tokio_core::io::Io;
+use tokio_core::reactor::Handle;
 use minihttp::Status;
 use minihttp::server::{Dispatcher, Error, Head};
 
@@ -15,13 +16,17 @@ use default_error_page::serve_error_page;
 pub struct Router {
     addr: SocketAddr,
     runtime: Arc<Runtime>,
+    handle: Handle,
 }
 
 impl Router {
-    pub fn new(addr: SocketAddr, runtime: Arc<Runtime>) -> Router {
+    pub fn new(addr: SocketAddr, runtime: Arc<Runtime>, handle: Handle)
+        -> Router
+    {
         Router {
             addr: addr,
             runtime: runtime,
+            handle: handle,
         }
     }
 }
@@ -57,6 +62,7 @@ impl<S: Transport> Dispatcher<S> for Router {
             headers: headers,
             prefix: pref,
             suffix: suf,
+            handle: &self.handle,
         };
         if let Some(handler) = handler {
             handler.serve(inp)

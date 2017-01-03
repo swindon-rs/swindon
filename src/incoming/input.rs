@@ -2,6 +2,7 @@ use std::sync::Arc;
 use std::net::SocketAddr;
 
 use minihttp::server::Head;
+use tokio_core::reactor::Handle;
 
 use config::Config;
 use runtime::Runtime;
@@ -16,6 +17,7 @@ pub struct Input<'a> {
     pub headers: &'a Head<'a>,
     pub prefix: &'a str,
     pub suffix: &'a str,
+    pub handle: &'a Handle,
 }
 
 impl<'a> IntoContext for Input<'a> {

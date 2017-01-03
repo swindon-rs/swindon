@@ -43,13 +43,14 @@ pub fn spawn_listener(addr: SocketAddr, handle: &Handle,
         // TODO(tailhook) make it configurable?
         .inflight_request_prealoc(0)
         .done();
+    let h1 = handle.clone();
 
     handle.spawn(
         listener.incoming()
         .then(move |item| match item {
             Ok((socket, saddr)) => {
                 ok(Proto::new(socket, &hcfg,
-                    Router::new(saddr, runtime.clone())))
+                    Router::new(saddr, runtime.clone(), h1.clone())))
             }
             Err(e) => {
                 info!("Error accepting: {}", e);
