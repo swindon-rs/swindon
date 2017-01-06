@@ -42,6 +42,6 @@ impl<F, S: Io> Codec<S> for QuickReply<F>
     fn start_response(&mut self, mut e: http::Encoder<S>) -> Reply<S> {
         let (func, config, debug) = self.inner.take()
             .expect("start response called once");
-        func(Encoder::new(e, config, debug))
+        func(Encoder::new(e, (config, debug)))
     }
 }

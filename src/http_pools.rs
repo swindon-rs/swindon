@@ -1,18 +1,26 @@
 use std::sync::{Arc, RwLock, RwLockWriteGuard};
 use std::collections::HashMap;
 
-use minihttp::client::{Codec, Config as HConfig, Proto};
+use minihttp::client::{Codec, Config as HConfig, Proto, Error, EncoderDone};
 use tokio_core::net::TcpStream;
 use tokio_core::reactor::Handle;
 use tk_pool::Pool;
 use tk_pool::uniform::{UniformMx, Config as PConfig};
 use abstract_ns::{Router, Resolver, union_stream};
 use futures::Stream;
+use futures::future::FutureResult;
 
 use intern::Upstream;
 use config::http_destinations::Destination;
 
-pub type HttpPool = Pool<Box<Codec<TcpStream>+Send>>;
+/// Future that is used for sending a client request
+///
+/// While we only support fully buffered requests it's fine to use
+/// FutureResult, but we will probably change it to something
+pub type HttpFuture<S> = FutureResult<EncoderDone<S>, Error>;
+pub type HttpPool = Pool<
+        Box<Codec<TcpStream, Future=HttpFuture<TcpStream>>+Send>
+    >;
 
 pub struct UpstreamRef<'a> {
     pools: &'a HttpPools,

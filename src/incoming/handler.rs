@@ -34,7 +34,7 @@ impl Handler {
                 Ok(handlers::websocket::serve_echo(input))
             }
             Handler::Proxy(ref settings) => {
-                unimplemented!();
+                Ok(handlers::proxy::serve(settings, input))
             }
             Handler::SwindonChat(ref chat) => {
                 unimplemented!();

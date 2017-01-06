@@ -13,6 +13,8 @@ use tokio_core::io::Io;
 use config::Config;
 use incoming::Debug;
 
+pub type Context = (Arc<Config>, Debug);
+
 
 pub struct Encoder<S: Io> {
     enc: http::Encoder<S>,
@@ -23,13 +25,14 @@ pub struct Encoder<S: Io> {
 /// Represents object that can be used for getting enough context for encoder
 /// from
 pub trait IntoContext: Sized {
-    fn into_context(self) -> (Arc<Config>, Debug);
+    fn into_context(self) -> Context;
 }
 
 impl<S: Io> Encoder<S> {
-    pub fn new(enc: http::Encoder<S>, config: Arc<Config>, debug: Debug)
+    pub fn new(enc: http::Encoder<S>, context: Context)
         -> Encoder<S>
     {
+        let (config, debug) = context;
         Encoder {
             enc: enc,
             config: config,
@@ -41,6 +44,9 @@ impl<S: Io> Encoder<S> {
 impl<S: Io> Encoder<S> {
     pub fn status(&mut self, status: Status) {
         self.enc.status(status);
+    }
+    pub fn custom_status(&mut self, code: u16, reason: &str) {
+        self.enc.custom_status(code, reason);
     }
     pub fn add_length(&mut self, n: u64) {
         self.enc.add_length(n).unwrap();

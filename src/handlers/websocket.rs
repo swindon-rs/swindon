@@ -37,7 +37,7 @@ impl<S: Io + 'static> Codec<S> for WebsockReply {
     fn start_response(&mut self, mut e: http::Encoder<S>) -> Reply<S> {
         let (config, debug, accept) = self.rdata.take()
             .expect("start response called once");
-        let mut e = Encoder::new(e, config, debug);
+        let mut e = Encoder::new(e, (config, debug));
         e.status(Status::SwitchingProtocol);
         e.add_header("Connection", "upgrade");
         e.add_header("Upgrade", "websocket");

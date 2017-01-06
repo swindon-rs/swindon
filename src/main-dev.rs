@@ -50,7 +50,8 @@ mod dev;
 mod startup;
 mod incoming;
 //mod flush_and_wait;
-mod http_pools;
+mod http_pools;  // TODO(tailhook) move to proxy?
+mod proxy;
 //mod json_requests;
 
 // Utils

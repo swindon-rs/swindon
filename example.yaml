@@ -11,6 +11,7 @@ routing:
   localhost/websocket-echo: websocket-echo
   example.com: example-chat-http
   httpbin.devd.io: http-bin
+  proxy.devd.io: bin
   chat.example.com/: example-chat
   chat.example.com/css: example-chat-static
   chat.example.com/js: example-chat-static
@@ -56,7 +57,12 @@ handlers:
     path: /work/src
     text-charset: utf-8
 
+  bin: !Proxy
+    ip-header: X-Remote-Ip
+    destination: bin
+
 session-pools:
+
   example-chat-session:
     listen: 127.0.0.1:2007
     inactivity-handlers:
@@ -64,6 +70,7 @@ session-pools:
 
 
 http-destinations:
+
   superman:
 
     load-balancing: queue
@@ -73,3 +80,13 @@ http-destinations:
 
     addresses:
     - example.com:5000
+
+  bin:
+
+    load-balancing: queue
+    queue-size-for-503: 100
+    backend-connections-per-ip-port: 1
+    in-flight-requests-per-backend-connection: 1
+
+    addresses:
+    - httpbin.org:80

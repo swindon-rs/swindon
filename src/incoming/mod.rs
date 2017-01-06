@@ -18,7 +18,7 @@ pub type Reply<S> = Box<Future<Item=EncoderDone<S>, Error=Error>>;
 pub use self::input::Input;
 pub use self::router::Router;
 pub use self::debug::Debug;
-pub use self::encoder::{Encoder, IntoContext};
+pub use self::encoder::{Encoder, IntoContext, Context};
 pub use self::quick_reply::reply;
 
 /// A transport trait. We currently include ``AsRawFd`` in it to allow

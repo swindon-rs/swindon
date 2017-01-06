@@ -49,7 +49,8 @@ mod default_error_page;
 mod startup;
 mod incoming;
 //mod flush_and_wait;
-mod http_pools;
+mod http_pools;  // TODO(tailhook) move to proxy?
+mod proxy;
 //mod json_requests;
 //
 //// Utils: either is in futures-rs > 0.1.6 (unreleased yet)
