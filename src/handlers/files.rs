@@ -72,12 +72,12 @@ pub fn serve_dir<S: Transport>(settings: &Arc<Static>, mut inp: Input)
                     }
                 }
                 Err(ref err) if err.kind() == io::ErrorKind::NotFound => {
-                    error_page(Status::NotFound, e)
+                    Box::new(error_page(Status::NotFound, e))
                 }
                 // TODO(tailhook) find out if we want to expose other
                 // errors, for example "Permission denied" and "is a directory"
                 Err(_) => {
-                    error_page(Status::InternalServerError, e)
+                    Box::new(error_page(Status::InternalServerError, e))
                 }
             }))
     })
@@ -132,12 +132,12 @@ pub fn serve_file<S: Transport>(settings: &Arc<SingleFile>, mut inp: Input)
                     }
                 }
                 Err(ref err) if err.kind() == io::ErrorKind::NotFound => {
-                    error_page(Status::NotFound, e)
+                    Box::new(error_page(Status::NotFound, e))
                 }
                 // TODO(tailhook) find out if we want to expose other
                 // errors, for example "Permission denied" and "is a directory"
                 Err(_) => {
-                    error_page(Status::InternalServerError, e)
+                    Box::new(error_page(Status::InternalServerError, e))
                 }
             }))
     })

@@ -109,7 +109,7 @@ impl<S: Io + 'static> http::Codec<S> for Codec {
                     }).map_err(|e| -> Error { unimplemented!() }))
                 }
                 State::Error(status) => {
-                    error_page(status, Encoder::new(e, ctx))
+                    Box::new(error_page(status, Encoder::new(e, ctx)))
                 }
                 _ => unreachable!(),
             }

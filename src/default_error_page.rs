@@ -2,9 +2,10 @@ use std::io::Write;
 use std::sync::Arc;
 
 use minihttp::{Status};
+use minihttp::server::{Error, EncoderDone};
 use tokio_core::io::Io;
 
-use futures::future::{ok};
+use futures::future::{ok, FutureResult};
 use incoming::{reply, Request, Input, Reply, Encoder};
 
 
@@ -33,11 +34,11 @@ const PART3: &'static str = concat!("\
 
 pub fn serve_error_page<S: Io + 'static>(status: Status, inp: Input)
     -> Request<S> {
-    reply(inp, move |e| error_page(status, e))
+    reply(inp, move |e| Box::new(error_page(status, e)))
 }
 
 pub fn error_page<S: Io + 'static>(status: Status, mut e: Encoder<S>)
-    -> Reply<S>
+    -> FutureResult<EncoderDone<S>, Error>
 {
     e.status(status);
     if status.response_has_body() {
@@ -56,5 +57,5 @@ pub fn error_page<S: Io + 'static>(status: Status, mut e: Encoder<S>)
     } else {
         e.done_headers();
     }
-    Box::new(ok(e.done()))
+    ok(e.done())
 }

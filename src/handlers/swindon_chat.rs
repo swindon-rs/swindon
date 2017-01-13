@@ -18,13 +18,18 @@ use intern::SessionId;
 use config::Config;
 use config::chat::Chat;
 use incoming::{Request, Input, Debug, Reply, Encoder, Transport};
-use default_error_page::serve_error_page;
+use incoming::{Context, IntoContext};
+use default_error_page::{serve_error_page, error_page};
 
+struct ReplyData {
+    context: Context,
+    accept: WebsocketAccept,
+    authorizer: Receiver<Result<(SessionId, Json), Status>>,
+}
 
 struct WebsockReply {
-    rdata: Option<(Arc<Config>, Debug, WebsocketAccept)>,
+    rdata: Option<ReplyData>,
     handle: Handle,
-    authorizer: Receiver<Result<(SessionId, Json), Status>>,
 }
 
 
@@ -41,15 +46,29 @@ impl<S: Io + 'static> Codec<S> for WebsockReply {
         Ok(Async::Ready(0))
     }
     fn start_response(&mut self, mut e: http::Encoder<S>) -> Reply<S> {
-        let (config, debug, accept) = self.rdata.take()
+        let ReplyData { context, accept, authorizer } = self.rdata.take()
             .expect("start response called once");
-        let mut e = Encoder::new(e, (config, debug));
-        e.status(Status::SwitchingProtocol);
-        e.add_header("Connection", "upgrade");
-        e.add_header("Upgrade", "websocket");
-        e.format_header("Sec-Websocket-Accept", &accept);
-        e.done_headers();
-        Box::new(ok(e.done()))
+        Box::new(authorizer.then(move |result| {
+            let mut e = Encoder::new(e, context);
+            match result {
+                Ok(Ok((sid, data))) => {
+                    e.status(Status::SwitchingProtocol);
+                    e.add_header("Connection", "upgrade");
+                    e.add_header("Upgrade", "websocket");
+                    e.format_header("Sec-Websocket-Accept", &accept);
+                    e.done_headers();
+                    ok(e.done())
+                }
+                Ok(Err(status)) => {
+                    error_page(status, e)
+                }
+                Err(_) => { // cancelled?
+                    // TODO(tailhook) verify that it either never happens
+                    // or that error is expected here
+                    error_page(Status::InternalServerError, e)
+                }
+            }
+        }))
     }
     fn hijack(&mut self, write_buf: WriteBuf<S>, read_buf: ReadBuf<S>) {
         let inp = read_buf.framed(WebsocketCodec);
@@ -70,9 +89,12 @@ pub fn serve<S: Transport>(settings: &Arc<Chat>, inp: Input)
             let (tx, rx) = channel();
             chat::start_authorize(&inp, settings, tx);
             Ok(Box::new(WebsockReply {
-                rdata: Some((inp.config.clone(), inp.debug, ws.accept)),
                 handle: inp.handle.clone(),
-                authorizer: rx,
+                rdata: Some(ReplyData {
+                    context: inp.into_context(),
+                    accept: ws.accept,
+                    authorizer: rx,
+                }),
             }))
         }
         Ok(None) => {
