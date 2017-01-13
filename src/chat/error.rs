@@ -4,7 +4,7 @@ use futures::sync::mpsc::SendError;
 
 use rustc_serialize::{Encodable, Encoder};
 use rustc_serialize::json::{Json, ParserError};
-use minihttp::enums::Status;
+use minihttp::Status;
 use minihttp::client;
 
 use super::message::{Meta, ValidationError};

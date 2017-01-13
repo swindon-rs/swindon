@@ -6,8 +6,11 @@
 use std::str;
 use std::ascii::AsciiExt;
 use std::collections::BTreeMap;
+
 use rustc_serialize::json::{self, Json};
 use rustc_serialize::{Encodable, Encoder};
+
+use chat::Cid;
 
 pub type Meta = BTreeMap<String, Json>;
 pub type Args = Vec<Json>;
@@ -96,10 +99,6 @@ pub fn get_active(meta: &Meta) -> Option<Option<u64>>   // XXX
     }
 }
 
-/// Encode to JSON Auth message.
-pub fn encode_auth(connection_id: &String, data: &AuthData) -> String {
-    json::encode(&Auth(connection_id, data)).unwrap()
-}
 
 /// Encode to JSON Websocket call:
 /// `[<meta_obj>, <args_list>, <kwargs_obj>]`
@@ -116,7 +115,7 @@ pub struct AuthData {
 
 // Private tools
 
-struct Auth<'a>(&'a String, &'a AuthData);
+pub struct Auth<'a>(pub &'a String, pub &'a AuthData);
 
 impl<'a> Encodable for Auth<'a> {
     fn encode<S: Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
@@ -214,10 +213,10 @@ mod test {
 
     #[test]
     fn encode_auth() {
-        let res = message::encode_auth(&"conn:1".to_string(), &AuthData{
+        let res = Auth(&"conn:1".to_string(), &AuthData{
             http_cookie: None, http_authorization: None,
             url_querystring: "".to_string(),
-        });
+        }).to_string();
         assert_eq!(res, concat!(
             r#"[{"connection_id":"conn:1"},[],{"#,
             r#""http_cookie":null,"http_authorization":null,"#,
@@ -229,7 +228,7 @@ mod test {
             url_querystring: "".to_string(),
         };
 
-        let res = message::encode_auth(&"conn:2".to_string(), &kw);
+        let res = Auth(&"conn:2".to_string(), &kw).to_string();
         assert_eq!(res, concat!(
             r#"[{"connection_id":"conn:2"},"#,
             r#"[],{"http_cookie":"auth=ok","#,

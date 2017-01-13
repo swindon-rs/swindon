@@ -4,11 +4,10 @@ use std::collections::{HashSet, HashMap};
 use rustc_serialize::json::Json;
 use futures::sync::mpsc::{UnboundedSender as Sender};
 
-use chat::Cid;
+use chat::{Cid, CloseReason};
 use intern::{Topic, SessionId, Lattice as Namespace, LatticeKey};
 use super::{ConnectionMessage};
 use super::lattice;
-use websocket::CloseReason;
 
 
 pub struct NewConnection {

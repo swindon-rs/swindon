@@ -1,382 +1,118 @@
-//! Pull API handler.
-use std::str::{self, FromStr};
-use std::sync::Arc;
+use std::str::from_utf8;
+use std::io::BufWriter;
+use std::mem;
 
-use futures::{Finished, finished};
-use tokio_service::Service;
-use tokio_core::net::TcpStream;
-use tk_bufstream::IoBuf;
-use minihttp::server::{Error, Request, ResponseFn};
-use minihttp::{Status};
-use minihttp::enums::Method;
-use rustc_serialize::json::{self, Json};
+use futures::Async;
+use futures::future::{FutureResult, ok};
+use futures::sync::oneshot;
+use minihttp::{Status, Version};
+use minihttp::client as http;
+use tokio_core::io::Io;
+use rustc_serialize::Encodable;
+use rustc_serialize::json::{as_json, Json};
 
-use {Pickler};
-use config::ConfigCell;
-use response::DebugInfo;
-use default_error_page::write_error_page;
-use intern::{Topic, Lattice, BadIdent};
+use intern::SessionId;
+use proxy::{RepReq, HalfResp, Response};
+use chat::message::{AuthData, Auth};
+use chat::Cid;
+use chat::cid::{serialize_cid};
+use chat::authorize::parse_userinfo;
 
-use super::{Cid, ProcessorPool};
-use super::processor::{Action, Delta};
-
-
-/// Chat Backend Http handler.
-#[derive(Clone)]
-pub struct ChatBackend {
-    pub config: ConfigCell,
-    pub chat_pool: ProcessorPool,
+enum State {
+    Init(String, Cid, AuthData),
+    Wait,
+    Headers(Status),
+    Done(Response),
+    Void,
 }
 
 
-impl Service for ChatBackend {
-    type Request = Request;
-    type Response = ResponseFn<Finished<IoBuf<TcpStream>, Error>, TcpStream>;
-    type Error = Error;
-    type Future = Finished<Self::Response, Error>;
-
-    fn call(&self, req: Request) -> Self::Future {
-        let cfg = self.config.get();
-        let status = self.serve(&req);
-        finished(ResponseFn::new(move |res| {
-            let res = Pickler(res, cfg.clone(), DebugInfo::new(&req));
-            write_error_page(status, res).done()
-        }))
-    }
+pub struct AuthCodec {
+    state: State,
+    sender: Option<oneshot::Sender<Result<(SessionId, Json), Status>>>,
 }
 
-impl ChatBackend {
-
-    fn serve(&self, req: &Request) -> Status {
-        use self::ChatRoute::*;
-
-        let route = match match_route(&req.method, req.path.as_str()) {
-            Ok(r) => r,
-            Err(_) => return Status::NotFound
-        };
-        let payload = match req.body {
-            Some(ref body) => {
-                str::from_utf8(&body.data[..]).ok()
-                    .and_then(|s| Json::from_str(s).ok())
-            }
-            None => None
-        };
-        if route.expect_data() && payload.is_none() {
-            return Status::BadRequest;
+impl AuthCodec {
+    pub fn new(path: String, cid: Cid, req: AuthData,
+        tx: oneshot::Sender<Result<(SessionId, Json), Status>>)
+        -> AuthCodec
+    {
+        AuthCodec {
+            state: State::Init(path, cid, req),
+            sender: Some(tx),
         }
-        let action = match route {
-            TopicSubscribe(conn_id, topic) => {
-                Action::Subscribe {
-                    conn_id: conn_id,
-                    topic: topic,
-                }
-            }
-            TopicUnsubscribe(conn_id, topic) => {
-                Action::Unsubscribe {
-                    conn_id: conn_id,
-                    topic: topic,
-                }
-            }
-            LatticeSubscribe(conn_id, namespace) => {
-                let delta = match decode_delta(req) {
-                    Ok(delta) => delta,
-                    Err(err) => {
-                        info!("Error {:?}", err);
-                        return Status::BadRequest
-                    }
-                };
-                self.chat_pool.send(Action::Lattice {
-                    namespace: namespace.clone(),
-                    delta: delta,
-                });
-                Action::Attach {
-                    namespace: namespace,
-                    conn_id: conn_id,
-                }
-            }
-            LatticeUnsubscribe(conn_id, namespace) => {
-                Action::Detach {
-                    namespace: namespace,
-                    conn_id: conn_id,
-                }
-            }
-            TopicPublish(topic) => {
-                let data = Arc::new(payload.unwrap());
-                Action::Publish {
-                    topic: topic,
-                    data: data,
-                }
-            }
-            LatticeUpdate(namespace) => {
-                let delta = match decode_delta(req) {
-                    Ok(delta) => delta,
-                    Err(err) => {
-                        info!("Error {:?}", err);
-                        return Status::BadRequest
-                    }
-                };
-                Action::Lattice {
-                    namespace: namespace,
-                    delta: delta,
-                }
-            }
-        };
-        self.chat_pool.send(action);
-        Status::NoContent
     }
-
 }
 
-fn decode_delta(req: &Request) -> Result<Delta, json::DecoderError>
+
+fn write_json_request<S: Io, E>(mut e: http::Encoder<S>, data: &E)
+    -> http::EncoderDone<S>
+    where E: Encodable,
 {
-    // NOTE: we assume body exist and is valid json
-    //  (ie: it parsed earlier)
-    let body = req.body.as_ref().unwrap();
-    let body = str::from_utf8(&body.data[..]).unwrap();
-    json::decode::<Delta>(body)
-}
-
-quick_error! {
-    #[derive(Debug)]
-    enum MatchError {
-        BadIdent(err: BadIdent) {
-            from()
-            display("bad ident: {}", err)
-            description(err.description())
-        }
-        UnknownRoute {
-            description("unknown route")
-        }
-        InvalidRoute {
-            description("malformed route")
-        }
+    use std::io::Write;
+    e.add_header("Content-Type", "application/json").unwrap();
+    e.add_chunked().unwrap();
+    e.done_headers().unwrap();
+    let mut buf = BufWriter::new(e);
+    write!(&mut buf, "{}", as_json(data)).unwrap();
+    match buf.into_inner() {
+        Ok(x) => x.done(),
+        Err(_) => unreachable!(),
     }
 }
 
-fn match_route(method: &Method, path: &str) -> Result<ChatRoute, MatchError> {
-    use minihttp::enums::Method::*;
-    use self::ChatRoute::*;
-    use self::MatchError::*;
 
-    if !path.starts_with("/v1/") {
-        return Err(UnknownRoute)
-    }
-    let mut it = path.split("/").skip(2);   // skip '' & 'v1'
-    let route = match (method, it.next()) {
-        (&Post, Some(kind)) => {
-            if !it.next().map(|x| x.len() > 0).unwrap_or(false) {
-                return Err(InvalidRoute)
-            }
-            match kind {
-                "lattice" => {
-                    let (_, namespace) = path.split_at("/v1/lattice/".len());
-                    let namespace = namespace.replace("/", ".").parse()?;
-                    ChatRoute::LatticeUpdate(namespace)
-                }
-                "publish" => {
-                    let (_, topic) = path.split_at("/v1/publish/".len());
-                    let topic = topic.replace("/", ".").parse()?;
-                    TopicPublish(topic)
-                }
-                _ => return Err(UnknownRoute)
-            }
+impl<S: Io> http::Codec<S> for AuthCodec {
+    type Future = FutureResult<http::EncoderDone<S>, http::Error>;
+
+    fn start_write(&mut self, mut e: http::Encoder<S>) -> Self::Future {
+        if let State::Init(p, c, i) = mem::replace(&mut self.state, State::Void)
+        {
+            self.state = State::Wait;
+            e.request_line("POST", &p, Version::Http11);
+            ok(write_json_request(e, &Auth(&serialize_cid(&c), &i)))
+        } else {
+            panic!("wrong state");
         }
-        (&Put, Some("connection")) |
-        (&Delete, Some("connection")) => {
-            let str_id = it.next().ok_or(InvalidRoute)?;
-            let conn_id = Cid::from_str(str_id).map_err(|_| InvalidRoute)?;
-
-            let kind = it.next();
-            if !it.next().map(|x| x.len() > 0).unwrap_or(false) {
-                return Err(InvalidRoute)
-            }
-            match kind {
-                Some("subscriptions") => {
-                    let (_, topic) = path.split_at(
-                        "/v1/connection//subscriptions/".len() + str_id.len());
-                    let topic = topic.replace("/", ".").parse()?;
-                    if method == &Put {
-                        TopicSubscribe(conn_id, topic)
-                    } else {
-                        TopicUnsubscribe(conn_id, topic)
+    }
+    fn headers_received(&mut self, headers: &http::Head)
+        -> Result<http::RecvMode, http::Error>
+    {
+        if let State::Wait = mem::replace(&mut self.state, State::Void) {
+            self.state = State::Headers(
+                headers.status().unwrap_or(Status::InternalServerError));
+            // TODO(tailhook) limit and streaming
+            Ok(http::RecvMode::Buffered(10_485_760))
+        } else {
+            panic!("wrong state");
+        }
+    }
+    fn data_received(&mut self, data: &[u8], end: bool)
+        -> Result<Async<usize>, http::Error>
+    {
+        // TODO(tailhook) streaming
+        assert!(end);
+        match mem::replace(&mut self.state, State::Void) {
+            State::Headers(hr) => {
+                let result = from_utf8(data)
+                    .map_err(|e| debug!("Invalid utf-8 in auth data: {}", e))
+                .and_then(|s| Json::from_str(s)
+                    .map_err(|e| debug!("Invalid json in auth data: {}", e)))
+                .and_then(|j| parse_userinfo(j)
+                    .map_err(|e| debug!("Bad user info in auth data: {}", e)));
+                match result {
+                    Ok((sess_id, userinfo)) => {
+                        self.sender.take().expect("not responded yet")
+                            .complete(Ok((sess_id, userinfo)))
                     }
-                }
-                Some("lattices") => {
-                    let (_, namespace) = path.split_at(
-                        "/v1/connection//lattices/".len() + str_id.len());
-                    let namespace = namespace.replace("/", ".").parse()?;
-                    if method == &Put {
-                        LatticeSubscribe(conn_id, namespace)
-                    } else {
-                        LatticeUnsubscribe(conn_id, namespace)
+                    Err(()) => {
+                        self.sender.take().expect("not responded yet")
+                            .complete(Err(Status::InternalServerError));
                     }
-                }
-                _ => return Err(UnknownRoute)
+                };
             }
+            _ => unreachable!(),
         }
-        _ => return Err(UnknownRoute)
-    };
-    Ok(route)
-}
-
-
-#[derive(Debug, PartialEq)]
-pub enum ChatRoute {
-    TopicSubscribe(Cid, Topic),
-    TopicUnsubscribe(Cid, Topic),
-    LatticeSubscribe(Cid, Lattice),
-    LatticeUnsubscribe(Cid, Lattice),
-    TopicPublish(Topic),
-    LatticeUpdate(Lattice),
-}
-
-impl ChatRoute {
-    fn expect_data(&self) -> bool {
-        use self::ChatRoute::*;
-        match *self {
-            TopicPublish(_) |
-            LatticeSubscribe(_, _) |
-            LatticeUpdate(_) => true,
-
-            TopicSubscribe(_, _) |
-            TopicUnsubscribe(_, _) |
-            LatticeUnsubscribe(_, _) => false,
-        }
-    }
-}
-
-
-#[cfg(test)]
-mod test {
-    use std::str::FromStr;
-    use minihttp::enums::Method;
-    use string_intern::Symbol;
-
-    use super::match_route;
-    use super::ChatRoute::*;
-    use super::super::Cid;
-
-    #[test]
-    fn match_topic_publish() {
-        let path = "/v1/publish/test-chat/room1";
-        let route = match_route(&Method::Post, path).unwrap();
-        assert_eq!(route, TopicPublish(Symbol::from("test-chat.room1")));
-    }
-
-    #[test]
-    fn match_lattice_update() {
-        let path = "/v1/lattice/test-chat/rooms";
-        let route = match_route(&Method::Post, path).unwrap();
-        assert_eq!(route, LatticeUpdate(Symbol::from("test-chat.rooms")));
-    }
-
-    #[test]
-    fn match_topic_subscribe() {
-        let path = "/v1/connection/123/subscriptions/test-chat/room1";
-        let route = match_route(&Method::Put, path).unwrap();
-        assert_eq!(route, TopicSubscribe(
-            Cid::from_str("123").unwrap(), Symbol::from("test-chat.room1")));
-    }
-
-    #[test]
-    fn match_topic_unsubscribe() {
-        let path = "/v1/connection/1234/subscriptions/test-chat/room1";
-        let route = match_route(&Method::Delete, path).unwrap();
-        assert_eq!(route, TopicUnsubscribe(
-            Cid::from_str("1234").unwrap(), Symbol::from("test-chat.room1")));
-    }
-
-    #[test]
-    fn match_lattice_subscribe() {
-        let path = "/v1/connection/1234/lattices/test-chat/room1";
-        let route = match_route(&Method::Put, path).unwrap();
-        assert_eq!(route, LatticeSubscribe(
-            Cid::from_str("1234").unwrap(), Symbol::from("test-chat.room1")));
-    }
-
-    #[test]
-    fn match_lattice_unsubscribe() {
-        let path = "/v1/connection/1235/lattices/test-chat/room1";
-        let route = match_route(&Method::Delete, path).unwrap();
-        assert_eq!(route, LatticeUnsubscribe(
-            Cid::from_str("1235").unwrap(), Symbol::from("test-chat.room1")));
-    }
-
-    #[test]
-    fn no_matches() {
-        let path = "/v/";
-        assert!(match_route(&Method::Get, path).is_err());
-        assert!(match_route(&Method::Put, path).is_err());
-        assert!(match_route(&Method::Post, path).is_err());
-        assert!(match_route(&Method::Patch, path).is_err());
-        assert!(match_route(&Method::Delete, path).is_err());
-
-        let path = "/v1/";
-        assert!(match_route(&Method::Get, path).is_err());
-        assert!(match_route(&Method::Put, path).is_err());
-        assert!(match_route(&Method::Post, path).is_err());
-        assert!(match_route(&Method::Patch, path).is_err());
-        assert!(match_route(&Method::Delete, path).is_err());
-
-        let path = "/v1/publish";
-        assert!(match_route(&Method::Get, path).is_err());
-        assert!(match_route(&Method::Put, path).is_err());
-        assert!(match_route(&Method::Post, path).is_err());
-        assert!(match_route(&Method::Patch, path).is_err());
-        assert!(match_route(&Method::Delete, path).is_err());
-
-        let path = "/v1/publish/";
-        assert!(match_route(&Method::Get, path).is_err());
-        assert!(match_route(&Method::Put, path).is_err());
-        assert!(match_route(&Method::Post, path).is_err());
-        assert!(match_route(&Method::Patch, path).is_err());
-        assert!(match_route(&Method::Delete, path).is_err());
-
-        let path = "/v1/publish/test-chat/room1";
-        assert!(match_route(&Method::Get, path).is_err());
-        assert!(match_route(&Method::Put, path).is_err());
-        assert!(match_route(&Method::Patch, path).is_err());
-        assert!(match_route(&Method::Delete, path).is_err());
-
-        let path = "/v1/lattice/test-chat/rooms";
-        assert!(match_route(&Method::Get, path).is_err());
-        assert!(match_route(&Method::Put, path).is_err());
-        assert!(match_route(&Method::Patch, path).is_err());
-        assert!(match_route(&Method::Delete, path).is_err());
-
-        let path = "/v1/connection//subscriptions/";
-        assert!(match_route(&Method::Get, path).is_err());
-        assert!(match_route(&Method::Put, path).is_err());
-        assert!(match_route(&Method::Post, path).is_err());
-        assert!(match_route(&Method::Patch, path).is_err());
-        assert!(match_route(&Method::Delete, path).is_err());
-
-        let path = "/v1/connection/abc/subscriptions/";
-        assert!(match_route(&Method::Get, path).is_err());
-        assert!(match_route(&Method::Put, path).is_err());
-        assert!(match_route(&Method::Post, path).is_err());
-        assert!(match_route(&Method::Patch, path).is_err());
-        assert!(match_route(&Method::Delete, path).is_err());
-
-        let path = "/v1/connection/123/subscriptions/";
-        assert!(match_route(&Method::Get, path).is_err());
-        assert!(match_route(&Method::Put, path).is_err());
-        assert!(match_route(&Method::Post, path).is_err());
-        assert!(match_route(&Method::Patch, path).is_err());
-        assert!(match_route(&Method::Delete, path).is_err());
-
-        let path = "/v1/connection/-123/subscriptions/";
-        assert!(match_route(&Method::Get, path).is_err());
-        assert!(match_route(&Method::Put, path).is_err());
-        assert!(match_route(&Method::Post, path).is_err());
-        assert!(match_route(&Method::Patch, path).is_err());
-        assert!(match_route(&Method::Delete, path).is_err());
-
-        let path = "/v1/connection/conn_id/subscriptions/room,1";
-        assert!(match_route(&Method::Get, path).is_err());
-        assert!(match_route(&Method::Put, path).is_err());
-        assert!(match_route(&Method::Post, path).is_err());
-        assert!(match_route(&Method::Patch, path).is_err());
-        assert!(match_route(&Method::Delete, path).is_err());
+        Ok((Async::Ready(data.len())))
     }
 }

@@ -23,7 +23,7 @@ use intern::LatticeKey;
 use chat::Cid;
 use chat::message::Meta;
 use chat::error::MessageError;
-use websocket::CloseReason;
+use chat::CloseReason;
 
 mod main;
 mod pool;

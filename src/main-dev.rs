@@ -45,7 +45,7 @@ mod routing;
 mod default_error_page;
 //mod response;
 //mod websocket;
-//mod chat;
+mod chat;
 mod dev;
 mod startup;
 mod incoming;

@@ -17,14 +17,14 @@ use minihttp::server::Proto;
 
 use config::{ListenSocket, Handler, ConfigCell};
 use incoming::Router;
-//use chat::{ChatBackend, Processor, MaintenanceAPI};
+use chat::{Processor};
 use handlers;
 use runtime::Runtime;
 use http_pools::{HttpPools};
 
 
 pub struct State {
-    //chat: Arc<RwLock<Processor>>,
+    chat: Arc<RwLock<Processor>>,
     http_pools: HttpPools,
     ns: abstract_ns::Router,
     listener_shutters: HashMap<SocketAddr, Sender<()>>,
@@ -82,13 +82,13 @@ pub fn populate_loop(handle: &Handle, cfg: &ConfigCell, verbose: bool)
     rb.add_default(ns);
     let resolver = rb.into_resolver();
 
-    //let chat_pro = Arc::new(RwLock::new(Processor::new()));
+    let chat_pro = Arc::new(RwLock::new(Processor::new()));
     let http_pools = HttpPools::new();
     let runtime = Arc::new(Runtime {
         config: cfg.clone(),
         handle: handle.clone(),
         http_pools: http_pools.clone(),
-        //chat_processor: chat_pro.clone(),
+        chat_processor: chat_pro.clone(),
     });
     let root = cfg.get();
 
@@ -116,10 +116,10 @@ pub fn populate_loop(handle: &Handle, cfg: &ConfigCell, verbose: bool)
         }
     }
 
-    /*
     for (name, cfg) in &root.session_pools {
         let (tx, rx) = channel();
         chat_pro.write().unwrap().create_pool(name, cfg, tx);
+        /*
         let maintenance = MaintenanceAPI::new(
             root.clone(), cfg.clone(), http_pools.clone(),
             handle.clone());
@@ -127,7 +127,9 @@ pub fn populate_loop(handle: &Handle, cfg: &ConfigCell, verbose: bool)
             maintenance.handle(msg);
             Ok(())
         }))
+        */
     }
+    /*
     for (name, h) in root.handlers.iter() {
         if let &Handler::SwindonChat(ref chat) = h {
             let sess = root.session_pools
@@ -152,7 +154,7 @@ pub fn populate_loop(handle: &Handle, cfg: &ConfigCell, verbose: bool)
     handlers::files::update_pools(&cfg.get().disk_pools);
     http_pools.update(&cfg.get().http_destinations, &resolver, handle);
     State {
-        //chat: chat_pro,
+        chat: chat_pro,
         ns: resolver,
         http_pools: http_pools,
         listener_shutters: listener_shutters,
@@ -161,7 +163,6 @@ pub fn populate_loop(handle: &Handle, cfg: &ConfigCell, verbose: bool)
 pub fn update_loop(state: &mut State, cfg: &ConfigCell, handle: &Handle) {
     // TODO(tailhook) update listening sockets
     handlers::files::update_pools(&cfg.get().disk_pools);
-/*
     state.http_pools.update(&cfg.get().http_destinations, &state.ns, handle);
     let mut chat_pro = state.chat.write().unwrap();
     let config = cfg.get();
@@ -169,6 +170,7 @@ pub fn update_loop(state: &mut State, cfg: &ConfigCell, handle: &Handle) {
         if !chat_pro.has_pool(name) {
             let (tx, rx) = channel();
             chat_pro.create_pool(name, cfg, tx);
+            /*
             let maintenance = MaintenanceAPI::new(
                 config.clone(), cfg.clone(), state.http_pools.clone(),
                 handle.clone());
@@ -176,8 +178,8 @@ pub fn update_loop(state: &mut State, cfg: &ConfigCell, handle: &Handle) {
                 maintenance.handle(msg);
                 Ok(())
             }));
+            */
         }
     }
     // TODO(tailhook) update chat handlers
-*/
 }

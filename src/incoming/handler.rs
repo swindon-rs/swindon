@@ -31,13 +31,13 @@ impl Handler {
                 Ok(handlers::files::serve_file(settings, input))
             }
             Handler::WebsocketEcho => {
-                Ok(handlers::websocket::serve_echo(input))
+                Ok(handlers::websocket_echo::serve(input))
             }
             Handler::Proxy(ref settings) => {
                 Ok(handlers::proxy::serve(settings, input))
             }
-            Handler::SwindonChat(ref chat) => {
-                unimplemented!();
+            Handler::SwindonChat(ref settings) => {
+                handlers::swindon_chat::serve(settings, input)
             }
         }
     }

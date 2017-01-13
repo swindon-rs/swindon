@@ -63,53 +63,6 @@ impl ChatAPI {
         }
     }
 
-    /// Issue Auth call to backend.
-    ///
-    /// Send Auth message to proper backend
-    /// returninng Hello/Error message.
-    pub fn authorize_connection(&mut self, req: &Request, conn_id: Cid,
-        channel: Sender<ConnectionMessage>)
-        -> OptFuture<Json, Error>
-    {
-        let http_cookies = req.headers.iter()
-            .filter(|&&(ref k, _)| k == "Cookie")
-            .map(|&(_, ref v)| v.clone())
-            .collect::<String>();
-        let http_auth = req.headers.iter()
-            .find(|&&(ref k, _)| k == "Authorization")
-            .map(|&(_, ref v)| v.clone());
-        let url_qs = req.path.splitn(2, "?").nth(1).unwrap_or("").to_string();
-
-        let data = message::AuthData {
-            http_cookie: Some(http_cookies),
-            http_authorization: http_auth,
-            url_querystring: url_qs,
-        };
-
-        let payload = message::encode_auth(&serialize_cid(&conn_id), &data);
-
-        self.proc_pool.send(Action::NewConnection {
-            conn_id: conn_id,
-            channel: channel,
-        });
-
-        let dest = self.chat_config.message_handlers
-            .resolve("tangle.authorize_connection");
-        let path: Cow<_> = if dest.path == "/" {
-            "/tangle/authorize_connection".into()
-        } else {
-            (dest.path.to_string() + "/tangle/authorize_connection").into()
-        };
-        request_fn_buffered(self.client.upstream(&dest.upstream),
-            move |mut e| {
-                e.request_line("POST", &path, Version::Http11);
-                e.add_header("Content-Type", "application/json").unwrap();
-                e.add_length(payload.as_bytes().len() as u64).unwrap();
-                e.done_headers().unwrap();
-                e.write_body(payload.as_bytes());
-                e.done().into()
-            })
-    }
 
     /// Make instance of Session API (api bound to cid/ssid/tx-channel)
     /// and associate this session with ws connection
@@ -218,29 +171,6 @@ impl SessionAPI {
     }
 }
 
-
-/// Parse userinfo received on Auth call;
-pub fn parse_userinfo(response: Json)
-    -> Result<(SessionId, Json), MessageError>
-{
-    use super::message::ValidationError::*;
-    use super::error::MessageError::*;
-    match response {
-        Json::Object(data) => {
-            let sess_id = match data.get("user_id".into()) {
-                Some(&Json::String(ref s)) => {
-                    SessionId::from_str(s.as_str())
-                    .map_err(|_| ValidationError(InvalidUserId))?
-                }
-                _ => return Err(ValidationError(InvalidUserId)),
-            };
-            Ok((sess_id, Json::Object(data)))
-        }
-        _ => {
-            Err(ValidationError(ObjectExpected))
-        }
-    }
-}
 
 pub struct MaintenanceAPI {
     config: Arc<Config>,

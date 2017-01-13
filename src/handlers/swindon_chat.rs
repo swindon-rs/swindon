@@ -9,16 +9,22 @@ use minihttp::websocket::{Codec as WebsocketCodec};
 use tk_bufstream::{ReadBuf, WriteBuf};
 use tokio_core::io::Io;
 use futures::future::{ok};
+use futures::sync::oneshot::{channel, Receiver};
 use tokio_core::reactor::Handle;
+use rustc_serialize::json::Json;
 
+use chat;
+use intern::SessionId;
 use config::Config;
-use incoming::{Request, Input, Debug, Reply, Encoder};
+use config::chat::Chat;
+use incoming::{Request, Input, Debug, Reply, Encoder, Transport};
 use default_error_page::serve_error_page;
 
 
 struct WebsockReply {
     rdata: Option<(Arc<Config>, Debug, WebsocketAccept)>,
     handle: Handle,
+    authorizer: Receiver<Result<(SessionId, Json), Status>>,
 }
 
 
@@ -56,19 +62,33 @@ impl<S: Io + 'static> Codec<S> for WebsockReply {
     }
 }
 
-pub fn serve_echo<S: Io + 'static>(inp: Input) -> Request<S> {
+pub fn serve<S: Transport>(settings: &Arc<Chat>, inp: Input)
+    -> Result<Request<S>, Error>
+{
     match inp.headers.get_websocket_upgrade() {
         Ok(Some(ws)) => {
-            Box::new(WebsockReply {
+            let (tx, rx) = channel();
+            chat::start_authorize(&inp, settings, tx);
+            Ok(Box::new(WebsockReply {
                 rdata: Some((inp.config.clone(), inp.debug, ws.accept)),
                 handle: inp.handle.clone(),
-            })
+                authorizer: rx,
+            }))
         }
         Ok(None) => {
-            serve_error_page(Status::NotFound, inp)
+            if let Some(ref hname) = settings.http_route {
+                if let Some(handler) = inp.config.handlers.get(hname) {
+                    handler.serve(inp)
+                } else {
+                    warn!("No such handler for `http-route`: {:?}", hname);
+                    Ok(serve_error_page(Status::NotFound, inp))
+                }
+            } else {
+                Ok(serve_error_page(Status::NotFound, inp))
+            }
         }
         Err(()) => {
-            serve_error_page(Status::BadRequest, inp)
+            Ok(serve_error_page(Status::BadRequest, inp))
         }
     }
 }

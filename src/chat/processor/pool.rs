@@ -8,13 +8,12 @@ use futures::sync::mpsc::{UnboundedSender as Sender};
 
 use intern::{Topic, SessionId, SessionPoolName, Lattice as Namespace};
 use config;
-use chat::Cid;
+use chat::{Cid, CloseReason};
 use super::{ConnectionMessage, PoolMessage};
 use super::session::Session;
 use super::connection::{NewConnection, Connection};
 use super::heap::HeapMap;
 use super::lattice::{Lattice, Delta};
-use websocket::CloseReason;
 
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
