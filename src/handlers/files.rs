@@ -103,32 +103,44 @@ fn path(settings: &Static, inp: &Input) -> Result<PathBuf, ()> {
     Ok(buf)
 }
 
-pub fn serve_file<S: Transport>(settings: &Arc<SingleFile>, inp: Input)
+pub fn serve_file<S: Transport>(settings: &Arc<SingleFile>, mut inp: Input)
     -> Request<S>
 {
-    unimplemented!();
-    /*
-    get_pool(&settings.pool).open(settings.path.clone())
-    // TODO(tailhook) this is not very good error
-    .map_err(Into::into)
-    .and_then(move |file| {
-        response.status(Status::Ok);
-        response.add_length(file.size());
-        response.add_header("Content-Type", &settings.content_type);
-        if response.debug_routing() {
-            response.format_header("X-Swindon-File-Path",
-                format_args!("{:?}", settings.path));
-        }
-        response.add_extra_headers(&settings.extra_headers);
-        if response.done_headers() {
-            Either::A(response.steal_socket()
-                .and_then(|sock| file.write_into(sock))
-                .map_err(Into::into))
-        } else {
-            Either::B(response.done())
-        }
-    }).boxed()
-    */
+    if !inp.headers.path().is_some() {
+        // Star or authority
+        return serve_error_page(Status::Forbidden, inp);
+    };
+    inp.debug.set_fs_path(&settings.path);
+    let pool = get_pool(&settings.pool);
+    let settings = settings.clone();
+    reply(inp, move |mut e| {
+        Box::new(pool.open(settings.path.clone())
+            .then(move |res| match res {
+                Ok(file) => {
+                    e.status(Status::Ok);
+                    e.add_length(file.size());
+                    e.add_header("Content-Type", &settings.content_type);
+                    e.add_extra_headers(&settings.extra_headers);
+                    if e.done_headers() {
+                        Box::new(e.raw_body()
+                            .and_then(|raw_body| file.write_into(raw_body))
+                            .map(|raw_body| raw_body.done())
+                            .map_err(Into::into))
+                        as Reply<_>
+                    } else {
+                        Box::new(ok(e.done()))
+                    }
+                }
+                Err(ref err) if err.kind() == io::ErrorKind::NotFound => {
+                    error_page(Status::NotFound, e)
+                }
+                // TODO(tailhook) find out if we want to expose other
+                // errors, for example "Permission denied" and "is a directory"
+                Err(_) => {
+                    error_page(Status::InternalServerError, e)
+                }
+            }))
+    })
 }
 
 fn new_pool(cfg: &config::Disk) -> DiskPool {
