@@ -41,9 +41,7 @@ impl<S: Io + 'static> Codec<S> for WebsockReply {
     fn data_received(&mut self, data: &[u8], end: bool)
         -> Result<Async<usize>, Error>
     {
-        assert!(end);
-        assert!(data.len() == 0);
-        Ok(Async::Ready(0))
+        unreachable!();
     }
     fn start_response(&mut self, mut e: http::Encoder<S>) -> Reply<S> {
         let ReplyData { context, accept, authorizer } = self.rdata.take()
@@ -60,6 +58,8 @@ impl<S: Io + 'static> Codec<S> for WebsockReply {
                     ok(e.done())
                 }
                 Ok(Err(status)) => {
+                    // TODO(tailhook) this should establish a connection
+                    // and send error code there
                     error_page(status, e)
                 }
                 Err(_) => { // cancelled?
