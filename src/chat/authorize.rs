@@ -51,22 +51,6 @@ fn auth_data(handshake: &Head) -> Result<AuthData, Status> {
     })
 }
 
-/*
-    let payload = message::encode_auth(&serialize_cid(&conn_id), &data);
-
-    let dest = self.chat_config.message_handlers
-        .resolve("tangle.authorize_connection");
-    let path: Cow<_> = if dest.path == "/" {
-        "/tangle/authorize_connection".into()
-    } else {
-        (dest.path.to_string() + "/tangle/authorize_connection").into()
-    };
-    request_fn_buffered(self.client.upstream(&dest.upstream),
-        move |mut e| {
-        })
-}
-*/
-
 
 pub fn start_authorize(inp: &Input, settings: &Arc<Chat>,
                        response: Sender<Result<(SessionId, Json), Status>>)
@@ -127,33 +111,6 @@ pub fn start_authorize(inp: &Input, settings: &Arc<Chat>,
         }
     }
 
-/*
-
-    Box::new(chat_api.authorize_connection(&req, cid, tx.clone())
-        .map_err(|e| -> Error { unimplemented!() })
-        .map(move |data| {
-            let resp = match chat::parse_userinfo(data) {
-                Ok((sess_id, userinfo)) => {
-                    let session_api = chat_api.session_api(
-                        sess_id, cid, userinfo, tx);
-                    WebsocketChat(Ready(init, session_api, rx))
-                }
-                Err(e) => {
-                    error!("Bad data returned by \
-                        authorize_connection: {}", e);
-                    WebsocketChat(AuthError(init,
-                        Status::InternalServerError))
-                }
-            };
-            Serializer {
-                config: cfg,
-                debug: debug,
-                response: resp,
-                handle: h1,
-                request: None,
-            }
-        }))
-        */
 }
 
 /// Returns true when status is one in the set which backend is allowed
