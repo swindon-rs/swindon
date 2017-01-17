@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use std::time::Duration;
 use quire::De;
-use quire::validate::{Structure, Sequence, Scalar};
+use quire::validate::{Structure, Sequence, Scalar, Numeric};
 
 use super::listen::{self, ListenSocket};
 use super::http;
@@ -25,6 +25,8 @@ pub struct InactivityTimeouts {
 pub fn validator<'x>() -> Structure<'x> {
     Structure::new()
     .member("listen", listen::validator())
+    .member("max_connections",
+        Numeric::new().min(1).max(1 << 31).default(1000))
     .member("inactivity_handlers",
         Sequence::new(http::destination_validator()))
     .member("inactivity", Structure::new()
