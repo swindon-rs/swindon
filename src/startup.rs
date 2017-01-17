@@ -15,19 +15,21 @@ use futures_cpupool;
 use minihttp;
 use minihttp::server::Proto;
 
+use intern::SessionPoolName;
 use config::{ListenSocket, Handler, ConfigCell};
 use incoming::Router;
-use chat::{Processor};
+use chat;
 use handlers;
 use runtime::Runtime;
 use http_pools::{HttpPools};
 
 
 pub struct State {
-    chat: Arc<RwLock<Processor>>,
+    chat: Arc<RwLock<chat::Processor>>,
     http_pools: HttpPools,
     ns: abstract_ns::Router,
     listener_shutters: HashMap<SocketAddr, Sender<()>>,
+    session_pool_listener_shutters: HashMap<(SessionPoolName, SocketAddr), Sender<()>>,
 }
 
 pub fn spawn_listener(addr: SocketAddr, handle: &Handle,
@@ -82,7 +84,7 @@ pub fn populate_loop(handle: &Handle, cfg: &ConfigCell, verbose: bool)
     rb.add_default(ns);
     let resolver = rb.into_resolver();
 
-    let chat_pro = Arc::new(RwLock::new(Processor::new()));
+    let chat_pro = Arc::new(RwLock::new(chat::Processor::new()));
     let http_pools = HttpPools::new();
     let runtime = Arc::new(Runtime {
         config: cfg.clone(),
@@ -93,6 +95,7 @@ pub fn populate_loop(handle: &Handle, cfg: &ConfigCell, verbose: bool)
     let root = cfg.get();
 
     let mut listener_shutters = HashMap::new();
+    let mut session_pool_shutters = HashMap::new();
 
     // TODO(tailhook) do something when config updates
     for sock in &root.listen {
@@ -116,9 +119,9 @@ pub fn populate_loop(handle: &Handle, cfg: &ConfigCell, verbose: bool)
         }
     }
 
-    for (name, cfg) in &root.session_pools {
+    for (name, settings) in &root.session_pools {
         let (tx, rx) = channel();
-        chat_pro.write().unwrap().create_pool(name, cfg, tx);
+        chat_pro.write().unwrap().create_pool(name, settings, tx);
         /*
         let maintenance = MaintenanceAPI::new(
             root.clone(), cfg.clone(), http_pools.clone(),
@@ -128,29 +131,26 @@ pub fn populate_loop(handle: &Handle, cfg: &ConfigCell, verbose: bool)
             Ok(())
         }))
         */
-    }
-    /*
-    for (name, h) in root.handlers.iter() {
-        if let &Handler::SwindonChat(ref chat) = h {
-            let sess = root.session_pools
-                .get(&chat.session_pool).unwrap();
-            match sess.listen {
-                ListenSocket::Tcp(addr) => {
-                    if verbose {
-                        println!("Listening {} at {}", name, addr);
+        match settings.listen {
+            ListenSocket::Tcp(addr) => {
+                if verbose {
+                    println!("Listening {} at {}", name, addr);
+                }
+                let (tx, rx) = oneshot();
+                // TODO(tailhook) wait and retry on error
+                match chat::spawn_listener(addr, handle, &runtime, settings, rx) {
+                    Ok(()) => {
+                        session_pool_shutters.insert((name.clone(), addr), tx);
                     }
-                    let chat_handler = ChatBackend {
-                        config: cfg.clone(),
-                        chat_pool: chat_pro.read().unwrap().pool(
-                            &chat.session_pool),
-                    };
-                    minihttp::serve(handle, addr,
-                        move || Ok(chat_handler.clone()));
+                    Err(e) => {
+                        error!("Error listening {}: {}. Will retry on next \
+                                configuration reload", addr, e);
+                    }
                 }
             }
         }
     }
-    */
+
     handlers::files::update_pools(&cfg.get().disk_pools);
     http_pools.update(&cfg.get().http_destinations, &resolver, handle);
     State {
@@ -158,6 +158,7 @@ pub fn populate_loop(handle: &Handle, cfg: &ConfigCell, verbose: bool)
         ns: resolver,
         http_pools: http_pools,
         listener_shutters: listener_shutters,
+        session_pool_listener_shutters: session_pool_shutters,
     }
 }
 pub fn update_loop(state: &mut State, cfg: &ConfigCell, handle: &Handle) {

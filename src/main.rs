@@ -1,4 +1,4 @@
-// TODO(tailhook) until we fill all stabs
+// TODO(tailhook) until we fill all stubs
 #![allow(dead_code)]
 
 // I don't see **any** reason for this warning to be enabled. We only build binary
