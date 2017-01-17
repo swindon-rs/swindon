@@ -10,18 +10,21 @@ use tokio_core::net::TcpListener;
 use tokio_core::reactor::Handle;
 use futures::sync::oneshot::{channel as oneshot, Sender, Receiver};
 
+use intern::SessionPoolName;
 use config::SessionPool;
 use runtime::Runtime;
 use chat::listener::codec::Handler;
 
 
 pub fn spawn_listener(addr: SocketAddr, handle: &Handle,
-    runtime: &Arc<Runtime>, settings: &Arc<SessionPool>, shutter: Receiver<()>)
+    runtime: &Arc<Runtime>, name: &SessionPoolName,
+    settings: &Arc<SessionPool>, shutter: Receiver<()>)
     -> Result<(), io::Error>
 {
     let root = runtime.config.get();
     let runtime = runtime.clone();
     let settings = settings.clone();
+    let name = name.clone();
     let listener = TcpListener::bind(&addr, &handle)?;
     // TODO(tailhook) how to update?
     let mut hcfg = minihttp::server::Config::new()
@@ -36,7 +39,7 @@ pub fn spawn_listener(addr: SocketAddr, handle: &Handle,
         .then(move |item| match item {
             Ok((socket, saddr)) => {
                 ok(Proto::new(socket, &hcfg,
-                    Handler::new(runtime.clone(),
+                    Handler::new(runtime.clone(), name.clone(),
                                  settings.clone(), h1.clone())))
             }
             Err(e) => {

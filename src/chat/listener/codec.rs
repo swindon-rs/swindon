@@ -1,3 +1,4 @@
+use std::fmt;
 use std::sync::Arc;
 use std::marker::PhantomData;
 
@@ -10,13 +11,14 @@ use minihttp::server::{Dispatcher, Error, Head};
 use minihttp::server as http;
 use minihttp::server::{EncoderDone, RecvMode, WebsocketAccept};
 
-use intern::{Topic, Lattice as Namespace};
+use intern::{Topic, SessionPoolName, Lattice as Namespace};
 use chat::Cid;
 use config::SessionPool;
 use runtime::Runtime;
 
 pub struct Handler {
     runtime: Arc<Runtime>,
+    name: SessionPoolName,
     settings: Arc<SessionPool>,
     handle: Handle,
 }
@@ -41,13 +43,36 @@ pub enum Route {
     Lattice(Namespace),
 }
 
+impl fmt::Display for Route {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        use self::Route::*;
+        match *self {
+            Subscribe(cid, ref tpc) => {
+                write!(f, "Subscribe {:?} {}", cid, tpc)
+            }
+            Unsubscribe(cid, ref tpc) => {
+                write!(f, "Unsubscribe {:?} {}", cid, tpc)
+            }
+            Publish(ref topic) => write!(f, "Publish {}", topic),
+            Attach(cid, ref ns) => {
+                write!(f, "Lattice attach {:?} {}", cid, ns)
+            }
+            Detach(cid, ref ns) => {
+                write!(f, "Lattice detach {:?} {}", cid, ns)
+            }
+            Lattice(ref ns) => write!(f, "Lattice update {}", ns),
+        }
+    }
+}
+
 impl Handler {
-    pub fn new(runtime: Arc<Runtime>, settings: Arc<SessionPool>,
-        handle: Handle)
+    pub fn new(runtime: Arc<Runtime>, name: SessionPoolName,
+        settings: Arc<SessionPool>, handle: Handle)
         -> Handler
     {
         Handler {
             runtime: runtime,
+            name: name,
             settings: settings,
             handle: handle,
         }
@@ -71,6 +96,15 @@ impl<S: Io> Dispatcher<S> for Handler {
                 Err(Status::BadRequest)
             }
         };
+        match query {
+            Ok(ref route) => {
+                info!("{} received from backend {}", self.name, route);
+            }
+            Err(status) => {
+                info!("{} path {:?} gets {:?}",
+                    self.name, headers.path(), status);
+            }
+        }
         Ok(Request {
             settings: self.settings.clone(),
             query: query,

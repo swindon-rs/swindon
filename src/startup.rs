@@ -138,7 +138,9 @@ pub fn populate_loop(handle: &Handle, cfg: &ConfigCell, verbose: bool)
                 }
                 let (tx, rx) = oneshot();
                 // TODO(tailhook) wait and retry on error
-                match chat::spawn_listener(addr, handle, &runtime, settings, rx) {
+                match chat::spawn_listener(addr, handle, &runtime,
+                                           name, settings, rx)
+                {
                     Ok(()) => {
                         session_pool_shutters.insert((name.clone(), addr), tx);
                     }
