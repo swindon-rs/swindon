@@ -9,6 +9,7 @@ use super::http;
 #[derive(RustcDecodable, Debug, PartialEq, Eq)]
 pub struct SessionPool {
     pub listen: ListenSocket,
+    pub max_payload_size: usize,
     pub inactivity_handlers: Vec<http::Destination>,
     pub inactivity: Arc<InactivityTimeouts>,
 }
@@ -27,6 +28,8 @@ pub fn validator<'x>() -> Structure<'x> {
     .member("listen", listen::validator())
     .member("max_connections",
         Numeric::new().min(1).max(1 << 31).default(1000))
+    .member("max_payload_size",
+        Numeric::new().min(1).max(1 << 31).default(10_485_760))
     .member("inactivity_handlers",
         Sequence::new(http::destination_validator()))
     .member("inactivity", Structure::new()

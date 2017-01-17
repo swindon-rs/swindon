@@ -15,6 +15,7 @@ using a single websocket. Each session pool contains multiple namespaces of
 room for isolating and integrating multiple applications in the session
 pool.
 
+
 Example
 =======
 
@@ -26,6 +27,7 @@ Example
         listen: 127.0.0.1:2007
         inactivity-handlers:
         - some-destination/chat/route
+
 
 Options
 =======
@@ -45,5 +47,11 @@ Options
    you should bump up a file descriptor limit to something larger than this
    value + max client connections.
 
+.. opt:: max-payload-size
+   (default ``10Mib``) Maximum size of the payload (json data) from backend
+   to swindon.
+
+
 .. opt:: inactivity-handlers
    TBD
+
