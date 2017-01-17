@@ -1,8 +1,9 @@
+use std::fmt;
 use std::str::FromStr;
 use std::num::ParseIntError;
 
 /// Internal connection id
-#[derive(Debug, Hash, PartialEq, Eq, Clone, Copy)]
+#[derive(Hash, PartialEq, Eq, Clone, Copy)]
 pub struct Cid(u64);
 
 
@@ -26,5 +27,15 @@ impl FromStr for Cid {
 
     fn from_str(src: &str) -> Result<Cid, Self::Err> {
         src.parse().map(|x| Cid(x))
+    }
+}
+
+impl fmt::Debug for Cid {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        if f.alternate() {
+            write!(f, "cid:{}", self.0)
+        } else {
+            write!(f, "Cid({})", self.0)
+        }
     }
 }

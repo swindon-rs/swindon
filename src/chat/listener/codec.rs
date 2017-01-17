@@ -48,19 +48,19 @@ impl fmt::Display for Route {
         use self::Route::*;
         match *self {
             Subscribe(cid, ref tpc) => {
-                write!(f, "Subscribe {:?} {}", cid, tpc)
+                write!(f, "Subscribe {:#?} {:?}", cid, tpc)
             }
             Unsubscribe(cid, ref tpc) => {
-                write!(f, "Unsubscribe {:?} {}", cid, tpc)
+                write!(f, "Unsubscribe {:#?} {:?}", cid, tpc)
             }
-            Publish(ref topic) => write!(f, "Publish {}", topic),
+            Publish(ref topic) => write!(f, "Publish {:?}", topic),
             Attach(cid, ref ns) => {
-                write!(f, "Lattice attach {:?} {}", cid, ns)
+                write!(f, "Lattice attach {:#?} {:?}", cid, ns)
             }
             Detach(cid, ref ns) => {
-                write!(f, "Lattice detach {:?} {}", cid, ns)
+                write!(f, "Lattice detach {:#?} {:?}", cid, ns)
             }
-            Lattice(ref ns) => write!(f, "Lattice update {}", ns),
+            Lattice(ref ns) => write!(f, "Lattice update {:?}", ns),
         }
     }
 }
@@ -98,10 +98,10 @@ impl<S: Io> Dispatcher<S> for Handler {
         };
         match query {
             Ok(ref route) => {
-                info!("{} received from backend {}", self.name, route);
+                info!("{:?} received from backend {}", self.name, route);
             }
             Err(status) => {
-                info!("{} path {:?} gets {:?}",
+                info!("{:?} path {:?} gets {:?}",
                     self.name, headers.path(), status);
             }
         }
