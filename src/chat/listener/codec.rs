@@ -187,9 +187,39 @@ impl<S: Io> http::Codec<S> for Request {
         -> Result<Async<usize>, Error>
     {
         assert!(end);
-        unimplemented!();
+        match self.query {
+            Subscribe(cid, ref topic) => {
+                unimplemented!();
+            }
+            Unsubscribe(cid, ref topic) => {
+                unimplemented!();
+            }
+            Public(ref topic) => {
+                unimplemented!();
+            }
+            Attach(cid, ref ns) => {
+                unimplemented!();
+            }
+            Detach(cid, ref ns) => {
+                unimplemented!();
+            }
+            Lattice(ref ns) => {
+                unimplemented!();
+            }
+        }
     }
     fn start_response(&mut self, e: http::Encoder<S>) -> Self::ResponseFuture {
-        unimplemented!();
+        if let Err(status) = self.query {
+            e.status(status)
+            // TODO(tailhook) add some body describing the error
+            e.add_length(0);
+            e.done_headers().unwrap();
+            e.done()
+        } else {
+            e.status(Status::NoContent)
+            e.add_length(0);
+            e.done_headers().unwrap();
+            e.done()
+        }
     }
 }
