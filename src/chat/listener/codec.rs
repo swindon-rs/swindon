@@ -3,7 +3,7 @@ use std::sync::Arc;
 use std::marker::PhantomData;
 
 use futures::{Async, Future};
-use futures::future::FutureResult;
+use futures::future::{FutureResult, ok};
 use tokio_core::io::Io;
 use tokio_core::reactor::Handle;
 use minihttp::Status;
@@ -186,40 +186,45 @@ impl<S: Io> http::Codec<S> for Request {
     fn data_received(&mut self, data: &[u8], end: bool)
         -> Result<Async<usize>, Error>
     {
+        use self::Route::*;
         assert!(end);
         match self.query {
-            Subscribe(cid, ref topic) => {
+            Ok(Subscribe(cid, ref topic)) => {
                 unimplemented!();
             }
-            Unsubscribe(cid, ref topic) => {
+            Ok(Unsubscribe(cid, ref topic)) => {
                 unimplemented!();
             }
-            Public(ref topic) => {
+            Ok(Publish(ref topic)) => {
                 unimplemented!();
             }
-            Attach(cid, ref ns) => {
+            Ok(Attach(cid, ref ns)) => {
                 unimplemented!();
             }
-            Detach(cid, ref ns) => {
+            Ok(Detach(cid, ref ns)) => {
                 unimplemented!();
             }
-            Lattice(ref ns) => {
+            Ok(Lattice(ref ns)) => {
                 unimplemented!();
             }
+            Err(_) => {}
         }
+        Ok(Async::Ready(data.len()))
     }
-    fn start_response(&mut self, e: http::Encoder<S>) -> Self::ResponseFuture {
+    fn start_response(&mut self, mut e: http::Encoder<S>)
+        -> Self::ResponseFuture
+    {
         if let Err(status) = self.query {
-            e.status(status)
+            e.status(status);
             // TODO(tailhook) add some body describing the error
             e.add_length(0);
             e.done_headers().unwrap();
-            e.done()
+            ok(e.done())
         } else {
-            e.status(Status::NoContent)
+            e.status(Status::NoContent);
             e.add_length(0);
             e.done_headers().unwrap();
-            e.done()
+            ok(e.done())
         }
     }
 }
