@@ -69,6 +69,13 @@ containers:
     environ:
       NODE_PATH: /usr/lib/node_modules
 
+  pytest:
+    setup:
+    - !Ubuntu xenial
+    - !Install [libcurl3]
+    - !PipConfig { dependencies: true }
+    - !Py3Requirements "tests/requirements.txt"
+
 commands:
 
   rustc: !Command
@@ -100,6 +107,11 @@ commands:
     volumes:
       /cargo: !Persistent { name: cargo }
     run: [cargo, test]
+
+  func-test: !Command
+    container: pytest
+    work-dir: /work/tests
+    run: [py.test]
 
   run: &run !Command
     container: ubuntu
