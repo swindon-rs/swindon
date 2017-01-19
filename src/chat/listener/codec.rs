@@ -1,6 +1,6 @@
 use std::fmt;
 use std::sync::Arc;
-use std::marker::PhantomData;
+use std::net::SocketAddr;
 
 use futures::{Async, Future};
 use futures::future::{FutureResult, ok};
@@ -13,18 +13,17 @@ use minihttp::server::{EncoderDone, RecvMode, WebsocketAccept};
 
 use intern::{Topic, SessionPoolName, Lattice as Namespace};
 use chat::Cid;
+use chat::listener::spawn::WorkerData;
 use config::SessionPool;
 use runtime::Runtime;
 
 pub struct Handler {
-    runtime: Arc<Runtime>,
-    name: SessionPoolName,
-    settings: Arc<SessionPool>,
-    handle: Handle,
+    addr: SocketAddr,
+    wdata: Arc<WorkerData>,
 }
 
 pub struct Request {
-    settings: Arc<SessionPool>,
+    wdata: Arc<WorkerData>,
     query: Result<Route, Status>,
 }
 
@@ -66,15 +65,12 @@ impl fmt::Display for Route {
 }
 
 impl Handler {
-    pub fn new(runtime: Arc<Runtime>, name: SessionPoolName,
-        settings: Arc<SessionPool>, handle: Handle)
+    pub fn new(addr: SocketAddr, wdata: Arc<WorkerData>)
         -> Handler
     {
         Handler {
-            runtime: runtime,
-            name: name,
-            settings: settings,
-            handle: handle,
+            addr: addr,
+            wdata: wdata,
         }
     }
 }
@@ -98,15 +94,16 @@ impl<S: Io> Dispatcher<S> for Handler {
         };
         match query {
             Ok(ref route) => {
-                info!("{:?} received from backend {}", self.name, route);
+                info!("{:?} received {} (ip: {})",
+                    self.wdata.name, route, self.addr);
             }
             Err(status) => {
-                info!("{:?} path {:?} gets {:?}",
-                    self.name, headers.path(), status);
+                info!("{:?} path {:?} gets {:?} (ip: {})",
+                    self.wdata.name, headers.path(), status, self.addr);
             }
         }
         Ok(Request {
-            settings: self.settings.clone(),
+            wdata: self.wdata.clone(),
             query: query,
         })
     }
@@ -181,7 +178,7 @@ impl Handler {
 impl<S: Io> http::Codec<S> for Request {
     type ResponseFuture = FutureResult<EncoderDone<S>, Error>;
     fn recv_mode(&mut self) -> RecvMode {
-        RecvMode::BufferedUpfront(self.settings.max_payload_size)
+        RecvMode::BufferedUpfront(self.wdata.settings.max_payload_size)
     }
     fn data_received(&mut self, data: &[u8], end: bool)
         -> Result<Async<usize>, Error>

@@ -11,5 +11,5 @@ pub struct Runtime {
     pub config: ConfigCell,
     pub handle: Handle,
     pub http_pools: HttpPools,
-    pub chat_processor: Arc<RwLock<chat::Processor>>,
+    pub session_pools: chat::SessionPools,
 }

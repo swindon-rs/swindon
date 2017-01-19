@@ -3,12 +3,11 @@ use std::sync::{Arc, RwLock};
 use std::path::{Path, PathBuf, Component};
 use std::collections::HashMap;
 use std::collections::hash_map::Entry::{Occupied, Vacant};
-use std::os::unix::io::AsRawFd;
 use std::hash::{Hash, Hasher};
 use std::collections::hash_map::DefaultHasher;
 
-use futures::{BoxFuture, Future};
-use futures::future::{Either, ok};
+use futures::{Future};
+use futures::future::{ok};
 use minihttp::server::Error;
 use minihttp::Status;
 use mime::TopLevel;

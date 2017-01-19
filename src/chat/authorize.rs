@@ -58,16 +58,11 @@ pub fn start_authorize(inp: &Input, settings: &Arc<Chat>,
     let conn_id = Cid::new();
     let (tx, rx) = channel();
 
-    let pool = inp.runtime.chat_processor.read()
-        .expect("chat pool locked")
-        .pool(&settings.session_pool);
-    let sess_cfg = inp.config.session_pools
-        .get(&settings.session_pool).unwrap(); // FIXME: unwrap
-
-    pool.send(Action::NewConnection {
-        conn_id: conn_id,
-        channel: tx,
-    });
+    inp.runtime.session_pools.send(&settings.session_pool,
+        Action::NewConnection {
+            conn_id: conn_id,
+            channel: tx,
+        });
 
     let dest = settings.message_handlers
         .resolve("tangle.authorize_connection");

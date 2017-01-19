@@ -25,11 +25,11 @@ use http_pools::{HttpPools};
 
 
 pub struct State {
-    chat: Arc<RwLock<chat::Processor>>,
     http_pools: HttpPools,
+    session_pools: chat::SessionPools,
     ns: abstract_ns::Router,
     listener_shutters: HashMap<SocketAddr, Sender<()>>,
-    session_pool_listener_shutters: HashMap<(SessionPoolName, SocketAddr), Sender<()>>,
+    runtime: Arc<Runtime>,
 }
 
 pub fn spawn_listener(addr: SocketAddr, handle: &Handle,
@@ -84,18 +84,17 @@ pub fn populate_loop(handle: &Handle, cfg: &ConfigCell, verbose: bool)
     rb.add_default(ns);
     let resolver = rb.into_resolver();
 
-    let chat_pro = Arc::new(RwLock::new(chat::Processor::new()));
     let http_pools = HttpPools::new();
+    let session_pools = chat::SessionPools::new();
     let runtime = Arc::new(Runtime {
         config: cfg.clone(),
         handle: handle.clone(),
         http_pools: http_pools.clone(),
-        chat_processor: chat_pro.clone(),
+        session_pools: session_pools.clone(),
     });
     let root = cfg.get();
 
     let mut listener_shutters = HashMap::new();
-    let mut session_pool_shutters = HashMap::new();
 
     // TODO(tailhook) do something when config updates
     for sock in &root.listen {
@@ -119,70 +118,22 @@ pub fn populate_loop(handle: &Handle, cfg: &ConfigCell, verbose: bool)
         }
     }
 
-    for (name, settings) in &root.session_pools {
-        let (tx, rx) = channel();
-        chat_pro.write().unwrap().create_pool(name, settings, tx);
-        /*
-        let maintenance = MaintenanceAPI::new(
-            root.clone(), cfg.clone(), http_pools.clone(),
-            handle.clone());
-        handle.spawn(rx.for_each(move |msg| {
-            maintenance.handle(msg);
-            Ok(())
-        }))
-        */
-        match settings.listen {
-            ListenSocket::Tcp(addr) => {
-                if verbose {
-                    println!("Listening {} at {}", name, addr);
-                }
-                let (tx, rx) = oneshot();
-                // TODO(tailhook) wait and retry on error
-                match chat::spawn_listener(addr, handle, &runtime,
-                                           name, settings, rx)
-                {
-                    Ok(()) => {
-                        session_pool_shutters.insert((name.clone(), addr), tx);
-                    }
-                    Err(e) => {
-                        error!("Error listening {}: {}. Will retry on next \
-                                configuration reload", addr, e);
-                    }
-                }
-            }
-        }
-    }
 
-    handlers::files::update_pools(&cfg.get().disk_pools);
-    http_pools.update(&cfg.get().http_destinations, &resolver, handle);
+    handlers::files::update_pools(&root.disk_pools);
+    http_pools.update(&root.http_destinations, &resolver, handle);
+    session_pools.update(&root.session_pools, handle, &runtime);
     State {
-        chat: chat_pro,
         ns: resolver,
         http_pools: http_pools,
+        session_pools: session_pools,
         listener_shutters: listener_shutters,
-        session_pool_listener_shutters: session_pool_shutters,
+        runtime: runtime,
     }
 }
 pub fn update_loop(state: &mut State, cfg: &ConfigCell, handle: &Handle) {
     // TODO(tailhook) update listening sockets
     handlers::files::update_pools(&cfg.get().disk_pools);
     state.http_pools.update(&cfg.get().http_destinations, &state.ns, handle);
-    let mut chat_pro = state.chat.write().unwrap();
-    let config = cfg.get();
-    for (name, cfg) in &config.session_pools {
-        if !chat_pro.has_pool(name) {
-            let (tx, rx) = channel();
-            chat_pro.create_pool(name, cfg, tx);
-            /*
-            let maintenance = MaintenanceAPI::new(
-                config.clone(), cfg.clone(), state.http_pools.clone(),
-                handle.clone());
-            handle.spawn(rx.for_each(move |msg| {
-                maintenance.handle(msg);
-                Ok(())
-            }));
-            */
-        }
-    }
-    // TODO(tailhook) update chat handlers
+    state.session_pools.update(&cfg.get().session_pools,
+        handle, &state.runtime);
 }

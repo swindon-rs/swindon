@@ -15,11 +15,11 @@ mod listener;
 pub use self::cid::Cid;
 pub use self::authorize::start_authorize;
 //pub use self::backend::ChatBackend;
-pub use self::processor::{Processor, ProcessorPool, Action};
 pub use self::message::{Meta, Args, Kwargs};
 //pub use self::api::{ChatAPI, SessionAPI, MaintenanceAPI, parse_userinfo};
 pub use self::error::MessageError;
 pub use self::close_reason::CloseReason;
-pub use self::listener::spawn_listener;
+pub use self::listener::SessionPools;
 
 //use self::processor::ConnectionMessage;
+//

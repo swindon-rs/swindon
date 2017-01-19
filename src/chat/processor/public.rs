@@ -12,8 +12,8 @@ use super::{Event, Action, PoolMessage};
 use super::main;
 
 
+#[derive(Clone)]
 pub struct Processor {
-    pools: HashSet<SessionPoolName>,
     queue: Sender<Event>,
 }
 
@@ -32,11 +32,10 @@ impl Processor {
         });
         return Processor {
             queue: tx,
-            pools: HashSet::new(),
         }
     }
 
-    pub fn create_pool(&mut self, name: &SessionPoolName,
+    pub fn create_pool(&self, name: &SessionPoolName,
         config: &Arc<config::SessionPool>, channel: ChannelSender<PoolMessage>)
     {
         self.queue.send(Event {
@@ -47,15 +46,19 @@ impl Processor {
                 channel: channel,
             },
         }).map_err(|e| panic!("Processor loop send error: {}", e)).ok();
-        self.pools.insert(name.clone());
+    }
+
+    pub fn destroy_pool(&self, name: &SessionPoolName) {
+        self.queue.send(Event {
+            pool: name.clone(),
+            timestamp: Instant::now(),
+            action: Action::StopSessionPool,
+        }).map_err(|e| panic!("Processor loop send error: {}", e)).ok();
     }
 
     pub fn pool(&self, name: &SessionPoolName)
         -> ProcessorPool
     {
-        if !self.pools.contains(name) {
-            panic!("No pool {} defined", name);
-        }
         ProcessorPool {
             pool_name: name.clone(),
             // TODO(tailhook) Should we reference Processor instead
@@ -63,8 +66,14 @@ impl Processor {
         }
     }
 
-    pub fn has_pool(&self, name: &SessionPoolName) -> bool {
-        self.pools.contains(name)
+    /// Send directly without getting pool
+    pub fn send(&self, pool: &SessionPoolName, action: Action) {
+        debug!("Sending pool action {:?} {:?}", pool, action);
+        self.queue.send(Event {
+            pool: pool.clone(),
+            timestamp: Instant::now(),
+            action: action,
+        }).map_err(|e| panic!("Error invoking processor: {}", e)).ok();
     }
 }
 
