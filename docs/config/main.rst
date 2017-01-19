@@ -31,7 +31,7 @@ Options
 
 .. opt:: listen
 
-   Listen of sockets to listen and accept connections
+   List of sockets to listen to and accept connections
 
    Example::
 

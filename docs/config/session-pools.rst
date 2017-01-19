@@ -24,7 +24,8 @@ Example
     session-pools:
 
       example-chat-session:
-        listen: 127.0.0.1:2007
+        listen:
+        - 127.0.0.1:2007
         inactivity-handlers:
         - some-destination/chat/route
 
@@ -34,7 +35,7 @@ Options
 
 .. opt:: listen
 
-   Listen of sockets to listen and accept connections
+   List of sockets to listen to and accept connections
 
    Example::
 

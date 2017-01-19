@@ -64,7 +64,8 @@ handlers:
 session-pools:
 
   example-chat-session:
-    listen: 127.0.0.1:2007
+    listen:
+    - 127.0.0.1:2007
     inactivity-handlers:
     - superman/chat
 

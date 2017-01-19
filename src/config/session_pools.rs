@@ -8,7 +8,7 @@ use super::http;
 
 #[derive(RustcDecodable, Debug, PartialEq, Eq)]
 pub struct SessionPool {
-    pub listen: ListenSocket,
+    pub listen: Vec<ListenSocket>,
     pub max_payload_size: usize,
     pub inactivity_handlers: Vec<http::Destination>,
     pub inactivity: Arc<InactivityTimeouts>,
