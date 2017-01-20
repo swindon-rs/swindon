@@ -1,7 +1,6 @@
 use std::sync::Arc;
 
 use minihttp::Status;
-use minihttp::server::{Head};
 use tokio_core::io::Io;
 use futures::future::{ok};
 

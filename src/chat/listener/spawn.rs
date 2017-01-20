@@ -8,7 +8,7 @@ use minihttp::server::Proto;
 use futures::future::{Future, ok};
 use tokio_core::net::TcpListener;
 use tokio_core::reactor::Handle;
-use futures::sync::oneshot::{Sender, Receiver};
+use futures::sync::oneshot::{Receiver};
 
 use intern::SessionPoolName;
 use config::SessionPool;

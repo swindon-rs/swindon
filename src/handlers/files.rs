@@ -8,7 +8,6 @@ use std::collections::hash_map::DefaultHasher;
 
 use futures::{Future};
 use futures::future::{ok};
-use minihttp::server::Error;
 use minihttp::Status;
 use mime::TopLevel;
 use mime_guess::guess_mime_type;

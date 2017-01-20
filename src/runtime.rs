@@ -1,4 +1,4 @@
-use std::sync::{Arc, RwLock};
+use std::sync::{RwLock};
 
 use tokio_core::reactor::Handle;
 
