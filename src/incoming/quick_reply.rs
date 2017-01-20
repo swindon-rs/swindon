@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use tokio_core::io::Io;
 use futures::Async;
-use minihttp::server::{EncoderDone, Error, Codec, RecvMode};
+use minihttp::server::{Error, Codec, RecvMode};
 use minihttp::server as http;
 
 use config::Config;
@@ -39,7 +39,7 @@ impl<F, S: Io> Codec<S> for QuickReply<F>
         assert!(data.len() == 0);
         Ok(Async::Ready(0))
     }
-    fn start_response(&mut self, mut e: http::Encoder<S>) -> Reply<S> {
+    fn start_response(&mut self, e: http::Encoder<S>) -> Reply<S> {
         let (func, config, debug) = self.inner.take()
             .expect("start response called once");
         func(Encoder::new(e, (config, debug)))

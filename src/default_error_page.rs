@@ -1,12 +1,11 @@
 use std::io::Write;
-use std::sync::Arc;
 
 use minihttp::{Status};
 use minihttp::server::{Error, EncoderDone};
 use tokio_core::io::Io;
 
 use futures::future::{ok, FutureResult};
-use incoming::{reply, Request, Input, Reply, Encoder};
+use incoming::{reply, Request, Input, Encoder};
 
 
 const PART1: &'static str = "\

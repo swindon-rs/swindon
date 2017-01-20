@@ -1,12 +1,10 @@
 use std::net::SocketAddr;
 use std::sync::Arc;
 
-use tokio_core::io::Io;
 use tokio_core::reactor::Handle;
 use minihttp::Status;
 use minihttp::server::{Dispatcher, Error, Head};
 
-use config::ConfigCell;
 use runtime::Runtime;
 use incoming::{Request, Debug, Input, Transport};
 use routing::{parse_host, route};

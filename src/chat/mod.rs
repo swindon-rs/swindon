@@ -1,7 +1,3 @@
-use std::str::FromStr;
-use futures::sync::mpsc::{UnboundedReceiver as Receiver};
-use minihttp::Status;
-
 mod cid;
 mod authorize;
 //mod api;

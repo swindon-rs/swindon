@@ -12,13 +12,12 @@ use tokio_core::io::Io;
 use rustc_serialize::Encodable;
 use rustc_serialize::json::{as_json, Json};
 
-use intern::SessionId;
-use proxy::{RepReq, HalfResp, Response};
+use proxy::{Response};
 use chat::message::{AuthData, Auth};
 use chat::Cid;
 use chat::cid::{serialize_cid};
 use chat::processor::{ProcessorPool, Action};
-use chat::authorize::parse_userinfo;
+use chat::authorize::{parse_userinfo, good_status};
 
 enum State {
     Init(String, AuthData),
@@ -100,7 +99,7 @@ impl<S: Io> http::Codec<S> for AuthCodec {
         // TODO(tailhook) streaming
         assert!(end);
         match mem::replace(&mut self.state, State::Void) {
-            State::Headers(hr) => {
+            State::Headers(Status::Ok) => {
                 let result = from_utf8(data)
                     .map_err(|e| debug!("Invalid utf-8 in auth data: {}", e))
                 .and_then(|s| Json::from_str(s)
@@ -126,6 +125,15 @@ impl<S: Io> http::Codec<S> for AuthCodec {
                             .complete(Err(Status::InternalServerError));
                     }
                 };
+            }
+            State::Headers(status) => {
+                if good_status(status) {
+                    self.sender.take().expect("not responded yet")
+                        .complete(Err(status));
+                } else {
+                    self.sender.take().expect("not responded yet")
+                        .complete(Err(Status::InternalServerError));
+                }
             }
             _ => unreachable!(),
         }

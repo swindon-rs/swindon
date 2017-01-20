@@ -15,7 +15,7 @@ struct DebugInfo {
 }
 
 impl Debug {
-    pub fn new(head: &Head, cfg: &Arc<Config>) -> Debug {
+    pub fn new(_head: &Head, cfg: &Arc<Config>) -> Debug {
         if cfg.debug_routing {
             Debug(Some(Box::new(DebugInfo {
                 route: None,

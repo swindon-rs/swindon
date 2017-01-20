@@ -3,7 +3,7 @@ use std::sync::Arc;
 use futures::{Async, Future};
 use futures::stream::{Stream};
 use minihttp::Status;
-use minihttp::server::{EncoderDone, Error, Codec, RecvMode, WebsocketAccept};
+use minihttp::server::{Error, Codec, RecvMode, WebsocketAccept};
 use minihttp::server as http;
 use minihttp::websocket::{Codec as WebsocketCodec};
 use tk_bufstream::{ReadBuf, WriteBuf};
@@ -34,7 +34,7 @@ impl<S: Io + 'static> Codec<S> for WebsockReply {
         assert!(data.len() == 0);
         Ok(Async::Ready(0))
     }
-    fn start_response(&mut self, mut e: http::Encoder<S>) -> Reply<S> {
+    fn start_response(&mut self, e: http::Encoder<S>) -> Reply<S> {
         let (config, debug, accept) = self.rdata.take()
             .expect("start response called once");
         let mut e = Encoder::new(e, (config, debug));

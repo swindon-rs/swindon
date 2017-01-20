@@ -3,7 +3,7 @@ use std::sync::Arc;
 use std::ascii::AsciiExt;
 use std::borrow::Cow;
 
-use futures::{Future, AsyncSink};
+use futures::{AsyncSink};
 use futures::sink::Sink;
 use futures::sync::oneshot::{Sender};
 use futures::sync::mpsc::{unbounded as channel};
@@ -17,7 +17,7 @@ use incoming::{Input};
 use chat::{Cid, MessageError};
 use chat::backend;
 use chat::message::AuthData;
-use chat::processor::{Action, ConnectionMessage};
+use chat::processor::Action;
 
 /// Issue Auth call to backend.
 ///

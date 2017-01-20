@@ -3,7 +3,6 @@ use std::sync::Arc;
 use std::time::Instant;
 use std::sync::mpsc::{channel, Sender};
 use futures::sync::mpsc::{UnboundedSender as ChannelSender};
-use std::collections::HashSet;
 
 
 use intern::SessionPoolName;

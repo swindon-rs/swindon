@@ -4,7 +4,7 @@ use futures::{Async, Future};
 use futures::stream::{Stream};
 use futures::sink::{Sink};
 use minihttp::Status;
-use minihttp::server::{EncoderDone, Error, Codec, RecvMode, WebsocketAccept};
+use minihttp::server::{Error, Codec, RecvMode, WebsocketAccept};
 use minihttp::server as http;
 use minihttp::websocket::{Codec as WebsocketCodec, Packet};
 use tk_bufstream::{ReadBuf, WriteBuf};
@@ -15,12 +15,10 @@ use tokio_core::reactor::Handle;
 use rustc_serialize::json::{self, Json};
 
 use chat;
-use intern::SessionId;
-use config::Config;
 use config::chat::Chat;
-use incoming::{Request, Input, Debug, Reply, Encoder, Transport};
+use incoming::{Request, Input, Reply, Encoder, Transport};
 use incoming::{Context, IntoContext};
-use default_error_page::{serve_error_page, error_page};
+use default_error_page::serve_error_page;
 
 struct ReplyData {
     context: Context,
@@ -40,12 +38,12 @@ impl<S: Io + 'static> Codec<S> for WebsockReply {
     fn recv_mode(&mut self) -> RecvMode {
         RecvMode::Hijack
     }
-    fn data_received(&mut self, data: &[u8], end: bool)
+    fn data_received(&mut self, _data: &[u8], _end: bool)
         -> Result<Async<usize>, Error>
     {
         unreachable!();
     }
-    fn start_response(&mut self, mut e: http::Encoder<S>) -> Reply<S> {
+    fn start_response(&mut self, e: http::Encoder<S>) -> Reply<S> {
         let (tx, rx) = channel();
         self.user_info = Some(rx);
         let ReplyData { context, accept, authorizer } = self.rdata.take()

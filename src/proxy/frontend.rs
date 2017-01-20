@@ -2,16 +2,12 @@ use std::sync::Arc;
 use std::mem;
 
 use futures::{Async, Future, AsyncSink};
-use futures::stream::{Stream};
 use futures::sink::{Sink};
 use futures::sync::oneshot;
 use minihttp::Status;
-use minihttp::server::{EncoderDone, Error, RecvMode, WebsocketAccept};
+use minihttp::server::{Error, RecvMode};
 use minihttp::server as http;
-use tk_bufstream::{ReadBuf, WriteBuf};
 use tokio_core::io::Io;
-use futures::future::{ok};
-use tokio_core::reactor::Handle;
 
 use config::Config;
 use config::proxy::Proxy;

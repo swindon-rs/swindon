@@ -4,22 +4,19 @@ use std::str::from_utf8;
 use std::sync::Arc;
 use std::net::SocketAddr;
 
-use futures::{Async, Future};
+use futures::Async;
 use futures::future::{FutureResult, ok};
 use tokio_core::io::Io;
-use tokio_core::reactor::Handle;
 use minihttp::Status;
 use minihttp::server::{Dispatcher, Error, Head};
 use minihttp::server as http;
-use minihttp::server::{EncoderDone, RecvMode, WebsocketAccept};
+use minihttp::server::{EncoderDone, RecvMode};
 use rustc_serialize::json;
 
-use intern::{Topic, SessionPoolName, Lattice as Namespace};
+use intern::{Topic, Lattice as Namespace};
 use chat::Cid;
 use chat::processor::Action;
 use chat::listener::spawn::WorkerData;
-use config::SessionPool;
-use runtime::Runtime;
 
 
 pub struct Handler {

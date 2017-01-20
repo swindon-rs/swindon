@@ -1,22 +1,20 @@
 use std::io;
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
 use std::net::SocketAddr;
 use std::collections::HashMap;
 
 use abstract_ns;
 use ns_std_threaded;
-use tokio_core::reactor::{Handle, Timeout};
+use tokio_core::reactor::Handle;
 use tokio_core::net::TcpListener;
 use futures::Stream;
-use futures::future::{Either, Future, ok};
-use futures::sync::mpsc::{unbounded as channel};
+use futures::future::{Future, ok};
 use futures::sync::oneshot::{channel as oneshot, Sender, Receiver};
 use futures_cpupool;
 use minihttp;
 use minihttp::server::Proto;
 
-use intern::SessionPoolName;
-use config::{ListenSocket, Handler, ConfigCell};
+use config::{ListenSocket, ConfigCell};
 use incoming::Router;
 use chat;
 use handlers;
@@ -40,7 +38,7 @@ pub fn spawn_listener(addr: SocketAddr, handle: &Handle,
     let runtime = runtime.clone();
     let listener = TcpListener::bind(&addr, &handle)?;
     // TODO(tailhook) how to update?
-    let mut hcfg = minihttp::server::Config::new()
+    let hcfg = minihttp::server::Config::new()
         .inflight_request_limit(root.pipeline_depth)
         // TODO(tailhook) make it configurable?
         .inflight_request_prealoc(0)

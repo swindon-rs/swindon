@@ -10,8 +10,6 @@ use std::collections::BTreeMap;
 use rustc_serialize::json::{self, Json};
 use rustc_serialize::{Encodable, Encoder};
 
-use chat::Cid;
-
 pub type Meta = BTreeMap<String, Json>;
 pub type Args = Vec<Json>;
 pub type Kwargs = BTreeMap<String, Json>;

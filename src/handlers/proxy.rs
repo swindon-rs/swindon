@@ -4,7 +4,7 @@ use proxy::frontend::Codec;
 use minihttp::Status;
 use tokio_core::io::Io;
 use config::proxy::Proxy;
-use incoming::{Request, Input, Reply};
+use incoming::{Request, Input};
 use default_error_page::serve_error_page;
 
 

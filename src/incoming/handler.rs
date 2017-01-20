@@ -1,12 +1,10 @@
-use std::sync::Arc;
 use std::path::Path;
 
-use tokio_core::io::Io;
-use minihttp::server::{Head, Dispatcher, Error};
+use minihttp::server::{Dispatcher, Error};
 use httpbin::HttpBin;
 
 use incoming::{Request, Input, Transport};
-use config::{Config, Handler};
+use config::{Handler};
 use handlers;
 
 // TODO(tailhook) this should eventually be a virtual method on Handler trait
