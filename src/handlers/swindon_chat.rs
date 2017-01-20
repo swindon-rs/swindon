@@ -2,16 +2,17 @@ use std::sync::Arc;
 
 use futures::{Async, Future};
 use futures::stream::{Stream};
+use futures::sink::{Sink};
 use minihttp::Status;
 use minihttp::server::{EncoderDone, Error, Codec, RecvMode, WebsocketAccept};
 use minihttp::server as http;
-use minihttp::websocket::{Codec as WebsocketCodec};
+use minihttp::websocket::{Codec as WebsocketCodec, Packet};
 use tk_bufstream::{ReadBuf, WriteBuf};
 use tokio_core::io::Io;
 use futures::future::{ok};
 use futures::sync::oneshot::{channel, Receiver};
 use tokio_core::reactor::Handle;
-use rustc_serialize::json::Json;
+use rustc_serialize::json::{self, Json};
 
 use chat;
 use intern::SessionId;
@@ -24,11 +25,12 @@ use default_error_page::{serve_error_page, error_page};
 struct ReplyData {
     context: Context,
     accept: WebsocketAccept,
-    authorizer: Receiver<Result<(SessionId, Json), Status>>,
+    authorizer: Receiver<Result<Arc<Json>, Status>>,
 }
 
 struct WebsockReply {
     rdata: Option<ReplyData>,
+    user_info: Option<Receiver<Result<Arc<Json>, Status>>>,
     handle: Handle,
 }
 
@@ -44,40 +46,59 @@ impl<S: Io + 'static> Codec<S> for WebsockReply {
         unreachable!();
     }
     fn start_response(&mut self, mut e: http::Encoder<S>) -> Reply<S> {
+        let (tx, rx) = channel();
+        self.user_info = Some(rx);
         let ReplyData { context, accept, authorizer } = self.rdata.take()
             .expect("start response called once");
         Box::new(authorizer.then(move |result| {
             let mut e = Encoder::new(e, context);
-            match result {
-                Ok(Ok((sid, data))) => {
-                    e.status(Status::SwitchingProtocol);
-                    e.add_header("Connection", "upgrade");
-                    e.add_header("Upgrade", "websocket");
-                    e.format_header("Sec-Websocket-Accept", &accept);
-                    e.done_headers();
-                    ok(e.done())
+            // We always allow websocket, and send error as shutdown message
+            // in case there is one.
+            let msg = match result {
+                Ok(Ok(data)) => Ok(data),
+                Ok(Err(status)) => Err(status),
+                Err(_) => {
+                    error!("authentication future is cancelled");
+                    Err(Status::InternalServerError)
                 }
-                Ok(Err(status)) => {
-                    // TODO(tailhook) this should establish a connection
-                    // and send error code there
-                    error_page(status, e)
-                }
-                Err(_) => { // cancelled?
-                    // TODO(tailhook) verify that it either never happens
-                    // or that error is expected here
-                    error_page(Status::InternalServerError, e)
-                }
-            }
+            };
+            tx.complete(msg);
+
+            e.status(Status::SwitchingProtocol);
+            e.add_header("Connection", "upgrade");
+            e.add_header("Upgrade", "websocket");
+            e.format_header("Sec-Websocket-Accept", &accept);
+            e.done_headers();
+            ok(e.done())
         }))
     }
     fn hijack(&mut self, write_buf: WriteBuf<S>, read_buf: ReadBuf<S>) {
+        let uchannel = self.user_info.take().unwrap();
         let inp = read_buf.framed(WebsocketCodec);
         let out = write_buf.framed(WebsocketCodec);
         // TODO(tailhook) convert Ping to Pong (and Close ?) before echoing
-        self.handle.spawn(inp.forward(out)
-            .map(|_| ())
-            // TODO(tailhook) check error reporting
-            .map_err(|e| info!("Websocket error: {}", e)))
+        let fut = uchannel.then(move |x| match x {
+            Ok(Ok(auth_data)) => {
+                let msg = chat::ConnectionMessage::Hello(auth_data);
+                out.send(Packet::Text(json::encode(&msg)
+                    .expect("every message can be encoded")))
+                .map_err(|e| info!("error sending userinfo: {:?}", e))
+                .and_then(|out| inp.forward(out)
+                    .map_err(|e| info!("error sending userinfo: {:?}", e))
+                    .map(|(_, _)| debug!("websocket complete")))
+
+            }
+            Ok(Err(_)) => {
+                // TODO(tailhook) shutdown gracefully
+                unimplemented!();
+            }
+            Err(_) => {
+                error!("authentication (userinfo) future is cancelled");
+                // TODO(tailhook) shutdown gracefully
+                unimplemented!();
+            }
+        });
+        self.handle.spawn(fut);
     }
 }
 
@@ -95,6 +116,7 @@ pub fn serve<S: Transport>(settings: &Arc<Chat>, inp: Input)
                     accept: ws.accept,
                     authorizer: rx,
                 }),
+                user_info: None,
             }))
         }
         Ok(None) => {

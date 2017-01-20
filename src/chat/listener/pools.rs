@@ -16,7 +16,7 @@ use config::{SessionPool, ListenSocket};
 #[derive(Clone)]
 pub struct SessionPools {
     pools: Arc<RwLock<HashMap<SessionPoolName, Worker>>>,
-    processor: Processor,
+    pub processor: Processor,
 }
 
 struct Worker {

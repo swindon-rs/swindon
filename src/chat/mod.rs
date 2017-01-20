@@ -20,6 +20,4 @@ pub use self::message::{Meta, Args, Kwargs};
 pub use self::error::MessageError;
 pub use self::close_reason::CloseReason;
 pub use self::listener::SessionPools;
-
-//use self::processor::ConnectionMessage;
-//
+pub use self::processor::ConnectionMessage;

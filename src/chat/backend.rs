@@ -1,4 +1,5 @@
 use std::str::from_utf8;
+use std::sync::Arc;
 use std::io::BufWriter;
 use std::mem;
 
@@ -16,10 +17,11 @@ use proxy::{RepReq, HalfResp, Response};
 use chat::message::{AuthData, Auth};
 use chat::Cid;
 use chat::cid::{serialize_cid};
+use chat::processor::{ProcessorPool, Action};
 use chat::authorize::parse_userinfo;
 
 enum State {
-    Init(String, Cid, AuthData),
+    Init(String, AuthData),
     Wait,
     Headers(Status),
     Done(Response),
@@ -29,16 +31,20 @@ enum State {
 
 pub struct AuthCodec {
     state: State,
-    sender: Option<oneshot::Sender<Result<(SessionId, Json), Status>>>,
+    chat: ProcessorPool,
+    conn_id: Cid,
+    sender: Option<oneshot::Sender<Result<Arc<Json>, Status>>>,
 }
 
 impl AuthCodec {
-    pub fn new(path: String, cid: Cid, req: AuthData,
-        tx: oneshot::Sender<Result<(SessionId, Json), Status>>)
+    pub fn new(path: String, cid: Cid, req: AuthData, chat: ProcessorPool,
+        tx: oneshot::Sender<Result<Arc<Json>, Status>>)
         -> AuthCodec
     {
         AuthCodec {
-            state: State::Init(path, cid, req),
+            state: State::Init(path, req),
+            chat: chat,
+            conn_id: cid,
             sender: Some(tx),
         }
     }
@@ -66,11 +72,12 @@ impl<S: Io> http::Codec<S> for AuthCodec {
     type Future = FutureResult<http::EncoderDone<S>, http::Error>;
 
     fn start_write(&mut self, mut e: http::Encoder<S>) -> Self::Future {
-        if let State::Init(p, c, i) = mem::replace(&mut self.state, State::Void)
+        if let State::Init(p, i) = mem::replace(&mut self.state, State::Void)
         {
             self.state = State::Wait;
             e.request_line("POST", &p, Version::Http11);
-            ok(write_json_request(e, &Auth(&serialize_cid(&c), &i)))
+            ok(write_json_request(e,
+                &Auth(&serialize_cid(&self.conn_id), &i)))
         } else {
             panic!("wrong state");
         }
@@ -102,10 +109,19 @@ impl<S: Io> http::Codec<S> for AuthCodec {
                     .map_err(|e| debug!("Bad user info in auth data: {}", e)));
                 match result {
                     Ok((sess_id, userinfo)) => {
+                        let userinfo = Arc::new(userinfo);
+                        debug!("Auth data received {:?}: {:?}",
+                            sess_id, userinfo);
+                        self.chat.send(Action::Associate {
+                            conn_id: self.conn_id,
+                            session_id: sess_id,
+                            metadata: userinfo.clone(),
+                        });
                         self.sender.take().expect("not responded yet")
-                            .complete(Ok((sess_id, userinfo)))
+                            .complete(Ok(userinfo))
                     }
                     Err(()) => {
+                        debug!("Auth error");
                         self.sender.take().expect("not responded yet")
                             .complete(Err(Status::InternalServerError));
                     }

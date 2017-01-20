@@ -53,16 +53,17 @@ fn auth_data(handshake: &Head) -> Result<AuthData, Status> {
 
 
 pub fn start_authorize(inp: &Input, settings: &Arc<Chat>,
-                       response: Sender<Result<(SessionId, Json), Status>>)
+                       response: Sender<Result<Arc<Json>, Status>>)
 {
     let conn_id = Cid::new();
     let (tx, rx) = channel();
 
-    inp.runtime.session_pools.send(&settings.session_pool,
-        Action::NewConnection {
-            conn_id: conn_id,
-            channel: tx,
-        });
+    let pool = inp.runtime.session_pools
+        .processor.pool(&settings.session_pool);
+    pool.send(Action::NewConnection {
+        conn_id: conn_id,
+        channel: tx,
+    });
 
     let dest = settings.message_handlers
         .resolve("tangle.authorize_connection");
@@ -81,7 +82,7 @@ pub fn start_authorize(inp: &Input, settings: &Arc<Chat>,
         }
     };
     let codec = Box::new(backend::AuthCodec::new(path.into_owned(),
-        conn_id, auth_data, response));
+        conn_id, auth_data, pool.clone(), response));
 
     match up.get_mut().get_mut() {
         Some(pool) => {
@@ -101,7 +102,10 @@ pub fn start_authorize(inp: &Input, settings: &Arc<Chat>,
         }
         None => {
             error!("No such pool {:?}", dest.upstream);
+            // TODO(tailhook) return error to user
+            // TODO(tailhook) deregister connection in pool
             // codec.into_inner().send(Err(Status::NotFound))
+            //
             unimplemented!();
         }
     }
