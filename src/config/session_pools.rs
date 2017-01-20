@@ -25,7 +25,7 @@ pub struct InactivityTimeouts {
 
 pub fn validator<'x>() -> Structure<'x> {
     Structure::new()
-    .member("listen", listen::validator())
+    .member("listen", Sequence::new(listen::validator()))
     .member("max_connections",
         Numeric::new().min(1).max(1 << 31).default(1000))
     .member("max_payload_size",
