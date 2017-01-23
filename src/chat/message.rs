@@ -15,20 +15,22 @@ pub type Args = Vec<Json>;
 pub type Kwargs = BTreeMap<String, Json>;
 
 
-#[derive(Debug, PartialEq)]
-pub enum ValidationError {
-    /// Invalid message length;
-    InvalidLength,
-    /// Invalid method ("tangle." or contains ".");
-    InvalidMethod,
-    /// request_id is missing or invalid in request_meta object;
-    InvalidRequestId,
-    /// user_id is missing or invalid in request_meta object;
-    InvalidUserId,
-    /// Array of args expected;
-    ArrayExpected,
-    /// Meta/Kwargs object expected;
-    ObjectExpected,
+quick_error! {
+    #[derive(Debug, PartialEq)]
+    pub enum ValidationError {
+        /// Invalid message length;
+        InvalidLength {}
+        /// Invalid method ("tangle." or contains ".");
+        InvalidMethod {}
+        /// request_id is missing or invalid in request_meta object;
+        InvalidRequestId {}
+        /// user_id is missing or invalid in request_meta object;
+        InvalidUserId {}
+        /// Array of args expected;
+        ArrayExpected {}
+        /// Meta/Kwargs object expected;
+        ObjectExpected {}
+    }
 }
 
 /// Decode Websocket json message into Meta & Message structs.

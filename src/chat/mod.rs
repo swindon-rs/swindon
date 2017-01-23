@@ -7,6 +7,7 @@ mod processor;
 mod error;
 mod close_reason;
 mod listener;
+mod dispatcher;
 
 pub use self::cid::Cid;
 pub use self::authorize::start_authorize;
@@ -17,3 +18,4 @@ pub use self::error::MessageError;
 pub use self::close_reason::CloseReason;
 pub use self::listener::SessionPools;
 pub use self::processor::ConnectionMessage;
+pub use self::dispatcher::Dispatcher;
