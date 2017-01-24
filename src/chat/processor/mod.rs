@@ -20,10 +20,9 @@ use futures::sync::mpsc::{UnboundedSender as Sender};
 use config;
 use intern::{Topic, SessionId, SessionPoolName, Lattice as Namespace};
 use intern::LatticeKey;
-use chat::Cid;
+use chat::{Cid, ConnectionSender, CloseReason};
 use chat::message::Meta;
 use chat::error::MessageError;
-use chat::CloseReason;
 
 mod main;
 mod pool;
@@ -85,7 +84,7 @@ pub enum Action {
     // ------ Connection management ------
     NewConnection {
         conn_id: Cid,
-        channel: Sender<ConnectionMessage>,
+        channel: ConnectionSender,
     },
     Associate {
         conn_id: Cid,
@@ -196,9 +195,13 @@ impl Encodable for ConnectionMessage {
                 })
             }
             StopSocket(ref reason) => {
+                // this clause should never actually be called
+                // but we think it's unwise to put assertions in serializer
                 s.emit_seq(2, |s| {
                     s.emit_seq_elt(0, |s| s.emit_str("stop"))?;
-                    s.emit_seq_elt(1, |s| reason.encode(s))
+                    s.emit_seq_elt(1, |s| {
+                        s.emit_str(&format!("{:?}", reason))
+                    })
                 })
             }
         }

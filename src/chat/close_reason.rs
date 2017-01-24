@@ -1,9 +1,12 @@
-#[derive(Debug, Clone, PartialEq, Eq, RustcEncodable)]
+use minihttp::Status;
+
+
+#[derive(Debug, Clone, PartialEq)]
 pub enum CloseReason {
     /// Stopping websocket because respective session pool is stopped
     PoolStopped,
     /// Closing because respective http returned specified response code
-    AuthHttp(u16),
+    AuthHttp(Status),
 }
 
 impl CloseReason {
@@ -11,7 +14,8 @@ impl CloseReason {
         use self::CloseReason::*;
         match *self {
             PoolStopped => 4001,
-            AuthHttp(code) if code >= 400 && code <= 599 => 4000 + code,
+            AuthHttp(code) if code.code() >= 400 && code.code() <= 599
+            => 4000 + code.code(),
             AuthHttp(_) => 4500,
         }
     }

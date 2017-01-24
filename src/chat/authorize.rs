@@ -6,7 +6,7 @@ use std::borrow::Cow;
 use futures::{AsyncSink};
 use futures::sink::Sink;
 use futures::sync::oneshot::{Sender};
-use futures::sync::mpsc::{unbounded as channel};
+use futures::sync::mpsc::{UnboundedSender};
 use minihttp::Status;
 use minihttp::server::Head;
 use rustc_serialize::json::Json;
@@ -14,10 +14,11 @@ use rustc_serialize::json::Json;
 use intern::SessionId;
 use config::chat::Chat;
 use incoming::{Input};
-use chat::{Cid, MessageError};
+use chat::{Cid, MessageError, CloseReason, ConnectionSender};
 use chat::backend;
 use chat::message::AuthData;
-use chat::processor::Action;
+use chat::processor::{Action};
+use chat::ConnectionMessage::{self, StopSocket};
 
 /// Issue Auth call to backend.
 ///
@@ -52,17 +53,14 @@ fn auth_data(handshake: &Head) -> Result<AuthData, Status> {
 }
 
 
-pub fn start_authorize(inp: &Input, settings: &Arc<Chat>,
-                       response: Sender<Result<Arc<Json>, Status>>)
+pub fn start_authorize(inp: &Input, conn_id: Cid, settings: &Arc<Chat>,
+                       messages: ConnectionSender)
 {
-    let conn_id = Cid::new();
-    let (tx, rx) = channel();
-
     let pool = inp.runtime.session_pools
         .processor.pool(&settings.session_pool);
     pool.send(Action::NewConnection {
         conn_id: conn_id,
-        channel: tx,
+        channel: messages.clone(),
     });
 
     let dest = settings.message_handlers
@@ -76,13 +74,13 @@ pub fn start_authorize(inp: &Input, settings: &Arc<Chat>,
 
     let auth_data = match auth_data(inp.headers) {
         Ok(data) => data,
-        Err(e) => {
-            response.complete(Err(e));
+        Err(status) => {
+            messages.send(StopSocket(CloseReason::AuthHttp(status)));
             return;
         }
     };
     let codec = Box::new(backend::AuthCodec::new(path.into_owned(),
-        conn_id, auth_data, pool.clone(), response));
+        conn_id, auth_data, pool.clone(), messages));
 
     match up.get_mut().get_mut() {
         Some(pool) => {
@@ -101,7 +99,7 @@ pub fn start_authorize(inp: &Input, settings: &Arc<Chat>,
             }
         }
         None => {
-            error!("No such pool {:?}", dest.upstream);
+            error!("No such destination {:?}", dest.upstream);
             // TODO(tailhook) return error to user
             // TODO(tailhook) deregister connection in pool
             // codec.into_inner().send(Err(Status::NotFound))

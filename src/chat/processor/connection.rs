@@ -4,7 +4,7 @@ use std::collections::{HashSet, HashMap};
 use rustc_serialize::json::Json;
 use futures::sync::mpsc::{UnboundedSender as Sender};
 
-use chat::{Cid, CloseReason};
+use chat::{Cid, CloseReason, ConnectionSender};
 use intern::{Topic, SessionId, Lattice as Namespace, LatticeKey};
 use super::{ConnectionMessage};
 use super::lattice;
@@ -15,7 +15,7 @@ pub struct NewConnection {
     pub topics: HashSet<Topic>,
     pub lattices: HashSet<Namespace>,
     pub message_buffer: Vec<(Topic, Arc<Json>)>,
-    pub channel: Sender<ConnectionMessage>,
+    pub channel: ConnectionSender,
 }
 
 
@@ -24,11 +24,11 @@ pub struct Connection {
     pub session_id: SessionId,
     pub topics: HashSet<Topic>,
     pub lattices: HashSet<Namespace>,
-    pub channel: Sender<ConnectionMessage>,
+    pub channel: ConnectionSender,
 }
 
 impl NewConnection {
-    pub fn new(conn_id: Cid, channel: Sender<ConnectionMessage>)
+    pub fn new(conn_id: Cid, channel: ConnectionSender)
         -> NewConnection
     {
         NewConnection {
@@ -56,16 +56,14 @@ impl NewConnection {
         self.message_buffer.push((topic, data));
     }
     pub fn stop(&mut self, reason: CloseReason) {
-        self.channel.send(ConnectionMessage::StopSocket(reason))
-            .map_err(|e| info!("Error sending stop message: {}", e)).ok();
+        self.channel.send(ConnectionMessage::StopSocket(reason));
     }
 }
 
 impl Connection {
 
     pub fn message(&mut self, topic: Topic, data: Arc<Json>) {
-        self.channel.send(ConnectionMessage::Publish(topic, data))
-            .map_err(|e| info!("Error sending message: {}", e)).ok();
+        self.channel.send(ConnectionMessage::Publish(topic, data));
     }
 
     pub fn lattice(&mut self, namespace: &Namespace,
@@ -73,11 +71,9 @@ impl Connection {
     {
         let msg = ConnectionMessage::Lattice(
             namespace.clone(), update.clone());
-        self.channel.send(msg)
-            .map_err(|e| info!("Error sending lattice: {}", e)).ok();
+        self.channel.send(msg);
     }
     pub fn stop(&mut self, reason: CloseReason) {
-        self.channel.send(ConnectionMessage::StopSocket(reason))
-            .map_err(|e| info!("Error sending stop message: {}", e)).ok();
+        self.channel.send(ConnectionMessage::StopSocket(reason));
     }
 }

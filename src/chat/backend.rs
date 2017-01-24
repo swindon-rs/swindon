@@ -5,7 +5,6 @@ use std::mem;
 
 use futures::Async;
 use futures::future::{FutureResult, ok};
-use futures::sync::oneshot;
 use minihttp::{Status, Version};
 use minihttp::client as http;
 use tokio_core::io::Io;
@@ -13,13 +12,15 @@ use rustc_serialize::Encodable;
 use rustc_serialize::json::{as_json, Json};
 
 use proxy::{Response};
-use chat::message::{AuthData, Auth};
-use chat::Cid;
+use chat::{Cid, ConnectionSender};
 use chat::cid::{serialize_cid};
+use chat::message::{AuthData, Auth, Meta, Args, Kwargs};
 use chat::processor::{ProcessorPool, Action};
 use chat::authorize::{parse_userinfo, good_status};
+use chat::ConnectionMessage::{Hello, StopSocket};
+use chat::CloseReason::{AuthHttp};
 
-enum State {
+enum AuthState {
     Init(String, AuthData),
     Wait,
     Headers(Status),
@@ -27,28 +28,56 @@ enum State {
     Void,
 }
 
+enum CallState {
+    Init {
+        cid: Cid, path: String, meta: Meta,
+        args: Args, kw: Kwargs
+    },
+}
 
 pub struct AuthCodec {
-    state: State,
+    state: AuthState,
     chat: ProcessorPool,
     conn_id: Cid,
-    sender: Option<oneshot::Sender<Result<Arc<Json>, Status>>>,
+    sender: ConnectionSender,
+}
+
+pub struct CallCodec {
+    state: CallState,
+    sender: ConnectionSender,
 }
 
 impl AuthCodec {
     pub fn new(path: String, cid: Cid, req: AuthData, chat: ProcessorPool,
-        tx: oneshot::Sender<Result<Arc<Json>, Status>>)
+        tx: ConnectionSender)
         -> AuthCodec
     {
         AuthCodec {
-            state: State::Init(path, req),
+            state: AuthState::Init(path, req),
             chat: chat,
             conn_id: cid,
-            sender: Some(tx),
+            sender: tx,
         }
     }
 }
 
+impl CallCodec {
+    pub fn new(cid: Cid, path: String, meta: Meta, args: Args, kw: Kwargs,
+        sender: ConnectionSender)
+        -> CallCodec
+    {
+        CallCodec {
+            state: CallState::Init {
+                cid: cid,
+                path: path,
+                meta: meta,
+                args: args,
+                kw: kw,
+            },
+            sender: sender,
+        }
+    }
+}
 
 fn write_json_request<S: Io, E>(mut e: http::Encoder<S>, data: &E)
     -> http::EncoderDone<S>
@@ -71,9 +100,10 @@ impl<S: Io> http::Codec<S> for AuthCodec {
     type Future = FutureResult<http::EncoderDone<S>, http::Error>;
 
     fn start_write(&mut self, mut e: http::Encoder<S>) -> Self::Future {
-        if let State::Init(p, i) = mem::replace(&mut self.state, State::Void)
+        use self::AuthState::*;
+        if let Init(p, i) = mem::replace(&mut self.state, Void)
         {
-            self.state = State::Wait;
+            self.state = Wait;
             e.request_line("POST", &p, Version::Http11);
             ok(write_json_request(e,
                 &Auth(&serialize_cid(&self.conn_id), &i)))
@@ -84,8 +114,9 @@ impl<S: Io> http::Codec<S> for AuthCodec {
     fn headers_received(&mut self, headers: &http::Head)
         -> Result<http::RecvMode, http::Error>
     {
-        if let State::Wait = mem::replace(&mut self.state, State::Void) {
-            self.state = State::Headers(
+        use self::AuthState::*;
+        if let Wait = mem::replace(&mut self.state, Void) {
+            self.state = Headers(
                 headers.status().unwrap_or(Status::InternalServerError));
             // TODO(tailhook) limit and streaming
             Ok(http::RecvMode::Buffered(10_485_760))
@@ -96,10 +127,11 @@ impl<S: Io> http::Codec<S> for AuthCodec {
     fn data_received(&mut self, data: &[u8], end: bool)
         -> Result<Async<usize>, http::Error>
     {
+        use self::AuthState::*;
         // TODO(tailhook) streaming
         assert!(end);
-        match mem::replace(&mut self.state, State::Void) {
-            State::Headers(Status::Ok) => {
+        match mem::replace(&mut self.state, Void) {
+            Headers(Status::Ok) => {
                 let result = from_utf8(data)
                     .map_err(|e| debug!("Invalid utf-8 in auth data: {}", e))
                 .and_then(|s| Json::from_str(s)
@@ -116,27 +148,46 @@ impl<S: Io> http::Codec<S> for AuthCodec {
                             session_id: sess_id,
                             metadata: userinfo.clone(),
                         });
-                        self.sender.take().expect("not responded yet")
-                            .complete(Ok(userinfo))
+                        self.sender.send(Hello(userinfo));
                     }
                     Err(()) => {
                         debug!("Auth error");
-                        self.sender.take().expect("not responded yet")
-                            .complete(Err(Status::InternalServerError));
+                        self.sender.send(StopSocket(
+                            AuthHttp(Status::InternalServerError)));
                     }
                 };
             }
-            State::Headers(status) => {
+            Headers(status) => {
                 if good_status(status) {
-                    self.sender.take().expect("not responded yet")
-                        .complete(Err(status));
+                    self.sender.send(StopSocket(AuthHttp(status)));
                 } else {
-                    self.sender.take().expect("not responded yet")
-                        .complete(Err(Status::InternalServerError));
+                    self.sender.send(StopSocket(
+                        AuthHttp(Status::InternalServerError)));
                 }
             }
             _ => unreachable!(),
         }
         Ok((Async::Ready(data.len())))
+    }
+}
+
+impl<S: Io> http::Codec<S> for CallCodec {
+    type Future = FutureResult<http::EncoderDone<S>, http::Error>;
+
+    fn start_write(&mut self, mut e: http::Encoder<S>) -> Self::Future {
+        use self::AuthState::*;
+        unimplemented!();
+    }
+    fn headers_received(&mut self, headers: &http::Head)
+        -> Result<http::RecvMode, http::Error>
+    {
+        use self::AuthState::*;
+        unimplemented!();
+    }
+    fn data_received(&mut self, data: &[u8], end: bool)
+        -> Result<Async<usize>, http::Error>
+    {
+        use self::AuthState::*;
+        unimplemented!();
     }
 }

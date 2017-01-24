@@ -8,7 +8,7 @@ use futures::sync::mpsc::{UnboundedSender as Sender};
 
 use intern::{Topic, SessionId, SessionPoolName, Lattice as Namespace};
 use config;
-use chat::{Cid, CloseReason};
+use chat::{Cid, CloseReason, ConnectionSender};
 use super::{ConnectionMessage, PoolMessage};
 use super::session::Session;
 use super::connection::{NewConnection, Connection};
@@ -89,7 +89,7 @@ impl Pool {
     }
 
     pub fn add_connection(&mut self, conn_id: Cid,
-        channel: Sender<ConnectionMessage>)
+        channel: ConnectionSender)
     {
         let old = self.pending_connections.insert(conn_id,
             NewConnection::new(conn_id, channel));
@@ -440,7 +440,7 @@ fn unsubscribe(topics: &mut HashMap<Topic, HashMap<Cid, Subscription>>,
     })
 }
 
-fn lattice_from(channel: &mut Sender<ConnectionMessage>,
+fn lattice_from(channel: &mut ConnectionSender,
     namespace: &Namespace, session: &SessionId, lattice: &Lattice)
 {
     let mut data = lattice.private.get(session)
@@ -452,8 +452,7 @@ fn lattice_from(channel: &mut Sender<ConnectionMessage>,
         });
     }
     let msg = ConnectionMessage::Lattice(namespace.clone(), Arc::new(data));
-    channel.send(msg)
-        .map_err(|e| info!("Error sending lattice: {}", e)).ok();
+    channel.send(msg);
 }
 
 fn copy_attachments(sess: &mut Session, list: &HashSet<Namespace>, cid: Cid) {

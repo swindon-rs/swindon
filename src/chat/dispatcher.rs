@@ -1,6 +1,9 @@
 use std::sync::Arc;
 
+use futures::AsyncSink;
 use futures::future::{FutureResult, ok, err};
+use futures::sink::{Sink};
+use futures::sync::mpsc::{UnboundedSender as Sender};
 use minihttp::websocket;
 use minihttp::websocket::{Error};
 use minihttp::websocket::Frame::{self, Text, Binary, Ping, Pong};
@@ -9,16 +12,20 @@ use tokio_core::reactor::Handle;
 use runtime::Runtime;
 use config::chat::Chat;
 use config::SessionPool;
-use chat::message::decode_message;
+use chat::{Cid, ConnectionSender};
+use chat::message::{decode_message, get_active, Meta, Args, Kwargs};
 use chat::processor::ProcessorPool;
+use chat::backend::CallCodec;
 
 
 pub struct Dispatcher {
+    pub cid: Cid,
     pub runtime: Arc<Runtime>,
     pub settings: Arc<Chat>,
     pub pool_settings: Arc<SessionPool>,
     pub processor: ProcessorPool,
     pub handle: Handle, // Does it belong here?
+    pub channel: ConnectionSender,
 }
 
 impl websocket::Dispatcher for Dispatcher {
@@ -27,10 +34,11 @@ impl websocket::Dispatcher for Dispatcher {
         match *frame {
             Text(data) => match decode_message(data) {
                 Ok((name, meta, args, kwargs)) => {
-                    // TODO(tailhook) update activity
-                    // send method call
-                    unimplemented!();
-                    ok(())
+                    if let Some(duration) = get_active(&meta) {
+                        // TODO(tailhook) update activity
+                    }
+                    self.method_call(name, meta, args, kwargs);
+                    ok(()) // no backpressure, yet
                 }
                 Err(e) => {
                     debug!("Message error: {}", e);
@@ -44,6 +52,46 @@ impl websocket::Dispatcher for Dispatcher {
                 err(Error::Closed)
             }
             Ping(_)|Pong(_) => unreachable!(),
+        }
+    }
+}
+
+impl Dispatcher {
+    fn method_call(&self, name: String, meta: Meta, args: Args, kw: Kwargs) {
+        let dest = self.settings.message_handlers.resolve(&name);
+        let mut path = name.replace("/", ".");
+        if dest.path == "/" {
+            path.insert(0, '/');
+        } else {
+            path = dest.path.clone() + "/" + &path;
+        };
+        let mut up = self.runtime.http_pools.upstream(&dest.upstream);
+        let codec = Box::new(CallCodec::new(self.cid, path, meta, args, kw,
+            self.channel.clone()));
+        match up.get_mut().get_mut() {
+            Some(pool) => {
+                match pool.start_send(codec) {
+                    Ok(AsyncSink::NotReady(codec)) => {
+                        // codec.into_inner().send(Err(Status::ServiceUnavailable))
+                        unimplemented!();
+                    }
+                    Ok(AsyncSink::Ready) => {
+                        debug!("Sent /tangle/authorize_connection to proxy");
+                    }
+                    Err(e) => {
+                        error!("Error sending to pool {:?}: {}", dest.upstream, e);
+                        // TODO(tailhook) ensure that sender is closed
+                    }
+                }
+            }
+            None => {
+                error!("No such destination {:?}", dest.upstream);
+                // TODO(tailhook) return error to user
+                // TODO(tailhook) deregister connection in pool
+                // codec.into_inner().send(Err(Status::NotFound))
+                //
+                unimplemented!();
+            }
         }
     }
 }
