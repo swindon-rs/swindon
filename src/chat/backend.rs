@@ -12,9 +12,10 @@ use rustc_serialize::Encodable;
 use rustc_serialize::json::{as_json, Json};
 
 use proxy::{Response};
-use chat::{Cid, ConnectionSender};
+use chat::{Cid, ConnectionSender, ConnectionMessage};
 use chat::cid::{serialize_cid};
-use chat::message::{AuthData, Auth, Meta, Args, Kwargs};
+use chat::error::MessageError;
+use chat::message::{AuthData, Auth, Call, Meta, Args, Kwargs};
 use chat::processor::{ProcessorPool, Action};
 use chat::authorize::{parse_userinfo, good_status};
 use chat::ConnectionMessage::{Hello, StopSocket};
@@ -33,6 +34,9 @@ enum CallState {
         cid: Cid, path: String, meta: Meta,
         args: Args, kw: Kwargs
     },
+    Wait(Meta),
+    Headers(Meta, Status),
+    Void,
 }
 
 pub struct AuthCodec {
@@ -175,19 +179,61 @@ impl<S: Io> http::Codec<S> for CallCodec {
     type Future = FutureResult<http::EncoderDone<S>, http::Error>;
 
     fn start_write(&mut self, mut e: http::Encoder<S>) -> Self::Future {
-        use self::AuthState::*;
-        unimplemented!();
+        use self::CallState::*;
+        if
+            let Init { cid, path, meta, args, kw} =
+            mem::replace(&mut self.state, Void)
+        {
+            e.request_line("POST", &path, Version::Http11);
+            // TODO(tailhook) implement authrization
+            //e.add_header("Authorization", "TODO");
+            let done = write_json_request(e, &Call(&meta, &args, &kw));
+            self.state = Wait(meta);
+            ok(done)
+        } else {
+            panic!("wrong state");
+        }
     }
     fn headers_received(&mut self, headers: &http::Head)
         -> Result<http::RecvMode, http::Error>
     {
-        use self::AuthState::*;
-        unimplemented!();
+        use self::CallState::*;
+        if let Wait(meta) = mem::replace(&mut self.state, Void) {
+            self.state = Headers(meta,
+                headers.status().unwrap_or(Status::InternalServerError));
+            // TODO(tailhook) configure limit
+            Ok(http::RecvMode::Buffered(10_485_760))
+        } else {
+            panic!("wrong state");
+        }
     }
     fn data_received(&mut self, data: &[u8], end: bool)
         -> Result<Async<usize>, http::Error>
     {
-        use self::AuthState::*;
-        unimplemented!();
+        use self::CallState::*;
+        assert!(end);
+        match mem::replace(&mut self.state, Void) {
+            Headers(meta, Status::Ok) => {
+                match parse_response(data) {
+                    Ok(x) => {
+                        self.sender.send(ConnectionMessage::Result(meta, x));
+                    }
+                    Err(e) => {
+                        self.sender.send(ConnectionMessage::Error(meta, e));
+                    }
+                }
+            }
+            Headers(meta, status) => {
+                self.sender.send(ConnectionMessage::Error(meta,
+                    // TODO(tailhook) should we put body here?
+                    MessageError::HttpError(status, None)));
+            }
+            _ => unreachable!(),
+        }
+        Ok((Async::Ready(data.len())))
     }
+}
+
+fn parse_response(data: &[u8]) -> Result<Json, MessageError> {
+    Ok(Json::from_str(from_utf8(data)?)?)
 }

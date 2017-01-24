@@ -6,7 +6,6 @@ use std::borrow::Cow;
 use futures::{AsyncSink};
 use futures::sink::Sink;
 use futures::sync::oneshot::{Sender};
-use futures::sync::mpsc::{UnboundedSender};
 use minihttp::Status;
 use minihttp::server::Head;
 use rustc_serialize::json::Json;
@@ -18,7 +17,7 @@ use chat::{Cid, MessageError, CloseReason, ConnectionSender};
 use chat::backend;
 use chat::message::AuthData;
 use chat::processor::{Action};
-use chat::ConnectionMessage::{self, StopSocket};
+use chat::ConnectionMessage::{StopSocket};
 
 /// Issue Auth call to backend.
 ///

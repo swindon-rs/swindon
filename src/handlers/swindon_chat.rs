@@ -12,7 +12,7 @@ use tokio_core::io::Io;
 use futures::future::{ok};
 use futures::sync::mpsc::{UnboundedReceiver as Receiver};
 use tokio_core::reactor::Handle;
-use rustc_serialize::json::{self, Json};
+use rustc_serialize::json;
 
 use chat::{self, Cid, ConnectionMessage, ConnectionSender};
 use runtime::Runtime;

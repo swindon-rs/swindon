@@ -136,7 +136,7 @@ impl<'a> Encodable for Auth<'a> {
     }
 }
 
-struct Call<'a>(&'a Meta, &'a Args, &'a Kwargs);
+pub struct Call<'a>(pub &'a Meta, pub &'a Args, pub &'a Kwargs);
 
 impl<'a> Encodable for Call<'a> {
     fn encode<S: Encoder>(&self, s: &mut S) -> Result<(), S::Error> {

@@ -1,5 +1,3 @@
-use std::sync::{RwLock};
-
 use tokio_core::reactor::Handle;
 
 use chat;
