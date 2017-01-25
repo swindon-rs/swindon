@@ -43,6 +43,7 @@ pub struct Event {
     action: Action,
 }
 
+// TODO(tailhook) move it upper the stack (to chat::)
 #[derive(Debug)]
 pub enum ConnectionMessage {
     /// Topic publish message:
@@ -50,7 +51,9 @@ pub enum ConnectionMessage {
     Publish(Topic, Arc<Json>),
     /// Auth response message:
     /// `["hello", {}, json_data]`
-    Hello(Arc<Json>),
+    ///
+    /// Note: SessionId here is not serialized, and goes only to dispatcher
+    Hello(SessionId, Arc<Json>),
     /// Websocket call result;
     Result(Meta, Json),
     /// Lattice update message
@@ -160,7 +163,8 @@ impl Encodable for ConnectionMessage {
                     s.emit_seq_elt(2, |s| json.encode(s))
                 })
             }
-            Hello(ref json) => {
+            // We don't serialize session id, it's already in dict
+            Hello(_, ref json) => {
                 s.emit_seq(3, |s| {
                     s.emit_seq_elt(0, |s| s.emit_str("hello"))?;
                     s.emit_seq_elt(1, |s| s.emit_map(0, |_| Ok(())))?;

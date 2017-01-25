@@ -65,7 +65,7 @@ impl ChatAPI {
 
 
     /// Make instance of Session API (api bound to cid/ssid/tx-channel)
-    /// and associate this session with ws connection
+    /// and associate this session with ws connectionuthor
     /// (send `Action::Associate`)
     pub fn session_api(self, session_id: SessionId, conn_id: Cid,
         userinfo: Json, mut channel: Sender<ConnectionMessage>)

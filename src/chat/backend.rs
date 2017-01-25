@@ -9,8 +9,10 @@ use minihttp::{Status, Version};
 use minihttp::client as http;
 use tokio_core::io::Io;
 use rustc_serialize::Encodable;
-use rustc_serialize::json::{as_json, Json};
+use rustc_serialize::json::{self, as_json, Json};
 
+use intern::SessionId;
+use base64::Base64;
 use proxy::{Response};
 use chat::{Cid, ConnectionSender, ConnectionMessage};
 use chat::cid::{serialize_cid};
@@ -20,6 +22,7 @@ use chat::processor::{ProcessorPool, Action};
 use chat::authorize::{parse_userinfo, good_status};
 use chat::ConnectionMessage::{Hello, StopSocket};
 use chat::CloseReason::{AuthHttp};
+
 
 enum AuthState {
     Init(String, AuthData),
@@ -31,7 +34,8 @@ enum AuthState {
 
 enum CallState {
     Init {
-        cid: Cid, path: String, meta: Meta,
+        auth: Arc<String>,
+        path: String, meta: Meta,
         args: Args, kw: Kwargs
     },
     Wait(Meta),
@@ -52,8 +56,8 @@ pub struct CallCodec {
 }
 
 impl AuthCodec {
-    pub fn new(path: String, cid: Cid, req: AuthData, chat: ProcessorPool,
-        tx: ConnectionSender)
+    pub fn new(path: String, cid: Cid, req: AuthData,
+        chat: ProcessorPool, tx: ConnectionSender)
         -> AuthCodec
     {
         AuthCodec {
@@ -66,13 +70,13 @@ impl AuthCodec {
 }
 
 impl CallCodec {
-    pub fn new(cid: Cid, path: String, meta: Meta, args: Args, kw: Kwargs,
-        sender: ConnectionSender)
+    pub fn new(auth: Arc<String>, path: String,
+        meta: Meta, args: Args, kw: Kwargs, sender: ConnectionSender)
         -> CallCodec
     {
         CallCodec {
             state: CallState::Init {
-                cid: cid,
+                auth: auth,
                 path: path,
                 meta: meta,
                 args: args,
@@ -149,10 +153,10 @@ impl<S: Io> http::Codec<S> for AuthCodec {
                             sess_id, userinfo);
                         self.chat.send(Action::Associate {
                             conn_id: self.conn_id,
-                            session_id: sess_id,
+                            session_id: sess_id.clone(),
                             metadata: userinfo.clone(),
                         });
-                        self.sender.send(Hello(userinfo));
+                        self.sender.send(Hello(sess_id, userinfo));
                     }
                     Err(()) => {
                         debug!("Auth error");
@@ -181,12 +185,12 @@ impl<S: Io> http::Codec<S> for CallCodec {
     fn start_write(&mut self, mut e: http::Encoder<S>) -> Self::Future {
         use self::CallState::*;
         if
-            let Init { cid, path, meta, args, kw} =
+            let Init { auth, path, meta, args, kw} =
             mem::replace(&mut self.state, Void)
         {
             e.request_line("POST", &path, Version::Http11);
             // TODO(tailhook) implement authrization
-            //e.add_header("Authorization", "TODO");
+            e.add_header("Authorization", &*auth).unwrap();
             let done = write_json_request(e, &Call(&meta, &args, &kw));
             self.state = Wait(meta);
             ok(done)

@@ -5,7 +5,6 @@ use std::borrow::Cow;
 
 use futures::{AsyncSink};
 use futures::sink::Sink;
-use futures::sync::oneshot::{Sender};
 use minihttp::Status;
 use minihttp::server::Head;
 use rustc_serialize::json::Json;

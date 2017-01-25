@@ -15,6 +15,9 @@ use tokio_core::reactor::Handle;
 use rustc_serialize::json;
 
 use chat::{self, Cid, ConnectionMessage, ConnectionSender};
+use chat::ConnectionMessage::Hello;
+use base64::Base64;
+use intern::SessionId;
 use runtime::Runtime;
 use config::chat::Chat;
 use incoming::{Request, Input, Reply, Encoder, Transport};
@@ -85,8 +88,10 @@ impl<S: Io + 'static> Codec<S> for WebsockReply {
 
         self.handle.spawn(rx.into_future()
             .then(move |result| match result {
-                Ok((auth_data, rx)) => {
-                    out.send(Packet::Text(json::encode(&auth_data)
+                Ok((Some(Hello(session_id, data)), rx)) => {
+                    let auth = Arc::new(format_auth(&session_id));
+                    out.send(Packet::Text(
+                        json::encode(&Hello(session_id, data))
                         .expect("every message can be encoded")))
                     .map_err(|e| info!("error sending userinfo: {:?}", e))
                     .and_then(move |out| {
@@ -103,6 +108,7 @@ impl<S: Io + 'static> Codec<S> for WebsockReply {
                         });
                         websocket::Loop::new(out, inp, rx, chat::Dispatcher {
                             cid: cid,
+                            auth: auth,
                             handle: h1,
                             pool_settings: pool_settings.clone(),
                             processor: processor,
@@ -112,6 +118,12 @@ impl<S: Io + 'static> Codec<S> for WebsockReply {
                             }, &cfg)
                         .map_err(|e| debug!("websocket closed: {}", e))
                     })
+                }
+                Ok((msg, rx)) => {
+                    error!("Received {:?} instead of Hello", msg);
+                    // Bad initial message received
+                    // TODO(tailhook) shutdown gracefully
+                    unimplemented!();
                 }
                 Err(_) => {
                     // TODO(tailhook) shutdown gracefully
@@ -157,4 +169,14 @@ pub fn serve<S: Transport>(settings: &Arc<Chat>, inp: Input)
             Ok(serve_error_page(Status::BadRequest, inp))
         }
     }
+}
+
+fn format_auth(s: &SessionId) -> String {
+    #[derive(RustcEncodable)]
+    struct Auth<'a> {
+        user_id: &'a SessionId,
+    }
+    format!("Tangle {}", Base64(json::encode(&Auth {
+        user_id: s,
+    }).unwrap().as_bytes()))
 }

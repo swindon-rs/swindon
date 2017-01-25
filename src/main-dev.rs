@@ -52,11 +52,7 @@ mod incoming;
 //mod flush_and_wait;
 mod http_pools;  // TODO(tailhook) move to proxy?
 mod proxy;
-//mod json_requests;
-
-// Utils
-//mod short_circuit;
-//mod either;
+mod base64;
 
 use std::process::exit;
 use std::env;

@@ -8,11 +8,13 @@ use minihttp::websocket;
 use minihttp::websocket::{Error};
 use minihttp::websocket::Frame::{self, Text, Binary, Ping, Pong};
 use tokio_core::reactor::Handle;
+use rustc_serialize::json::Json;
 
 use runtime::Runtime;
 use config::chat::Chat;
 use config::SessionPool;
 use chat::{Cid, ConnectionSender};
+use chat::cid::serialize_cid;
 use chat::message::{decode_message, get_active, Meta, Args, Kwargs};
 use chat::processor::ProcessorPool;
 use chat::backend::CallCodec;
@@ -20,6 +22,7 @@ use chat::backend::CallCodec;
 
 pub struct Dispatcher {
     pub cid: Cid,
+    pub auth: Arc<String>,
     pub runtime: Arc<Runtime>,
     pub settings: Arc<Chat>,
     pub pool_settings: Arc<SessionPool>,
@@ -33,10 +36,12 @@ impl websocket::Dispatcher for Dispatcher {
     fn frame(&mut self, frame: &Frame) -> FutureResult<(), Error> {
         match *frame {
             Text(data) => match decode_message(data) {
-                Ok((name, meta, args, kwargs)) => {
+                Ok((name, mut meta, args, kwargs)) => {
                     if let Some(duration) = get_active(&meta) {
                         // TODO(tailhook) update activity
                     }
+                    meta.insert("connection_id".to_string(),
+                        Json::String(serialize_cid(&self.cid)));
                     self.method_call(name, meta, args, kwargs);
                     ok(()) // no backpressure, yet
                 }
@@ -66,7 +71,9 @@ impl Dispatcher {
             path = dest.path.clone() + "/" + &path;
         };
         let mut up = self.runtime.http_pools.upstream(&dest.upstream);
-        let codec = Box::new(CallCodec::new(self.cid, path, meta, args, kw,
+        let codec = Box::new(CallCodec::new(
+            self.auth.clone(),
+            path, meta, args, kw,
             self.channel.clone()));
         match up.get_mut().get_mut() {
             Some(pool) => {

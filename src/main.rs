@@ -50,11 +50,7 @@ mod incoming;
 //mod flush_and_wait;
 mod http_pools;  // TODO(tailhook) move to proxy?
 mod proxy;
-//mod json_requests;
-//
-//// Utils: either is in futures-rs > 0.1.6 (unreleased yet)
-//mod short_circuit;
-//mod either;
+mod base64;
 
 use std::io::{self, Write};
 use std::time::Duration;
