@@ -63,7 +63,7 @@ impl websocket::Dispatcher for Dispatcher {
 impl Dispatcher {
     fn method_call(&self, name: String, meta: Meta, args: Args, kw: Kwargs) {
         let dest = self.settings.message_handlers.resolve(&name);
-        let mut path = name.replace("/", ".");
+        let mut path = name.replace(".", "/");
         if dest.path == "/" {
             path.insert(0, '/');
         } else {
