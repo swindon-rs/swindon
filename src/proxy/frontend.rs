@@ -2,6 +2,7 @@ use std::sync::Arc;
 use std::mem;
 
 use futures::{Async, Future, AsyncSink};
+use futures::future::{ok};
 use futures::sink::{Sink};
 use futures::sync::oneshot;
 use minihttp::Status;
@@ -9,9 +10,8 @@ use minihttp::server::{Error, RecvMode};
 use minihttp::server as http;
 use tokio_core::io::Io;
 
-use config::Config;
 use config::proxy::Proxy;
-use incoming::{Request, Input, Debug, Reply, Encoder, Context, IntoContext};
+use incoming::{Input, Debug, Reply, Encoder, Context, IntoContext};
 use default_error_page::error_page;
 use http_pools::HttpPools;
 use proxy:: {RepReq, HalfReq, Response, backend};
@@ -99,10 +99,18 @@ impl<S: Io + 'static> http::Codec<S> for Codec {
             let ctx = self.context.take().unwrap();
             match mem::replace(&mut self.state, State::Void) {
                 State::Sent { response, .. } => {
-                    Box::new(response.and_then(move |resp| {
+                    Box::new(response.then(move |result| {
                         let e = Encoder::new(e, ctx);
-                        Ok(resp.encode(e))
-                    }).map_err(|e| -> Error { unimplemented!() }))
+                        match result {
+                            Ok(resp) => {
+                                ok(resp.encode(e))
+                            }
+                            Err(err) => {
+                                debug!("Proxy request error: {:?}", err);
+                                error_page(Status::BadGateway, e)
+                            }
+                        }
+                    }))
                 }
                 State::Error(status) => {
                     Box::new(error_page(status, Encoder::new(e, ctx)))
