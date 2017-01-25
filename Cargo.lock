@@ -16,7 +16,7 @@ dependencies = [
  "matches 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "mime 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "mime_guess 1.8.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "minihttp 0.1.0 (git+https://github.com/popravich/minihttp?rev=8590364)",
+ "minihttp 0.1.0 (git+https://github.com/popravich/minihttp?rev=5a4da14)",
  "netbuf 0.3.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "ns-std-threaded 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "quick-error 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -233,7 +233,7 @@ dependencies = [
 [[package]]
 name = "minihttp"
 version = "0.1.0"
-source = "git+https://github.com/popravich/minihttp?rev=8590364#85903645f2ee82bddb4c5cff266411af6cc900b1"
+source = "git+https://github.com/popravich/minihttp?rev=5a4da14#5a4da14d98d00c979d970d193fab89e8ae257b47"
 dependencies = [
  "abstract-ns 0.2.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "argparse 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -257,7 +257,7 @@ dependencies = [
 name = "minihttp"
 version = "0.1.0"
 source = "git+git://github.com/popravich/minihttp?rev=e424f66#e424f666f4a75bf0eea75abc6fbd48b6486d0417"
-replace = "minihttp 0.1.0 (git+https://github.com/popravich/minihttp?rev=8590364)"
+replace = "minihttp 0.1.0 (git+https://github.com/popravich/minihttp?rev=5a4da14)"
 
 [[package]]
 name = "mio"
@@ -649,7 +649,7 @@ dependencies = [
 "checksum mime 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)" = "b5c93a4bd787ddc6e7833c519b73a50883deb5863d76d9b71eb8216fb7f94e66"
 "checksum mime_guess 1.8.1 (registry+https://github.com/rust-lang/crates.io-index)" = "76da6df85047af8c0edfa53f48eb1073012ce1cc95c8fedc0a374f659a89dd65"
 "checksum minihttp 0.1.0 (git+git://github.com/popravich/minihttp?rev=e424f66)" = "<none>"
-"checksum minihttp 0.1.0 (git+https://github.com/popravich/minihttp?rev=8590364)" = "<none>"
+"checksum minihttp 0.1.0 (git+https://github.com/popravich/minihttp?rev=5a4da14)" = "<none>"
 "checksum mio 0.6.3 (registry+https://github.com/rust-lang/crates.io-index)" = "2a1ce15f33e3ea5a0a463b23e22565ceca10b5593f6b387bb7bc24d65590bf01"
 "checksum miow 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "3a78d2605eb97302c10cf944b8d96b0a2a890c52957caf92fcd1f24f69049579"
 "checksum net2 0.2.26 (registry+https://github.com/rust-lang/crates.io-index)" = "5edf9cb6be97212423aed9413dd4729d62b370b5e1c571750e882cebbbc1e3e2"
