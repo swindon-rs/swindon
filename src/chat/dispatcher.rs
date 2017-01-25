@@ -3,7 +3,6 @@ use std::sync::Arc;
 use futures::AsyncSink;
 use futures::future::{FutureResult, ok, err};
 use futures::sink::{Sink};
-use futures::sync::mpsc::{UnboundedSender as Sender};
 use minihttp::websocket;
 use minihttp::websocket::{Error};
 use minihttp::websocket::Frame::{self, Text, Binary, Ping, Pong};

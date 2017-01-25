@@ -2,7 +2,6 @@ use std::sync::Arc;
 use std::collections::{HashSet, HashMap};
 
 use rustc_serialize::json::Json;
-use futures::sync::mpsc::{UnboundedSender as Sender};
 
 use chat::{Cid, CloseReason, ConnectionSender};
 use intern::{Topic, SessionId, Lattice as Namespace, LatticeKey};
