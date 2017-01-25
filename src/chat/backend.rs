@@ -9,10 +9,8 @@ use minihttp::{Status, Version};
 use minihttp::client as http;
 use tokio_core::io::Io;
 use rustc_serialize::Encodable;
-use rustc_serialize::json::{self, as_json, Json};
+use rustc_serialize::json::{as_json, Json};
 
-use intern::SessionId;
-use base64::Base64;
 use proxy::{Response};
 use chat::{Cid, ConnectionSender, ConnectionMessage};
 use chat::cid::{serialize_cid};
@@ -151,12 +149,13 @@ impl<S: Io> http::Codec<S> for AuthCodec {
                         let userinfo = Arc::new(userinfo);
                         debug!("Auth data received {:?}: {:?}",
                             sess_id, userinfo);
+                        self.sender.send(Hello(sess_id.clone(),
+                                               userinfo.clone()));
                         self.chat.send(Action::Associate {
                             conn_id: self.conn_id,
-                            session_id: sess_id.clone(),
-                            metadata: userinfo.clone(),
+                            session_id: sess_id,
+                            metadata: userinfo,
                         });
-                        self.sender.send(Hello(sess_id, userinfo));
                     }
                     Err(()) => {
                         debug!("Auth error");
