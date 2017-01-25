@@ -43,7 +43,7 @@ pub enum Route {
     /// `POST /v1/publish/<path>`
     Publish(Topic),
     /// `PUT /v1/connection/<conn_id>/lattices/<namespace>`
-    Attach(Cid, Namespace),
+    LatticeSubscribe(Cid, Namespace),
     /// `DELETE /v1/connection/<conn_id>/lattices/<namespace>`
     Detach(Cid, Namespace),
     /// `POST /v1/lattice/<namespace>`
@@ -61,8 +61,8 @@ impl fmt::Display for Route {
                 write!(f, "Unsubscribe {:#?} {:?}", cid, tpc)
             }
             Publish(ref topic) => write!(f, "Publish {:?}", topic),
-            Attach(cid, ref ns) => {
-                write!(f, "Lattice attach {:#?} {:?}", cid, ns)
+            LatticeSubscribe(cid, ref ns) => {
+                write!(f, "Lattice subscribe {:#?} {:?}", cid, ns)
             }
             Detach(cid, ref ns) => {
                 write!(f, "Lattice detach {:#?} {:?}", cid, ns)
@@ -150,7 +150,7 @@ impl Handler {
                         });
                         match (method, cid, ns) {
                             ("PUT", Some(cid), Some(ns)) => {
-                                State::Query(Route::Attach(cid, ns))
+                                State::Query(Route::LatticeSubscribe(cid, ns))
                             }
                             ("DELETE", Some(cid), Some(ns)) => {
                                 State::Query(Route::Detach(cid, ns))
@@ -244,14 +244,70 @@ impl<S: Io> http::Codec<S> for Request {
                     }
                 }
             }
-            State::Query(Attach(cid, ns)) => {
-                unimplemented!();
+            State::Query(LatticeSubscribe(cid, ns)) => {
+                // TODO(tailhook) check content-type
+                let data = from_utf8(data)
+                    .map_err(|e| {
+                        info!("Error decoding utf-8 for \
+                            '/v1/lattice/_/subscribe': \
+                            {:?}", e);
+                    })
+                    .and_then(|data| json::decode(data)
+                    .map_err(|e| {
+                        info!("Error decoding json for \
+                            '/v1/lattice/_/subscribe': \
+                            {:?}", e);
+                    }));
+                match data {
+                    Ok(delta) => {
+                        self.wdata.processor.send(Action::Lattice {
+                            namespace: ns.clone(),
+                            delta: delta,
+                        });
+                        self.wdata.processor.send(Action::Attach {
+                            namespace: ns.clone(),
+                            conn_id: cid,
+                        });
+                        State::Done
+                    }
+                    Err(_) => {
+                        State::Error(Status::BadRequest)
+                    }
+                }
             }
             State::Query(Detach(cid, ns)) => {
-                unimplemented!();
+                self.wdata.processor.send(Action::Detach {
+                    namespace: ns.clone(),
+                    conn_id: cid,
+                });
+                State::Done
             }
             State::Query(Lattice(ns)) => {
-                unimplemented!();
+                // TODO(tailhook) check content-type
+                let data = from_utf8(data)
+                    .map_err(|e| {
+                        info!("Error decoding utf-8 for \
+                            '/v1/lattice': \
+                            {:?}", e);
+                    })
+                    .and_then(|data| json::decode(data)
+                    .map_err(|e| {
+                        info!("Error decoding json for \
+                            '/v1/lattice': \
+                            {:?}", e);
+                    }));
+                match data {
+                    Ok(delta) => {
+                        self.wdata.processor.send(Action::Lattice {
+                            namespace: ns.clone(),
+                            delta: delta,
+                        });
+                        State::Done
+                    }
+                    Err(_) => {
+                        State::Error(Status::BadRequest)
+                    }
+                }
             }
             State::Done => unreachable!(),
             State::Error(e) => State::Error(e),
