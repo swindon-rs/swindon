@@ -1,5 +1,4 @@
 use std::sync::Arc;
-use std::borrow::Cow;
 
 use futures::Future;
 use futures::stream::{Stream};
@@ -51,6 +50,8 @@ pub fn run(runtime: &Arc<Runtime>, settings: &Arc<SessionPool>,
                                     }
                                     Err(e) => {
                                         // TODO(tailhook) log, retry later
+                                        error!("Error sending inactivity: {}",
+                                            e);
                                     }
                                 }
                             }

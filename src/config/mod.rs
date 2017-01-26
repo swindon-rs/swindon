@@ -170,7 +170,7 @@ pub mod test {
 
             session-pools:
               example-session:
-                listen: 127.0.0.1:2007
+                listen: [127.0.0.1:2007]
 
             http-destinations:
               superman:

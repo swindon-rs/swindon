@@ -153,9 +153,9 @@ impl<'a> Encodable for Call<'a> {
 
 #[cfg(test)]
 mod test {
-    use rustc_serialize::json::Json;
+    use rustc_serialize::json::{self, Json};
 
-    use chat::message::{self, Meta, Args, Kwargs, AuthData};
+    use chat::message::{self, Meta, Args, Kwargs, Auth, AuthData};
     use super::ValidationError as V;
 
     #[test]
@@ -213,10 +213,10 @@ mod test {
 
     #[test]
     fn encode_auth() {
-        let res = Auth(&"conn:1".to_string(), &AuthData{
+        let res = json::encode(&Auth(&"conn:1".to_string(), &AuthData {
             http_cookie: None, http_authorization: None,
             url_querystring: "".to_string(),
-        }).to_string();
+        })).unwrap();
         assert_eq!(res, concat!(
             r#"[{"connection_id":"conn:1"},[],{"#,
             r#""http_cookie":null,"http_authorization":null,"#,
@@ -228,7 +228,7 @@ mod test {
             url_querystring: "".to_string(),
         };
 
-        let res = Auth(&"conn:2".to_string(), &kw).to_string();
+        let res = json::encode(&Auth(&"conn:2".to_string(), &kw)).unwrap();
         assert_eq!(res, concat!(
             r#"[{"connection_id":"conn:2"},"#,
             r#"[],{"http_cookie":"auth=ok","#,

@@ -16,8 +16,6 @@ use rustc_serialize::json;
 
 use chat::{self, Cid, ConnectionMessage, ConnectionSender, TangleAuth};
 use chat::ConnectionMessage::Hello;
-use base64::Base64;
-use intern::SessionId;
 use runtime::Runtime;
 use config::chat::Chat;
 use incoming::{Request, Input, Reply, Encoder, Transport};
@@ -121,7 +119,7 @@ impl<S: Io + 'static> Codec<S> for WebsockReply {
                         .map_err(|e| debug!("websocket closed: {}", e))
                     })
                 }
-                Ok((msg, rx)) => {
+                Ok((msg, _)) => {
                     error!("Received {:?} instead of Hello", msg);
                     // Bad initial message received
                     // TODO(tailhook) shutdown gracefully

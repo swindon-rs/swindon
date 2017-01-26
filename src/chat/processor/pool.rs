@@ -478,7 +478,7 @@ mod test {
 
     use string_intern::{Symbol, Validator};
     use config;
-    use chat::Cid;
+    use chat::{Cid, ConnectionSender};
 
     use super::Pool;
     use super::super::lattice::{Delta, Values};
@@ -489,8 +489,9 @@ mod test {
         let (tx, rx) = channel();
         let pool = Pool::new(SessionPoolName::from("test_pool"),
             Arc::new(config::SessionPool {
-                listen: config::ListenSocket::Tcp(
-                    "127.0.0.1:65535".parse().unwrap()),
+                listen: vec![
+                    config::ListenSocket::Tcp(
+                    "127.0.0.1:65535".parse().unwrap())],
                 inactivity_handlers: Vec::new(),
                 inactivity: Arc::new(config::InactivityTimeouts {
                     new_connection: De::new(Duration::from_secs(60)),
@@ -498,6 +499,7 @@ mod test {
                     client_max: De::new(Duration::from_secs(60)),
                     client_default: De::new(Duration::from_secs(60)),
                 }),
+                max_payload_size: 10_000_000,
             }),
             tx);
         return (pool, rx);
@@ -505,7 +507,7 @@ mod test {
 
     fn add_u1(pool: &mut Pool) -> (Cid, Receiver<ConnectionMessage>) {
         let cid = Cid::new();
-        let (tx, rx) = channel();
+        let (tx, rx) = ConnectionSender::new();
         pool.add_connection(cid, tx);
         pool.associate(cid, SessionId::from("user1"), Instant::now(),
             Arc::new(Json::Object(vec![
@@ -518,7 +520,7 @@ mod test {
 
     fn add_u2(pool: &mut Pool) -> (Cid, Receiver<ConnectionMessage>) {
         let cid = Cid::new();
-        let (tx, rx) = channel();
+        let (tx, rx) = ConnectionSender::new();
         pool.add_connection(cid, tx);
         pool.associate(cid, SessionId::from("user2"), Instant::now(),
             Arc::new(Json::Object(vec![
@@ -611,7 +613,7 @@ mod test {
     fn attach_before_associate() {
         let (mut pool, _rx) = pool();
         let cid = Cid::new();
-        let (tx, mut rx) = channel();
+        let (tx, mut rx) = ConnectionSender::new();
         pool.add_connection(cid, tx);
         pool.lattice_update(Ns::from("rooms"), Delta {
             shared: builder(),
