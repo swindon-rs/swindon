@@ -1,4 +1,5 @@
 use std::str::from_utf8;
+use std::borrow::Cow;
 use std::sync::Arc;
 use std::io::BufWriter;
 use std::mem;
@@ -12,7 +13,8 @@ use rustc_serialize::Encodable;
 use rustc_serialize::json::{as_json, Json};
 
 use proxy::{Response};
-use chat::{Cid, ConnectionSender, ConnectionMessage};
+use intern::SessionId;
+use chat::{Cid, ConnectionSender, ConnectionMessage, TangleAuth};
 use chat::cid::{serialize_cid};
 use chat::error::MessageError;
 use chat::message::{AuthData, Auth, Call, Meta, Args, Kwargs};
@@ -20,6 +22,9 @@ use chat::processor::{ProcessorPool, Action};
 use chat::authorize::{parse_userinfo, good_status};
 use chat::ConnectionMessage::{Hello, StopSocket};
 use chat::CloseReason::{AuthHttp};
+
+
+const INACTIVITY_PAYLOAD: &'static [u8] = b"[{}, [], {}]";
 
 
 enum AuthState {
@@ -53,6 +58,11 @@ pub struct CallCodec {
     sender: ConnectionSender,
 }
 
+pub struct InactivityCodec {
+    path: Arc<String>,
+    session_id: SessionId,
+}
+
 impl AuthCodec {
     pub fn new(path: String, cid: Cid, req: AuthData,
         chat: ProcessorPool, tx: ConnectionSender)
@@ -84,6 +94,16 @@ impl CallCodec {
         }
     }
 }
+
+impl InactivityCodec {
+    pub fn new(path: &Arc<String>, sid: &SessionId) -> InactivityCodec {
+        InactivityCodec {
+            path: path.clone(),
+            session_id: sid.clone(),
+        }
+    }
+}
+
 
 fn write_json_request<S: Io, E>(mut e: http::Encoder<S>, data: &E)
     -> http::EncoderDone<S>
@@ -233,6 +253,34 @@ impl<S: Io> http::Codec<S> for CallCodec {
             }
             _ => unreachable!(),
         }
+        Ok((Async::Ready(data.len())))
+    }
+}
+
+impl<S: Io> http::Codec<S> for InactivityCodec {
+    type Future = FutureResult<http::EncoderDone<S>, http::Error>;
+
+    fn start_write(&mut self, mut e: http::Encoder<S>) -> Self::Future {
+        e.request_line("POST", &self.path, Version::Http11);
+        // TODO(tailhook) implement authrization
+        e.format_header("Authorization",
+                        TangleAuth(&self.session_id)).unwrap();
+        e.add_header("Content-Type", "application/json").unwrap();
+        e.add_length(INACTIVITY_PAYLOAD.len() as u64).unwrap();
+        e.done_headers().unwrap();
+        e.write_body(INACTIVITY_PAYLOAD);
+        ok(e.done())
+    }
+    fn headers_received(&mut self, headers: &http::Head)
+        -> Result<http::RecvMode, http::Error>
+    {
+        // TODO(tailhook) retry request if failed
+        Ok(http::RecvMode::Buffered(0))
+    }
+    fn data_received(&mut self, data: &[u8], end: bool)
+        -> Result<Async<usize>, http::Error>
+    {
+        assert!(end);
         Ok((Async::Ready(data.len())))
     }
 }

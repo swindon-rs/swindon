@@ -8,8 +8,10 @@ use futures::sync::mpsc::{unbounded as channel};
 
 use runtime::Runtime;
 use intern::SessionPoolName;
-use chat::listener::spawn::{listen, WorkerData, Shutdown};
+use chat::listener::spawn::{listen, WorkerData};
+use chat::inactivity_handler;
 use chat::processor::{Processor, Action};
+use chat::Shutdown;
 use config::{SessionPool, ListenSocket};
 
 
@@ -22,6 +24,7 @@ pub struct SessionPools {
 struct Worker {
     data: Arc<WorkerData>,
     shutters: HashMap<SocketAddr, Sender<Shutdown>>,
+    inactivity_shutter: Sender<Shutdown>,
 }
 
 impl SessionPools {
@@ -49,6 +52,7 @@ impl SessionPools {
                 for (_, shutter) in wrk.shutters {
                     shutter.complete(Shutdown);
                 }
+                wrk.inactivity_shutter.complete(Shutdown);
             }
         }
 
@@ -60,16 +64,8 @@ impl SessionPools {
 
             let (tx, rx) = channel();
             self.processor.create_pool(name, settings, tx);
-
-            /*
-            let maintenance = MaintenanceAPI::new(
-                root.clone(), cfg.clone(), http_pools.clone(),
-                handle.clone());
-            handle.spawn(rx.for_each(move |msg| {
-                maintenance.handle(msg);
-                Ok(())
-            }))
-            */
+            let in_shutter = inactivity_handler::run(
+                runtime, settings, handle, rx);
 
             pools.insert(name.clone(), Worker {
                 data: Arc::new(WorkerData {
@@ -80,6 +76,7 @@ impl SessionPools {
                     handle: handle.clone(),
                 }),
                 shutters: HashMap::new(),
+                inactivity_shutter: in_shutter,
             });
         }
 

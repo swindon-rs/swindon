@@ -11,7 +11,7 @@ use minihttp::server as http;
 use tokio_core::io::Io;
 
 use config::proxy::Proxy;
-use incoming::{Input, Debug, Reply, Encoder, Context, IntoContext};
+use incoming::{Input, Reply, Encoder, Context, IntoContext};
 use default_error_page::error_page;
 use http_pools::HttpPools;
 use proxy:: {RepReq, HalfReq, Response, backend};
@@ -63,7 +63,7 @@ impl<S: Io + 'static> http::Codec<S> for Codec {
                 match up.get_mut().get_mut() {
                     Some(pool) => {
                         match pool.start_send(codec) {
-                            Ok(AsyncSink::NotReady(r)) => {
+                            Ok(AsyncSink::NotReady(_)) => {
                                 State::Error(Status::ServiceUnavailable)
                             }
                             Ok(AsyncSink::Ready) => {

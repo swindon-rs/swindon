@@ -13,6 +13,7 @@ use futures::sync::oneshot::{Receiver};
 use intern::SessionPoolName;
 use config::SessionPool;
 use runtime::Runtime;
+use chat::Shutdown;
 use chat::listener::codec::Handler;
 use chat::processor::ProcessorPool;
 
@@ -24,9 +25,6 @@ pub struct WorkerData {
     pub processor: ProcessorPool,
     pub handle: Handle, // Does it belong here?
 }
-
-pub struct Shutdown;
-
 
 pub fn listen(addr: SocketAddr, worker_data: &Arc<WorkerData>,
     shutter: Receiver<Shutdown>)

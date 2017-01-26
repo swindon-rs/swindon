@@ -14,7 +14,7 @@ use futures::sync::mpsc::{UnboundedReceiver as Receiver};
 use tokio_core::reactor::Handle;
 use rustc_serialize::json;
 
-use chat::{self, Cid, ConnectionMessage, ConnectionSender};
+use chat::{self, Cid, ConnectionMessage, ConnectionSender, TangleAuth};
 use chat::ConnectionMessage::Hello;
 use base64::Base64;
 use intern::SessionId;
@@ -89,7 +89,9 @@ impl<S: Io + 'static> Codec<S> for WebsockReply {
         self.handle.spawn(rx.into_future()
             .then(move |result| match result {
                 Ok((Some(Hello(session_id, data)), rx)) => {
-                    let auth = Arc::new(format_auth(&session_id));
+                    // Cache formatted auth
+                    let auth = Arc::new(
+                        format!("{}", TangleAuth(&session_id)));
                     out.send(Packet::Text(
                         json::encode(&Hello(session_id, data))
                         .expect("every message can be encoded")))
@@ -171,12 +173,3 @@ pub fn serve<S: Transport>(settings: &Arc<Chat>, inp: Input)
     }
 }
 
-fn format_auth(s: &SessionId) -> String {
-    #[derive(RustcEncodable)]
-    struct Auth<'a> {
-        user_id: &'a SessionId,
-    }
-    format!("Tangle {}", Base64(json::encode(&Auth {
-        user_id: s,
-    }).unwrap().as_bytes()))
-}
