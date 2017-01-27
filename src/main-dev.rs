@@ -38,18 +38,13 @@ extern crate ns_std_threaded;
 mod intern;
 mod config;
 mod runtime;
-//mod handler;
 mod handlers;
 mod routing;
-//mod serializer;
 mod default_error_page;
-//mod response;
-//mod websocket;
 mod chat;
 mod dev;
 mod startup;
 mod incoming;
-//mod flush_and_wait;
 mod http_pools;  // TODO(tailhook) move to proxy?
 mod proxy;
 mod base64;
