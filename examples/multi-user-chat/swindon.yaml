@@ -8,8 +8,7 @@ routing:
   localhost/empty.gif: empty-gif
   localhost/favicon.ico: public
   localhost: chat
-  # we can't proxy websockets for now, so we disable websocket to webpack
-  localhost/sockjs-node: html
+  localhost/sockjs-node: socksjs
 
 
 handlers:
@@ -32,6 +31,13 @@ handlers:
   html: !Proxy
     destination: webpack
 
+  # The way socksjs does websocket emulation: it creates a response with
+  # chunked encoding. While we might be able to process it well, it occupies
+  # connection and the request that is pipelined after this one hangs
+  # indefinitely. So we need separate connection pool for such connections
+  socksjs: !Proxy
+    destination: socksjs-emu
+
 
 session-pools:
   chat:
@@ -43,6 +49,14 @@ http-destinations:
   chat:
     addresses:
     - 127.0.0.1:8082
+
   webpack:
     addresses:
     - 127.0.0.1:3000
+
+  socksjs-emu:
+    addresses:
+    - 127.0.0.1:3000
+    backend-connections-per-ip-port: 100
+    in-flight-requests-per-backend-connection: 1
+    queue-size-for-503: 1
