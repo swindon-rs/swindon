@@ -1,5 +1,6 @@
 listen:
 - 0.0.0.0:8080
+max-connections: 1000000
 
 routing:
   127.0.0.1/empty.gif: empty-gif
