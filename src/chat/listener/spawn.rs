@@ -2,12 +2,13 @@ use std::io;
 use std::sync::Arc;
 use std::net::SocketAddr;
 
+use futures::future::Either;
 use futures::stream::Stream;
 use minihttp;
 use minihttp::server::Proto;
 use futures::future::{Future, ok};
 use tokio_core::net::TcpListener;
-use tokio_core::reactor::Handle;
+use tokio_core::reactor::{Handle, Timeout};
 use futures::sync::oneshot::{Receiver};
 
 use intern::SessionPoolName;
@@ -30,35 +31,36 @@ pub fn listen(addr: SocketAddr, worker_data: &Arc<WorkerData>,
     shutter: Receiver<Shutdown>)
     -> Result<(), io::Error>
 {
-    let root = worker_data.runtime.config.get();
     let w1 = worker_data.clone();
+    let w2 = worker_data.clone();
+    let runtime = worker_data.runtime.clone();
     let listener = TcpListener::bind(&addr, &worker_data.handle)?;
     // TODO(tailhook) how to update?
     let hcfg = minihttp::server::Config::new()
-        .inflight_request_limit(root.pipeline_depth)
+        .inflight_request_limit(worker_data.settings.pipeline_depth)
         // TODO(tailhook) make it configurable?
         .inflight_request_prealoc(0)
         .done();
 
     worker_data.handle.spawn(
         listener.incoming()
+        // we need stream that doesn't fail on error
         .then(move |item| match item {
-            Ok((socket, saddr)) => {
-                ok(Proto::new(socket, &hcfg,
-                    Handler::new(saddr, w1.clone())))
-            }
+            Ok(x) => Either::A(ok(Some(x))),
             Err(e) => {
-                info!("Error accepting: {}", e);
-                unimplemented!();
-                /*
-                let dur = runtime.config.get().listen_error_timeout;
+                warn!("Error accepting: {}", e);
+                let dur = w1.settings.listen_error_timeout;
                 Either::B(Timeout::new(*dur, &runtime.handle).unwrap()
-                    .from_err()
-                    .and_then(|()| Ok(())))
-                */
+                    .and_then(|()| ok(None)))
             }
         })
-        .buffer_unordered(root.max_connections)
+        .filter_map(|x| x)
+        .map(move |(socket, saddr)| {
+             Proto::new(socket, &hcfg, Handler::new(saddr, w2.clone()))
+             // always succeed
+             .then(|_| Ok(()))
+        })
+        .buffer_unordered(worker_data.settings.max_connections)
         .for_each(move |()| Ok(()))
         .select(shutter.then(move |_| Ok(())))
         .map(move |(_, _)| info!("Listener {} exited", addr))

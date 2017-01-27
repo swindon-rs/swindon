@@ -5,7 +5,8 @@ use std::collections::HashMap;
 
 use abstract_ns;
 use ns_std_threaded;
-use tokio_core::reactor::Handle;
+use futures::future::Either;
+use tokio_core::reactor::{Handle, Timeout};
 use tokio_core::net::TcpListener;
 use futures::Stream;
 use futures::future::{Future, ok};
@@ -35,7 +36,8 @@ pub fn spawn_listener(addr: SocketAddr, handle: &Handle,
     -> Result<(), io::Error>
 {
     let root = runtime.config.get();
-    let runtime = runtime.clone();
+    let r1 = runtime.clone();
+    let r2 = runtime.clone();
     let listener = TcpListener::bind(&addr, &handle)?;
     // TODO(tailhook) how to update?
     let hcfg = minihttp::server::Config::new()
@@ -48,20 +50,20 @@ pub fn spawn_listener(addr: SocketAddr, handle: &Handle,
     handle.spawn(
         listener.incoming()
         .then(move |item| match item {
-            Ok((socket, saddr)) => {
-                ok(Proto::new(socket, &hcfg,
-                    Router::new(saddr, runtime.clone(), h1.clone())))
-            }
+            Ok(x) => Either::A(ok(Some(x))),
             Err(e) => {
-                info!("Error accepting: {}", e);
-                unimplemented!();
-                /*
-                let dur = runtime.config.get().listen_error_timeout;
-                Either::B(Timeout::new(*dur, &runtime.handle).unwrap()
-                    .from_err()
-                    .and_then(|()| Ok(())))
-                */
+                warn!("Error accepting: {}", e);
+                let dur = r1.config.get().listen_error_timeout;
+                Either::B(Timeout::new(*dur, &r1.handle).unwrap()
+                    .and_then(|()| ok(None)))
             }
+        })
+        .filter_map(|x| x)
+        .map(move |(socket, saddr)| {
+             Proto::new(socket, &hcfg,
+                Router::new(saddr, r2.clone(), h1.clone()))
+             // always succeed
+             .then(|_| Ok(()))
         })
         .buffer_unordered(root.max_connections)
         .for_each(|()| Ok(()))
