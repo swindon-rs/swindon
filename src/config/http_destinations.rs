@@ -23,7 +23,7 @@ pub fn validator<'x>() -> Structure<'x> {
         .allow_plain()
         .plain_default("queue"))
     .member("queue_size_for_503",
-        Numeric::new().min(10).max(1 << 32).default(100_000))
+        Numeric::new().min(0).max(1 << 32).default(100_000))
     .member("backend_connections_per_ip_port",
         Numeric::new().min(1).max(100_000).default(100))
     .member("in_flight_requests_per_backend_connection",
