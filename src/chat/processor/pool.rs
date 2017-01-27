@@ -499,6 +499,9 @@ mod test {
                     client_max: De::new(Duration::from_secs(60)),
                     client_default: De::new(Duration::from_secs(60)),
                 }),
+                max_connections: 100,
+                listen_error_timeout: Duration::from_secs(1).into(),
+                pipeline_depth: 2,
                 max_payload_size: 10_000_000,
             }),
             tx);
