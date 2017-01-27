@@ -1,6 +1,3 @@
-// TODO(tailhook) until we fill all stubs
-#![allow(dead_code)]
-
 // I don't see **any** reason for this warning to be enabled. We only build binary
 // and most of these warnings do not apply to real visibility of types inside
 // the crate
