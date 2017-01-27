@@ -52,6 +52,19 @@ Options
    (default ``10Mib``) Maximum size of the payload (json data) from backend
    to swindon.
 
+.. opt:: pipeline-depth
+
+   (default ``2``) Accept maximum N in-flight requests for each HTTP
+   connection. Pipelined requests improve performance of your service but also
+   expose it to DoS attacks.
+
+.. opt:: listen-error-timeout
+
+   (default ``100ms``) Time to sleep when we caught error accepting connection,
+   mostly error is some resource shortage (usually EMFILE or ENFILE), so
+   repeating after some short timeout makes sense (chances that some connection
+   freed some resources).
+
 
 .. opt:: inactivity-handlers
    TBD
