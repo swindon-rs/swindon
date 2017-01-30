@@ -78,31 +78,32 @@ pub fn start_authorize(inp: &Input, conn_id: Cid, settings: &Arc<Chat>,
         }
     };
     let codec = Box::new(backend::AuthCodec::new(path.into_owned(),
-        conn_id, auth_data, pool.clone(), messages));
+        conn_id, auth_data, pool.clone(), messages.clone()));
 
     match up.get_mut().get_mut() {
         Some(pool) => {
             match pool.start_send(codec) {
                 Ok(AsyncSink::NotReady(codec)) => {
-                    // codec.into_inner().send(Err(Status::ServiceUnavailable))
-                    unimplemented!();
+                    messages.send(StopSocket(CloseReason::AuthHttp(
+                        Status::ServiceUnavailable)));
                 }
                 Ok(AsyncSink::Ready) => {
                     debug!("Sent /tangle/authorize_connection to proxy");
                 }
                 Err(e) => {
                     error!("Error sending to pool {:?}: {}", dest.upstream, e);
-                    // TODO(tailhook) ensure that sender is closed
+                    // TODO(tailhook) is this situation possible?
+                    //                probably this means this destination
+                    //                removed from config, but we should
+                    //                investigate it further
+                    messages.send(StopSocket(CloseReason::AuthHttp(
+                        Status::ServiceUnavailable)));
                 }
             }
         }
         None => {
             error!("No such destination {:?}", dest.upstream);
-            // TODO(tailhook) return error to user
-            // TODO(tailhook) deregister connection in pool
-            // codec.into_inner().send(Err(Status::NotFound))
-            //
-            unimplemented!();
+            messages.send(StopSocket(CloseReason::AuthHttp(Status::NotFound)));
         }
     }
 
