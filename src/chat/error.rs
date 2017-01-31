@@ -48,10 +48,13 @@ quick_error! {
             description("Http error")
             display("Http error: {}", err)
         }
-        /// Request future was canceled for some reason (connection drop?)
+        /// Too many requests queued
+        PoolOverflow {
+            description("too many requests queued")
+        }
+        /// Error sending message to worker pool
         PoolError {
-            description("could not send, \
-                         pool is either overloaded or non-existent")
+            description("error sending message to worker pool")
         }
     }
 }
@@ -87,8 +90,11 @@ impl Encodable for MessageError {
             Proto(_) => {
                 s.emit_str("backend_protocol_error")
             }
+            PoolOverflow => {
+                s.emit_str("too_many_requests")
+            }
             PoolError => {
-                s.emit_str("backend_protocol_error")
+                s.emit_str("unexpected_pool_error")
             }
         }
     }
@@ -104,7 +110,9 @@ impl MessageError {
                 "http_error"
             }
             IoError(_) | Utf8Error(_) | JsonError(_) => "invalid_content",
-            Proto(_) | PoolError | ValidationError(_) => "protocol_error",
+            Proto(_) | ValidationError(_) => "protocol_error",
+            PoolError => "unexpected_error",
+            PoolOverflow => "too_many_requests",
         };
         meta.insert("error_kind".to_string(), Json::String(kind.to_string()));
     }

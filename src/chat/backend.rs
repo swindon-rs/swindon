@@ -37,11 +37,10 @@ enum AuthState {
 enum CallState {
     Init {
         auth: Arc<String>,
-        path: String, meta: Meta,
-        args: Args, kw: Kwargs
+        path: String, args: Args, kw: Kwargs
     },
-    Wait(Meta),
-    Headers(Meta, Status),
+    Wait,
+    Headers(Status),
     Void,
 }
 
@@ -54,6 +53,7 @@ pub struct AuthCodec {
 
 pub struct CallCodec {
     state: CallState,
+    meta: Arc<Meta>,
     sender: ConnectionSender,
 }
 
@@ -78,17 +78,17 @@ impl AuthCodec {
 
 impl CallCodec {
     pub fn new(auth: Arc<String>, path: String,
-        meta: Meta, args: Args, kw: Kwargs, sender: ConnectionSender)
+        meta: &Arc<Meta>, args: Args, kw: Kwargs, sender: ConnectionSender)
         -> CallCodec
     {
         CallCodec {
             state: CallState::Init {
                 auth: auth,
                 path: path,
-                meta: meta,
                 args: args,
                 kw: kw,
             },
+            meta: meta.clone(),
             sender: sender,
         }
     }
@@ -203,14 +203,14 @@ impl<S: Io> http::Codec<S> for CallCodec {
     fn start_write(&mut self, mut e: http::Encoder<S>) -> Self::Future {
         use self::CallState::*;
         if
-            let Init { auth, path, meta, args, kw} =
+            let Init { auth, path, args, kw} =
             mem::replace(&mut self.state, Void)
         {
             e.request_line("POST", &path, Version::Http11);
             // TODO(tailhook) implement authrization
             e.add_header("Authorization", &*auth).unwrap();
-            let done = write_json_request(e, &Call(&meta, &args, &kw));
-            self.state = Wait(meta);
+            let done = write_json_request(e, &Call(&*self.meta, &args, &kw));
+            self.state = Wait;
             ok(done)
         } else {
             panic!("wrong state");
@@ -220,8 +220,8 @@ impl<S: Io> http::Codec<S> for CallCodec {
         -> Result<http::RecvMode, http::Error>
     {
         use self::CallState::*;
-        if let Wait(meta) = mem::replace(&mut self.state, Void) {
-            self.state = Headers(meta,
+        if let Wait = mem::replace(&mut self.state, Void) {
+            self.state = Headers(
                 headers.status().unwrap_or(Status::InternalServerError));
             // TODO(tailhook) configure limit
             Ok(http::RecvMode::Buffered(10_485_760))
@@ -235,18 +235,20 @@ impl<S: Io> http::Codec<S> for CallCodec {
         use self::CallState::*;
         assert!(end);
         match mem::replace(&mut self.state, Void) {
-            Headers(meta, Status::Ok) => {
+            Headers(Status::Ok) => {
                 match parse_response(data) {
                     Ok(x) => {
-                        self.sender.send(ConnectionMessage::Result(meta, x));
+                        self.sender.send(ConnectionMessage::Result(
+                            self.meta.clone(), x));
                     }
                     Err(e) => {
-                        self.sender.send(ConnectionMessage::Error(meta, e));
+                        self.sender.send(ConnectionMessage::Error(
+                            self.meta.clone(), e));
                     }
                 }
             }
-            Headers(meta, status) => {
-                self.sender.send(ConnectionMessage::Error(meta,
+            Headers(status) => {
+                self.sender.send(ConnectionMessage::Error(self.meta.clone(),
                     // TODO(tailhook) should we put body here?
                     MessageError::HttpError(status, None)));
             }

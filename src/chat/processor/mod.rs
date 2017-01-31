@@ -55,11 +55,11 @@ pub enum ConnectionMessage {
     /// Note: SessionId here is not serialized, and goes only to dispatcher
     Hello(SessionId, Arc<Json>),
     /// Websocket call result;
-    Result(Meta, Json),
+    Result(Arc<Meta>, Json),
     /// Lattice update message
     Lattice(Namespace, Arc<HashMap<LatticeKey, lattice::Values>>),
     /// Error response to websocket call
-    Error(Meta, MessageError),
+    Error(Arc<Meta>, MessageError),
     /// Force websocket stop
     StopSocket(CloseReason),
 }

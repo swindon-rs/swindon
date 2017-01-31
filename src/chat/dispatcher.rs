@@ -15,8 +15,9 @@ use config::SessionPool;
 use chat::{Cid, ConnectionSender};
 use chat::cid::serialize_cid;
 use chat::message::{decode_message, get_active, Meta, Args, Kwargs};
-use chat::processor::ProcessorPool;
+use chat::processor::{ProcessorPool, ConnectionMessage};
 use chat::backend::CallCodec;
+use chat::error::MessageError;
 
 
 pub struct Dispatcher {
@@ -70,33 +71,33 @@ impl Dispatcher {
             path = dest.path.clone() + "/" + &path;
         };
         let mut up = self.runtime.http_pools.upstream(&dest.upstream);
+        let meta = Arc::new(meta);
         let codec = Box::new(CallCodec::new(
             self.auth.clone(),
-            path, meta, args, kw,
+            path, &meta, args, kw,
             self.channel.clone()));
         match up.get_mut().get_mut() {
             Some(pool) => {
                 match pool.start_send(codec) {
                     Ok(AsyncSink::NotReady(codec)) => {
-                        // codec.into_inner().send(Err(Status::ServiceUnavailable))
-                        unimplemented!();
+                        self.channel.send(ConnectionMessage::Error(meta,
+                            MessageError::PoolOverflow));
                     }
                     Ok(AsyncSink::Ready) => {
                         debug!("Sent /tangle/authorize_connection to proxy");
                     }
                     Err(e) => {
-                        error!("Error sending to pool {:?}: {}", dest.upstream, e);
-                        // TODO(tailhook) ensure that sender is closed
+                        error!("Error sending to pool {:?}: {}",
+                            dest.upstream, e);
+                        self.channel.send(ConnectionMessage::Error(meta,
+                            MessageError::PoolError));
                     }
                 }
             }
             None => {
                 error!("No such destination {:?}", dest.upstream);
-                // TODO(tailhook) return error to user
-                // TODO(tailhook) deregister connection in pool
-                // codec.into_inner().send(Err(Status::NotFound))
-                //
-                unimplemented!();
+                self.channel.send(ConnectionMessage::Error(meta,
+                    MessageError::PoolError));
             }
         }
     }
