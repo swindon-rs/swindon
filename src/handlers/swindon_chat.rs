@@ -3,6 +3,7 @@ use std::sync::Arc;
 use futures::{Async, Future};
 use futures::stream::{Stream};
 use futures::sink::{Sink};
+use futures::future::{Either};
 use minihttp::Status;
 use minihttp::server::{Error, Codec, RecvMode, WebsocketAccept};
 use minihttp::server as http;
@@ -15,7 +16,7 @@ use tokio_core::reactor::Handle;
 use rustc_serialize::json;
 
 use chat::{self, Cid, ConnectionMessage, ConnectionSender, TangleAuth};
-use chat::ConnectionMessage::Hello;
+use chat::ConnectionMessage::{Hello, StopSocket};
 use runtime::Runtime;
 use config::chat::Chat;
 use incoming::{Request, Input, Reply, Encoder, Transport};
@@ -83,6 +84,7 @@ impl<S: Io + 'static> Codec<S> for WebsockReply {
 
         let (tx, rx) = self.channel.take()
             .expect("hijack called only once");
+        let log_err_err = |e| debug!("closing websocket closed: {}", e);
 
         self.handle.spawn(rx.into_future()
             .then(move |result| match result {
@@ -90,44 +92,54 @@ impl<S: Io + 'static> Codec<S> for WebsockReply {
                     // Cache formatted auth
                     let auth = Arc::new(
                         format!("{}", TangleAuth(&session_id)));
-                    out.send(Packet::Text(
-                        json::encode(&Hello(session_id, data))
-                        .expect("every message can be encoded")))
-                    .map_err(|e| info!("error sending userinfo: {:?}", e))
-                    .and_then(move |out| {
-                        let rx = rx.map(|x| {
-                            Packet::Text(json::encode(&x)
-                                .expect("any data can be serialized"))
-                        }).map_err(|_| -> &str {
-                            // There shouldn't be a real-life case for this.
-                            // But in case session-pool has been removed from
-                            // the config and connection closes, it might
-                            // probably happen, we don't care too much of that.
-                            error!("outbound channel unexpectedly closed");
-                            "outbound channel unexpectedly closed"
-                        });
-                        websocket::Loop::new(out, inp, rx, chat::Dispatcher {
-                            cid: cid,
-                            auth: auth,
-                            handle: h1,
-                            pool_settings: pool_settings.clone(),
-                            processor: processor,
-                            runtime: r1,
-                            settings: s1,
-                            channel: tx,
-                            }, &cfg)
-                        .map_err(|e| debug!("websocket closed: {}", e))
-                    })
+                    Either::A(
+                        out.send(Packet::Text(
+                            json::encode(&Hello(session_id, data))
+                            .expect("every message can be encoded")))
+                        .map_err(|e| info!("error sending userinfo: {:?}", e))
+                        .and_then(move |out| {
+                            let rx = rx.map(|x| {
+                                Packet::Text(json::encode(&x)
+                                    .expect("any data can be serialized"))
+                            }).map_err(|_| -> &str {
+                                // There shouldn't be a real-life case for
+                                // this.  But in case session-pool has been
+                                // removed from the config and connection
+                                // closes, it might probably happen, we don't
+                                // care too much of that.
+                                error!("outbound channel unexpectedly closed");
+                                "outbound channel unexpectedly closed"
+                            });
+                            websocket::Loop::new(out, inp, rx,
+                                chat::Dispatcher {
+                                    cid: cid,
+                                    auth: auth,
+                                    handle: h1,
+                                    pool_settings: pool_settings.clone(),
+                                    processor: processor,
+                                    runtime: r1,
+                                    settings: s1,
+                                    channel: tx,
+                                }, &cfg)
+                            .map_err(|e| debug!("websocket closed: {}", e))
+                        }))
+                }
+                Ok((Some(StopSocket(close_reason)), _)) => {
+                    Either::B(websocket::Loop::<_, _, _>::closing(out, inp,
+                            close_reason.code(),
+                            close_reason.reason(),
+                            &cfg)
+                        .map_err(log_err_err))
                 }
                 Ok((msg, _)) => {
-                    error!("Received {:?} instead of Hello", msg);
-                    // Bad initial message received
-                    // TODO(tailhook) shutdown gracefully
-                    unimplemented!();
+                    panic!("Received {:?} instead of Hello", msg);
                 }
                 Err(_) => {
-                    // TODO(tailhook) shutdown gracefully
-                    unimplemented!();
+                    error!("Aborted handshake because pool closed");
+                    Either::B(websocket::Loop::<_, _, _>::closing(out, inp,
+                            1011, "", //
+                            &cfg)
+                        .map_err(log_err_err))
                 }
             }));
     }

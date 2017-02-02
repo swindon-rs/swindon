@@ -7,6 +7,8 @@ pub enum CloseReason {
     PoolStopped,
     /// Closing because respective http returned specified response code
     AuthHttp(Status),
+    /// Closed by peer, we just propagate the message here
+    PeerClose(u16, String),
 }
 
 impl CloseReason {
@@ -17,13 +19,15 @@ impl CloseReason {
             AuthHttp(code) if code.code() >= 400 && code.code() <= 599
             => 4000 + code.code(),
             AuthHttp(_) => 4500,
+            PeerClose(x, _) => x,
         }
     }
-    pub fn reason(&self) -> &'static str {
+    pub fn reason(&self) -> &str {
         use self::CloseReason::*;
         match *self {
             PoolStopped => "session_pool_stopped",
             AuthHttp(_) => "backend_error",
+            PeerClose(_, ref y) => y,
         }
     }
 }

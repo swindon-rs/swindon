@@ -5,14 +5,14 @@ use futures::future::{FutureResult, ok, err};
 use futures::sink::{Sink};
 use minihttp::websocket;
 use minihttp::websocket::{Error};
-use minihttp::websocket::Frame::{self, Text, Binary, Ping, Pong};
+use minihttp::websocket::Frame::{self, Text, Binary, Ping, Pong, Close};
 use tokio_core::reactor::Handle;
 use rustc_serialize::json::Json;
 
 use runtime::Runtime;
 use config::chat::Chat;
 use config::SessionPool;
-use chat::{Cid, ConnectionSender};
+use chat::{Cid, ConnectionSender, CloseReason};
 use chat::cid::serialize_cid;
 use chat::message::{decode_message, get_active, Meta, Args, Kwargs};
 use chat::processor::{ProcessorPool, ConnectionMessage};
@@ -57,6 +57,12 @@ impl websocket::Dispatcher for Dispatcher {
                 err(Error::Closed)
             }
             Ping(_)|Pong(_) => unreachable!(),
+            Close(code, text) => {
+                debug!("Received close message [{}]{:?}", code, text);
+                self.channel.send(ConnectionMessage::StopSocket(
+                    CloseReason::PeerClose(code, text.into())));
+                ok(())
+            }
         }
     }
 }
