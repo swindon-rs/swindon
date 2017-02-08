@@ -33,7 +33,7 @@ impl HalfReq {
         let path = match *inp.headers.request_target() {
             Origin(x) => x.to_string(),
             Absolute { path, ..} => path.to_string(),
-            Authority(..) => unimplemented!(),  // TODO(tailhook) throw error
+            Authority(..) => unreachable!(),
             Asterisk => String::from("*"),
         };
         HalfReq {
