@@ -111,6 +111,7 @@ commands:
   func-test: !Command
     container: pytest
     work-dir: /work/tests
+    prerequisites: [make]
     run: [py.test]
 
   run: &run !Command

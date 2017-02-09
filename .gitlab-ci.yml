@@ -26,3 +26,8 @@ tests:
   stage: test
   script:
   - vagga ci-test --color=always
+
+functional-tests:
+  stage: test
+  script:
+  - vagga func-test --color=yes -v
