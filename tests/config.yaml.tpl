@@ -17,6 +17,8 @@ debug-routing: *DEBUG_ROUTING
 # Configure all possible routing?
 routing:
   localhost/empty.gif: empty_gif
+  localhost/empty-w-headers.gif: empty_gif_w_headers
+  localhost/empty-w-content-length.gif: empty_gif_w_clen
 
 # Configure all possible handlers?
 handlers:
@@ -24,7 +26,14 @@ handlers:
   #   EmptyGif, HttpBin, WebsocketEcho;
 
   empty_gif: !EmptyGif
+  empty_gif_w_headers: !EmptyGif
+    extra-headers:
+      X-Some-Header: some value
 
+  empty_gif_w_clen: !EmptyGif
+    extra-headers:
+      Content-Type: image/other
+      Content-Length: 100500
 
 # session-pools:
 

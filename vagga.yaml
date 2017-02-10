@@ -72,8 +72,14 @@ containers:
   pytest:
     setup:
     - !Ubuntu xenial
-    - !Install [libcurl3]
-    - !PipConfig { dependencies: true }
+    - !AptTrust
+      keys: [4AB0F789CBA31744CC7DA76A8CF63AD3F06FC659]
+    - !UbuntuPPA jonathonf/python-3.6
+    - !Install [libcurl3, python3.6, python3.6-dev]
+    - !PipConfig
+      dependencies: true
+      install-python: false
+      python-exe: /usr/bin/python3.6
     - !Py3Requirements "tests/requirements.txt"
 
 commands:
