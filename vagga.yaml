@@ -108,10 +108,19 @@ commands:
       /cargo: !Persistent { name: cargo }
     run: [cargo, test]
 
+  _ci-make: !Command
+    container: ubuntu
+    description: Build project
+    environ:
+      CARGO_HOME: /cargo
+    volumes:
+      /cargo: !Persistent { name: cargo }
+    run: [cargo, build]
+
   func-test: !Command
     container: pytest
     work-dir: /work/tests
-    prerequisites: [make]
+    prerequisites: [_ci-make]
     run: [py.test]
 
   run: &run !Command
