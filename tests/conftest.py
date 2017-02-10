@@ -3,10 +3,22 @@ import pathlib
 import subprocess
 import tempfile
 import os
-import json
+import string
+import socket
 
+import yarl
+
+from collections import namedtuple
 from aiohttp import web, test_utils
 # Command line options
+
+# TODO:
+#
+#   Make big append-only* config
+#   (* - new tests must not change parts other tests depends)
+#
+#   Make low-level aiohttp backend server
+#   (to allow fine-grained request-to-response control)
 
 
 def pytest_addoption(parser):
@@ -14,6 +26,11 @@ def pytest_addoption(parser):
                      type=pathlib.Path,
                      action='append',
                      help="Path to swindon binary to run")
+    parser.addoption('--swindon-config',
+                     default=pathlib.Path(__file__).parent / 'config.yaml.tpl',
+                     type=pathlib.Path,
+                     help=("Path to swindon config template,"
+                           " default is `%(default)s`"))
 
 
 SWINDON_BIN = []
@@ -32,36 +49,50 @@ def pytest_configure(config):
 # Fixtures
 
 
-@pytest.fixture(params=SWINDON_BIN)
-def swindon(_proc, request):
+@pytest.fixture(scope='session', params=[True, False],
+                ids=['debug-routing', 'no-debug-routing'])
+def debug_routing(request):
+    return request.param
+
+
+SwindonInfo = namedtuple('SwindonInfo', 'proc url')
+
+
+@pytest.fixture(scope='session', params=SWINDON_BIN, autouse=True)
+def swindon(_proc, request, debug_routing):
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.bind(('127.0.0.1', 0))
+        ADDRESS = s.getsockname()
+    addr_str = ':'.join(map(str, ADDRESS))
+
     swindon_bin = request.param
     fd, fname = tempfile.mkstemp()
 
-    def configure(**config):
-        config.setdefault('listen', [])
-        if not config['listen']:
-            config['listen'].append("127.0.0.1:8080")
-        config.setdefault('debug-routing', True)
-        os.write(fd, json.dumps(config, indent=2).encode("utf-8"))
-        proc = _proc(swindon_bin,
-                     '--verbose',
-                     '--config',
-                     fname,
-                     # TODO: add config
-                     stdout=subprocess.PIPE,
-                     stderr=subprocess.STDOUT)
-        addr = set(config['listen'])
-        while True:
-            assert proc.poll() is None, (proc.poll(), proc.stdout.read())
-            line = proc.stdout.readline().decode('utf-8').strip()
-            for a in list(addr):
-                if line.endswith(a):
-                    addr.discard(a)
-            if not addr:
-                break
-        return proc
+    conf_template = request.config.getoption('--swindon-config')
+    with conf_template.open('rt') as f:
+        tpl = string.Template(f.read())
+
+    config = tpl.substitute(listen_address=addr_str,
+                            debug_routing=str(debug_routing).lower(),
+                            )
+    os.write(fd, config.encode('utf-8'))
+
+    proc = _proc(swindon_bin,
+                 '--verbose',
+                 '--config',
+                 fname,
+                 stdout=subprocess.PIPE,
+                 stderr=subprocess.PIPE)
+    while True:
+        assert proc.poll() is None, (
+            proc.poll(), proc.stdout.read(), proc.stderr.read())
+        line = proc.stdout.readline().decode('utf-8').strip()
+        if line.endswith(addr_str):
+            break
+
+    url = yarl.URL('http://localhost:{}'.format(ADDRESS[1]))
     try:
-        yield configure
+        yield SwindonInfo(proc, url)
     finally:
         os.close(fd)
         os.remove(fname)
@@ -88,10 +119,11 @@ def swindon_client(loop):
     finally:
         loop.run_until_complete(finalize())
 
+
 # helpers
 
 
-@pytest.fixture
+@pytest.fixture(scope='session')
 def _proc():
     # Process runner
     processes = []
