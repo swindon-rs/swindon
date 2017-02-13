@@ -62,6 +62,35 @@ def debug_routing(request):
     return request.param
 
 
+@pytest.fixture
+def http_request(request_method, http_version, debug_routing):
+
+    async def inner(url):
+        async with aiohttp.ClientSession(version=http_version) as s:
+            async with s.request(request_method, url) as resp:
+                data = await resp.read()
+                assert resp.version == http_version
+                assert_headers(resp.headers, debug_routing)
+                return resp, data
+    return inner
+
+
+def assert_headers(headers, debug_routing):
+    assert 'Content-Type' in headers
+    assert 'Content-Length' in headers
+    assert 'Date' in headers
+    assert 'Server' in headers
+    if debug_routing:
+        assert 'X-Swindon-Route' in headers
+    else:
+        assert 'X-Swindon-Route' not in headers
+
+    assert len(headers.getall('Content-Type')) == 1
+    assert len(headers.getall('Content-Length')) == 1
+    assert len(headers.getall('Date')) == 1
+    assert headers.getall('Server') == ['swindon/func-tests']
+
+
 SwindonInfo = namedtuple('SwindonInfo', 'proc url')
 
 
