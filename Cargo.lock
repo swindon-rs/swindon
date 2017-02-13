@@ -29,7 +29,7 @@ dependencies = [
  "time 0.1.36 (registry+https://github.com/rust-lang/crates.io-index)",
  "tk-bufstream 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "tk-pool 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "tk-sendfile 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tk-sendfile 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio-core 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -539,7 +539,7 @@ dependencies = [
 
 [[package]]
 name = "tk-sendfile"
-version = "0.3.0"
+version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "futures 0.1.9 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -683,7 +683,7 @@ dependencies = [
 "checksum time 0.1.36 (registry+https://github.com/rust-lang/crates.io-index)" = "211b63c112206356ef1ff9b19355f43740fc3f85960c598a93d3a3d3ba7beade"
 "checksum tk-bufstream 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)" = "01cc0d5ca95cb381845f90d4755e9b965321624075346cc3fea98efda960b8df"
 "checksum tk-pool 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)" = "16ae52a2127b8d1c6b310cd2c64d7c6dd4453f9f7c3ddfdaac006b4a318564ab"
-"checksum tk-sendfile 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)" = "9c550423f6233ed7f3c52e803795ccfe3d29158fa28267383faed02aae979898"
+"checksum tk-sendfile 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)" = "cb640e4574f45e77d8ae1c0dcd2abc94cc7a4f767a6a25d0ddfa36f5546f5165"
 "checksum tokio-core 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)" = "3d1be481b55126f02ef88ff86748086473cb537a949fc4a8f4be403a530ae54b"
 "checksum unicase 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)" = "13a5906ca2b98c799f4b1ab4557b76367ebd6ae5ef14930ec841c74aed5f3764"
 "checksum unicode-bidi 0.2.4 (registry+https://github.com/rust-lang/crates.io-index)" = "b61814f3e7fd0e0f15370f767c7c943e08bc2e3214233ae8f88522b334ceb778"

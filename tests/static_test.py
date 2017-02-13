@@ -4,10 +4,8 @@ import aiohttp
 async def test_index(swindon, http_request, debug_routing):
     # XXX: on resp.read() connection gets closed
     resp, data = await http_request(swindon.url / 'static')
-    assert resp.status == 200
-    assert resp.headers['Content-Type'] == 'application/octet-stream'
-    assert resp.headers['Content-Length'] == '4096'
-    assert data != b''
+    assert resp.status == 403
+    assert resp.headers['Content-Type'] == 'text/html'
 
 
 async def test_ok(swindon, http_request, debug_routing):

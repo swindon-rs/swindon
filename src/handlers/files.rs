@@ -72,6 +72,11 @@ pub fn serve_dir<S: Transport>(settings: &Arc<Static>, mut inp: Input)
                 Err(ref err) if err.kind() == io::ErrorKind::NotFound => {
                     Box::new(error_page(Status::NotFound, e))
                 }
+                // One of the known `Other` issues is when path refers to
+                // a directory rather than regular file
+                Err(ref err) if err.kind() == io::ErrorKind::Other => {
+                    Box::new(error_page(Status::Forbidden, e))
+                }
                 // TODO(tailhook) find out if we want to expose other
                 // errors, for example "Permission denied" and "is a directory"
                 Err(_) => {
