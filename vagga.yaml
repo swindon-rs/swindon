@@ -127,6 +127,7 @@ commands:
     container: pytest
     work-dir: /work/tests
     prerequisites: [_ci-make]
+    user-id: 1
     run: [py.test]
 
   run: &run !Command
