@@ -17,11 +17,10 @@ async def test_ok(swindon, debug_routing):
             assert len(data) == 26
 
 
-@pytest.mark.parametrize('method', [
-    'GET', 'PATCH', 'POST', 'PUT', 'DELETE', 'UPDATE', 'XXX'])
-async def test_request_methods(swindon, method):
-    async with aiohttp.ClientSession() as s:
-        async with s.request(method, swindon.url / 'empty.gif') as resp:
+async def test_request_methods(swindon, request_method, http_version):
+    async with aiohttp.ClientSession(version=http_version) as s:
+        meth = request_method
+        async with s.request(meth, swindon.url / 'empty.gif') as resp:
             assert resp.status == 200
             assert resp.headers['Content-Type'] == 'image/gif'
             assert resp.headers['Content-Length'] == '26'
@@ -41,17 +40,21 @@ async def test_request_HEAD(swindon):
             assert len(data) == 0
 
 
-async def test_extra_headers(swindon):
-    async with aiohttp.ClientSession() as sess:
-        async with sess.get(swindon.url / 'empty-w-headers.gif') as resp:
+async def test_extra_headers(swindon, request_method, http_version):
+    meth = request_method
+    url = swindon.url / 'empty-w-headers.gif'
+    async with aiohttp.ClientSession(version=http_version) as sess:
+        async with sess.request(meth, url) as resp:
             assert resp.status == 200
             assert resp.headers['X-Some-Header'] == 'some value'
 
 
 @pytest.mark.xfail(reason="!EmptyGif allow multiple Content-Type headers")
-async def test_headers_override(swindon):
-    async with aiohttp.ClientSession() as s:
-        async with s.get(swindon.url / 'empty-w-content-length.gif') as resp:
+async def test_headers_override(swindon, request_method, http_version):
+    meth = request_method
+    url = swindon.url / 'empty-w-content-length.gif'
+    async with aiohttp.ClientSession(version=http_version) as s:
+        async with s.request(meth, url) as resp:
             assert resp.status == 200
             clen = [val for key, val in resp.raw_headers
                     if key == b'CONTENT-LENGTH']

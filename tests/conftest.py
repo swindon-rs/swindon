@@ -7,6 +7,7 @@ import string
 import socket
 
 import yarl
+import aiohttp
 
 from collections import namedtuple
 from aiohttp import web, test_utils
@@ -47,6 +48,21 @@ def pytest_configure(config):
         SWINDON_BIN.append(str(p))
 
 # Fixtures
+
+
+@pytest.fixture(params=[
+    'GET', 'PATCH', 'POST', 'PUT', 'UPDATED', 'DELETE', 'XXX'])
+def request_method(request):
+    """Parametrized fixture changing request method
+    (GET / POST / PATCH / ...).
+    """
+    return request.param
+
+
+@pytest.fixture(params=[aiohttp.HttpVersion11, aiohttp.HttpVersion10],
+                ids=['http/1.1', 'http/1.0'])
+def http_version(request):
+    return request.param
 
 
 @pytest.fixture(scope='session', params=[True, False],

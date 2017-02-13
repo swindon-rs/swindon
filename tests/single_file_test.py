@@ -16,11 +16,10 @@ async def test_ok(swindon, debug_routing):
                 'X-Swindon-Route' not in resp.headers
 
 
-@pytest.mark.parametrize('method', [
-    'GET', 'PATCH', 'POST', 'PUT', 'UPDATE', 'DELETE', 'XXXX'])
-async def test_request_method(swindon, method):
-    async with aiohttp.ClientSession() as s:
-        async with s.request(method, swindon.url / 'static-file') as resp:
+async def test_request_method(swindon, request_method, http_version):
+    async with aiohttp.ClientSession(version=http_version) as s:
+        url = swindon.url / 'static-file'
+        async with s.request(request_method, url) as resp:
             assert resp.status == 200
             assert resp.headers['Content-Type'] == 'text/plain'
             assert resp.headers['Content-Length'] == '17'
@@ -29,13 +28,14 @@ async def test_request_method(swindon, method):
 
 
 @pytest.mark.xfail(reason="Server name is static; expected one from config")
-async def test_missing_file(swindon):
+async def test_missing_file(swindon, request_method, http_version):
     msg = (b'<!DOCTYPE html><html><head>'
            b'<title>404 Not Found</title></head>'
            b'<body><h1>404 Not Found</h1><hr>'
            b'<p>Yours faithfully,<br>swindon/func-tests</p></body></html>')
-    async with aiohttp.ClientSession() as s:
-        async with s.get(swindon.url / 'missing-file') as resp:
+    async with aiohttp.ClientSession(version=http_version) as s:
+        meth = request_method
+        async with s.request(meth, swindon.url / 'missing-file') as resp:
             assert resp.status == 404
             data = await resp.read()
             assert data == msg
@@ -44,13 +44,14 @@ async def test_missing_file(swindon):
 
 
 @pytest.mark.xfail(reason="Server name is static; expected one from config")
-async def test_permission(swindon):
+async def test_permission(swindon, request_method, http_version):
     msg = (b'<!DOCTYPE html><html><head>'
            b'<title>404 Not Found</title></head>'
            b'<body><h1>404 Not Found</h1><hr>'
            b'<p>Yours faithfully,<br>swindon/func-tests</p></body></html>')
-    async with aiohttp.ClientSession() as s:
-        async with s.get(swindon.url / 'no-permission') as resp:
+    async with aiohttp.ClientSession(version=http_version) as s:
+        meth = request_method
+        async with s.request(meth, swindon.url / 'no-permission') as resp:
             assert resp.status == 404
             data = await resp.read()
             assert data == msg
