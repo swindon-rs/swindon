@@ -99,7 +99,7 @@ commands:
     description: Build project
     run: [cargo, build]
 
-  test: !Command
+  cargo-test: !Command
     container: ubuntu
     description: Test project
     environ: { RUST_BACKTRACE: 1 }
@@ -123,12 +123,16 @@ commands:
       /cargo: !Persistent { name: cargo }
     run: [cargo, build]
 
-  func-test: !Command
+  func-test: &functest !Command
     container: pytest
     work-dir: /work/tests
     prerequisites: [_ci-make]
     user-id: 1
     run: [py.test]
+
+  test: !Command
+    <<: *functest
+    prerequisites: [ci-test]
 
   run: &run !Command
     container: ubuntu
