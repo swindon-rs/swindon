@@ -1,0 +1,4 @@
+setuptools
+pytest>=3.0.5
+pytest-aiohttp
+uvloop

@@ -69,6 +69,19 @@ containers:
     environ:
       NODE_PATH: /usr/lib/node_modules
 
+  pytest:
+    setup:
+    - !Ubuntu xenial
+    - !AptTrust
+      keys: [4AB0F789CBA31744CC7DA76A8CF63AD3F06FC659]
+    - !UbuntuPPA jonathonf/python-3.6
+    - !Install [libcurl3, python3.6, python3.6-dev]
+    - !PipConfig
+      dependencies: true
+      install-python: false
+      python-exe: /usr/bin/python3.6
+    - !Py3Requirements "tests/requirements.txt"
+
 commands:
 
   rustc: !Command
@@ -100,6 +113,22 @@ commands:
     volumes:
       /cargo: !Persistent { name: cargo }
     run: [cargo, test]
+
+  _ci-make: !Command
+    container: ubuntu
+    description: Build project
+    environ:
+      CARGO_HOME: /cargo
+    volumes:
+      /cargo: !Persistent { name: cargo }
+    run: [cargo, build]
+
+  func-test: !Command
+    container: pytest
+    work-dir: /work/tests
+    prerequisites: [_ci-make]
+    user-id: 1
+    run: [py.test]
 
   run: &run !Command
     container: ubuntu
