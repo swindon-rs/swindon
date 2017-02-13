@@ -11,15 +11,6 @@ import aiohttp
 
 from collections import namedtuple
 from aiohttp import web, test_utils
-# Command line options
-
-# TODO:
-#
-#   Make big append-only* config
-#   (* - new tests must not change parts other tests depends)
-#
-#   Make low-level aiohttp backend server
-#   (to allow fine-grained request-to-response control)
 
 
 def pytest_addoption(parser):
@@ -157,8 +148,3 @@ def _proc():
             proc = processes.pop(0)
             proc.terminate()
             proc.wait()
-
-
-@pytest.fixture(scope='session')
-def proc_runner():
-    pass
