@@ -1,10 +1,6 @@
-import pytest
 import aiohttp
 
 
-@pytest.mark.xfail(
-    raises=aiohttp.ServerDisconnectedError,
-    reason="Could not serve static index")
 async def test_index(swindon, http_request, debug_routing):
     # XXX: on resp.read() connection gets closed
     resp, data = await http_request(swindon.url / 'static')
@@ -28,7 +24,6 @@ async def test_ok(swindon, http_request, debug_routing):
         assert 'X-Swindon-File-Path' not in resp.headers
 
 
-@pytest.mark.xfail(reason="Server name is static; expected one from config")
 async def test_permission(swindon, http_request, debug_routing):
     msg = (b'<!DOCTYPE html><html><head>'
            b'<title>404 Not Found</title></head>'
@@ -52,7 +47,6 @@ async def test_extra_headers(swindon, http_request, debug_routing):
     assert data == b'Static file test\n'
 
 
-@pytest.mark.xfail(reason="!Static allow multiple Content-Type headers")
 async def test_headers_override(
         swindon, request_method, http_version, debug_routing):
     url = swindon.url / 'static-w-ctype' / 'static_file.txt'

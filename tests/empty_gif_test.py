@@ -1,4 +1,3 @@
-import pytest
 import aiohttp
 
 
@@ -39,7 +38,6 @@ async def test_extra_headers(swindon, http_request):
     assert resp.headers['X-Some-Header'] == 'some value'
 
 
-@pytest.mark.xfail(reason="!EmptyGif allow multiple Content-Type headers")
 async def test_headers_override(swindon, http_request):
     url = swindon.url / 'empty-w-content-length.gif'
     resp, data = await http_request(url)

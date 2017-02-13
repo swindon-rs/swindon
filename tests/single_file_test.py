@@ -1,4 +1,3 @@
-import pytest
 
 
 async def test_ok(swindon, http_request, debug_routing):
@@ -24,7 +23,6 @@ async def test_request_method(swindon, http_request):
     assert data == b'Static file test\n'
 
 
-@pytest.mark.xfail(reason="Server name is static; expected one from config")
 async def test_missing_file(swindon, http_request, debug_routing):
     msg = (b'<!DOCTYPE html><html><head>'
            b'<title>404 Not Found</title></head>'
@@ -40,7 +38,6 @@ async def test_missing_file(swindon, http_request, debug_routing):
             '"/work/tests/assets/missing_file.txt"'
 
 
-@pytest.mark.xfail(reason="Server name is static; expected one from config")
 async def test_permission(swindon, http_request):
     msg = (b'<!DOCTYPE html><html><head>'
            b'<title>404 Not Found</title></head>'
