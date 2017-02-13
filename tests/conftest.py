@@ -157,3 +157,8 @@ def _proc():
             proc = processes.pop(0)
             proc.terminate()
             proc.wait()
+
+
+@pytest.fixture(scope='session')
+def proc_runner():
+    pass

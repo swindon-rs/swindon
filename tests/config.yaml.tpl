@@ -25,6 +25,10 @@ routing:
   localhost/missing-file: missing_file
   localhost/no-permission: no-permission
 
+  localhost/static: static
+  localhost/static-w-headers: static_w_headers
+  localhost/static-w-ctype: static_w_ctype
+
 # Configure all possible handlers?
 handlers:
   # Allowed handlers are: SwindonChat, Static, SingleFile, Proxy,
@@ -51,6 +55,19 @@ handlers:
   no_permission: !SingleFile
     path: /work/tests/assets/permission.txt
     content-type: text/no/permission
+
+  ### Static handlers ###
+
+  static: !Static
+    path: /work/tests/assets/
+  static_w_headers: !Static
+    path: /work/tests/assets/
+    extra-headers:
+      X-Some-Header: some value
+  static_w_ctype: !Static
+    path: /work/tests/assets/
+    extra-headers:
+      Content-Type: something/other
 
 # session-pools:
 
