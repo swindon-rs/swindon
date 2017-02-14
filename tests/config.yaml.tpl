@@ -1,6 +1,7 @@
 _VARS:
   - &LISTEN ${listen_address}
   - &DEBUG_ROUTING ${debug_routing}
+  - &PROXY_ADDRESS ${proxy_address}
 
 listen:
 - *LISTEN
@@ -17,17 +18,28 @@ debug-routing: *DEBUG_ROUTING
 # Configure all possible routing?
 routing:
 
+  ### !EmptyGif routes ###
   localhost/empty.gif: empty_gif
   localhost/empty-w-headers.gif: empty_gif_w_headers
   localhost/empty-w-content-length.gif: empty_gif_w_clen
 
+  ### !SingleFile routes ###
   localhost/static-file: single_file
   localhost/missing-file: missing_file
   localhost/no-permission: no-permission
 
+  ### !Static routes ###
   localhost/static: static
   localhost/static-w-headers: static_w_headers
   localhost/static-w-ctype: static_w_ctype
+
+  # TODO: add overlapping routes:
+  #   /static: !Proxy & /static/file: !SingleFile
+
+  ### !Proxy routes ###
+  localhost/proxy: proxy
+
+  ### !SwindonChat routes ###
 
 # Configure all possible handlers?
 handlers:
@@ -69,6 +81,16 @@ handlers:
     extra-headers:
       Content-Type: something/other
 
+  ### Proxy handlers ###
+
+  proxy: !Proxy
+    destination: proxy_dest/
+
+  ### SwindonChat handlers ###
+
 # session-pools:
 
-# http-destinations: {}
+http-destinations:
+  proxy_dest:
+    addresses:
+    - *PROXY_ADDRESS

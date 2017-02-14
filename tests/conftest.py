@@ -8,6 +8,7 @@ import socket
 
 import yarl
 import aiohttp
+import asyncio
 
 from collections import namedtuple
 from aiohttp import web, test_utils
@@ -90,15 +91,20 @@ def assert_headers(headers, debug_routing):
     assert headers.getall('Server') == ['swindon/func-tests']
 
 
-SwindonInfo = namedtuple('SwindonInfo', 'proc url')
+SwindonInfo = namedtuple('SwindonInfo', 'proc url proxy')
 
 
 @pytest.fixture(scope='session', params=SWINDON_BIN, autouse=True)
 def swindon(_proc, request, debug_routing):
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.bind(('127.0.0.1', 0))
-        ADDRESS = s.getsockname()
-    addr_str = ':'.join(map(str, ADDRESS))
+        SWINDON_ADDRESS = s.getsockname()
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.bind(('127.0.0.1', 0))
+        PROXY_ADDRESS = s.getsockname()
+
+    def to_str(addr):
+        return ':'.join(map(str, addr))
 
     swindon_bin = request.param
     fd, fname = tempfile.mkstemp()
@@ -107,8 +113,9 @@ def swindon(_proc, request, debug_routing):
     with (ROOT / conf_template).open('rt') as f:
         tpl = string.Template(f.read())
 
-    config = tpl.substitute(listen_address=addr_str,
+    config = tpl.substitute(listen_address=to_str(SWINDON_ADDRESS),
                             debug_routing=str(debug_routing).lower(),
+                            proxy_address=to_str(PROXY_ADDRESS),
                             )
     os.write(fd, config.encode('utf-8'))
 
@@ -122,12 +129,13 @@ def swindon(_proc, request, debug_routing):
         assert proc.poll() is None, (
             proc.poll(), proc.stdout.read(), proc.stderr.read())
         line = proc.stdout.readline().decode('utf-8').strip()
-        if line.endswith(addr_str):
+        if line.endswith(to_str(SWINDON_ADDRESS)):
             break
 
-    url = yarl.URL('http://localhost:{}'.format(ADDRESS[1]))
+    url = yarl.URL('http://localhost:{}'.format(SWINDON_ADDRESS[1]))
+    proxy = yarl.URL('http://localhost:{}'.format(PROXY_ADDRESS[1]))
     try:
-        yield SwindonInfo(proc, url)
+        yield SwindonInfo(proc, url, proxy)
     finally:
         os.close(fd)
         os.remove(fname)
@@ -153,6 +161,97 @@ def swindon_client(loop):
         yield go
     finally:
         loop.run_until_complete(finalize())
+
+
+@pytest.fixture
+def proxy_server(swindon, loop):
+    ctx = ContextServer(swindon.proxy.port, loop)
+    loop.run_until_complete(ctx.start_server())
+    try:
+        yield ctx
+    finally:
+        loop.run_until_complete(ctx.stop_server())
+
+
+class ContextServer:
+
+    def __init__(self, port, loop=None):
+        self.port = port
+        self.loop = loop
+        self.queue = asyncio.Queue(loop=loop)
+
+        async def handler(request):
+            fut = self.loop.create_future()
+            await self.queue.put((request, fut))
+            return await fut
+
+        self.server = web.Server(handler, loop=loop)
+        self._srv = None
+
+    async def start_server(self):
+        assert self._srv is None
+        self._srv = await self.loop.create_server(
+            self.server, '127.0.0.1', self.port,
+            reuse_address=True, reuse_port=True)
+
+    async def stop_server(self):
+        assert self._srv is not None
+        await self.server.shutdown(1)
+        self._srv.close()
+        await self._srv.wait_closed()
+
+    def send(self, method, url, **kwargs):
+        assert self._srv
+
+        async def _send_request():
+            async with aiohttp.ClientSession(**kwargs) as sess:
+                async with sess.request(method, url) as resp:
+                    await resp.read()
+                    return resp
+
+        tsk = asyncio.ensure_future(_send_request(), loop=self.loop)
+        return _RequestContext(self.queue, tsk, loop=self.loop)
+
+
+class _RequestContext:
+    def __init__(self, queue, tsk, loop=None):
+        self.queue = queue
+        self.tsk = tsk
+        self.loop = loop
+
+    async def __aenter__(self):
+        get = asyncio.ensure_future(self.queue.get(), loop=self.loop)
+        await asyncio.wait(
+            [get, self.tsk], return_when=asyncio.FIRST_COMPLETED)
+        # must receive request first
+        # otherwise something is wrong and request completed first
+        if get.done():
+            self._req, self._fut = await get
+        else:
+            get.cancel()
+            self._req = self._fut = None
+
+        return Inflight(self._req, self._fut, self.tsk)
+
+    async def __aexit__(self, exc_type, exc, tb):
+        if self._fut and not self._fut.done():
+            self._fut.cancel()
+
+
+_Inflight = namedtuple('Inflight', 'req srv_resp client_resp')
+
+
+class Inflight(_Inflight):
+    @property
+    def has_client_response(self):
+        return self.client_resp.done()
+
+    async def send_resp(self, resp):
+        if isinstance(resp, Exception):
+            self.srv_resp.set_exception(resp)
+        else:
+            self.srv_resp.set_result(resp)
+        return await self.client_resp
 
 
 # helpers
