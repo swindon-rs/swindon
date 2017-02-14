@@ -236,6 +236,8 @@ class _RequestContext:
     async def __aexit__(self, exc_type, exc, tb):
         if self._fut and not self._fut.done():
             self._fut.cancel()
+        if not self.tsk.done():
+            self.tsk.cancel()
 
 
 _Inflight = namedtuple('Inflight', 'req srv_resp client_resp')

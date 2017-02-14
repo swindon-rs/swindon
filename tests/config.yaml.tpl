@@ -38,6 +38,7 @@ routing:
 
   ### !Proxy routes ###
   localhost/proxy: proxy
+  localhost/proxy-w-prefix: proxy_w_prefix
 
   ### !SwindonChat routes ###
 
@@ -85,6 +86,8 @@ handlers:
 
   proxy: !Proxy
     destination: proxy_dest/
+  proxy_w_prefix: !Proxy
+    destination: proxy_dest/prefix
 
   ### SwindonChat handlers ###
 
