@@ -1,7 +1,9 @@
+use std::ascii::AsciiExt;
 use std::path::PathBuf;
 use std::collections::HashMap;
 
 use quire::validate::{Nothing, Enum, Structure, Scalar, Mapping};
+use rustc_serialize::{Decoder, Decodable};
 
 use intern::DiskPoolName;
 
@@ -14,16 +16,18 @@ pub enum Mode {
 }
 
 
-#[derive(RustcDecodable, Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct Static {
     pub mode: Mode,
     pub path: PathBuf,
     pub text_charset: Option<String>,
     pub pool: DiskPoolName,
     pub extra_headers: HashMap<String, String>,
+    // Computed values
+    pub overrides_content_type: bool,
 }
 
-#[derive(RustcDecodable, Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct SingleFile {
     pub path: PathBuf,
     pub content_type: String,
@@ -50,4 +54,55 @@ pub fn single_file<'x>() -> Structure<'x> {
     .member("content_type", Scalar::new())
     .member("pool", Scalar::new().default("default"))
     .member("extra_headers", Mapping::new(Scalar::new(), Scalar::new()))
+}
+
+impl Decodable for Static {
+    fn decode<D: Decoder>(d: &mut D) -> Result<Self, D::Error> {
+        #[derive(RustcDecodable)]
+        pub struct Internal {
+            pub mode: Mode,
+            pub path: PathBuf,
+            pub text_charset: Option<String>,
+            pub pool: DiskPoolName,
+            pub extra_headers: HashMap<String, String>,
+        }
+        let int = Internal::decode(d)?;
+        return Ok(Static {
+            overrides_content_type:
+                header_contains(&int.extra_headers, "Content-Type"),
+            mode: int.mode,
+            path: int.path,
+            text_charset: int.text_charset,
+            pool: int.pool,
+            extra_headers: int.extra_headers,
+        })
+    }
+}
+
+impl Decodable for SingleFile {
+    fn decode<D: Decoder>(d: &mut D) -> Result<Self, D::Error> {
+        #[derive(RustcDecodable)]
+        pub struct Internal {
+            pub path: PathBuf,
+            pub content_type: String,
+            pub pool: DiskPoolName,
+            pub extra_headers: HashMap<String, String>,
+        }
+        let int = Internal::decode(d)?;
+        if header_contains(&int.extra_headers, "Content-Type") {
+            return Err(d.error("Content-Type must be specified as \
+                `content-type` parameter rather than in `extra-headers` \
+                in `!SingleFile` handler."));
+        }
+        return Ok(SingleFile {
+            path: int.path,
+            content_type: int.content_type,
+            pool: int.pool,
+            extra_headers: int.extra_headers,
+        })
+    }
+}
+
+pub fn header_contains(map: &HashMap<String, String>, name: &str) -> bool {
+    map.iter().any(|(header, _)| header.eq_ignore_ascii_case(name))
 }

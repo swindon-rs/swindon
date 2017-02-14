@@ -59,4 +59,4 @@ async def test_headers_override(
             ctype = [val for key, val in resp.raw_headers
                      if key == b'CONTENT-TYPE']
             assert len(ctype) == 1
-            assert ctype[0] == b'text/plain'
+            assert ctype[0] == b'something/other'

@@ -18,7 +18,9 @@ pub fn serve<S: Io + 'static>(settings: &Arc<EmptyGif>, inp: Input)
     reply(inp, move |mut e| {
         e.status(Status::Ok);
         e.add_length(EMPTY_GIF.len() as u64);
-        e.add_header("Content-Type", "image/gif");
+        if !settings.overrides_content_type {
+            e.add_header("Content-Type", "image/gif");
+        }
         e.add_extra_headers(&settings.extra_headers);
         if e.done_headers() {
             e.write_body(EMPTY_GIF);

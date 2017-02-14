@@ -49,13 +49,15 @@ pub fn serve_dir<S: Transport>(settings: &Arc<Static>, mut inp: Input)
                 Ok(file) => {
                     e.status(Status::Ok);
                     e.add_length(file.size());
-                    match (&mime.0, &settings.text_charset) {
-                        (&TopLevel::Text, &Some(ref enc)) => {
-                            e.format_header("Content-Type", format_args!(
-                                "{}/{}; charset={}", mime.0, mime.1, enc));
-                        }
-                        _ => {
-                            e.format_header("Content-Type", mime);
+                    if !settings.overrides_content_type {
+                        match (&mime.0, &settings.text_charset) {
+                            (&TopLevel::Text, &Some(ref enc)) => {
+                                e.format_header("Content-Type", format_args!(
+                                    "{}/{}; charset={}", mime.0, mime.1, enc));
+                            }
+                            _ => {
+                                e.format_header("Content-Type", mime);
+                            }
                         }
                     }
                     e.add_extra_headers(&settings.extra_headers);
