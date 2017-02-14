@@ -12,15 +12,15 @@ import aiohttp
 from collections import namedtuple
 from aiohttp import web, test_utils
 
+ROOT = pathlib.Path('/work')
+
 
 def pytest_addoption(parser):
     parser.addoption('--swindon-bin', default=[],
-                     type=pathlib.Path,
                      action='append',
                      help="Path to swindon binary to run")
     parser.addoption('--swindon-config',
-                     default=pathlib.Path(__file__).parent / 'config.yaml.tpl',
-                     type=pathlib.Path,
+                     default='./tests/config.yaml.tpl',
                      help=("Path to swindon config template,"
                            " default is `%(default)s`"))
 
@@ -29,12 +29,11 @@ SWINDON_BIN = []
 
 
 def pytest_configure(config):
-    root = pathlib.Path('/work')
     bins = config.getoption('--swindon-bin')[:]
-    SWINDON_BIN[:] = bins or [pathlib.Path('target/debug/swindon')]
+    SWINDON_BIN[:] = bins or ['target/debug/swindon']
     for _ in range(len(SWINDON_BIN)):
         p = SWINDON_BIN.pop(0)
-        p = root / p
+        p = ROOT / p
         assert p.exists(), p
         SWINDON_BIN.append(str(p))
 
@@ -104,8 +103,8 @@ def swindon(_proc, request, debug_routing):
     swindon_bin = request.param
     fd, fname = tempfile.mkstemp()
 
-    conf_template = request.config.getoption('--swindon-config')
-    with conf_template.open('rt') as f:
+    conf_template = pathlib.Path(request.config.getoption('--swindon-config'))
+    with (ROOT / conf_template).open('rt') as f:
         tpl = string.Template(f.read())
 
     config = tpl.substitute(listen_address=addr_str,
