@@ -131,8 +131,8 @@ commands:
     run: [py.test]
 
   test: !Command
+    prerequisites: [_ci-make, ci-test]
     <<: *functest
-    prerequisites: [ci-test]
 
   run: &run !Command
     container: ubuntu
