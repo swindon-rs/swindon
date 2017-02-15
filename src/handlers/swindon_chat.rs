@@ -7,7 +7,7 @@ use futures::future::{Either};
 use minihttp::Status;
 use minihttp::server::{Error, Codec, RecvMode, WebsocketAccept};
 use minihttp::server as http;
-use minihttp::websocket::{self, Codec as WebsocketCodec, Packet};
+use minihttp::websocket::{self, ServerCodec as WebsocketCodec, Packet};
 use tk_bufstream::{ReadBuf, WriteBuf};
 use tokio_core::io::Io;
 use futures::future::{ok};
@@ -110,7 +110,7 @@ impl<S: Io + 'static> Codec<S> for WebsockReply {
                                 error!("outbound channel unexpectedly closed");
                                 "outbound channel unexpectedly closed"
                             });
-                            websocket::Loop::new(out, inp, rx,
+                            websocket::Loop::server(out, inp, rx,
                                 chat::Dispatcher {
                                     cid: cid,
                                     auth: auth,

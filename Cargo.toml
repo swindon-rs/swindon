@@ -20,7 +20,7 @@ mime = "0.2.2"
 mime_guess = "1.8.0"
 tk-sendfile = "0.3.1"
 tk-bufstream = "0.2.2"
-minihttp = { git = "https://github.com/popravich/minihttp", rev="37b2aeb" }
+minihttp = { git = "https://github.com/popravich/minihttp", rev="5faadf5" }
 netbuf = "0.3.7"
 sha1 = "0.2.0"
 byteorder = "0.5.3"
@@ -36,7 +36,7 @@ abstract-ns = "0.2.4"
 ns-std-threaded = "0.1.0"
 
 [replace]
-"minihttp:0.1.0" = { git = "https://github.com/popravich/minihttp", rev="37b2aeb" }
+"minihttp:0.1.0" = { git = "https://github.com/popravich/minihttp", rev="5faadf5" }
 
 [[bin]]
 name = "swindon"

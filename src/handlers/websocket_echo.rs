@@ -5,7 +5,7 @@ use futures::stream::{Stream};
 use minihttp::Status;
 use minihttp::server::{Error, Codec, RecvMode, WebsocketAccept};
 use minihttp::server as http;
-use minihttp::websocket::{Codec as WebsocketCodec};
+use minihttp::websocket::{ServerCodec as WebsocketCodec};
 use tk_bufstream::{ReadBuf, WriteBuf};
 use tokio_core::io::Io;
 use futures::future::{ok};
