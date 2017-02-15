@@ -124,9 +124,9 @@ impl<S: Io + 'static> http::Codec<S> for Codec {
 impl Codec {
     pub fn new(settings: &Arc<Proxy>, inp: Input) -> Codec {
         Codec {
-            settings: settings.clone(),
+            state: State::Headers(HalfReq::from_input(&inp, &settings)),
             pools: inp.runtime.http_pools.clone(),
-            state: State::Headers(HalfReq::from_input(&inp)),
+            settings: settings.clone(),
             context: Some(inp.into_context()),
         }
     }
