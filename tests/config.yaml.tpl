@@ -42,6 +42,9 @@ routing:
 
   ### !SwindonChat routes ###
 
+  ### !WebsocketEcho routes ###
+  localhost/websocket-echo: websocket_echo
+
 # Configure all possible handlers?
 handlers:
   # Allowed handlers are: SwindonChat, Static, SingleFile, Proxy,
@@ -90,6 +93,9 @@ handlers:
     destination: proxy_dest/prefix
 
   ### SwindonChat handlers ###
+
+  ### WebsocketEcho handlers ###
+  websocket_echo: !WebsocketEcho
 
 # session-pools:
 
