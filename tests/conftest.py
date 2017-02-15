@@ -13,7 +13,7 @@ import asyncio
 
 from collections import namedtuple
 from concurrent.futures import ThreadPoolExecutor
-from aiohttp import web, test_utils
+from aiohttp import web
 
 ROOT = pathlib.Path('/work')
 
@@ -134,8 +134,7 @@ def swindon(_proc, request, debug_routing):
                  stderr=subprocess.STDOUT,
                  )
     while True:
-        assert proc.poll() is None, (
-            proc.poll(), proc.stdout.read(), proc.stderr.read())
+        assert proc.poll() is None, (proc.poll(), proc.stdout.read())
         line = proc.stdout.readline().decode('utf-8').strip()
         if line.endswith(to_str(SWINDON_ADDRESS)):
             break
@@ -169,28 +168,6 @@ def swindon_logger(swindon, loop, request):
         exec_.submit(echo, swindon.proc.stdout)
         yield
         run = False
-
-
-@pytest.fixture
-def swindon_client(loop):
-    clients = []
-
-    async def go(__param, *args, **kwargs):
-        if not isinstance(__param, web.Application):
-            __param = __param(loop, *args, **kwargs)
-        client = test_utils.TestClient(__param)
-        await client.start_server()
-        clients.append(client)
-        return client
-
-    async def finalize():
-        while clients:
-            await (clients.pop()).close()
-
-    try:
-        yield go
-    finally:
-        loop.run_until_complete(finalize())
 
 
 @pytest.fixture
