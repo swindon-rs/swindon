@@ -26,6 +26,10 @@ def pytest_addoption(parser):
                      default='./tests/config.yaml.tpl',
                      help=("Path to swindon config template,"
                            " default is `%(default)s`"))
+    parser.addoption('--rust-log',
+                     default='debug,tokio_core=warn',
+                     help=("Set RUST_LOG for swindon, default is"
+                           " \"%(default)s\""))
 
 
 SWINDON_BIN = []
@@ -125,6 +129,7 @@ def swindon(_proc, request, debug_routing):
                  '--verbose',
                  '--config',
                  fname,
+                 env={'RUST_LOG': request.config.getoption('--rust-log')},
                  stdout=subprocess.PIPE,
                  stderr=subprocess.STDOUT,
                  )
