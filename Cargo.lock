@@ -16,7 +16,7 @@ dependencies = [
  "matches 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "mime 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "mime_guess 1.8.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "minihttp 0.1.0 (git+https://github.com/popravich/minihttp?rev=5faadf5)",
+ "minihttp 0.1.0 (git+https://github.com/popravich/minihttp?rev=d200122)",
  "netbuf 0.3.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "ns-std-threaded 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "quick-error 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -28,7 +28,7 @@ dependencies = [
  "string-intern 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "time 0.1.36 (registry+https://github.com/rust-lang/crates.io-index)",
  "tk-bufstream 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)",
- "tk-pool 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tk-pool 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "tk-sendfile 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio-core 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
@@ -233,7 +233,7 @@ dependencies = [
 [[package]]
 name = "minihttp"
 version = "0.1.0"
-source = "git+https://github.com/popravich/minihttp?rev=5faadf5#5faadf5251b5468b3dd87bd787a3861a5c0e8ea6"
+source = "git+https://github.com/popravich/minihttp?rev=d200122#d2001224a4c5826bf6a5441c6871d66ab1ed97d5"
 dependencies = [
  "abstract-ns 0.2.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "argparse 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -258,7 +258,7 @@ dependencies = [
 name = "minihttp"
 version = "0.1.0"
 source = "git+git://github.com/popravich/minihttp?rev=e424f66#e424f666f4a75bf0eea75abc6fbd48b6486d0417"
-replace = "minihttp 0.1.0 (git+https://github.com/popravich/minihttp?rev=5faadf5)"
+replace = "minihttp 0.1.0 (git+https://github.com/popravich/minihttp?rev=d200122)"
 
 [[package]]
 name = "mio"
@@ -527,7 +527,7 @@ dependencies = [
 
 [[package]]
 name = "tk-pool"
-version = "0.2.2"
+version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "abstract-ns 0.2.4 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -650,7 +650,7 @@ dependencies = [
 "checksum mime 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)" = "b5c93a4bd787ddc6e7833c519b73a50883deb5863d76d9b71eb8216fb7f94e66"
 "checksum mime_guess 1.8.1 (registry+https://github.com/rust-lang/crates.io-index)" = "76da6df85047af8c0edfa53f48eb1073012ce1cc95c8fedc0a374f659a89dd65"
 "checksum minihttp 0.1.0 (git+git://github.com/popravich/minihttp?rev=e424f66)" = "<none>"
-"checksum minihttp 0.1.0 (git+https://github.com/popravich/minihttp?rev=5faadf5)" = "<none>"
+"checksum minihttp 0.1.0 (git+https://github.com/popravich/minihttp?rev=d200122)" = "<none>"
 "checksum mio 0.6.3 (registry+https://github.com/rust-lang/crates.io-index)" = "2a1ce15f33e3ea5a0a463b23e22565ceca10b5593f6b387bb7bc24d65590bf01"
 "checksum miow 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "3a78d2605eb97302c10cf944b8d96b0a2a890c52957caf92fcd1f24f69049579"
 "checksum net2 0.2.26 (registry+https://github.com/rust-lang/crates.io-index)" = "5edf9cb6be97212423aed9413dd4729d62b370b5e1c571750e882cebbbc1e3e2"
@@ -683,7 +683,7 @@ dependencies = [
 "checksum thread_local 0.2.7 (registry+https://github.com/rust-lang/crates.io-index)" = "8576dbbfcaef9641452d5cf0df9b0e7eeab7694956dd33bb61515fb8f18cfdd5"
 "checksum time 0.1.36 (registry+https://github.com/rust-lang/crates.io-index)" = "211b63c112206356ef1ff9b19355f43740fc3f85960c598a93d3a3d3ba7beade"
 "checksum tk-bufstream 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)" = "01cc0d5ca95cb381845f90d4755e9b965321624075346cc3fea98efda960b8df"
-"checksum tk-pool 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)" = "16ae52a2127b8d1c6b310cd2c64d7c6dd4453f9f7c3ddfdaac006b4a318564ab"
+"checksum tk-pool 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)" = "e0dbbfa7b2590a61bddfeb41f5a63e4667e2dac3c75d7dd016285690a2d40a8d"
 "checksum tk-sendfile 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)" = "cb640e4574f45e77d8ae1c0dcd2abc94cc7a4f767a6a25d0ddfa36f5546f5165"
 "checksum tokio-core 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)" = "3d1be481b55126f02ef88ff86748086473cb537a949fc4a8f4be403a530ae54b"
 "checksum unicase 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)" = "13a5906ca2b98c799f4b1ab4557b76367ebd6ae5ef14930ec841c74aed5f3764"
