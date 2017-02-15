@@ -128,13 +128,13 @@ def swindon(_proc, request, debug_routing):
                  '--config',
                  fname,
                  env={'RUST_LOG': request.config.getoption('--rust-log')},
-                 stdout=subprocess.PIPE,
-                 stderr=subprocess.STDOUT,
                  )
     while True:
-        assert proc.poll() is None, (proc.poll(), proc.stdout.read())
-        line = proc.stdout.readline().decode('utf-8').strip()
-        if line.endswith(to_str(SWINDON_ADDRESS)):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            try:
+                s.connect(('127.0.0.1', SWINDON_ADDRESS[1]))
+            except ConnectionRefusedError:
+                continue
             break
 
     url = yarl.URL('http://localhost:{}'.format(SWINDON_ADDRESS[1]))
@@ -144,24 +144,6 @@ def swindon(_proc, request, debug_routing):
     finally:
         os.close(fd)
         os.remove(fname)
-
-
-@pytest.fixture(autouse=True)
-def swindon_logger(swindon, loop, request):
-
-    def echo():
-        data = b''
-        while data is not None:
-            data = swindon.proc.stdout.read()
-            if data is not None:
-                print(data.decode('utf-8'))
-
-    os.set_blocking(swindon.proc.stdout.fileno(), False)
-    echo()
-    try:
-        yield
-    finally:
-        echo()
 
 
 @pytest.fixture
