@@ -24,7 +24,6 @@ async def test_simple_request(proxy_server, swindon,
         assert await client_resp.read() == b'OK'
 
 
-@pytest.mark.xfail
 async def test_method(proxy_server, swindon, request_method):
     url = swindon.url / 'proxy/hello'
     async with proxy_server.send(request_method, url) as inflight:
