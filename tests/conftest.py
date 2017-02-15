@@ -5,14 +5,12 @@ import tempfile
 import os
 import string
 import socket
-import time
 
 import yarl
 import aiohttp
 import asyncio
 
 from collections import namedtuple
-from concurrent.futures import ThreadPoolExecutor
 from aiohttp import web
 
 ROOT = pathlib.Path('/work')
@@ -150,24 +148,20 @@ def swindon(_proc, request, debug_routing):
 
 @pytest.fixture(autouse=True)
 def swindon_logger(swindon, loop, request):
-    run = True
 
-    def echo(stream):
-        nonlocal run
-        while run:
-            out = stream.read()
-            while out:
-                for line in out.splitlines():
-                    print(line.decode('utf-8'))
-                out = stream.read()
-            time.sleep(.001)
+    def echo():
+        data = b''
+        while data is not None:
+            data = swindon.proc.stdout.read()
+            if data is not None:
+                print(data.decode('utf-8'))
 
     os.set_blocking(swindon.proc.stdout.fileno(), False)
-    with ThreadPoolExecutor(max_workers=1) as exec_:
-        swindon.proc.stdout.read()
-        exec_.submit(echo, swindon.proc.stdout)
+    echo()
+    try:
         yield
-        run = False
+    finally:
+        echo()
 
 
 @pytest.fixture
