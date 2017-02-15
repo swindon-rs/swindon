@@ -24,7 +24,7 @@ const PART3: &'static str = concat!("\
             </h1>\
             <hr>\
             <p>Yours faithfully,<br>\
-                swindon/", env!("CARGO_PKG_VERSION"), "\
+                swindon web server\
             </p>\
         </body>\
     </html>\

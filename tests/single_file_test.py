@@ -27,7 +27,7 @@ async def test_missing_file(swindon, http_request, debug_routing):
     msg = (b'<!DOCTYPE html><html><head>'
            b'<title>404 Not Found</title></head>'
            b'<body><h1>404 Not Found</h1><hr>'
-           b'<p>Yours faithfully,<br>swindon/func-tests</p></body></html>')
+           b'<p>Yours faithfully,<br>swindon web server</p></body></html>')
     resp, data = await http_request(swindon.url / 'missing-file')
     assert resp.status == 404
     assert data == msg
@@ -42,7 +42,7 @@ async def test_permission(swindon, http_request):
     msg = (b'<!DOCTYPE html><html><head>'
            b'<title>404 Not Found</title></head>'
            b'<body><h1>404 Not Found</h1><hr>'
-           b'<p>Yours faithfully,<br>swindon/func-tests</p></body></html>')
+           b'<p>Yours faithfully,<br>swindon web server</p></body></html>')
     resp, data = await http_request(swindon.url / 'no-permission')
     assert resp.status == 404
     assert data == msg

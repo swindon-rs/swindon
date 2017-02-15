@@ -26,7 +26,7 @@ async def test_permission(swindon, http_request, debug_routing):
     msg = (b'<!DOCTYPE html><html><head>'
            b'<title>404 Not Found</title></head>'
            b'<body><h1>404 Not Found</h1><hr>'
-           b'<p>Yours faithfully,<br>swindon/func-tests</p></body></html>')
+           b'<p>Yours faithfully,<br>swindon web server</p></body></html>')
     url = swindon.url / 'static' / 'no-permission'
     resp, data = await http_request(url)
     assert resp.status == 404
