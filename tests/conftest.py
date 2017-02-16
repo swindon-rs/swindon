@@ -247,13 +247,14 @@ class _WSContext:
         self.queue = queue
         self.loop = loop
         self.url = url
-        self.sess = aiohttp.ClientSession(loop=loop, **kwargs)
+        self.kwargs = kwargs
+        self.sess = aiohttp.ClientSession(loop=loop)
         self.ws = None
 
     async def __aenter__(self):
 
-        fut = asyncio.ensure_future(self.sess.ws_connect(self.url),
-                                    loop=self.loop)
+        fut = asyncio.ensure_future(
+            self.sess.ws_connect(self.url, **self.kwargs), loop=self.loop)
 
         def set_ws(f):
             self.ws = f.result()
