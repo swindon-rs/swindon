@@ -42,7 +42,7 @@ async def test_ws_close_timeout(proxy_server, swindon):
 
 
 @pytest.mark.parametrize('status_code', [
-    400, 401, 404, 410, 500, 501, 502, 504])
+    400, 401, 404, 410, 500, 503])
 async def test_error_codes(proxy_server, swindon, loop, status_code):
     url = swindon.url / 'swindon-chat'
     async with proxy_server.swindon_chat(url, timeout=1) as inflight:
@@ -60,7 +60,12 @@ async def test_error_codes(proxy_server, swindon, loop, status_code):
 
 
 @pytest.mark.parametrize('status_code', [
-    100, 101, 201, 204, 300, 301, 302, 304])
+    100, 101,
+    201, 204,
+    300, 301, 302, 304,
+    402, 405,
+    501, 502, 504,  # these codes are not exposed to end-user.
+    ])
 async def test_unexpected_responses(proxy_server, swindon, loop, status_code):
     url = swindon.url / 'swindon-chat'
     async with proxy_server.swindon_chat(url, timeout=1) as inflight:

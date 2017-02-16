@@ -116,11 +116,13 @@ pub fn start_authorize(inp: &Input, conn_id: Cid, settings: &Arc<Chat>,
 /// will be logged.
 pub fn good_status(status: Status) -> bool {
     matches!(status,
-        Status::Forbidden|
+        Status::BadRequest|
         Status::Unauthorized|
+        Status::Forbidden|
         Status::NotFound|
         Status::Gone|
-        Status::BadRequest)
+        Status::ServiceUnavailable
+        )
 }
 
 /// Parse userinfo received on Auth call;
