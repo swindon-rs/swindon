@@ -3,7 +3,7 @@ import asyncio
 import aiohttp
 
 
-async def test_echo_chat(proxy_server, swindon):
+async def test_echo_chat(swindon):
     url = swindon.url / 'websocket-echo'
     async with aiohttp.ClientSession() as s:
         async with s.ws_connect(url) as ws:

@@ -98,17 +98,30 @@ def assert_headers(headers, debug_routing):
 SwindonInfo = namedtuple('SwindonInfo', 'proc url proxy')
 
 
-@pytest.fixture(scope='session', params=SWINDON_BIN, autouse=True)
-def swindon(_proc, request, debug_routing):
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.bind(('127.0.0.1', 0))
-        SWINDON_ADDRESS = s.getsockname()
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.bind(('127.0.0.1', 0))
-        PROXY_ADDRESS = s.getsockname()
+@pytest.fixture(scope='session')
+def unused_port():
+    used = set()
 
-    def to_str(addr):
-        return ':'.join(map(str, addr))
+    def find():
+        while True:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.bind(('127.0.0.1', 0))
+                port = s.getsockname()[1]
+                if port in used:
+                    continue
+                used.add(port)
+                return port
+    return find
+
+
+@pytest.fixture(scope='session', params=SWINDON_BIN, autouse=True)
+def swindon(_proc, request, debug_routing, unused_port):
+    SWINDON_ADDRESS = unused_port()
+    PROXY_ADDRESS = unused_port()
+    SESSION_POOL_ADDRESS = unused_port()
+
+    def to_addr(port):
+        return '127.0.0.1:{}'.format(port)
 
     swindon_bin = request.param
     fd, fname = tempfile.mkstemp()
@@ -117,9 +130,10 @@ def swindon(_proc, request, debug_routing):
     with (ROOT / conf_template).open('rt') as f:
         tpl = string.Template(f.read())
 
-    config = tpl.substitute(listen_address=to_str(SWINDON_ADDRESS),
+    config = tpl.substitute(listen_address=to_addr(SWINDON_ADDRESS),
                             debug_routing=str(debug_routing).lower(),
-                            proxy_address=to_str(PROXY_ADDRESS),
+                            proxy_address=to_addr(PROXY_ADDRESS),
+                            spool_address=to_addr(SESSION_POOL_ADDRESS),
                             )
     os.write(fd, config.encode('utf-8'))
 
@@ -132,13 +146,13 @@ def swindon(_proc, request, debug_routing):
     while True:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             try:
-                s.connect(('127.0.0.1', SWINDON_ADDRESS[1]))
+                s.connect(('127.0.0.1', SWINDON_ADDRESS))
             except ConnectionRefusedError:
                 continue
             break
 
-    url = yarl.URL('http://localhost:{}'.format(SWINDON_ADDRESS[1]))
-    proxy = yarl.URL('http://localhost:{}'.format(PROXY_ADDRESS[1]))
+    url = yarl.URL('http://localhost:{}'.format(SWINDON_ADDRESS))
+    proxy = yarl.URL('http://localhost:{}'.format(PROXY_ADDRESS))
     try:
         yield SwindonInfo(proc, url, proxy)
     finally:
@@ -195,6 +209,10 @@ class ContextServer:
         tsk = asyncio.ensure_future(_send_request(), loop=self.loop)
         return _RequestContext(self.queue, tsk, loop=self.loop)
 
+    def swindon_chat(self, url, **kwargs):
+        # TODO: return Websocket worker
+        return _WSContext(self.queue, url, kwargs, loop=self.loop)
+
 
 class _RequestContext:
     def __init__(self, queue, tsk, loop=None):
@@ -204,8 +222,9 @@ class _RequestContext:
 
     async def __aenter__(self):
         get = asyncio.ensure_future(self.queue.get(), loop=self.loop)
-        await asyncio.wait(
-            [get, self.tsk], return_when=asyncio.FIRST_COMPLETED)
+        await asyncio.wait([get, self.tsk],
+                           return_when=asyncio.FIRST_COMPLETED,
+                           loop=self.loop)
         # must receive request first
         # otherwise something is wrong and request completed first
         if get.done():
@@ -221,6 +240,32 @@ class _RequestContext:
             self._fut.cancel()
         if not self.tsk.done():
             self.tsk.cancel()
+
+
+class _WSContext:
+    def __init__(self, queue, url, kwargs, loop):
+        self.queue = queue
+        self.loop = loop
+        self.url = url
+        self.sess = aiohttp.ClientSession(loop=loop, **kwargs)
+        self.ws = None
+
+    async def __aenter__(self):
+
+        fut = asyncio.ensure_future(self.sess.ws_connect(self.url),
+                                    loop=self.loop)
+
+        def set_ws(f):
+            self.ws = f.result()
+        fut.add_done_callback(set_ws)
+
+        return Inflight(self.queue, None, fut)
+
+    async def __aexit__(self, exc_type, exc, tb):
+        # XXX: this hangs for a while...
+        if self.ws:
+            await self.ws.close()
+        await self.sess.close()
 
 
 _Inflight = namedtuple('Inflight', 'req srv_resp client_resp')

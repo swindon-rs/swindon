@@ -1,4 +1,3 @@
-import pytest
 from aiohttp import web, HttpVersion11
 
 
