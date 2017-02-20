@@ -1,3 +1,4 @@
+import pytest
 
 
 def test_empty_config(check_config):
@@ -10,6 +11,21 @@ def test_no_listen(check_config):
         handlers: {}
     """)
     assert err != ''
+
+
+# XXX: all this values (except 1) are valid yaml booleans
+@pytest.mark.parametrize("debug_routing", [
+    "yes", "on", "y", "1",
+    "no", "off", "n", "0",
+    ])
+def test_debug_variants(check_config, debug_routing):
+    err = check_config("""
+        debug_routing: {}
+    """.format(debug_routing))
+    assert (
+        ".debug_routing: Can't parse value: provided string"
+        " was not `true` or `false`"
+        )in err
 
 
 def test_invalid_listen(check_config):
@@ -64,3 +80,24 @@ def test_no_handler(check_config):
     """
     err = check_config(cfg)
     assert err != ''
+
+
+def test_invalid_routing(check_config):
+    err = check_config("""
+        listen:
+        - 127.0.0.1:80
+        routing:
+        - host:port/path: handler
+    """)
+    assert '.routing: Mapping expected' in err
+    # XXX: total inconsistency: missing 'got ...' phrase.
+
+
+def test_invalid_handlers(check_config):
+    err = check_config("""
+        listen:
+        - 1.2.3.4:5
+        handlers:
+        - handler: !EmptyGif
+    """)
+    assert '.handlers: Mapping expected' in err
