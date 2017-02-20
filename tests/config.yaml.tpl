@@ -28,6 +28,7 @@ routing:
   localhost/static-file: single_file
   localhost/missing-file: missing_file
   localhost/no-permission: no-permission
+  localhost/static-file-headers: extra_headers
 
   ### !Static routes ###
   localhost/static: static
@@ -74,6 +75,12 @@ handlers:
   no_permission: !SingleFile
     path: /work/tests/assets/permission.txt
     content-type: text/no/permission
+  extra_headers: !SingleFile
+    path: /work/tests/assets/static_file.txt
+    content-type: text/plain
+    extra-headers:
+      X-Extra-Header: "extra value"
+      X-Bad-Header: "bad header\r\n"
 
   ### Static handlers ###
 

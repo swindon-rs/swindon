@@ -285,7 +285,10 @@ class _WSContext:
             self.sess.ws_connect(self.url, **self.kwargs), loop=self.loop)
 
         def set_ws(f):
-            self.ws = f.result()
+            try:
+                self.ws = f.result()
+            except Exception as err:
+                self.queue.put_nowait((err, None))
         fut.add_done_callback(set_ws)
 
         return Inflight(self.queue, None, fut)

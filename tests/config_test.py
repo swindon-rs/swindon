@@ -101,3 +101,23 @@ def test_invalid_handlers(check_config):
         - handler: !EmptyGif
     """)
     assert '.handlers: Mapping expected' in err
+
+
+# Test Extra headers for static files
+
+def test_extra_headers(check_config):
+    err = check_config("""
+        listen:
+        - 1.2.3.4:5
+        routing:
+            host/path: handler
+        handlers:
+            handler: !SingleFile
+                path: /work/
+                content-type: text/plain
+                extra-headers:
+                    Content-Type: text/html
+    """)
+    assert (
+        '.handlers.handler: Content-Type must be specified as `content-type`'
+        ' parameter rather than in `extra-headers`') in err

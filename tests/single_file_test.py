@@ -48,3 +48,10 @@ async def test_permission(swindon, http_request):
     assert data == msg
     assert resp.headers['Content-Type'] != 'text/no/permission'
     assert resp.headers['Content-Length'] == str(len(msg))
+
+
+async def test_extra_headers(swindon, http_request):
+    resp, data = await http_request(swindon.url / 'static-file-headers')
+    assert resp.status == 200
+    assert resp.headers.getall('X-Extra-Header') == ['extra value']
+    assert 'X-Bad-Header' not in resp.headers
