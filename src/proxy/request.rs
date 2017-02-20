@@ -1,4 +1,5 @@
 use std::sync::Arc;
+use std::net::SocketAddr;
 
 use tokio_core::io::Io;
 use minihttp::Version;
@@ -18,6 +19,7 @@ pub struct HalfReq {
     path: String,
     host: String,
     headers: Vec<(String, Vec<u8>)>,
+    addr: SocketAddr,
 }
 
 #[derive(Debug)]
@@ -27,6 +29,7 @@ struct ReqData {
     path: String,
     host: String,
     headers: Vec<(String, Vec<u8>)>,
+    addr: SocketAddr,
     body: Vec<u8>,
 }
 
@@ -40,6 +43,7 @@ impl HalfReq {
             Authority(..) => unreachable!(),
             Asterisk => String::from("*"),
         };
+
         HalfReq {
             settings: settings.clone(),
             method: inp.headers.method().to_string(),
@@ -48,6 +52,7 @@ impl HalfReq {
             headers: inp.headers.headers().map(|(k, v)| {
                 (k.to_string(), v.to_vec())
             }).collect(),
+            addr: inp.addr,
         }
     }
     pub fn upgrade(self, body: Vec<u8>) -> RepReq {
@@ -57,6 +62,7 @@ impl HalfReq {
             path: self.path,
             host: self.host,
             headers: self.headers,
+            addr: self.addr,
             body: body,
         }))
     }
@@ -74,6 +80,10 @@ impl RepReq {
 
         // Spec doesn't mandate, but recomments it to be first
         e.add_header("Host", &r.host).unwrap();
+        if let Some(ref h) = r.settings.ip_header {
+            // NOTE: this can duplicate header value.
+            e.add_header(h, format!("{}", r.addr.ip())).unwrap();
+        }
 
         for &(ref k, ref v) in &r.headers {
             e.add_header(k, v).unwrap();

@@ -40,6 +40,7 @@ routing:
   ### !Proxy routes ###
   localhost/proxy: proxy
   localhost/proxy-w-prefix: proxy_w_prefix
+  localhost/proxy-w-ip-header: proxy_w_ip_header
 
   ### !SwindonChat routes ###
   localhost/swindon-chat: swindon_chat
@@ -93,6 +94,9 @@ handlers:
     destination: proxy_dest/
   proxy_w_prefix: !Proxy
     destination: proxy_dest/prefix
+  proxy_w_ip_header: !Proxy
+    destination: proxy_dest
+    ip-header: X-Some-Header
 
   ### SwindonChat handlers ###
   swindon_chat: !SwindonChat

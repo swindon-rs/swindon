@@ -47,3 +47,24 @@ async def test_prefix(proxy_server, swindon):
 
         client_resp = await inflight.send_resp(web.Response(text='OK'))
         assert client_resp.status == 200
+
+
+async def test_ip_header(proxy_server, swindon):
+    url = swindon.url / 'proxy-w-ip-header'
+    async with proxy_server.send("GET", url) as inflight:
+        assert not inflight.has_client_response, await inflight.client_resp
+
+        assert inflight.req.headers.getall('X-Some-Header') == ['127.0.0.1']
+
+        client_resp = await inflight.send_resp(web.Response(text='OK'))
+        assert client_resp.status == 200
+
+    h = {"X-Some-Header": "1.2.3.4"}
+    async with proxy_server.send("GET", url, headers=h) as inflight:
+        assert not inflight.has_client_response, await inflight.client_resp
+
+        assert set(inflight.req.headers.getall('X-Some-Header')) == {
+            '1.2.3.4', '127.0.0.1'}
+
+        client_resp = await inflight.send_resp(web.Response(text='OK'))
+        assert client_resp.status == 200
