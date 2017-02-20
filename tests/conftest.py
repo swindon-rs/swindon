@@ -5,6 +5,7 @@ import tempfile
 import os
 import string
 import socket
+import textwrap
 
 import yarl
 import aiohttp
@@ -114,7 +115,7 @@ def unused_port():
     return find
 
 
-@pytest.fixture(scope='session', params=SWINDON_BIN, autouse=True)
+@pytest.fixture(scope='session', params=SWINDON_BIN)
 def swindon(_proc, request, debug_routing, unused_port):
     SWINDON_ADDRESS = unused_port()
     PROXY_ADDRESS = unused_port()
@@ -158,6 +159,33 @@ def swindon(_proc, request, debug_routing, unused_port):
     finally:
         os.close(fd)
         os.remove(fname)
+
+
+@pytest.fixture(params=SWINDON_BIN)
+def check_config(request):
+    swindon_bin = request.param
+
+    def checker(cfg=''):
+        cfg = textwrap.dedent(cfg)
+        with tempfile.NamedTemporaryFile('wt') as f:
+            f.write(cfg)
+            f.flush()
+
+            res = subprocess.run([
+                swindon_bin,
+                '--check-config',
+                '--config',
+                f.name,
+                ],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                encoding='utf-8',
+                timeout=15,
+                )
+            assert not res.stdout, res
+            assert res.returncode == 1, res
+            return res.stderr.replace(f.name, 'TEMP_FILE_NAME')
+    return checker
 
 
 @pytest.fixture
