@@ -26,7 +26,8 @@ fn path_match<S: AsRef<str>>(pattern: &Option<S>, value: &str) -> bool {
         let prefix = prefix.as_ref();
         if value.starts_with(prefix) && (
                 value.len() == prefix.len() ||
-                value[prefix.len()..].starts_with("/"))
+                value[prefix.len()..].starts_with("/") ||
+                value[prefix.len()..].starts_with("?"))
         {
             return true;
         }
