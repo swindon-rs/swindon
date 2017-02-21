@@ -96,7 +96,7 @@ def assert_headers(headers, debug_routing):
     assert headers.getall('Server') == ['swindon/func-tests']
 
 
-SwindonInfo = namedtuple('SwindonInfo', 'proc url proxy')
+SwindonInfo = namedtuple('SwindonInfo', 'proc url proxy api')
 
 
 @pytest.fixture(scope='session')
@@ -154,8 +154,9 @@ def swindon(_proc, request, debug_routing, unused_port):
 
     url = yarl.URL('http://localhost:{}'.format(SWINDON_ADDRESS))
     proxy = yarl.URL('http://localhost:{}'.format(PROXY_ADDRESS))
+    api = yarl.URL('http://localhost:{}'.format(SESSION_POOL_ADDRESS))
     try:
-        yield SwindonInfo(proc, url, proxy)
+        yield SwindonInfo(proc, url, proxy, api)
     finally:
         os.close(fd)
         os.remove(fname)

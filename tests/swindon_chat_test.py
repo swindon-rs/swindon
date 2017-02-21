@@ -1,4 +1,6 @@
 import pytest
+import aiohttp
+
 from unittest import mock
 from async_timeout import timeout
 from aiohttp import web
@@ -243,3 +245,36 @@ async def test_echo_messages(proxy_server, swindon):
             'result', {'request_id': '1'},
             {'echo': "some message"},
             ]
+
+
+async def test_subscribe_publish(proxy_server, swindon):
+    url = swindon.url / 'swindon-chat'
+    async with proxy_server.swindon_chat(url, timeout=1) as inflight:
+        req, fut = await inflight.req.get()
+        assert req.path == '/tangle/authorize_connection'
+        meta, args, kwargs = await req.json()
+        assert 'connection_id' in meta
+        assert not args
+        assert kwargs
+
+        cid = meta['connection_id']
+
+        async with aiohttp.ClientSession() as s:
+            sub_url = swindon.api / 'v1/connection' / cid / 'subscriptions'
+            sub_url = sub_url / 'some/topic'
+            async with s.put(sub_url) as resp:
+                assert resp.status == 204
+
+            publish_url = swindon.api / 'v1/publish' / 'some/topic'
+            data = b'{"Test": "message"}'
+            async with s.post(publish_url, data=data) as resp:
+                assert resp.status == 204
+
+        fut.set_result(json_response({
+            "user_id": "topic-user:1", "username": "Jack"}))
+        ws = await inflight.client_resp
+        hello = await ws.receive_json()
+        assert hello == [
+            'hello', {}, {'user_id': 'topic-user:1', 'username': 'Jack'}]
+        msg = await ws.receive_json()
+        assert msg == ['message', {'topic': 'some.topic'}, {'Test': 'message'}]
