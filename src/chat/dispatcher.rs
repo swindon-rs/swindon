@@ -40,8 +40,6 @@ impl websocket::Dispatcher for Dispatcher {
                     if let Some(duration) = get_active(&meta) {
                         // TODO(tailhook) update activity
                     }
-                    meta.insert("connection_id".to_string(),
-                        Json::String(serialize_cid(&self.cid)));
                     self.method_call(name, meta, args, kwargs);
                     ok(()) // no backpressure, yet
                 }
@@ -80,7 +78,7 @@ impl Dispatcher {
         let meta = Arc::new(meta);
         let codec = Box::new(CallCodec::new(
             self.auth.clone(),
-            path, &meta, args, kw,
+            path, self.cid, &meta, args, kw,
             self.channel.clone()));
         match up.get_mut().get_mut() {
             Some(pool) => {

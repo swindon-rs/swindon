@@ -30,4 +30,4 @@ tests:
 functional-tests:
   stage: test
   script:
-  - vagga func-test --color=yes -v -rsxX
+  - vagga func-test --color=yes -n auto -v -rsxX

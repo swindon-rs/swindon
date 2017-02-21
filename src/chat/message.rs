@@ -100,12 +100,6 @@ pub fn get_active(meta: &Meta) -> Option<Option<u64>>   // XXX
 }
 
 
-/// Encode to JSON Websocket call:
-/// `[<meta_obj>, <args_list>, <kwargs_obj>]`
-pub fn encode_call(meta: &Meta, args: &Args, kwargs: &Kwargs) -> String {
-    json::encode(&Call(meta, args, kwargs)).unwrap()
-}
-
 #[derive(RustcEncodable)]
 pub struct AuthData {
     pub http_cookie: Option<String>,
@@ -136,14 +130,31 @@ impl<'a> Encodable for Auth<'a> {
     }
 }
 
-pub struct Call<'a>(pub &'a Meta, pub &'a Args, pub &'a Kwargs);
+pub struct Call<'a>(pub &'a Meta, pub &'a String, pub &'a Args, pub &'a Kwargs);
 
 impl<'a> Encodable for Call<'a> {
     fn encode<S: Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
         s.emit_seq(3, |s| {
-            s.emit_seq_elt(0, |s| self.0.encode(s))?;
-            s.emit_seq_elt(1, |s| self.1.encode(s))?;
-            s.emit_seq_elt(2, |s| self.2.encode(s))?;
+            s.emit_seq_elt(0, |s| {
+                let n = match self.0.get("connection_id") {
+                    Some(_) => self.0.len(),
+                    None => self.0.len() + 1,
+                };
+                s.emit_map(n, |s| {
+                    s.emit_map_elt_key(0, |s| s.emit_str("connection_id"))?;
+                    s.emit_map_elt_val(0, |s| self.1.encode(s))?;
+                    let m = self.0.iter()
+                        .filter(|&(&ref k, _)| k != "connection_id")
+                        .enumerate();
+                    for (i, (ref k, ref v)) in m {
+                        s.emit_map_elt_key(i+1, |s| s.emit_str(k))?;
+                        s.emit_map_elt_val(i+1, |s| v.encode(s))?;
+                    }
+                    Ok(())
+                })
+            })?;
+            s.emit_seq_elt(1, |s| self.2.encode(s))?;
+            s.emit_seq_elt(2, |s| self.3.encode(s))?;
             Ok(())
         })?;
         Ok(())
@@ -155,7 +166,7 @@ impl<'a> Encodable for Call<'a> {
 mod test {
     use rustc_serialize::json::{self, Json};
 
-    use chat::message::{self, Meta, Args, Kwargs, Auth, AuthData};
+    use chat::message::{self, Call, Meta, Args, Kwargs, Auth, AuthData};
     use super::ValidationError as V;
 
     #[test]
@@ -240,18 +251,26 @@ mod test {
         let mut meta = Meta::new();
         let mut args = Args::new();
         let mut kw = Kwargs::new();
+        let cid = "123".to_string();
 
-        let res = message::encode_call(&meta, &args, &kw);
-        assert_eq!(res, "[{},[],{}]");
+        let res = json::encode(&Call(&meta, &cid, &args, &kw)).unwrap();
+        assert_eq!(res, "[{\"connection_id\":\"123\"},[],{}]");
 
         meta.insert("request_id".into(), Json::String("123".into()));
         args.push(Json::String("Hello".into()));
         args.push(Json::String("World!".into()));
         kw.insert("room".into(), Json::U64(123));
 
-        let res = message::encode_call(&meta, &args, &kw);
+        let res = json::encode(&Call(&meta, &cid, &args, &kw)).unwrap();
         assert_eq!(res, concat!(
-            r#"[{"request_id":"123"},"#,
+            r#"[{"connection_id":"123","request_id":"123"},"#,
+            r#"["Hello","World!"],"#,
+            r#"{"room":123}]"#));
+
+        meta.insert("connection_id".into(), Json::String("321".into()));
+        let res = json::encode(&Call(&meta, &cid, &args, &kw)).unwrap();
+        assert_eq!(res, concat!(
+            r#"[{"connection_id":"123","request_id":"123"},"#,
             r#"["Hello","World!"],"#,
             r#"{"room":123}]"#));
     }

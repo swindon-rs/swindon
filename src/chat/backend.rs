@@ -54,6 +54,7 @@ pub struct AuthCodec {
 pub struct CallCodec {
     state: CallState,
     meta: Arc<Meta>,
+    conn_id: Cid,
     sender: ConnectionSender,
 }
 
@@ -77,7 +78,7 @@ impl AuthCodec {
 }
 
 impl CallCodec {
-    pub fn new(auth: Arc<String>, path: String,
+    pub fn new(auth: Arc<String>, path: String, cid: Cid,
         meta: &Arc<Meta>, args: Args, kw: Kwargs, sender: ConnectionSender)
         -> CallCodec
     {
@@ -89,6 +90,7 @@ impl CallCodec {
                 kw: kw,
             },
             meta: meta.clone(),
+            conn_id: cid,
             sender: sender,
         }
     }
@@ -209,7 +211,8 @@ impl<S: Io> http::Codec<S> for CallCodec {
             e.request_line("POST", &path, Version::Http11);
             // TODO(tailhook) implement authrization
             e.add_header("Authorization", &*auth).unwrap();
-            let done = write_json_request(e, &Call(&*self.meta, &args, &kw));
+            let cid = serialize_cid(&self.conn_id);
+            let done = write_json_request(e, &Call(&*self.meta, &cid, &args, &kw));
             self.state = Wait;
             ok(done)
         } else {

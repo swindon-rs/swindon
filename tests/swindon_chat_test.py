@@ -140,7 +140,6 @@ async def test_auth_request__cookies(proxy_server, swindon):
 async def test_auth_request__querystring(proxy_server, swindon):
     url = (swindon.url / 'swindon-chat').with_query(
         'query=param1&query=param2')
-    print(url)
     call = proxy_server.swindon_chat
     async with call(url, timeout=1) as inflight:
         req, fut = await inflight.req.get()
@@ -240,7 +239,6 @@ async def test_echo_messages(proxy_server, swindon):
             }))
 
         echo = await ws.receive_json()
-        # XXX: connection_id must be absent!
         assert echo == [
             'result', {'request_id': '1'},
             {'echo': "some message"},
