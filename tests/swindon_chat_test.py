@@ -1,5 +1,6 @@
 import pytest
 import aiohttp
+import json
 
 from unittest import mock
 from async_timeout import timeout
@@ -247,7 +248,7 @@ async def test_echo_messages(proxy_server, swindon):
             ]
 
 
-async def test_subscribe_publish(proxy_server, swindon):
+async def test_topic_subscribe_publish(proxy_server, swindon):
     url = swindon.url / 'swindon-chat'
     async with proxy_server.swindon_chat(url, timeout=1) as inflight:
         req, fut = await inflight.req.get()
@@ -278,3 +279,55 @@ async def test_subscribe_publish(proxy_server, swindon):
             'hello', {}, {'user_id': 'topic-user:1', 'username': 'Jack'}]
         msg = await ws.receive_json()
         assert msg == ['message', {'topic': 'some.topic'}, {'Test': 'message'}]
+
+        async with aiohttp.ClientSession() as s:
+            publish_url = swindon.api / 'v1/publish' / 'some/topic'
+            data = b'"other message"'
+            async with s.post(publish_url, data=data) as resp:
+                assert resp.status == 204
+        msg = await ws.receive_json()
+        assert msg == ['message', {'topic': 'some.topic'}, 'other message']
+
+
+async def test_lattice_subscribe_update(proxy_server, swindon):
+    url = swindon.url / 'swindon-chat'
+    async with proxy_server.swindon_chat(url, timeout=1) as inflight:
+        req, fut = await inflight.req.get()
+        assert req.path == '/tangle/authorize_connection'
+        meta, args, kwargs = await req.json()
+        assert 'connection_id' in meta
+        assert not args
+        assert kwargs
+        cid = meta['connection_id']
+
+        async with aiohttp.ClientSession() as s:
+            u = swindon.api / 'v1/connection' / cid / 'lattices'
+            u = u / 'lattice/namespace'
+            data = json.dumps({
+                'shared': {
+                    'room1': {'last_message_counter': 123},
+                },
+                'private': {
+                    'lattice-user:1': {
+                        'room1': {'last_seen_counter': 120},
+                    }
+                },
+            })
+            async with s.put(u, data=data) as resp:
+                assert resp.status == 204
+
+        fut.set_result(json_response({
+            "user_id": "lattice-user:1", "username": "Jim"}))
+        ws = await inflight.client_resp
+        hello = await ws.receive_json()
+        assert hello == [
+            'hello', {}, {'user_id': 'lattice-user:1', 'username': 'Jim'}]
+        up = await ws.receive_json()
+        assert up == [
+            'lattice',
+            {'namespace': 'lattice.namespace'},
+            {'room1': {
+                'last_message_counter': 123,
+                'last_seen_counter': 120,
+                }},
+        ]
