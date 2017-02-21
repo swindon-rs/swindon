@@ -236,6 +236,7 @@ impl<S: Io> http::Codec<S> for CallCodec {
         assert!(end);
         match mem::replace(&mut self.state, Void) {
             Headers(Status::Ok) => {
+                // TODO: connection_id must be dropped from meta
                 match parse_response(data) {
                     Ok(x) => {
                         self.sender.send(ConnectionMessage::Result(
