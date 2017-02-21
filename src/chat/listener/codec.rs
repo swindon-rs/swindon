@@ -187,7 +187,7 @@ impl Handler {
 impl<S: Io> http::Codec<S> for Request {
     type ResponseFuture = FutureResult<EncoderDone<S>, Error>;
     fn recv_mode(&mut self) -> RecvMode {
-        RecvMode::BufferedUpfront(self.wdata.settings.max_payload_size)
+        RecvMode::buffered_upfront(self.wdata.settings.max_payload_size)
     }
     fn data_received(&mut self, data: &[u8], end: bool)
         -> Result<Async<usize>, Error>

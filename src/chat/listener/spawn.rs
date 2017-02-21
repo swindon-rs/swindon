@@ -34,6 +34,7 @@ pub fn listen(addr: SocketAddr, worker_data: &Arc<WorkerData>,
     let w1 = worker_data.clone();
     let w2 = worker_data.clone();
     let runtime = worker_data.runtime.clone();
+    let h1 = runtime.handle.clone();
     let listener = TcpListener::bind(&addr, &worker_data.handle)?;
     // TODO(tailhook) how to update?
     let hcfg = minihttp::server::Config::new()
@@ -56,7 +57,7 @@ pub fn listen(addr: SocketAddr, worker_data: &Arc<WorkerData>,
         })
         .filter_map(|x| x)
         .map(move |(socket, saddr)| {
-             Proto::new(socket, &hcfg, Handler::new(saddr, w2.clone()))
+             Proto::new(socket, &hcfg, Handler::new(saddr, w2.clone()), &h1)
              // always succeed
              .then(|_| Ok(()))
         })

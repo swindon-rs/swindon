@@ -61,7 +61,7 @@ pub fn spawn_listener(addr: SocketAddr, handle: &Handle,
         .filter_map(|x| x)
         .map(move |(socket, saddr)| {
              Proto::new(socket, &hcfg,
-                Router::new(saddr, r2.clone(), h1.clone()))
+                Router::new(saddr, r2.clone(), h1.clone()), &h1)
              // always succeed
              .then(|_| Ok(()))
         })

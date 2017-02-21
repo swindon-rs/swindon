@@ -25,7 +25,7 @@ struct WebsockReply {
 impl<S: Io + 'static> Codec<S> for WebsockReply {
     type ResponseFuture = Reply<S>;
     fn recv_mode(&mut self) -> RecvMode {
-        RecvMode::Hijack
+        RecvMode::hijack()
     }
     fn data_received(&mut self, data: &[u8], end: bool)
         -> Result<Async<usize>, Error>

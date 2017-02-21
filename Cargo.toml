@@ -19,13 +19,13 @@ lazy_static = "0.2.1"
 mime = "0.2.2"
 mime_guess = "1.8.0"
 tk-sendfile = "0.3.1"
-tk-bufstream = "0.2.2"
-minihttp = { git = "https://github.com/popravich/minihttp", rev="d200122" }
+tk-bufstream = "0.2.4"
+minihttp = { git = "https://github.com/popravich/minihttp", rev="c74ce50" }
 netbuf = "0.3.7"
 sha1 = "0.2.0"
 byteorder = "0.5.3"
 httparse = "1.2.1"
-httpbin = { git="https://github.com/tailhook/httpbin-rs", rev="3cf2634" }
+httpbin = { git="https://github.com/tailhook/httpbin-rs", rev="616cfdc" }
 slab = "0.3.0"
 matches = "0.1.4"
 assert_matches = "1.0.1"
@@ -36,7 +36,7 @@ abstract-ns = "0.2.4"
 ns-std-threaded = "0.1.0"
 
 [replace]
-"minihttp:0.1.0" = { git = "https://github.com/popravich/minihttp", rev="d200122" }
+"minihttp:0.1.0" = { git = "https://github.com/popravich/minihttp", rev="c74ce50" }
 
 [[bin]]
 name = "swindon"
