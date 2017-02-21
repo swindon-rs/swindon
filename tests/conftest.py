@@ -230,8 +230,8 @@ class ContextServer:
         assert self._srv
 
         async def _send_request():
-            async with aiohttp.ClientSession(**kwargs) as sess:
-                async with sess.request(method, url) as resp:
+            async with aiohttp.ClientSession() as sess:
+                async with sess.request(method, url, **kwargs) as resp:
                     await resp.read()
                     return resp
 
