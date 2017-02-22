@@ -66,6 +66,46 @@ Options
    repeating after some short timeout makes sense (chances that some connection
    freed some resources).
 
+.. opt:: first-byte-timeout
+
+   (default ``5s``) Timeout receiving very first byte over connection
+
+.. opt:: keep-alive-timeout
+
+   (default ``90s``) Timeout of idle connection (when no request has been sent
+   yet)
+
+.. opt:: headers-timeout
+
+   (default ``10s``) Timeout of receiving whole request headers
+
+   This timeout starts when first byte of headers is received
+
+.. opt:: input-body-byte-timeout
+
+   (default ``15s``) Maximum delay between any two bytes of
+   input request received
+
+.. opt:: input-body-whole-timeout
+
+   (default ``1 hour``) Timeout of whole request body received
+
+.. opt:: output-body-byte-timeout
+
+   (default ``15s``)
+
+.. opt:: output-body-whole-timeout
+
+   (default ``1 hour``) Timeout for the whole response body to be send to the
+   client
+
+   This timeout is taken literally for any response, so it must be
+   as large as needed for slowest client fetching slowest file. I.e.
+   it might be as big as a hour or day for some applications, but consider
+   short timeouts if you don't serve large files to prevent DoS attacks.
+
+
+
 .. opt:: debug-routing
 
    Enable ``X-Swindon-*`` headers in responses to debug routes chosen for

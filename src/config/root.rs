@@ -20,6 +20,14 @@ pub struct Config {
     pub max_connections: usize,
     pub pipeline_depth: usize,
     pub listen_error_timeout: De<Duration>,
+    pub first_byte_timeout: De<Duration>,
+    pub keep_alive_timeout: De<Duration>,
+    pub headers_timeout: De<Duration>,
+    pub input_body_byte_timeout: De<Duration>,
+    pub input_body_whole_timeout: De<Duration>,
+    pub output_body_byte_timeout: De<Duration>,
+    pub output_body_whole_timeout: De<Duration>,
+
     pub routing: Routing,
     pub handlers: HashMap<HandlerName, Handler>,
     pub session_pools: HashMap<SessionPoolName, Arc<SessionPool>>,
@@ -34,12 +42,21 @@ pub struct Config {
 
 pub fn config_validator<'a>() -> Structure<'a> {
     Structure::new()
+
     .member("listen", Sequence::new(listen::validator()))
     .member("max_connections",
         Numeric::new().min(1).max(1 << 31).default(1000))
     .member("pipeline_depth",
         Numeric::new().min(1).max(10000).default(2))
     .member("listen_error_timeout", Scalar::new().default("100ms"))
+    .member("first_byte_timeout", Scalar::new().default("5s"))
+    .member("keep_alive_timeout", Scalar::new().default("90s"))
+    .member("headers_timeout", Scalar::new().default("10s"))
+    .member("input_body_byte_timeout", Scalar::new().default("15s"))
+    .member("input_body_whole_timeout", Scalar::new().default("1 hour"))
+    .member("output_body_byte_timeout", Scalar::new().default("15s"))
+    .member("output_body_whole_timeout", Scalar::new().default("1 hour"))
+
     .member("routing", routing::validator())
     .member("handlers", Mapping::new(Scalar::new(), handlers::validator()))
     .member("session_pools",
