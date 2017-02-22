@@ -48,7 +48,7 @@ impl<S: Io> http::Codec<S> for Codec {
         if let State::Wait = mem::replace(&mut self.state, State::Void) {
             self.state = State::Headers(HalfResp::from_headers(headers));
             // TODO(tailhook) limit and streaming
-            Ok(http::RecvMode::Buffered(10_485_760))
+            Ok(http::RecvMode::buffered(10_485_760))
         } else {
             panic!("wrong state");
         }

@@ -3,9 +3,9 @@ use std::sync::Arc;
 use futures::{Async, Future};
 use futures::stream::{Stream};
 use minihttp::Status;
-use minihttp::server::{Error, Codec, RecvMode, WebsocketAccept};
+use minihttp::server::{Error, Codec, RecvMode};
 use minihttp::server as http;
-use minihttp::websocket::{ServerCodec as WebsocketCodec};
+use minihttp::websocket::{ServerCodec as WebsocketCodec, Accept};
 use tk_bufstream::{ReadBuf, WriteBuf};
 use tokio_core::io::Io;
 use futures::future::{ok};
@@ -17,7 +17,7 @@ use default_error_page::serve_error_page;
 
 
 struct WebsockReply {
-    rdata: Option<(Arc<Config>, Debug, WebsocketAccept)>,
+    rdata: Option<(Arc<Config>, Debug, Accept)>,
     handle: Handle,
 }
 

@@ -146,7 +146,7 @@ impl<S: Io> http::Codec<S> for AuthCodec {
             self.state = Headers(
                 headers.status().unwrap_or(Status::InternalServerError));
             // TODO(tailhook) limit and streaming
-            Ok(http::RecvMode::Buffered(10_485_760))
+            Ok(http::RecvMode::buffered(10_485_760))
         } else {
             panic!("wrong state");
         }
@@ -227,7 +227,7 @@ impl<S: Io> http::Codec<S> for CallCodec {
             self.state = Headers(
                 headers.status().unwrap_or(Status::InternalServerError));
             // TODO(tailhook) configure limit
-            Ok(http::RecvMode::Buffered(10_485_760))
+            Ok(http::RecvMode::buffered(10_485_760))
         } else {
             panic!("wrong state");
         }
@@ -280,7 +280,7 @@ impl<S: Io> http::Codec<S> for InactivityCodec {
         -> Result<http::RecvMode, http::Error>
     {
         // TODO(tailhook) retry request if failed
-        Ok(http::RecvMode::Buffered(0))
+        Ok(http::RecvMode::buffered(0))
     }
     fn data_received(&mut self, data: &[u8], end: bool)
         -> Result<Async<usize>, http::Error>

@@ -1,25 +1,37 @@
-use std::io;
-use std::sync::{Arc, RwLock};
-use std::path::{Path, PathBuf, Component};
 use std::collections::HashMap;
+use std::collections::hash_map::DefaultHasher;
 use std::collections::hash_map::Entry::{Occupied, Vacant};
 use std::hash::{Hash, Hasher};
-use std::collections::hash_map::DefaultHasher;
+use std::io;
+use std::path::{Path, PathBuf, Component};
+use std::sync::{Arc, RwLock};
 
+use futures_cpupool::CpuPool;
 use futures::{Future};
 use futures::future::{ok};
-use minihttp::Status;
-use mime::TopLevel;
 use mime_guess::guess_mime_type;
+use mime::TopLevel;
+use minihttp::server::Error;
+use minihttp::Status;
 use tk_sendfile::DiskPool;
-use futures_cpupool::CpuPool;
 
-use intern::{DiskPoolName};
-use incoming::{Input, Request, Reply, Transport};
-use incoming::reply;
 use config;
 use config::static_files::{Static, Mode, SingleFile};
 use default_error_page::{serve_error_page, error_page};
+use incoming::{Input, Request, Reply, Transport};
+use incoming::reply;
+use intern::{DiskPoolName};
+
+
+quick_error! {
+    #[derive(Debug)]
+    enum FileError {
+        Sendfile(err: io::Error) {
+            description("sendfile error")
+            cause(err)
+        }
+    }
+}
 
 
 lazy_static! {
@@ -65,7 +77,8 @@ pub fn serve_dir<S: Transport>(settings: &Arc<Static>, mut inp: Input)
                         Box::new(e.raw_body()
                             .and_then(|raw_body| file.write_into(raw_body))
                             .map(|raw_body| raw_body.done())
-                            .map_err(Into::into))
+                            .map_err(FileError::Sendfile)
+                            .map_err(Error::custom))
                         as Reply<_>
                     } else {
                         Box::new(ok(e.done()))
@@ -130,7 +143,8 @@ pub fn serve_file<S: Transport>(settings: &Arc<SingleFile>, mut inp: Input)
                         Box::new(e.raw_body()
                             .and_then(|raw_body| file.write_into(raw_body))
                             .map(|raw_body| raw_body.done())
-                            .map_err(Into::into))
+                            .map_err(FileError::Sendfile)
+                            .map_err(Error::custom))
                         as Reply<_>
                     } else {
                         Box::new(ok(e.done()))

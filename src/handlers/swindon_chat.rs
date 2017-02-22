@@ -5,9 +5,9 @@ use futures::stream::{Stream};
 use futures::sink::{Sink};
 use futures::future::{Either};
 use minihttp::Status;
-use minihttp::server::{Error, Codec, RecvMode, WebsocketAccept};
+use minihttp::server::{Error, Codec, RecvMode};
 use minihttp::server as http;
-use minihttp::websocket::{self, ServerCodec as WebsocketCodec, Packet};
+use minihttp::websocket::{self, ServerCodec as WebsocketCodec, Packet, Accept};
 use tk_bufstream::{ReadBuf, WriteBuf};
 use tokio_core::io::Io;
 use futures::future::{ok};
@@ -34,7 +34,7 @@ struct WebsockReply {
 
 struct ReplyData {
     context: Context,
-    accept: WebsocketAccept,
+    accept: Accept,
 }
 
 
