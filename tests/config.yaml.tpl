@@ -27,8 +27,10 @@ routing:
   ### !SingleFile routes ###
   localhost/static-file: single_file
   localhost/missing-file: missing_file
-  localhost/no-permission: no-permission
+  localhost/no-permission: no_permission
   localhost/static-file-headers: extra_headers
+  localhost/symlink: single_symlink
+  localhost/dev-null: dev_null
 
   ### !Static routes ###
   localhost/static: static
@@ -73,7 +75,7 @@ handlers:
     path: /work/tests/assets/missing_file.txt
     content-type: text/is/missing
   no_permission: !SingleFile
-    path: /work/tests/assets/permission.txt
+    path: /no-permission.txt
     content-type: text/no/permission
   extra_headers: !SingleFile
     path: /work/tests/assets/static_file.txt
@@ -81,6 +83,12 @@ handlers:
     extra-headers:
       X-Extra-Header: "extra value"
       X-Bad-Header: "bad header\r\n"
+  single_symlink: !SingleFile
+    path: /work/tests/assets/link.txt
+    content-type: text/plain
+  dev_null: !SingleFile
+    path: /dev/null
+    content-type: text/plain
 
   ### Static handlers ###
 
@@ -104,11 +112,13 @@ handlers:
   proxy_w_ip_header: !Proxy
     destination: proxy_dest
     ip-header: X-Some-Header
+  swindon_proxy: !Proxy
+    destination: swindon_http_dest
 
   ### SwindonChat handlers ###
   swindon_chat: !SwindonChat
     session_pool: swindon_pool
-    http_route: swindon_http_dest
+    http_route: swindon_proxy
     message_handlers:
       "*": swindon_chat_dest/
 

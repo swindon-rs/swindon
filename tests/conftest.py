@@ -12,6 +12,7 @@ import aiohttp
 import asyncio
 
 from collections import namedtuple
+from functools import partial
 from aiohttp import web
 
 ROOT = pathlib.Path('/work')
@@ -136,6 +137,8 @@ def swindon(_proc, request, debug_routing, unused_port):
                             proxy_address=to_addr(PROXY_ADDRESS),
                             spool_address=to_addr(SESSION_POOL_ADDRESS),
                             )
+    assert _check_config(config, returncode=0, __swindon_bin=swindon_bin) == ''
+
     os.write(fd, config.encode('utf-8'))
 
     proc = _proc(swindon_bin,
@@ -164,29 +167,29 @@ def swindon(_proc, request, debug_routing, unused_port):
 
 @pytest.fixture(params=SWINDON_BIN)
 def check_config(request):
-    swindon_bin = request.param
+    return partial(_check_config, __swindon_bin=request.param)
 
-    def checker(cfg='', returncode=1):
-        cfg = textwrap.dedent(cfg)
-        with tempfile.NamedTemporaryFile('wt') as f:
-            f.write(cfg)
-            f.flush()
 
-            res = subprocess.run([
-                swindon_bin,
-                '--check-config',
-                '--config',
-                f.name,
-                ],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                encoding='utf-8',
-                timeout=15,
-                )
-            assert not res.stdout, res
-            assert res.returncode == returncode, res
-            return res.stderr.replace(f.name, 'TEMP_FILE_NAME')
-    return checker
+def _check_config(cfg='', returncode=1, *, __swindon_bin):
+    cfg = textwrap.dedent(cfg)
+    with tempfile.NamedTemporaryFile('wt') as f:
+        f.write(cfg)
+        f.flush()
+
+        res = subprocess.run([
+            __swindon_bin,
+            '--check-config',
+            '--config',
+            f.name,
+            ],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            encoding='utf-8',
+            timeout=15,
+            )
+        assert not res.stdout, res
+        assert res.returncode == returncode, res
+        return res.stderr.replace(f.name, 'TEMP_FILE_NAME')
 
 
 @pytest.fixture

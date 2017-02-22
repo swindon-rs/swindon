@@ -142,6 +142,7 @@ pub fn serve_file<S: Transport>(settings: &Arc<SingleFile>, mut inp: Input)
                 // TODO(tailhook) find out if we want to expose other
                 // errors, for example "Permission denied" and "is a directory"
                 Err(_) => {
+                    // TODO: log error.
                     Box::new(error_page(Status::InternalServerError, e))
                 }
             }))
