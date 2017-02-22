@@ -237,6 +237,41 @@ async def test_echo_messages(proxy_server, swindon):
             ['some message'],
             {},
         ]
+        auth_data = 'Tangle eyJ1c2VyX2lkIjoidXNlcjoyIn0='
+        assert req.headers['Authorization'] == auth_data
+
+        fut.set_result(json_response({
+            'echo': "some message",
+            }))
+
+        echo = await ws.receive_json()
+        assert echo == [
+            'result', {'request_id': '1'},
+            {'echo': "some message"},
+            ]
+
+
+async def test_prefix_routes(proxy_server, swindon):
+    url = swindon.url / 'swindon-chat'
+    async with proxy_server.swindon_chat(url, timeout=1) as inflight:
+        req, fut = await inflight.req.get()
+        assert req.path == '/tangle/authorize_connection'
+        fut.set_result(json_response({
+            "user_id": "user:2", "username": "Jack"}))
+        ws = await inflight.client_resp
+        hello = await ws.receive_json()
+        assert hello == [
+            'hello', {}, {'user_id': 'user:2', 'username': 'Jack'}]
+
+        ws.send_json(['prefixed.echo_message', {'request_id': '1'},
+                      ['some message'], {}])
+        req, fut = await inflight.req.get()
+        assert req.path == '/with-prefix/prefixed/echo_message'
+        assert await req.json() == [
+            {'request_id': '1', 'connection_id': mock.ANY},
+            ['some message'],
+            {},
+        ]
         fut.set_result(json_response({
             'echo': "some message",
             }))

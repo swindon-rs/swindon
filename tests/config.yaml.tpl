@@ -121,6 +121,7 @@ handlers:
     http_route: swindon_proxy
     message_handlers:
       "*": swindon_chat_dest/
+      prefixed.*: swindon_chat_dest/with-prefix
 
   ### WebsocketEcho handlers ###
   websocket_echo: !WebsocketEcho
