@@ -166,7 +166,7 @@ def swindon(_proc, request, debug_routing, unused_port):
 def check_config(request):
     swindon_bin = request.param
 
-    def checker(cfg=''):
+    def checker(cfg='', returncode=1):
         cfg = textwrap.dedent(cfg)
         with tempfile.NamedTemporaryFile('wt') as f:
             f.write(cfg)
@@ -184,7 +184,7 @@ def check_config(request):
                 timeout=15,
                 )
             assert not res.stdout, res
-            assert res.returncode == 1, res
+            assert res.returncode == returncode, res
             return res.stderr.replace(f.name, 'TEMP_FILE_NAME')
     return checker
 

@@ -2,15 +2,16 @@ import pytest
 
 
 def test_empty_config(check_config):
-    assert check_config() != ""
+    # NOTE: empty config is ok
+    assert check_config(returncode=0) == ""
 
 
 def test_no_listen(check_config):
     err = check_config("""
         routing: {}
         handlers: {}
-    """)
-    assert err != ''
+    """, returncode=0)
+    assert err == ''
 
 
 # XXX: all this values (except 1) are valid yaml booleans
@@ -25,7 +26,7 @@ def test_debug_variants(check_config, debug_routing):
     assert (
         ".debug_routing: Can't parse value: provided string"
         " was not `true` or `false`"
-        )in err
+        ) in err
 
 
 def test_invalid_listen(check_config):
@@ -67,6 +68,108 @@ def test_no_proxy_destination(check_config):
     """
     err = check_config(cfg)
     assert ".handlers.abc.destination: Expected scalar, got Null" in err
+
+
+def test_unknown_proxy_destination(check_config):
+    cfg = """
+        listen:
+        - 127.0.0.1:8080
+        routing:
+            localhost:/abc: abc
+        handlers:
+            abc: !Proxy
+                destination: unknown-dest
+    """
+    err = check_config(cfg)
+    assert (
+        "handler\"abc\": unknown http destination upstream\"unknown-dest\""
+        ) in err
+
+
+def test_unknown_chat_http_route(check_config):
+    cfg = """
+        routing:
+            localhost:/abc: chat
+        handlers:
+            chat: !SwindonChat
+                session-pool: chat
+                http-route: unknown-dest
+                message-handlers:
+                    "*": dummy/
+        session-pools:
+            chat:
+                inactivity-handlers:
+                - dummy/
+        http-destinations:
+            dummy:
+                addresses:
+                - 1.2.3.4:5
+    """
+    err = check_config(cfg)
+    assert (
+        "handler\"chat\": unknown http route handler\"unknown-dest\""
+        ) in err
+
+
+def test_unknown_chat_message_handlers(check_config):
+    cfg = """
+        routing:
+            localhost:/abc: chat
+        handlers:
+            chat: !SwindonChat
+                session-pool: chat
+                message-handlers:
+                    "*": dummy/
+                    "test": unknown-dest/
+        session-pools:
+            chat:
+                inactivity-handlers:
+                - dummy/
+        http-destinations:
+            dummy:
+                addresses:
+                - 1.2.3.4:5
+    """
+    err = check_config(cfg)
+    assert (
+        "handler\"chat\": unknown http destination upstream\"unknown-dest\""
+        ) in err
+
+    cfg = """
+        routing:
+            localhost:/abc: chat
+        handlers:
+            chat: !SwindonChat
+                session-pool: chat
+                message-handlers:
+                    "*": unknown-dest/
+                    "tangle.*": dummy/
+        session-pools:
+            chat:
+                inactivity-handlers:
+                - dummy/
+        http-destinations:
+            dummy:
+                addresses:
+                - 1.2.3.4:5
+    """
+    err = check_config(cfg)
+    assert (
+        "handler\"chat\": unknown http destination upstream\"unknown-dest\""
+        ) in err
+
+
+def test_unknown_session_pool_dest(check_config):
+    cfg = """
+        session-pools:
+            chat:
+                inactivity-handlers:
+                - dummy/
+    """
+    err = check_config(cfg)
+    assert (
+        "sessionpool\"chat\": unknown http destination upstream\"dummy\""
+        ) in err
 
 
 def test_no_handler(check_config):
