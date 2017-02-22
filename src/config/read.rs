@@ -34,6 +34,12 @@ quick_error! {
     }
 }
 
+macro_rules! err {
+    // Shortcut to config post-load validation error
+    ($msg:expr, $($a:expr),*) => (
+        return Err(format!($msg, $($a),*).into())
+    )
+}
 
 
 pub fn include_file(files: &RefCell<&mut Vec<(PathBuf, Metadata)>>,
@@ -95,22 +101,63 @@ pub fn read_config<P: AsRef<Path>>(filename: P)
         parse_config(filename, &config_validator(), &opt)?
     };
 
+    // Extra config validations
+
+    for (route, name) in &cfg.routing {
+        if cfg.handlers.get(name).is_none() {
+            err!("Unknown handler for route: {:?} {:?}", route, name)
+        }
+        // TODO: check if route ends with '/'
+        //  (cause we check for it in route matcher)
+    }
     for (name, h) in &cfg.handlers {
-        if let &Handler::SwindonChat(ref chat) = h {
-            match cfg.session_pools.get(&chat.session_pool) {
-                None => {
-                    return Err(format!("No session pool {:?} defined",
-                        chat.session_pool).into());
-                }
-                Some(ref pool) => {
-                    let dest = chat.message_handlers.resolve(
-                        "tangle.session_inactive");
-                    if !pool.inactivity_handlers.contains(dest) {
-                        return Err(format!(
-                            "Inactivity destinations mismatch for {:?}: {:?}",
-                            name, dest).into())
+        match h {
+            &Handler::SwindonChat(ref chat) => {
+                match cfg.session_pools.get(&chat.session_pool) {
+                    None => {
+                        err!("No session pool {:?} defined", chat.session_pool)
+                    }
+                    Some(ref pool) => {
+                        let dest = chat.message_handlers.resolve(
+                            "tangle.session_inactive");
+                        if !pool.inactivity_handlers.contains(dest) {
+                            err!(concat!(
+                                "Inactivity destinations mismatch for",
+                                 "{:?}: {:?}"), name, dest)
+                        }
                     }
                 }
+                if let Some(h) = chat.http_route.as_ref() {
+                    if !cfg.handlers.contains_key(h) {
+                        err!("{:?}: unknown http route {:?}", name, h)
+                    }
+                }
+                let u = &chat.message_handlers.default.upstream;
+                if !cfg.http_destinations.contains_key(u) {
+                    err!("{:?}: unknown http destination {:?}", name, u)
+                }
+                for (pat, dest) in &chat.message_handlers.map {
+                    if !cfg.http_destinations.contains_key(&dest.upstream) {
+                        err!("{:?}: unknown http destination {:?}",
+                             name, dest.upstream)
+                    }
+                }
+            }
+            &Handler::Proxy(ref proxy) => {
+                let u = &proxy.destination.upstream;
+                if !cfg.http_destinations.contains_key(u) {
+                    err!("{:?}: unknown http destination {:?}", name, u)
+                }
+            }
+            _ => {}
+        }
+    }
+    // TODO: verify session_pool inactivity handlers
+    for (name, s) in &cfg.session_pools {
+        for dest in &s.inactivity_handlers {
+            if !cfg.http_destinations.contains_key(&dest.upstream) {
+                err!("{:?}: unknown http destination {:?}",
+                     name, dest.upstream)
             }
         }
     }

@@ -24,8 +24,8 @@ pub enum Pattern {
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct RoutingTable {
-    default: http::Destination,
-    map: BTreeMap<Pattern, http::Destination>,
+    pub default: http::Destination,
+    pub map: BTreeMap<Pattern, http::Destination>,
 }
 
 pub fn validator<'x>() -> Structure<'x> {

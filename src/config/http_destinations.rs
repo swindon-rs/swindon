@@ -28,5 +28,5 @@ pub fn validator<'x>() -> Structure<'x> {
         Numeric::new().min(1).max(100_000).default(100))
     .member("in_flight_requests_per_backend_connection",
         Numeric::new().min(1).max(1000).default(2))
-    .member("addresses", Sequence::new(Scalar::new()))
+    .member("addresses", Sequence::new(Scalar::new()).min_length(1))
 }
