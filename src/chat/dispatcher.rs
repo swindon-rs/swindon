@@ -1,4 +1,6 @@
 use std::sync::Arc;
+use std::time::{Instant, Duration};
+use std::cmp;
 
 use futures::AsyncSink;
 use futures::future::{FutureResult, ok, err};
@@ -15,7 +17,7 @@ use config::SessionPool;
 use chat::{Cid, ConnectionSender, CloseReason};
 use chat::cid::serialize_cid;
 use chat::message::{decode_message, get_active, Meta, Args, Kwargs};
-use chat::processor::{ProcessorPool, ConnectionMessage};
+use chat::processor::{Action, ProcessorPool, ConnectionMessage};
 use chat::backend::CallCodec;
 use chat::error::MessageError;
 
@@ -38,7 +40,7 @@ impl websocket::Dispatcher for Dispatcher {
             Text(data) => match decode_message(data) {
                 Ok((name, mut meta, args, kwargs)) => {
                     if let Some(duration) = get_active(&meta) {
-                        // TODO(tailhook) update activity
+                        self.update_activity(duration);
                     }
                     self.method_call(name, meta, args, kwargs);
                     ok(()) // no backpressure, yet
@@ -104,5 +106,17 @@ impl Dispatcher {
                     MessageError::PoolError));
             }
         }
+    }
+
+    fn update_activity(&self, seconds: u64) {
+        let min = *self.pool_settings.client_min_idle_timeout;
+        let max = *self.pool_settings.client_max_idle_timeout;
+        let seconds = Duration::from_secs(seconds);
+        let seconds = cmp::max(cmp::min(seconds, max), min);
+        let timestamp = Instant::now() + seconds;
+        self.processor.send(Action::UpdateActivity{
+            conn_id: self.cid,
+            timestamp: timestamp,
+        });
     }
 }
