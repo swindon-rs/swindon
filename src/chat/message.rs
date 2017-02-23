@@ -87,14 +87,11 @@ pub fn decode_message(s: &str)
 
 /// Returns true if Meta object contains 'active' key and
 /// it either set to true or uint timeout (in seconds).
-///
-/// NOTE: we support bool for compatibility with tangle
-pub fn get_active(meta: &Meta) -> Option<Option<u64>>   // XXX
+pub fn get_active(meta: &Meta) -> Option<u64>
 {
     let duration = meta.get(&"active".to_string());
     match duration {
-        Some(&Json::U64(v)) => Some(Some(v)),
-        Some(&Json::Boolean(true)) => Some(None),
+        Some(&Json::U64(v)) => Some(v),
         _ => None,
     }
 }
@@ -285,8 +282,7 @@ mod test {
         assert!(message::get_active(&meta).is_none());
 
         meta.insert("active".into(), Json::Boolean(true));
-        assert!(message::get_active(&meta).is_some());
-        assert_eq!(message::get_active(&meta).unwrap(), None);
+        assert!(message::get_active(&meta).is_none());
 
         meta.insert("active".into(), Json::I64(123i64));
         assert!(message::get_active(&meta).is_none());
@@ -295,7 +291,7 @@ mod test {
         assert!(message::get_active(&meta).is_none());
 
         meta.insert("active".into(), Json::U64(123));
-        assert_eq!(message::get_active(&meta).unwrap(), Some(123 as u64));
+        assert_eq!(message::get_active(&meta).unwrap(), 123u64);
 
         if let Json::Object(meta) = Json::from_str("{\"active\": 123}")
             .unwrap()
