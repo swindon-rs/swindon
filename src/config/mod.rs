@@ -26,7 +26,7 @@ pub use self::routing::Route;
 pub use self::handlers::Handler;
 pub use self::disk::Disk;
 pub use self::empty_gif::EmptyGif;
-pub use self::session_pools::{SessionPool, InactivityTimeouts};
+pub use self::session_pools::{SessionPool};
 pub use self::http::Destination;
 
 use quire::{parse_string, Options};
@@ -222,9 +222,9 @@ pub mod test {
         let cfg = make_config();
 
         let p = cfg.session_pools.get("example-session".into()).unwrap();
-        assert_eq!(*p.inactivity.new_connection, Duration::from_secs(60));
-        assert_eq!(*p.inactivity.client_min, Duration::from_secs(1));
-        assert_eq!(*p.inactivity.client_max, Duration::from_secs(7200));
-        assert_eq!(*p.inactivity.client_default, Duration::from_secs(1));
+        assert_eq!(*p.new_connection_idle_timeout, Duration::from_secs(60));
+        assert_eq!(*p.client_min_idle_timeout, Duration::from_secs(1));
+        assert_eq!(*p.client_max_idle_timeout, Duration::from_secs(7200));
+        assert_eq!(*p.client_default_idle_timeout, Duration::from_secs(1));
     }
 }

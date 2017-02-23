@@ -84,7 +84,7 @@ impl Pool {
             connections: HashMap::new(),
             topics: HashMap::new(),
             lattices: HashMap::new(),
-            new_connection_timeout: (*cfg.inactivity.new_connection).clone(),
+            new_connection_timeout: (*cfg.new_connection_idle_timeout).clone(),
         }
     }
 
@@ -493,12 +493,10 @@ mod test {
                     config::ListenSocket::Tcp(
                     "127.0.0.1:65535".parse().unwrap())],
                 inactivity_handlers: Vec::new(),
-                inactivity: Arc::new(config::InactivityTimeouts {
-                    new_connection: De::new(Duration::from_secs(60)),
-                    client_min: De::new(Duration::from_secs(60)),
-                    client_max: De::new(Duration::from_secs(60)),
-                    client_default: De::new(Duration::from_secs(60)),
-                }),
+                new_connection_idle_timeout: De::new(Duration::from_secs(60)),
+                client_min_idle_timeout: De::new(Duration::from_secs(60)),
+                client_max_idle_timeout: De::new(Duration::from_secs(60)),
+                client_default_idle_timeout: De::new(Duration::from_secs(60)),
                 max_connections: 100,
                 listen_error_timeout: Duration::from_secs(1).into(),
                 pipeline_depth: 2,
