@@ -38,7 +38,7 @@ impl websocket::Dispatcher for Dispatcher {
     fn frame(&mut self, frame: &Frame) -> FutureResult<(), Error> {
         match *frame {
             Text(data) => match decode_message(data) {
-                Ok((name, mut meta, args, kwargs)) => {
+                Ok((name, meta, args, kwargs)) => {
                     if let Some(duration) = get_active(&meta) {
                         self.update_activity(duration);
                     }

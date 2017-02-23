@@ -136,7 +136,7 @@ pub fn read_config<P: AsRef<Path>>(filename: P)
                 if !cfg.http_destinations.contains_key(u) {
                     err!("{:?}: unknown http destination {:?}", name, u)
                 }
-                for (pat, dest) in &chat.message_handlers.map {
+                for (_, dest) in &chat.message_handlers.map {
                     if !cfg.http_destinations.contains_key(&dest.upstream) {
                         err!("{:?}: unknown http destination {:?}",
                              name, dest.upstream)
