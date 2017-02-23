@@ -2,7 +2,8 @@ _VARS:
   - &LISTEN ${listen_address}
   - &DEBUG_ROUTING ${debug_routing}
   - &PROXY_ADDRESS ${proxy_address}
-  - &SPOOL_ADDRESS ${spool_address}
+  - &SPOOL_ADDRESS1 ${spool_address1}
+  - &SPOOL_ADDRESS2 ${spool_address2}
 
 listen:
 - *LISTEN
@@ -47,6 +48,7 @@ routing:
 
   ### !SwindonChat routes ###
   localhost/swindon-chat: swindon_chat
+  localhost/swindon-chat-w-timeouts: swindon_chat_w_timeouts
 
   ### !WebsocketEcho routes ###
   localhost/websocket-echo: websocket_echo
@@ -122,6 +124,10 @@ handlers:
     message_handlers:
       "*": swindon_chat_dest/
       prefixed.*: swindon_chat_dest/with-prefix
+  swindon_chat_w_timeouts: !SwindonChat
+    session_pool: pool_w_timeouts
+    message_handlers:
+      "*": swindon_chat_dest/
 
   ### WebsocketEcho handlers ###
   websocket_echo: !WebsocketEcho
@@ -129,7 +135,7 @@ handlers:
 session-pools:
   swindon_pool:
     listen:
-    - *SPOOL_ADDRESS
+    - *SPOOL_ADDRESS1
     inactivity_handlers:
     - swindon_chat_dest/
     ### defaults: ###
@@ -142,6 +148,14 @@ session-pools:
     #   client_min: 1s
     #   client_max: 2h
     #   client_default: 1s
+  pool_w_timeouts:
+    listen:
+    - *SPOOL_ADDRESS2
+    inactivity_handlers:
+    - swindon_chat_dest
+    new_connection_idle_timeout: 1s
+    client_min_idle_timeout: 1s
+    client_max_idle_timeout: 10s
 
 http-destinations:
   ### Proxy destintations ###

@@ -97,7 +97,7 @@ def assert_headers(headers, debug_routing):
     assert headers.getall('Server') == ['swindon/func-tests']
 
 
-SwindonInfo = namedtuple('SwindonInfo', 'proc url proxy api')
+SwindonInfo = namedtuple('SwindonInfo', 'proc url proxy api api2')
 
 
 @pytest.fixture(scope='session')
@@ -120,7 +120,8 @@ def unused_port():
 def swindon(_proc, request, debug_routing, unused_port):
     SWINDON_ADDRESS = unused_port()
     PROXY_ADDRESS = unused_port()
-    SESSION_POOL_ADDRESS = unused_port()
+    SESSION_POOL_ADDRESS1 = unused_port()
+    SESSION_POOL_ADDRESS2 = unused_port()
 
     def to_addr(port):
         return '127.0.0.1:{}'.format(port)
@@ -135,12 +136,17 @@ def swindon(_proc, request, debug_routing, unused_port):
     config = tpl.substitute(listen_address=to_addr(SWINDON_ADDRESS),
                             debug_routing=str(debug_routing).lower(),
                             proxy_address=to_addr(PROXY_ADDRESS),
-                            spool_address=to_addr(SESSION_POOL_ADDRESS),
+                            spool_address1=to_addr(SESSION_POOL_ADDRESS1),
+                            spool_address2=to_addr(SESSION_POOL_ADDRESS2),
                             )
     assert _check_config(config, returncode=0, __swindon_bin=swindon_bin) == ''
 
     os.write(fd, config.encode('utf-8'))
 
+    print("Swinod ports: {}", dict(swindon=SWINDON_ADDRESS,
+                                   proxy=PROXY_ADDRESS,
+                                   session1=SESSION_POOL_ADDRESS1,
+                                   session2=SESSION_POOL_ADDRESS2))
     proc = _proc(swindon_bin,
                  '--verbose',
                  '--config',
@@ -157,9 +163,10 @@ def swindon(_proc, request, debug_routing, unused_port):
 
     url = yarl.URL('http://localhost:{}'.format(SWINDON_ADDRESS))
     proxy = yarl.URL('http://localhost:{}'.format(PROXY_ADDRESS))
-    api = yarl.URL('http://localhost:{}'.format(SESSION_POOL_ADDRESS))
+    api = yarl.URL('http://localhost:{}'.format(SESSION_POOL_ADDRESS1))
+    api2 = yarl.URL('http://localhost:{}'.format(SESSION_POOL_ADDRESS2))
     try:
-        yield SwindonInfo(proc, url, proxy, api)
+        yield SwindonInfo(proc, url, proxy, api, api2)
     finally:
         os.close(fd)
         os.remove(fname)
@@ -295,7 +302,7 @@ class _WSContext:
                 self.queue.put_nowait((err, None))
         fut.add_done_callback(set_ws)
 
-        return Inflight(self.queue, None, fut)
+        return WSInflight(self.queue, fut)
 
     async def __aexit__(self, exc_type, exc, tb):
         # XXX: this hangs for a while...
@@ -305,6 +312,8 @@ class _WSContext:
 
 
 _Inflight = namedtuple('Inflight', 'req srv_resp client_resp')
+
+_WSInflight = namedtuple('WSInflight', 'queue websocket')
 
 
 class Inflight(_Inflight):
@@ -318,6 +327,12 @@ class Inflight(_Inflight):
         else:
             self.srv_resp.set_result(resp)
         return await self.client_resp
+
+
+class WSInflight(_WSInflight):
+
+    async def request(self):
+        return await self.queue.get()
 
 
 # helpers

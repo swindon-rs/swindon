@@ -1,6 +1,7 @@
 import pytest
 import aiohttp
 import json
+import asyncio
 
 from unittest import mock
 from async_timeout import timeout
@@ -11,8 +12,8 @@ from aiohttp.web import json_response
 
 async def test_simple_userinfo(proxy_server, swindon):
     url = swindon.url / 'swindon-chat'
-    async with proxy_server.swindon_chat(url, timeout=1) as inflight:
-        req, fut = await inflight.req.get()
+    async with proxy_server.swindon_chat(url, timeout=1) as call:
+        req, fut = await call.request()
         assert req.path == '/tangle/authorize_connection'
         assert req.headers['Content-Type'] == 'application/json'
         assert 'Authorization' not in req.headers
@@ -27,7 +28,7 @@ async def test_simple_userinfo(proxy_server, swindon):
 
         fut.set_result(
             web.Response(text='{"user_id": "user:1", "username": "John"}'))
-        ws = await inflight.client_resp
+        ws = await call.websocket
         msg = await ws.receive_json()
         assert msg == ['hello', {}, {'user_id': 'user:1', 'username': 'John'}]
 
@@ -35,12 +36,12 @@ async def test_simple_userinfo(proxy_server, swindon):
 async def test_ws_close_timeout(proxy_server, swindon):
     url = swindon.url / 'swindon-chat'
     with timeout(1):
-        async with proxy_server.swindon_chat(url) as inflight:
-            req, fut = await inflight.req.get()
+        async with proxy_server.swindon_chat(url) as call:
+            req, fut = await call.request()
             assert req.path == '/tangle/authorize_connection'
             fut.set_result(
                 web.Response(text='{"user_id": "user:1"}'))
-            ws = await inflight.client_resp
+            ws = await call.websocket
             msg = await ws.receive_json()
             assert msg == [
                 'hello', {}, {'user_id': 'user:1'}]
@@ -50,12 +51,12 @@ async def test_ws_close_timeout(proxy_server, swindon):
     400, 401, 404, 410, 500, 503])
 async def test_error_codes(proxy_server, swindon, loop, status_code):
     url = swindon.url / 'swindon-chat'
-    async with proxy_server.swindon_chat(url, timeout=1) as inflight:
-        req, fut = await inflight.req.get()
+    async with proxy_server.swindon_chat(url, timeout=1) as call:
+        req, fut = await call.request()
         assert req.path == '/tangle/authorize_connection'
         fut.set_result(
             web.Response(status=status_code, body=b'Custom Error'))
-        ws = await inflight.client_resp
+        ws = await call.websocket
         msg = await ws.receive()
         assert msg.type == WSMsgType.CLOSE
         assert msg.data == 4000 + status_code
@@ -75,12 +76,12 @@ async def test_error_codes(proxy_server, swindon, loop, status_code):
 async def test_unexpected_responses(
         proxy_server, swindon, loop, status_code, body):
     url = swindon.url / 'swindon-chat'
-    async with proxy_server.swindon_chat(url, timeout=1) as inflight:
-        req, fut = await inflight.req.get()
+    async with proxy_server.swindon_chat(url, timeout=1) as call:
+        req, fut = await call.request()
         assert req.path == '/tangle/authorize_connection'
         fut.set_result(
             web.Response(status=status_code, body=body))
-        ws = await inflight.client_resp
+        ws = await call.websocket
         msg = await ws.receive()
         assert msg.type == WSMsgType.CLOSE
         assert msg.data == 4500
@@ -100,13 +101,13 @@ async def test_unexpected_responses(
     ])
 async def test_invalid_auth_response(proxy_server, swindon, auth_resp):
     url = swindon.url / 'swindon-chat'
-    async with proxy_server.swindon_chat(url, timeout=1) as inflight:
-        req, fut = await inflight.req.get()
+    async with proxy_server.swindon_chat(url, timeout=1) as call:
+        req, fut = await call.request()
         assert req.path == '/tangle/authorize_connection'
 
         fut.set_result(
             web.Response(text=auth_resp, content_type='application/json'))
-        ws = await inflight.client_resp
+        ws = await call.websocket
         msg = await ws.receive()
         assert msg.type == WSMsgType.CLOSE
         assert msg.data == 4500
@@ -119,8 +120,8 @@ async def test_auth_request__cookies(proxy_server, swindon):
     url = swindon.url / 'swindon-chat'
     h = {"Cookie": "valid=cookie; next=value"}
     call = proxy_server.swindon_chat
-    async with call(url, headers=h, timeout=1) as inflight:
-        req, fut = await inflight.req.get()
+    async with call(url, headers=h, timeout=1) as call:
+        req, fut = await call.request()
         assert req.path == '/tangle/authorize_connection'
         assert req.headers['Content-Type'] == 'application/json'
         assert 'Authorization' not in req.headers
@@ -135,7 +136,7 @@ async def test_auth_request__cookies(proxy_server, swindon):
 
         fut.set_result(
             json_response({"user_id": "user:1", "username": "John"}))
-        ws = await inflight.client_resp
+        ws = await call.websocket
         msg = await ws.receive_json()
         assert msg == ['hello', {}, {'user_id': 'user:1', 'username': 'John'}]
 
@@ -143,9 +144,8 @@ async def test_auth_request__cookies(proxy_server, swindon):
 async def test_auth_request__querystring(proxy_server, swindon):
     url = (swindon.url / 'swindon-chat').with_query(
         'query=param1&query=param2')
-    call = proxy_server.swindon_chat
-    async with call(url, timeout=1) as inflight:
-        req, fut = await inflight.req.get()
+    async with proxy_server.swindon_chat(url, timeout=1) as call:
+        req, fut = await call.request()
         assert req.path == '/tangle/authorize_connection'
         assert req.headers['Content-Type'] == 'application/json'
         assert 'Authorization' not in req.headers
@@ -160,7 +160,7 @@ async def test_auth_request__querystring(proxy_server, swindon):
 
         fut.set_result(
             json_response({"user_id": "user:1", "username": "John"}))
-        ws = await inflight.client_resp
+        ws = await call.websocket
         msg = await ws.receive_json()
         assert msg == ['hello', {}, {'user_id': 'user:1', 'username': 'John'}]
 
@@ -168,9 +168,8 @@ async def test_auth_request__querystring(proxy_server, swindon):
 async def test_auth_request__authorization(proxy_server, swindon):
     url = swindon.url / 'swindon-chat'
     h = {"Authorization": "digest abcdef"}
-    call = proxy_server.swindon_chat
-    async with call(url, headers=h, timeout=1) as inflight:
-        req, fut = await inflight.req.get()
+    async with proxy_server.swindon_chat(url, headers=h, timeout=1) as call:
+        req, fut = await call.request()
         assert req.path == '/tangle/authorize_connection'
         assert req.headers['Content-Type'] == 'application/json'
         assert 'Authorization' not in req.headers
@@ -185,7 +184,7 @@ async def test_auth_request__authorization(proxy_server, swindon):
 
         fut.set_result(json_response({
             "user_id": "user:1", "username": "John"}))
-        ws = await inflight.client_resp
+        ws = await call.websocket
         msg = await ws.receive_json()
         assert msg == ['hello', {}, {'user_id': 'user:1', 'username': 'John'}]
 
@@ -194,9 +193,8 @@ async def test_auth_request__all(proxy_server, swindon):
     url = swindon.url / 'swindon-chat'
     url = url.with_query("foo=bar")
     h = {"Cookie": "valid=cookie", "Authorization": "digest abcdef"}
-    call = proxy_server.swindon_chat
-    async with call(url, headers=h, timeout=1) as inflight:
-        req, fut = await inflight.req.get()
+    async with proxy_server.swindon_chat(url, headers=h, timeout=1) as call:
+        req, fut = await call.request()
         assert req.path == '/tangle/authorize_connection'
         assert req.headers['Content-Type'] == 'application/json'
         assert 'Authorization' not in req.headers
@@ -211,26 +209,26 @@ async def test_auth_request__all(proxy_server, swindon):
 
         fut.set_result(
             json_response({"user_id": "user:1", "username": "John"}))
-        ws = await inflight.client_resp
+        ws = await call.websocket
         msg = await ws.receive_json()
         assert msg == ['hello', {}, {'user_id': 'user:1', 'username': 'John'}]
 
 
 async def test_echo_messages(proxy_server, swindon):
     url = swindon.url / 'swindon-chat'
-    async with proxy_server.swindon_chat(url, timeout=1) as inflight:
-        req, fut = await inflight.req.get()
+    async with proxy_server.swindon_chat(url, timeout=1) as call:
+        req, fut = await call.request()
         assert req.path == '/tangle/authorize_connection'
         fut.set_result(json_response({
             "user_id": "user:2", "username": "Jack"}))
-        ws = await inflight.client_resp
+        ws = await call.websocket
         hello = await ws.receive_json()
         assert hello == [
             'hello', {}, {'user_id': 'user:2', 'username': 'Jack'}]
 
         ws.send_json(['chat.echo_message', {'request_id': '1'},
                       ['some message'], {}])
-        req, fut = await inflight.req.get()
+        req, fut = await call.request()
         assert req.path == '/chat/echo_message'
         assert await req.json() == [
             {'request_id': '1', 'connection_id': mock.ANY},
@@ -253,19 +251,19 @@ async def test_echo_messages(proxy_server, swindon):
 
 async def test_prefix_routes(proxy_server, swindon):
     url = swindon.url / 'swindon-chat'
-    async with proxy_server.swindon_chat(url, timeout=1) as inflight:
-        req, fut = await inflight.req.get()
+    async with proxy_server.swindon_chat(url, timeout=1) as call:
+        req, fut = await call.request()
         assert req.path == '/tangle/authorize_connection'
         fut.set_result(json_response({
             "user_id": "user:2", "username": "Jack"}))
-        ws = await inflight.client_resp
+        ws = await call.websocket
         hello = await ws.receive_json()
         assert hello == [
             'hello', {}, {'user_id': 'user:2', 'username': 'Jack'}]
 
         ws.send_json(['prefixed.echo_message', {'request_id': '1'},
                       ['some message'], {}])
-        req, fut = await inflight.req.get()
+        req, fut = await call.request()
         assert req.path == '/with-prefix/prefixed/echo_message'
         assert await req.json() == [
             {'request_id': '1', 'connection_id': mock.ANY},
@@ -285,8 +283,8 @@ async def test_prefix_routes(proxy_server, swindon):
 
 async def test_topic_subscribe_publish(proxy_server, swindon):
     url = swindon.url / 'swindon-chat'
-    async with proxy_server.swindon_chat(url, timeout=1) as inflight:
-        req, fut = await inflight.req.get()
+    async with proxy_server.swindon_chat(url, timeout=1) as call:
+        req, fut = await call.request()
         assert req.path == '/tangle/authorize_connection'
         meta, args, kwargs = await req.json()
         assert 'connection_id' in meta
@@ -308,7 +306,7 @@ async def test_topic_subscribe_publish(proxy_server, swindon):
 
         fut.set_result(json_response({
             "user_id": "topic-user:1", "username": "Jack"}))
-        ws = await inflight.client_resp
+        ws = await call.websocket
         hello = await ws.receive_json()
         assert hello == [
             'hello', {}, {'user_id': 'topic-user:1', 'username': 'Jack'}]
@@ -326,8 +324,8 @@ async def test_topic_subscribe_publish(proxy_server, swindon):
 
 async def test_lattice_subscribe_update(proxy_server, swindon):
     url = swindon.url / 'swindon-chat'
-    async with proxy_server.swindon_chat(url, timeout=1) as inflight:
-        req, fut = await inflight.req.get()
+    async with proxy_server.swindon_chat(url, timeout=1) as call:
+        req, fut = await call.request()
         assert req.path == '/tangle/authorize_connection'
         meta, args, kwargs = await req.json()
         assert 'connection_id' in meta
@@ -353,7 +351,7 @@ async def test_lattice_subscribe_update(proxy_server, swindon):
 
         fut.set_result(json_response({
             "user_id": "lattice-user:1", "username": "Jim"}))
-        ws = await inflight.client_resp
+        ws = await call.websocket
         hello = await ws.receive_json()
         assert hello == [
             'hello', {}, {'user_id': 'lattice-user:1', 'username': 'Jim'}]
@@ -366,3 +364,42 @@ async def test_lattice_subscribe_update(proxy_server, swindon):
                 'last_seen_counter': 120,
                 }},
         ]
+
+
+async def test_inactivity(proxy_server, swindon):
+    chat_url = swindon.url / 'swindon-chat-w-timeouts'
+    async with proxy_server.swindon_chat(chat_url, timeout=1) as call:
+        req, fut = await call.request()
+        assert req.path == '/tangle/authorize_connection'
+        fut.set_result(json_response({
+            "user_id": "user:1", "username": "Jim"}))
+
+        ws = await call.websocket
+        hello = await ws.receive_json()
+        assert hello == [
+            'hello', {}, {'user_id': 'user:1', 'username': 'Jim'}]
+
+        req, fut = await asyncio.wait_for(call.request(), timeout=1.2)
+        assert req.path == '/tangle/session_inactive'
+        assert req.headers.getall('Authorization') == [
+            'Tangle eyJ1c2VyX2lkIjoidXNlcjoxIn0='
+            ]
+        assert await req.json() == [{}, [], {}]
+        fut.set_result(web.Response(status=200))
+
+        ws.send_json([
+            'whatever', {'request_id': '1', 'active': 2}, [], {}])
+        req, fut = await call.request()
+        assert req.path == '/whatever'
+        assert await req.json() == [
+            {'request_id': '1', 'active': 2, 'connection_id': mock.ANY},
+            [], {}]
+        fut.set_result(web.Response(status=200))
+
+        req, fut = await asyncio.wait_for(call.request(), timeout=3.2)
+        assert req.path == '/tangle/session_inactive'
+        assert req.headers.getall('Authorization') == [
+            'Tangle eyJ1c2VyX2lkIjoidXNlcjoxIn0='
+            ]
+        assert await req.json() == [{}, [], {}]
+        fut.set_result(web.Response(status=200))
