@@ -19,6 +19,9 @@ routing:
   #chat.example.com/js: example-chat-static
   #chat.example.com/index.html: example-chat-static
 
+authorization:
+  auth.example.com: ldap
+
 handlers:
 
   example-chat: !SwindonChat
@@ -100,3 +103,23 @@ http-destinations:
 
     addresses:
     - httpbin.org:80
+
+authorizers:
+  ldap: !Ldap
+    destination: local-ldap
+    search-base: dc=users,dc=example,dc=org
+    login-attribute: uid
+    password-attibute: userPassword
+    login-header: X-User-Uid
+    additional-queries:
+      X-User-Groups:
+        search-base: cn=Group,dc=uaprom,dc=org
+        fetch-attribute: dn
+        filter: "member=${dn}"
+        dn-attribute-strip-base: cn=Group,dc=uaprom,dc=org
+
+ldap-destinations:
+
+  local-ldap:
+    addresses:
+    - localhost:8398
