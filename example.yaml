@@ -20,6 +20,7 @@ routing:
   #chat.example.com/index.html: example-chat-static
 
 authorization:
+  chat.example.com/admin: ldap
   auth.example.com: ldap
 
 handlers:
