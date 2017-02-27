@@ -6,6 +6,7 @@ use super::chat;
 use super::static_files;
 use super::proxy;
 use super::empty_gif;
+use super::redirect;
 
 
 #[derive(RustcDecodable, Debug, PartialEq, Eq)]
@@ -21,6 +22,8 @@ pub enum Handler {
     /// autobahn tests, but we might choose to change test suite, so don't use
     /// it for something serious.
     WebsocketEcho,
+    BaseRedirect(Arc<redirect::BaseRedirect>),
+    StripWWWRedirect,
 }
 
 pub fn validator<'x>() -> Enum<'x> {
@@ -32,4 +35,6 @@ pub fn validator<'x>() -> Enum<'x> {
     .option("HttpBin", Nothing)
     .option("EmptyGif", empty_gif::validator())
     .option("WebsocketEcho", Nothing)
+    .option("BaseRedirect", redirect::base_redirect())
+    .option("StripWWWRedirect", Nothing)
 }
