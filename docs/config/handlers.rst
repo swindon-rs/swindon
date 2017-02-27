@@ -1,6 +1,6 @@
-.. _handlers:
-
 .. highlight:: yaml
+
+.. _handlers:
 
 Handlers
 ========

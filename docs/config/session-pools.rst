@@ -1,5 +1,7 @@
 .. _sessions:
 
+.. highlight:: yaml
+
 ============
 Session Pool
 ============
@@ -46,11 +48,13 @@ Options
     - 127.0.0.1:3333
 
 .. opt:: max-connections
+
    (default ``1000``) Maximum number of backend connections to accept. Note
    you should bump up a file descriptor limit to something larger than this
    value + max client connections.
 
 .. opt:: max-payload-size
+
    (default ``10Mib``) Maximum size of the payload (json data) from backend
    to swindon.
 
