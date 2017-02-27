@@ -53,6 +53,12 @@ routing:
   ### !WebsocketEcho routes ###
   localhost/websocket-echo: websocket_echo
 
+  ### !BaseRedirect routes ###
+  example.com: base_redirect
+
+  ### !StripWWWRedirect routes ###
+  www.example.com: strip_www_redirect
+
 # Configure all possible handlers?
 handlers:
   # Allowed handlers are: SwindonChat, Static, SingleFile, Proxy,
@@ -131,6 +137,14 @@ handlers:
 
   ### WebsocketEcho handlers ###
   websocket_echo: !WebsocketEcho
+
+  ### BaseRedirect handler ###
+
+  base_redirect: !BaseRedirect
+    redirect-to-domain: localhost
+
+  ### StripWWWRedirect handler
+  strip_www_redirect: !StripWWWRedirect
 
 session-pools:
   swindon_pool:

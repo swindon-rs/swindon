@@ -71,9 +71,9 @@ def debug_routing(request):
 @pytest.fixture
 def http_request(request_method, http_version, debug_routing):
 
-    async def inner(url):
+    async def inner(url, **kwargs):
         async with aiohttp.ClientSession(version=http_version) as s:
-            async with s.request(request_method, url) as resp:
+            async with s.request(request_method, url, **kwargs) as resp:
                 data = await resp.read()
                 assert resp.version == http_version
                 assert_headers(resp.headers, debug_routing)
@@ -143,15 +143,12 @@ def swindon(_proc, request, debug_routing, unused_port):
 
     os.write(fd, config.encode('utf-8'))
 
-    print("Swinod ports: {}", dict(swindon=SWINDON_ADDRESS,
-                                   proxy=PROXY_ADDRESS,
-                                   session1=SESSION_POOL_ADDRESS1,
-                                   session2=SESSION_POOL_ADDRESS2))
     proc = _proc(swindon_bin,
                  '--verbose',
                  '--config',
                  fname,
-                 env={'RUST_LOG': request.config.getoption('--rust-log')},
+                 env={'RUST_LOG': request.config.getoption('--rust-log'),
+                      'RUST_BACKTRACE': os.environ.get('RUST_BACKTRACE', '0')},
                  )
     while True:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
