@@ -1,11 +1,19 @@
 .. _handlers:
 
+.. highlight:: yaml
+
 Handlers
 ========
 
+.. contents:: Handlers
+   :local:
 
-Proxy Handler
-=============
+
+Proxy handler
+-------------
+
+.. index:: pair: !Proxy; Handlers
+
 
 Proxy handler looks like::
 
@@ -57,3 +65,147 @@ Settings:
    4. Consider making use cases (1-2) and (3) separate routes with different
       limits.
 
+
+Static & Single file handlers
+-----------------------------
+
+.. index::
+   pair: !SingleFile; Handlers
+   pair: !Static; Handlers
+
+Handler for serving static files::
+
+   robots-txt: !SingleFile
+      path: /www/my-host/robots.txt
+      content-type: text/plain
+
+   static-files: !Static
+      path: /www/my-host/static
+
+Common settings:
+
+.. opt:: pool
+
+   (default: ``default``) Disk pool name to be used to serve this file.
+
+.. opt:: extra-headers
+
+   (optional) Extra HTTP headers to be added to response.
+
+``!SingleFile`` settings:
+
+.. opt:: path
+
+   (required) Path to file to serve.
+
+.. opt:: content-type
+
+   (required) Set Content type for served file.
+
+``!Static`` settings:
+
+.. opt:: path
+
+   (required) Path to directory to serve.
+
+.. opt:: mode
+
+   (default: ``relative_to_route``) Sets path resolve mode:
+
+   * ``relative_to_domain_root``
+      Use whole URL path as filesystem path to file;
+
+   * ``relative_to_route``
+      Use only route suffix/tail as filesystem path to file;
+
+   These pathes, ofcourse, relative to ``path`` setting.
+
+.. opt:: text-charset
+
+   (optional) Sets ``charset`` parameter of ``Content-Type`` header.
+
+
+Swindon chat handler
+--------------------
+
+.. index::
+   pair: !SwindonChat; Handlers
+
+Swindon chat handler::
+
+   example-chat: !SwindonChat
+      session-pool: example-chat-session
+      http-route: backend/fallback
+      message-handlers:
+      "*": backend/path
+
+Settings
+
+.. opt:: session-pool
+
+   (required) Sets session pool to be used with this chat
+
+.. opt:: http-route
+
+   (optional) Sets fallback http route to be used in case when
+   URL is accessed with plain http request, not websocket upgrade request.
+
+.. opt:: message-handlers
+
+   (required) Mapping of chat method name patterns to http handlers.
+
+   Allowed patterns of 3 types:
+
+   ``"*"`` -- (required) special "default" pattern; any method with doesn't match
+      any other pattern will be sent to this http handler.
+
+   ``"prefix.*"`` -- "glob" pattern matches method name by prefix including dot,
+      for instance, pattern ``"chat.*"`` will match::
+
+         chat.send_message
+         chat.hello
+
+      but will not match::
+
+         chat_send_message
+         chat
+
+      also "chat.send*" is invalid pattern, it will be read as 'exact' pattern,
+      however will not work ever because "*" is not allowed in method names.
+
+   ``"exact.pattern"`` -- "exact" pattern, matches whole method name.
+
+   Patterns match order is: "exact" then "glob" otherwise "default".
+
+
+WebsocketEcho
+-------------
+
+.. index:: pair: !WebsocketEcho; Handlers
+
+Handler for a dummy websocket echo service::
+
+   echo: !WebsocketEcho
+
+
+Empty GIF handler
+-----------------
+
+.. index:: pair: !EmptyGif; Handlers
+
+Empty GIF handler is used to serve static empty pixel gif image::
+
+   empty-gif: !EmptyGif
+
+Seetings:
+
+.. opt:: extra-headers
+
+   Mapping of extra http headers to return in response.
+
+Http bin handler
+----------------
+
+.. index:: pair: !HttpBin; Handlers
+
+Serves kind'a request-response testing service, see http://httpbin.org.

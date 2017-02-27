@@ -1,3 +1,5 @@
+.. _sessions:
+
 ============
 Session Pool
 ============

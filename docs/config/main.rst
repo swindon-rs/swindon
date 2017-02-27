@@ -1,4 +1,4 @@
-
+.. highlight:: yaml
 
 Main Configuration
 ==================
@@ -12,7 +12,7 @@ Sections
 
 .. sect:: routing
 
-   Describes routing table for all input requests. :ref:`routing`
+   Describes routing table for all input requests. See :ref:`routing`
 
    Example::
 
@@ -24,7 +24,43 @@ Sections
 
 .. sect:: handlers
 
-    A mapping of handler name to the handler itself. :ref:`handlers`
+   A mapping of handler name to the handler itself. See :ref:`handlers`
+
+   Example::
+
+      handlers:
+        empty-gif: !EmptyGif
+        proxy-handler: !Proxy
+          destination: host1/
+
+.. sect:: http-destinations
+
+   Describes upstream servers. See ref:`http_destinations`
+
+   Example::
+
+      http-destinations:
+         host1:
+            addresses:
+            - 127.0.0.1:8080
+
+
+.. sect:: session-pools
+
+   Describes session pools for chat protocol. See :ref:`sessions`
+
+   Example::
+
+      session-pools:
+         example-chat-session:
+            listen:
+            - 127.0.0.1
+            inactivity-handlers:
+            - some-desctination/chat/route
+
+.. sect:: disk-pools
+
+   TBD
 
 Options
 -------

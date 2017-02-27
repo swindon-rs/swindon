@@ -143,11 +143,6 @@ session-pools:
     # max_connections: 1000
     # listen_error_timeout: 100ms
     # max_payload_size: 10485760
-    # inactivity:
-    #   new_connection: 60s
-    #   client_min: 1s
-    #   client_max: 2h
-    #   client_default: 1s
   pool_w_timeouts:
     listen:
     - *SPOOL_ADDRESS2
