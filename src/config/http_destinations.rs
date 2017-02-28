@@ -19,7 +19,7 @@ pub struct Destination {
     pub addresses: Vec<String>,
     pub keep_alive_timeout: De<Duration>,
     pub max_request_timeout: De<Duration>,
-    pub safe_pipelining_timeout: De<Duration>,
+    pub safe_pipeline_timeout: De<Duration>,
 }
 
 pub fn validator<'x>() -> Structure<'x> {
