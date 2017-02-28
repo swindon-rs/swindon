@@ -25,7 +25,7 @@ cleanup:
 tests:
   stage: test
   script:
-  - vagga ci-test --color=always
+  - vagga cargo-test --color=always
 
 functional-tests:
   stage: test
