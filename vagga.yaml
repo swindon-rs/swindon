@@ -21,9 +21,10 @@ containers:
       script: "./install.sh --prefix=/usr \
                --components=cargo"
     - !EnsureDir /cargo
-    # auto-clean: true
     environ:
-      HOME: /work
+      CARGO_HOME: /cargo
+    volumes:
+      /cargo: !Persistent { name: cargo }
 
   sphinx:
     setup:
@@ -105,37 +106,20 @@ commands:
 
   cargo-test: !Command
     container: ubuntu
-    description: Test project
-    environ: { RUST_BACKTRACE: 1 }
-    run: [cargo, test]
-
-  ci-test: !Command
-    container: ubuntu
     description: Run CI tests (with crates in container)
     environ:
-      CARGO_HOME: /cargo
-    volumes:
-      /cargo: !Persistent { name: cargo }
+      RUST_BACKTRACE: 1
     run: [cargo, test]
-
-  _ci-make: !Command
-    container: ubuntu
-    description: Build project
-    environ:
-      CARGO_HOME: /cargo
-    volumes:
-      /cargo: !Persistent { name: cargo }
-    run: [cargo, build]
 
   func-test: &functest !Command
     container: pytest
     work-dir: /work/tests
-    prerequisites: [_ci-make]
+    prerequisites: [make]
     user-id: 1
     run: [py.test]
 
   test: !Command
-    prerequisites: [_ci-make, ci-test]
+    prerequisites: [make, cargo-test]
     <<: *functest
 
   run: &run !Command
@@ -206,8 +190,6 @@ commands:
     description: build rust docs
     environ:
       CARGO_HOME: /cargo
-    volumes:
-      /cargo: !Persistent { name: cargo }
     run: |
       cargo doc --no-deps
   _copy-doc: !Command
