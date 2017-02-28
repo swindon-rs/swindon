@@ -34,6 +34,9 @@ struct LatticeVarValidator;
 /// CRDT variable name in lattice
 pub type LatticeVar = Symbol<LatticeVarValidator>;
 
+struct LdapValidator;
+pub type LdapUpstream = Symbol<LdapValidator>;
+
 quick_error! {
     #[derive(Debug)]
     pub enum BadIdent {
@@ -82,6 +85,19 @@ impl Validator for UpstreamValidator {
     }
     fn display(value: &Symbol<Self>, fmt: &mut fmt::Formatter) -> fmt::Result {
         write!(fmt, "upstream{:?}", value.as_ref())
+    }
+}
+
+impl Validator for LdapValidator {
+    type Err = BadIdent;
+    fn validate_symbol(val: &str) -> Result<(), Self::Err> {
+        if !valid_ident(val) {
+            return Err(BadIdent::InvalidChar);
+        }
+        Ok(())
+    }
+    fn display(value: &Symbol<Self>, fmt: &mut fmt::Formatter) -> fmt::Result {
+        write!(fmt, "ldap{:?}", value.as_ref())
     }
 }
 

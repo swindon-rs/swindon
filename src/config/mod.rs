@@ -11,6 +11,7 @@ mod routing;
 mod handlers;
 mod session_pools;
 pub mod http_destinations;
+pub mod ldap;
 // handlers
 pub mod chat;
 pub mod static_files;

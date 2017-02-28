@@ -7,12 +7,14 @@ use quire::validate::{Structure, Sequence, Mapping, Scalar, Numeric};
 use quire::De;
 
 use intern::{HandlerName, Upstream, SessionPoolName, DiskPoolName};
-use super::listen::{self, ListenSocket};
-use super::routing::{self, Routing};
-use super::handlers::{self, Handler};
-use super::session_pools::{self, SessionPool};
-use super::http_destinations::{self, Destination};
-use super::disk::{self, Disk};
+use intern::{LdapUpstream};
+use config::listen::{self, ListenSocket};
+use config::routing::{self, Routing};
+use config::handlers::{self, Handler};
+use config::session_pools::{self, SessionPool};
+use config::http_destinations::{self, Destination};
+use config::ldap;
+use config::disk::{self, Disk};
 
 #[derive(RustcDecodable, PartialEq, Eq, Debug)]
 pub struct Config {
@@ -32,6 +34,7 @@ pub struct Config {
     pub handlers: HashMap<HandlerName, Handler>,
     pub session_pools: HashMap<SessionPoolName, Arc<SessionPool>>,
     pub http_destinations: HashMap<Upstream, Destination>,
+    pub ldap_destinations: HashMap<LdapUpstream, ldap::Destination>,
     pub debug_routing: bool,
     pub server_name: Option<String>,
 
@@ -67,6 +70,8 @@ pub fn config_validator<'a>() -> Structure<'a> {
         Mapping::new(Scalar::new(), session_pools::validator()))
     .member("http_destinations",
         Mapping::new(Scalar::new(), http_destinations::validator()))
+    .member("ldap_destinations",
+        Mapping::new(Scalar::new(), ldap::destination_validator()))
     .member("debug_routing", Scalar::new().default(false))
     .member("server_name", Scalar::new().optional()
         .default(concat!("swindon/", env!("CARGO_PKG_VERSION"))))

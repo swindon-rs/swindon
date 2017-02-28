@@ -15,3 +15,4 @@ Configuration sections:
    handlers
    session-pools
    http-destinations
+   ldap
