@@ -6,7 +6,7 @@ use futures::AsyncSink;
 use futures::future::{FutureResult, ok, err};
 use futures::sink::{Sink};
 use minihttp::websocket;
-use minihttp::websocket::{Error};
+use minihttp::websocket::{Error as WsError};
 use minihttp::websocket::Frame::{self, Text, Binary, Ping, Pong, Close};
 use tokio_core::reactor::Handle;
 use rustc_serialize::json::Json;
@@ -17,6 +17,7 @@ use config::SessionPool;
 use chat::{Cid, ConnectionSender, CloseReason};
 use chat::cid::serialize_cid;
 use chat::message::{decode_message, get_active, Meta, Args, Kwargs};
+use chat::message::{ValidationError};
 use chat::processor::{Action, ProcessorPool, ConnectionMessage};
 use chat::backend::CallCodec;
 use chat::error::MessageError;
@@ -33,9 +34,23 @@ pub struct Dispatcher {
     pub channel: ConnectionSender,
 }
 
+quick_error! {
+    #[derive(Debug)]
+    pub enum Error {
+        Validation(e: ValidationError) {
+            description(e.description())
+            cause(e)
+            from()
+        }
+        Binary {
+            description("binary messages are not supported yet")
+        }
+    }
+}
+
 impl websocket::Dispatcher for Dispatcher {
-    type Future = FutureResult<(), Error>;
-    fn frame(&mut self, frame: &Frame) -> FutureResult<(), Error> {
+    type Future = FutureResult<(), WsError>;
+    fn frame(&mut self, frame: &Frame) -> FutureResult<(), WsError> {
         match *frame {
             Text(data) => match decode_message(data) {
                 Ok((name, meta, args, kwargs)) => {
@@ -47,14 +62,13 @@ impl websocket::Dispatcher for Dispatcher {
                 }
                 Err(e) => {
                     debug!("Message error: {}", e);
-                    // TODO(tailhook) better error
-                    err(Error::Closed)
+                    err(WsError::custom(Error::from(e)))
                 }
             },
             Binary(_) => {
                 debug!("Binary messages are not supported yet");
                 // TODO(tailhook) better error
-                err(Error::Closed)
+                err(WsError::custom(Error::Binary))
             }
             Ping(_)|Pong(_) => unreachable!(),
             Close(code, text) => {

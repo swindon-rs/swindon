@@ -79,11 +79,11 @@ impl HttpPools {
                         dest.backend_connections_per_ip_port)
                     .done();
                 let stream = union_stream(
-                    dest.addresses.iter()
-                    .map(|x| resolver.subscribe(x)
-                        as Box<Stream<Item=_, Error=_>>)
-                    .collect());
-                let mx = UniformMx::new(handle, &pool_config, Box::new(stream),
+                        dest.addresses.iter()
+                        .map(|x| resolver.subscribe(x))
+                        .collect()
+                    ).map_err(|e| Error::custom(e));
+                let mx = UniformMx::new(handle, &pool_config, stream,
                     move |addr| Proto::connect_tcp(addr, &conn_config, &h2));
                 let pool = Pool::create(handle, dest.queue_size_for_503, mx);
                 plain.insert(k.clone(), pool);
