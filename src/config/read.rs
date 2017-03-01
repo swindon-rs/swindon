@@ -107,8 +107,15 @@ pub fn read_config<P: AsRef<Path>>(filename: P)
         if cfg.handlers.get(name).is_none() {
             err!("Unknown handler for route: {:?} {:?}", route, name)
         }
-        // TODO: check if route ends with '/'
-        //  (cause we check for it in route matcher)
+        if route.path.as_ref().map(|x| x.ends_with("/")).unwrap_or(false) {
+            err!("Path must not end with /: {:?} {:?}", route, name);
+        }
+        if let Some(&Handler::StripWWWRedirect) = cfg.handlers.get(name) {
+            if !route.host.starts_with("www.") {
+                err!(concat!("Expected `www.` prefix for StripWWWRedirect",
+                             " handler route: {:?} {:?}"), route, name);
+            }
+        }
     }
     for (name, h) in &cfg.handlers {
         match h {

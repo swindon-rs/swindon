@@ -206,8 +206,6 @@ def test_invalid_handlers(check_config):
     assert '.handlers: Mapping expected' in err
 
 
-# Test Extra headers for static files
-
 def test_extra_headers(check_config):
     err = check_config("""
         listen:
@@ -224,3 +222,29 @@ def test_extra_headers(check_config):
     assert (
         '.handlers.handler: Content-Type must be specified as `content-type`'
         ' parameter rather than in `extra-headers`') in err
+
+
+def test_www_redirect_route_prefix(check_config):
+    err = check_config("""
+        routing:
+            example.com: www_redirect
+        handlers:
+            www_redirect: !StripWWWRedirect
+    """)
+    assert (
+        "Expected `www.` prefix for StripWWWRedirect handler route:"
+        " Route { host: \"example.com\", path: None }"
+        ) in err
+
+
+def test_route_path_suffix(check_config):
+    err = check_config("""
+        routing:
+            localhost/some/path/: handler
+        handlers:
+            handler: !EmptyGif
+    """)
+    assert (
+        "Path must not end with /: Route { host: \"localhost\","
+        " path: Some(\"/some/path/\") }"
+        )in err
