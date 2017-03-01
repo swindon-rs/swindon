@@ -18,6 +18,7 @@ pub mod static_files;
 pub mod proxy;
 pub mod disk;
 pub mod empty_gif;
+pub mod redirect;
 
 pub use self::read::Error;
 pub use self::root::Config;
@@ -28,6 +29,7 @@ pub use self::disk::Disk;
 pub use self::empty_gif::EmptyGif;
 pub use self::session_pools::{SessionPool};
 pub use self::http::Destination;
+pub use self::redirect::BaseRedirect;
 
 use quire::{parse_string, Options};
 
