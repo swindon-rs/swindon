@@ -13,7 +13,8 @@ use incoming::{reply, Request, Input};
 pub fn base_redirect<S: Io + 'static>(settings: &Arc<BaseRedirect>, inp: Input)
     -> Request<S>
 {
-    serve_redirect(settings.redirect_to_domain.as_str(), Status::Found, inp)
+    serve_redirect(settings.redirect_to_domain.as_str(),
+        Status::MovedPermanently, inp)
 }
 
 
@@ -23,7 +24,7 @@ pub fn strip_www_redirect<S: Io + 'static>(inp: Input)
 
     let base_host = inp.headers.host().and_then(|h| {
         if h.len() > 4 && h[0..4].eq_ignore_ascii_case("www.") {
-            Some(h.split_at(4).1)
+            Some(&h[4..])
         } else {
             None
         }
