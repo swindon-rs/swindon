@@ -7,7 +7,7 @@ async def test_ok(swindon, request_method, http_version, debug_routing):
 
     async with aiohttp.ClientSession(version=http_version) as s:
         async with s.request(request_method, url, **kw) as resp:
-            assert resp.status == 302
+            assert resp.status == 301
             assert resp.headers.getall("Location") == [
                 "http://example.com:{}/empty.gif".format(swindon.url.port)
                 ]
