@@ -178,6 +178,42 @@ Settings
    Patterns match order is: "exact" then "glob" otherwise "default".
 
 
+Redirect handlers
+-----------------
+
+.. index::
+   pair: !BaseRedirect; Handlers
+   pair: !StripWWWRedirect; Handlers
+
+``!BaseRedirect`` handler is used for permanent base host redirects::
+
+   routing:
+      example.com: new-handler
+      example.org: redirect
+   handlers:
+      redirect: !BaseRedirect
+         redirect-to-domain: example.com
+
+      new-handler: !Proxy
+         destination: somedest/
+
+.. opt:: redirect-to-domain
+
+   Destination domain to redirect to.
+
+``!StripWWWRedirect`` handler is used redirect to URL without ``www.`` prefix::
+
+   routing:
+      example.com: new-handler
+      www.example.com: strip-www
+   handlers:
+      strip-www: !StripWWWRedirect
+      example.com: !Proxy
+         destination: somedest/
+
+.. note:: Both redirects use *301 Moved Permanently* status code.
+
+
 WebsocketEcho
 -------------
 
