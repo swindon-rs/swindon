@@ -4,8 +4,8 @@ use futures::sync::mpsc::SendError;
 
 use rustc_serialize::{Encodable, Encoder};
 use rustc_serialize::json::{Json, ParserError};
-use minihttp::Status;
-use minihttp::client;
+use tk_http::Status;
+use tk_http::client;
 
 use super::message::{Meta, ValidationError};
 

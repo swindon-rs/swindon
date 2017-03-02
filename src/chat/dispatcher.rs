@@ -5,9 +5,9 @@ use std::cmp;
 use futures::AsyncSink;
 use futures::future::{FutureResult, ok, err};
 use futures::sink::{Sink};
-use minihttp::websocket;
-use minihttp::websocket::{Error as WsError};
-use minihttp::websocket::Frame::{self, Text, Binary, Ping, Pong, Close};
+use tk_http::websocket;
+use tk_http::websocket::{Error as WsError};
+use tk_http::websocket::Frame::{self, Text, Binary, Ping, Pong, Close};
 use tokio_core::reactor::Handle;
 use rustc_serialize::json::Json;
 

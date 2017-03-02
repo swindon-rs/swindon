@@ -5,8 +5,8 @@ use std::borrow::Cow;
 
 use futures::{AsyncSink};
 use futures::sink::Sink;
-use minihttp::Status;
-use minihttp::server::Head;
+use tk_http::Status;
+use tk_http::server::Head;
 use rustc_serialize::json::Json;
 
 use intern::SessionId;

@@ -2,8 +2,8 @@ use std::sync::Arc;
 use std::net::SocketAddr;
 
 use tokio_core::io::Io;
-use minihttp::Version;
-use minihttp::client::{Encoder, EncoderDone};
+use tk_http::Version;
+use tk_http::client::{Encoder, EncoderDone};
 
 use incoming::{Input};
 use config::proxy::Proxy;
@@ -36,7 +36,7 @@ struct ReqData {
 
 impl HalfReq {
     pub fn from_input(inp: &Input, settings: &Arc<Proxy>) -> HalfReq {
-        use minihttp::server::RequestTarget::*;
+        use tk_http::server::RequestTarget::*;
         let path = match *inp.headers.request_target() {
             Origin(x) => x.to_string(),
             Absolute { path, ..} => path.to_string(),

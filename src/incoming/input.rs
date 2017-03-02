@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use std::net::SocketAddr;
 
-use minihttp::server::Head;
+use tk_http::server::Head;
 use tokio_core::reactor::Handle;
 
 use config::Config;

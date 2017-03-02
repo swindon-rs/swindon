@@ -11,8 +11,8 @@ use futures::{Future};
 use futures::future::{ok};
 use mime_guess::guess_mime_type;
 use mime::TopLevel;
-use minihttp::server::Error;
-use minihttp::Status;
+use tk_http::server::Error;
+use tk_http::Status;
 use tk_sendfile::DiskPool;
 
 use config;

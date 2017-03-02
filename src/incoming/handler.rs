@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use minihttp::server::{Dispatcher, Error};
+use tk_http::server::{Dispatcher, Error};
 use httpbin::HttpBin;
 
 use incoming::{Request, Input, Transport};

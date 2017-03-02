@@ -1,4 +1,4 @@
-use minihttp::Status;
+use tk_http::Status;
 
 
 #[derive(Debug, Clone, PartialEq)]

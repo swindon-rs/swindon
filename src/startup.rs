@@ -12,8 +12,8 @@ use futures::Stream;
 use futures::future::{Future, ok};
 use futures::sync::oneshot::{channel as oneshot, Sender, Receiver};
 use futures_cpupool;
-use minihttp;
-use minihttp::server::Proto;
+use tk_http;
+use tk_http::server::Proto;
 
 use config::{ListenSocket, ConfigCell};
 use incoming::Router;
@@ -40,7 +40,7 @@ pub fn spawn_listener(addr: SocketAddr, handle: &Handle,
     let r2 = runtime.clone();
     let listener = TcpListener::bind(&addr, &handle)?;
     // TODO(tailhook) how to update?
-    let hcfg = minihttp::server::Config::new()
+    let hcfg = tk_http::server::Config::new()
         .inflight_request_limit(root.pipeline_depth)
         // TODO(tailhook) make it configurable?
         .inflight_request_prealoc(0)

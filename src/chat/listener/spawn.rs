@@ -4,8 +4,8 @@ use std::net::SocketAddr;
 
 use futures::future::Either;
 use futures::stream::Stream;
-use minihttp;
-use minihttp::server::Proto;
+use tk_http;
+use tk_http::server::Proto;
 use futures::future::{Future, ok};
 use tokio_core::net::TcpListener;
 use tokio_core::reactor::{Handle, Timeout};
@@ -37,7 +37,7 @@ pub fn listen(addr: SocketAddr, worker_data: &Arc<WorkerData>,
     let h1 = runtime.handle.clone();
     let listener = TcpListener::bind(&addr, &worker_data.handle)?;
     // TODO(tailhook) how to update?
-    let hcfg = minihttp::server::Config::new()
+    let hcfg = tk_http::server::Config::new()
         .inflight_request_limit(worker_data.settings.pipeline_depth)
         // TODO(tailhook) make it configurable?
         .inflight_request_prealoc(0)

@@ -5,8 +5,8 @@ use std::mem;
 
 use futures::Async;
 use futures::future::{FutureResult, ok};
-use minihttp::{Status, Version};
-use minihttp::client as http;
+use tk_http::{Status, Version};
+use tk_http::client as http;
 use tokio_core::io::Io;
 use rustc_serialize::Encodable;
 use rustc_serialize::json::{as_json, Json};

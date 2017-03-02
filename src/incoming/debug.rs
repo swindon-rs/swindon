@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use std::path::{Path, PathBuf};
 
-use minihttp::server::Head;
+use tk_http::server::Head;
 
 use intern::HandlerName;
 use config::Config;

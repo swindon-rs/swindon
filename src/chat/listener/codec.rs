@@ -7,10 +7,10 @@ use std::net::SocketAddr;
 use futures::Async;
 use futures::future::{FutureResult, ok};
 use tokio_core::io::Io;
-use minihttp::Status;
-use minihttp::server::{Dispatcher, Error, Head};
-use minihttp::server as http;
-use minihttp::server::{EncoderDone, RecvMode};
+use tk_http::Status;
+use tk_http::server::{Dispatcher, Error, Head};
+use tk_http::server as http;
+use tk_http::server::{EncoderDone, RecvMode};
 use rustc_serialize::json;
 
 use intern::{Topic, Lattice as Namespace};

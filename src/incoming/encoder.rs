@@ -4,9 +4,9 @@ use std::sync::Arc;
 use std::collections::HashMap;
 
 use time;
-use minihttp::Status;
-use minihttp::server as http;
-use minihttp::server::{EncoderDone, FutureRawBody};
+use tk_http::Status;
+use tk_http::server as http;
+use tk_http::server::{EncoderDone, FutureRawBody};
 use tokio_core::io::Io;
 
 

@@ -3,7 +3,7 @@ use std::os::unix::io::AsRawFd;
 use tokio_core::io::Io;
 use tk_sendfile::Destination;
 use futures::future::Future;
-use minihttp::server::{Codec, EncoderDone, Error};
+use tk_http::server::{Codec, EncoderDone, Error};
 
 mod input;
 mod router;

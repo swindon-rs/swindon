@@ -2,8 +2,8 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 
 use tokio_core::reactor::Handle;
-use minihttp::Status;
-use minihttp::server::{Dispatcher, Error, Head};
+use tk_http::Status;
+use tk_http::server::{Dispatcher, Error, Head};
 
 use runtime::Runtime;
 use incoming::{Request, Debug, Input, Transport};

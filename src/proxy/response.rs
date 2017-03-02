@@ -1,8 +1,8 @@
 use tokio_core::io::Io;
 
-use minihttp::{Status};
-use minihttp::client::Head;
-use minihttp::server::{EncoderDone};
+use tk_http::{Status};
+use tk_http::client::Head;
+use tk_http::server::{EncoderDone};
 
 use incoming::Encoder;
 

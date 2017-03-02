@@ -14,7 +14,7 @@ extern crate quire;
 extern crate time;
 extern crate argparse;
 extern crate tokio_core;
-extern crate minihttp;
+extern crate tk_http;
 extern crate netbuf;
 extern crate mime;
 extern crate sha1;

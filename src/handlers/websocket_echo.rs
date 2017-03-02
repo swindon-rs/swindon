@@ -2,10 +2,10 @@ use std::sync::Arc;
 
 use futures::{Async, Future};
 use futures::stream::{Stream};
-use minihttp::Status;
-use minihttp::server::{Error, Codec, RecvMode};
-use minihttp::server as http;
-use minihttp::websocket::{ServerCodec as WebsocketCodec, Accept};
+use tk_http::Status;
+use tk_http::server::{Error, Codec, RecvMode};
+use tk_http::server as http;
+use tk_http::websocket::{ServerCodec as WebsocketCodec, Accept};
 use tk_bufstream::{ReadBuf, WriteBuf};
 use tokio_core::io::Io;
 use futures::future::{ok};

@@ -3,7 +3,7 @@ use std::mem;
 use futures::Async;
 use futures::future::{FutureResult, ok};
 use futures::sync::oneshot;
-use minihttp::client as http;
+use tk_http::client as http;
 use tokio_core::io::Io;
 
 use proxy::{RepReq, HalfResp, Response};

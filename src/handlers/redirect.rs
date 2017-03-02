@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use std::ascii::AsciiExt;
 
-use minihttp::Status;
+use tk_http::Status;
 use tokio_core::io::Io;
 use futures::future::ok;
 

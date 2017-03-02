@@ -1,7 +1,7 @@
 use std::sync::{Arc, RwLock, RwLockWriteGuard};
 use std::collections::HashMap;
 
-use minihttp::client::{Codec, Config as HConfig, Proto, Error, EncoderDone};
+use tk_http::client::{Codec, Config as HConfig, Proto, Error, EncoderDone};
 use tokio_core::net::TcpStream;
 use tokio_core::reactor::Handle;
 use tk_pool::Pool;

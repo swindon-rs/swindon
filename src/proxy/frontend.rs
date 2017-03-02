@@ -5,9 +5,9 @@ use futures::{Async, Future, AsyncSink};
 use futures::future::{ok};
 use futures::sink::{Sink};
 use futures::sync::oneshot;
-use minihttp::Status;
-use minihttp::server::{Error, RecvMode};
-use minihttp::server as http;
+use tk_http::Status;
+use tk_http::server::{Error, RecvMode};
+use tk_http::server as http;
 use tokio_core::io::Io;
 
 use config::proxy::Proxy;

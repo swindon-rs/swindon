@@ -2,8 +2,8 @@ use std::sync::Arc;
 
 use tokio_core::io::Io;
 use futures::Async;
-use minihttp::server::{Error, Codec, RecvMode};
-use minihttp::server as http;
+use tk_http::server::{Error, Codec, RecvMode};
+use tk_http::server as http;
 
 use config::Config;
 use incoming::{Request, Reply, Encoder, IntoContext, Debug};

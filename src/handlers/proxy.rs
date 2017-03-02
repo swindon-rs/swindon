@@ -1,8 +1,8 @@
 use std::sync::Arc;
 use proxy::frontend::Codec;
 
-use minihttp::Status;
-use minihttp::server::RequestTarget::Authority;
+use tk_http::Status;
+use tk_http::server::RequestTarget::Authority;
 use tokio_core::io::Io;
 use config::proxy::Proxy;
 use incoming::{Request, Input};
