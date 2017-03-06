@@ -118,11 +118,22 @@ Common settings:
    * ``relative_to_route``
       Use only route suffix/tail as filesystem path to file;
 
+   * ``with_hostname``
+      Add hostname as the first directory component
+
    These pathes, ofcourse, relative to ``path`` setting.
 
 .. opt:: text-charset
 
    (optional) Sets ``charset`` parameter of ``Content-Type`` header.
+
+.. opt:: strip-host-suffix
+
+   (optional) If ``mode`` is ``with_hostname`` strip the specified suffix
+   from the host name before using it as a first component of a directory.
+   For example, if ``strip-host-suffix`` is ``example.org`` then URL
+   ``http://something.example.com/xx/yy`` will be searched in the directory
+   ``something/xx/yy``.
 
 
 Swindon chat handler

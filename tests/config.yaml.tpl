@@ -37,6 +37,7 @@ routing:
   localhost/static: static
   localhost/static-w-headers: static_w_headers
   localhost/static-w-ctype: static_w_ctype
+  localhost/static-w-hostname: static_w_hostname
 
   # TODO: add overlapping routes:
   #   /static: !Proxy & /static/file: !SingleFile
@@ -110,6 +111,9 @@ handlers:
     path: /work/tests/assets/
     extra-headers:
       Content-Type: something/other
+  static_w_hostname: !Static
+    mode: with_hostname
+    path: /work/tests/assets/
 
   ### Proxy handlers ###
 

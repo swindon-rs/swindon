@@ -11,6 +11,7 @@ use quire::ast::{Ast, process as process_ast};
 use super::Config;
 use super::root::config_validator;
 use super::Handler;
+use config::static_files::Mode;
 
 
 quick_error! {
@@ -154,6 +155,14 @@ pub fn read_config<P: AsRef<Path>>(filename: P)
                 let u = &proxy.destination.upstream;
                 if !cfg.http_destinations.contains_key(u) {
                     err!("{:?}: unknown http destination {:?}", name, u)
+                }
+            }
+            &Handler::Static(ref config) => {
+                if config.strip_host_suffix.is_some() &&
+                   config.mode != Mode::with_hostname
+                {
+                    err!("{:?}: `strip-host-suffix` only \
+                        works when `mode: with-hostname`", name);
                 }
             }
             _ => {}

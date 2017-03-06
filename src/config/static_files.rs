@@ -13,6 +13,7 @@ use intern::DiskPoolName;
 pub enum Mode {
     relative_to_domain_root,
     relative_to_route,
+    with_hostname,
 }
 
 
@@ -23,6 +24,7 @@ pub struct Static {
     pub text_charset: Option<String>,
     pub pool: DiskPoolName,
     pub extra_headers: HashMap<String, String>,
+    pub strip_host_suffix: Option<String>,
     // Computed values
     pub overrides_content_type: bool,
 }
@@ -40,12 +42,14 @@ pub fn validator<'x>() -> Structure<'x> {
     .member("mode", Enum::new()
         .option("relative_to_domain_root", Nothing)
         .option("relative_to_route", Nothing)
+        .option("with_hostname", Nothing)
         .allow_plain()
         .plain_default("relative_to_route"))
     .member("path", Scalar::new())
     .member("text_charset", Scalar::new().optional())
     .member("pool", Scalar::new().default("default"))
     .member("extra_headers", Mapping::new(Scalar::new(), Scalar::new()))
+    .member("strip_host_suffix", Scalar::new().optional())
 }
 
 pub fn single_file<'x>() -> Structure<'x> {
@@ -65,6 +69,7 @@ impl Decodable for Static {
             pub text_charset: Option<String>,
             pub pool: DiskPoolName,
             pub extra_headers: HashMap<String, String>,
+            pub strip_host_suffix: Option<String>,
         }
         let int = Internal::decode(d)?;
         return Ok(Static {
@@ -75,6 +80,7 @@ impl Decodable for Static {
             text_charset: int.text_charset,
             pool: int.pool,
             extra_headers: int.extra_headers,
+            strip_host_suffix: int.strip_host_suffix,
         })
     }
 }

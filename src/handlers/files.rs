@@ -103,13 +103,47 @@ pub fn serve_dir<S: Transport>(settings: &Arc<Static>, mut inp: Input)
 
 fn path(settings: &Static, inp: &Input) -> Result<PathBuf, ()> {
     let path = match settings.mode {
-        Mode::relative_to_domain_root => {
+        Mode::relative_to_domain_root | Mode::with_hostname => {
             inp.headers.path().unwrap_or("/")
         }
         Mode::relative_to_route => inp.suffix,
     };
     let path = Path::new(path.trim_left_matches('/'));
     let mut buf = settings.path.to_path_buf();
+    if settings.mode == Mode::with_hostname {
+        match inp.headers.host()  {
+            Some(host) => {
+                if host.find("/").is_some() {
+                    // no slashes allowed
+                    return Err(());
+                }
+                let name: &str = if let Some(colon) = host.find(":") {
+                    &host[..colon]
+                } else {
+                    &host[..]
+                };
+                let name = if let Some(ref suf) = settings.strip_host_suffix {
+                    if suf.len() >= name.len() {
+                        // empty prefix is not allowed yet
+                        return Err(());
+                    }
+                    if !name.ends_with(suf) {
+                        // only this suffix should work
+                        return Err(());
+                    }
+                    let final_dot = name.len() - suf.len() - 1;
+                    if !name[final_dot..].starts_with('.') {
+                        return Err(())
+                    }
+                    &name[..final_dot]
+                } else {
+                    name
+                };
+                buf.push(name);
+            }
+            None => return Err(()),
+        }
+    }
     for cmp in path.components() {
         match cmp {
             Component::Normal(chunk) => {

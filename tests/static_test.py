@@ -60,3 +60,12 @@ async def test_headers_override(
                      if key == b'CONTENT-TYPE']
             assert len(ctype) == 1
             assert ctype[0] == b'something/other'
+
+
+async def test_hostname(swindon, http_request, debug_routing):
+    url = swindon.url / 'static-w-hostname' / 'test.txt'
+    resp, data = await http_request(url)
+    assert resp.status == 200
+    assert resp.headers['Content-Type'] == 'text/plain'
+    assert resp.headers['Content-Length'] == '17'
+    assert data == b'localhost+static\n'
