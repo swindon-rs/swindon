@@ -33,6 +33,11 @@ async def test_permission(swindon, http_request, debug_routing):
     assert data == msg
     assert resp.headers['Content-Type'] != 'text/no/permission'
     assert resp.headers['Content-Length'] == str(len(msg))
+    if debug_routing:
+        assert resp.headers.getall('X-Swindon-File-Path', []) == [
+            '"/work/tests/assets/no-permission"']
+    else:
+        assert 'X-Swindon-File-Path' not in resp.headers
 
 
 async def test_extra_headers(swindon, http_request, debug_routing):
@@ -43,6 +48,11 @@ async def test_extra_headers(swindon, http_request, debug_routing):
     assert resp.headers['Content-Length'] == '17'
     assert resp.headers['X-Some-Header'] == 'some value'
     assert data == b'Static file test\n'
+    if debug_routing:
+        assert resp.headers.getall('X-Swindon-File-Path', []) == [
+            '"/work/tests/assets/static_file.html"']
+    else:
+        assert 'X-Swindon-File-Path' not in resp.headers
 
 
 async def test_headers_override(
@@ -60,6 +70,11 @@ async def test_headers_override(
                      if key == b'CONTENT-TYPE']
             assert len(ctype) == 1
             assert ctype[0] == b'something/other'
+            if debug_routing:
+                assert resp.headers.getall('X-Swindon-File-Path', []) == [
+                    '"/work/tests/assets/static_file.txt"']
+            else:
+                assert 'X-Swindon-File-Path' not in resp.headers
 
 
 async def test_hostname(swindon, http_request, debug_routing):
@@ -69,3 +84,8 @@ async def test_hostname(swindon, http_request, debug_routing):
     assert resp.headers['Content-Type'] == 'text/plain'
     assert resp.headers['Content-Length'] == '17'
     assert data == b'localhost+static\n'
+    if debug_routing:
+        assert resp.headers.getall('X-Swindon-File-Path', []) == [
+            '"/work/tests/assets/localhost/static-w-hostname/test.txt"']
+    else:
+        assert 'X-Swindon-File-Path' not in resp.headers
