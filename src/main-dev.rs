@@ -123,6 +123,6 @@ pub fn main() {
     };
 
     let mut lp = Core::new().unwrap();
-    startup::populate_loop(&lp.handle(), &cfg, verbose);
+    let _state = startup::populate_loop(&lp.handle(), &cfg, verbose);
     lp.run(futures::empty::<(), ()>()).unwrap();
 }
