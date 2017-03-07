@@ -1,8 +1,8 @@
 containers:
-  ubuntu:
+  xenial:
     setup:
     - !Ubuntu xenial
-    - !Install
+    - &pkgs !Install
       - make
       - gcc
       - libc6-dev
@@ -12,15 +12,42 @@ containers:
       - ca-certificates
       - libcurl3
       - pkg-config
-    - !TarInstall
-      url: https://static.rust-lang.org/dist/rust-1.15.0-x86_64-unknown-linux-gnu.tar.gz
+      - git  # to build package
+      - lsb-release  # to build package
+    - &rust !TarInstall
+      url: https://static.rust-lang.org/dist/rust-1.15.1-x86_64-unknown-linux-gnu.tar.gz
       script: "./install.sh --prefix=/usr \
                --components=rustc,rust-std-x86_64-unknown-linux-gnu,cargo"
+    - &bulk !Tar
+      url: "http://files.zerogw.com/bulk/bulk-0.4.7.tar.gz"
+      sha256: faec9ee88ee079de3c7cfb95c5900489941b28b24b47411afaec1fae7a277546
+      path: /
     - !EnsureDir /cargo
-    environ:
+    environ: &environ
       CARGO_HOME: /cargo
-    volumes:
+    volumes: &volumes
       /cargo: !Persistent { name: cargo }
+
+
+  trusty:
+    setup:
+    - !Ubuntu trusty
+    - *pkgs
+    - *rust
+    - *bulk
+    - !EnsureDir /cargo
+    environ: *environ
+    volumes: *volumes
+
+  precise:
+    setup:
+    - !Ubuntu precise
+    - *pkgs
+    - *rust
+    - *bulk
+    - !EnsureDir /cargo
+    environ: *environ
+    volumes: *volumes
 
   sphinx:
     setup:
@@ -43,7 +70,7 @@ containers:
 
   wrk:
     setup:
-    - !Container ubuntu
+    - !Container xenial
     - !UbuntuUniverse
     - !Install
       - wrk
@@ -86,22 +113,22 @@ containers:
 commands:
 
   rustc: !Command
-    container: ubuntu
+    container: xenial
     description: Run rustc command
     run: [rustc]
 
   cargo: !Command
-    container: ubuntu
+    container: xenial
     description: Run Cargo command
     run: [cargo]
 
   make: !Command
-    container: ubuntu
+    container: xenial
     description: Build project
     run: [cargo, build]
 
   cargo-test: !Command
-    container: ubuntu
+    container: xenial
     description: Run CI tests (with crates in container)
     environ:
       RUST_BACKTRACE: 1
@@ -119,7 +146,7 @@ commands:
     <<: *functest
 
   run: &run !Command
-    container: ubuntu
+    container: xenial
     description: Run
     environ:
       RUST_BACKTRACE: 1
@@ -132,7 +159,7 @@ commands:
     - --config=example.yaml
 
   bench-run: &bench-run !Command
-    container: ubuntu
+    container: xenial
     description: Run swindon for benchmarks (--release and specific config)
     environ:
       RUST_BACKTRACE: 1
@@ -146,7 +173,7 @@ commands:
     - --config=example.yaml
 
   devd: !Command
-    container: ubuntu
+    container: xenial
     description: Run swindon-dev (useless without parameters)
     run:
     - cargo
@@ -155,7 +182,7 @@ commands:
     - "--"
 
   debug-run: !Command
-    container: ubuntu
+    container: xenial
     description: Run with debugging enabled
     run: |
       cargo build
@@ -182,14 +209,14 @@ commands:
       swindon: *run
 
   _cargo-doc: !Command
-    container: ubuntu
+    container: xenial
     description: build rust docs
     environ:
       CARGO_HOME: /cargo
     run: |
       cargo doc --no-deps
   _copy-doc: !Command
-    container: ubuntu
+    container: xenial
     description: copy rust docs into sphinx build dir
     prerequisites: [_cargo-doc]
     run: |
@@ -197,7 +224,7 @@ commands:
       [ -d docs/_build/html/rust_api ] && rm -r docs/_build/html/rust_api
       cp -rT target/doc docs/_build/html/rust_api
   _cargo-new: !Command
-    container: ubuntu
+    container: xenial
     description: Create New Crate lib
     work-dir: /work/deps
     run: [cargo, new, --vcs, git]
@@ -223,7 +250,7 @@ commands:
     prerequisites: [make]
     children:
       swindon: !Command
-        container: ubuntu
+        container: xenial
         work-dir: examples/message-board
         environ: { RUST_BACKTRACE: 1 }
         run:
@@ -246,7 +273,7 @@ commands:
     prerequisites: [make]
     children:
       swindon: !Command
-        container: ubuntu
+        container: xenial
         work-dir: examples/multi-user-chat
         environ: { RUST_BACKTRACE: 1 }
         run:
@@ -266,3 +293,37 @@ commands:
         run:
         - npm
         - start
+
+  bulk: !Command
+    description: Run any bulk command
+    container: xenial
+    run: [bulk]
+
+
+  _package-trusty: !Command
+    container: trusty
+    run: &package |
+      set -e
+      version=$(git describe --dirty)
+      codename=$(lsb_release --codename --short)
+      rm -rf pkg
+      rm -rf target/release/lithos_*
+      bulk with-version "${version}" cargo install --root=/work/pkg --path=.
+      bulk pack --package-version="${version}+${codename}1"
+
+  _package-precise: !Command
+    container: precise
+    run: *package
+
+  _package-xenial: !Command
+    container: xenial
+    run: *package
+
+  packages: !Command
+    container: xenial
+    description: Build packages and repostories (mostly for CI)
+    prerequisites: [_package-trusty, _package-precise, _package-xenial]
+    accepts_arguments: true
+    run: |
+      bulk repo-add --config bulk.yaml --repository-base dist/repos \
+        dist/swindon-[0-9]*.deb "$@"

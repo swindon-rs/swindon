@@ -1,0 +1,90 @@
+minimum-bulk: v0.4.5
+
+metadata:
+  name: swindon
+  short-description: A HTTP/websocket server
+  long-description: |
+    A full-featured HTTP server with support of smart websocket proxying.
+
+repositories:
+
+# trusty
+- kind: debian
+  suite: trusty
+  component: swindon
+  keep-releases: 1
+  match-version: ^\d+\.\d+\.\d+\+trusty1$
+
+- kind: debian
+  suite: trusty
+  component: swindon-stable
+  keep-releases: 1000
+  match-version: ^\d+\.\d+\.\d+\+trusty1$
+
+- kind: debian
+  suite: trusty
+  component: swindon-testing
+  keep-releases: 100
+  match-version: \+trusty1$
+
+# precise
+- kind: debian
+  suite: precise
+  component: swindon
+  keep-releases: 1
+  match-version: ^\d+\.\d+\.\d+\+precise1$
+  add-empty-i386-repo: true
+
+- kind: debian
+  suite: precise
+  component: swindon-stable
+  keep-releases: 1000
+  match-version: ^\d+\.\d+\.\d+\+precise1$
+  add-empty-i386-repo: true
+
+- kind: debian
+  suite: precise
+  component: swindon-testing
+  keep-releases: 100
+  match-version: \+precise1$
+  add-empty-i386-repo: true
+
+# xenial
+- kind: debian
+  suite: xenial
+  component: swindon
+  keep-releases: 1
+  match-version: ^\d+\.\d+\.\d+\+xenial1$
+
+- kind: debian
+  suite: xenial
+  component: swindon-stable
+  keep-releases: 1000
+  match-version: ^\d+\.\d+\.\d+\+xenial1$
+
+- kind: debian
+  suite: xenial
+  component: swindon-testing
+  keep-releases: 100
+  match-version: \+xenial1$
+
+versions:
+
+- file: Cargo.toml
+  block-start: ^\[package\]
+  block-end: ^\[.*\]
+  regex: ^version\s*=\s*"(\S+)"
+
+- file: docs/conf.py
+  regex: ^version\s*=\s*'(\S+)'
+  partial-version: ^\d+\.\d+
+
+- file: docs/conf.py
+  regex: ^release\s*=\s*'(\S+)'
+
+  # for more automation we also update the lockfile
+
+- file: Cargo.lock
+  block-start: ^\[root\]
+  regex: ^version\s*=\s*"(\S+)"
+  block-end: ^\[.*\]
