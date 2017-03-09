@@ -12,13 +12,21 @@ pub fn route<'x, D>(host: &str, path: &'x str, table: &'x BTreeMap<Route, D>)
     // TODO(tailhook) transform into range iteration when `btree_range` is
     // stable
     for (route, result) in table.iter().rev() {
-        if route.host == host && path_match(&route.path, path) {
+        if host_match(host, &route) && path_match(&route.path, path) {
             // Longest match is the last in reversed iteration
             let prefix = route.path.as_ref().map(|x| &x[..]).unwrap_or("");
             return Some((result, prefix, &path[prefix.len()..]));
         }
     }
     return None;
+}
+
+fn host_match(host: &str, route: &Route) -> bool {
+    if route.is_base {
+        host.ends_with(route.host.as_str())
+    } else {
+        route.host == host
+    }
 }
 
 fn path_match<S: AsRef<str>>(pattern: &Option<S>, value: &str) -> bool {
@@ -54,7 +62,7 @@ mod test {
     #[test]
     fn route_host() {
         let table = vec![
-            (Route { host: "example.com".into(), path: None }, 1),
+            (Route { is_base: false, host: "example.com".into(), path: None }, 1),
             ].into_iter().collect();
         assert_eq!(route("example.com", "/hello", &table),
                    Some((&1, "", "/hello")));

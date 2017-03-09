@@ -233,7 +233,7 @@ def test_www_redirect_route_prefix(check_config):
     """)
     assert (
         "Expected `www.` prefix for StripWWWRedirect handler route:"
-        " Route { host: \"example.com\", path: None }"
+        " Route { is_base: false, host: \"example.com\", path: None }"
         ) in err
 
 
@@ -245,6 +245,6 @@ def test_route_path_suffix(check_config):
             handler: !EmptyGif
     """)
     assert (
-        "Path must not end with /: Route { host: \"localhost\","
-        " path: Some(\"/some/path/\") }"
+        "Path must not end with /: Route { is_base: false,"
+        " host: \"localhost\", path: Some(\"/some/path/\") }"
         )in err
