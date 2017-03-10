@@ -74,6 +74,12 @@ mod test {
 
     #[test]
     fn route_host_suffix() {
+        // Routing table
+        //   example.com: 1
+        //   *.example.com: 2
+        //   *.example.com/static: 3
+        //   www.example.com/static/favicon.ico: 4
+        //   xxx.example.com: 5
         let table = vec![
             (Route { is_suffix: false, host: "example.com".into(), path: None }, 1),
             (Route { is_suffix: true, host: ".example.com".into(), path: None }, 2),
@@ -96,6 +102,9 @@ mod test {
         assert_eq!(route("xxx.example.com", "/hello", &table),
                    Some((&5, "", "/hello")));
         assert_eq!(route("example.org", "/", &table), None);
+        assert_eq!(route("example.com", "/hello", &table),
+                   Some((&1, "", "/hello")));
+        assert_eq!(route("www.example.com", "/static", &table), None);
     }
     /*
 
