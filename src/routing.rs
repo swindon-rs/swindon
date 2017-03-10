@@ -22,7 +22,7 @@ pub fn route<'x, D>(host: &str, path: &'x str, table: &'x BTreeMap<Route, D>)
 }
 
 fn host_match(host: &str, route: &Route) -> bool {
-    if route.is_base {
+    if route.is_suffix {
         host.ends_with(route.host.as_str())
     } else {
         route.host == host
@@ -62,13 +62,37 @@ mod test {
     #[test]
     fn route_host() {
         let table = vec![
-            (Route { is_base: false, host: "example.com".into(), path: None }, 1),
+            (Route { is_suffix: false, host: "example.com".into(), path: None }, 1),
             ].into_iter().collect();
         assert_eq!(route("example.com", "/hello", &table),
                    Some((&1, "", "/hello")));
         assert_eq!(route("example.com", "/", &table),
                    Some((&1, "", "/")));
         assert_eq!(route("example.org", "/hello", &table), None);
+        assert_eq!(route("example.org", "/", &table), None);
+    }
+
+    #[test]
+    fn route_host_suffix() {
+        let table = vec![
+            (Route { is_suffix: false, host: "example.com".into(), path: None }, 1),
+            (Route { is_suffix: true, host: ".example.com".into(), path: None }, 2),
+            (Route { is_suffix: true, host: ".example.com".into(),
+                     path: Some("/static".into()) }, 3),
+            (Route { is_suffix: false, host: "www.example.com".into(),
+                     path: Some("/static/favicon.ico".into()) }, 4),
+            (Route { is_suffix: false, host: "xxx.example.com".into(),
+                     path: None }, 5),
+            ].into_iter().collect();
+
+        assert_eq!(route("test.example.com", "/hello", &table),
+                   Some((&2, "", "/hello")));
+        assert_eq!(route("www.example.com", "/", &table),
+                   Some((&2, "", "/")));
+        assert_eq!(route("www.example.com", "/static/i", &table),
+                   Some((&3, "/static", "/i")));
+        assert_eq!(route("www.example.com", "/static/favicon.ico", &table),
+                   Some((&4, "/static/favicon.ico", "")));
         assert_eq!(route("example.org", "/", &table), None);
     }
     /*
