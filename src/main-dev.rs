@@ -63,6 +63,7 @@ pub fn main() {
 
     let mut verbose = true;
     let mut show_config = false;
+    let mut crossdomain = false;
     let mut port = 8000;
     let mut routes = Vec::<dev::Route>::new();
     {
@@ -94,6 +95,9 @@ pub fn main() {
             .add_option(&["--show-config"], StoreTrue,
             "Show config for swindon that is generate by swindon-dev and
              exit");
+        ap.refer(&mut crossdomain)
+            .add_option(&["--crossdomain"], StoreTrue,
+            "Adds `Access-Control-Allow-Origin: *` header");
         ap.add_option(&["--version"],
             Print(env!("CARGO_PKG_VERSION").to_string()),
             "Show version");
@@ -103,7 +107,7 @@ pub fn main() {
         ap.parse_args_or_exit();
     }
 
-    let config = dev::generate_config(port, &routes);
+    let config = dev::generate_config(port, &routes, crossdomain);
     if show_config {
         print!("{}", config);
         exit(0);

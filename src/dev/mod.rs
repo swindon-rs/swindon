@@ -59,13 +59,16 @@ impl FromStr for Route {
     }
 }
 
-pub fn generate_config(port: u16, routes: &[Route]) -> String {
+pub fn generate_config(port: u16, routes: &[Route], crossdomain: bool)
+    -> String
+{
     let mut buffer = String::new();
-    _generate_config(&mut buffer, port, routes).unwrap();
+    _generate_config(&mut buffer, port, routes, crossdomain).unwrap();
     return buffer;
 }
 
-fn _generate_config(buf: &mut String, port: u16, routes: &[Route])
+fn _generate_config(buf: &mut String, port: u16, routes: &[Route],
+    crossdomain: bool)
     -> Result<(), fmt::Error>
 {
     writeln!(buf, "listen: [127.0.0.1:{}]", port)?;
@@ -92,12 +95,20 @@ fn _generate_config(buf: &mut String, port: u16, routes: &[Route])
                 writeln!(buf, "    mode: relative_to_route")?;
                 writeln!(buf, "    path: {:?}", path)?;
                 writeln!(buf, "    text-charset: utf-8")?;
+                if crossdomain {
+                    writeln!(buf, "    extra-headers:")?;
+                    writeln!(buf, "      Access-Control-Allow-Origin: '*'")?;
+                }
             }
             Route { destination: Destination::Http(_, ref path), .. } => {
                 writeln!(buf, "")?;
                 writeln!(buf, "  h{}: !Proxy", idx)?;
                 writeln!(buf, "    mode: forward")?;
                 writeln!(buf, "    destination: d{}/{}", idx, path)?;
+                if crossdomain {
+                    writeln!(buf, "    extra-headers:")?;
+                    writeln!(buf, "      Access-Control-Allow-Origin: '*'")?;
+                }
             }
         }
     }
