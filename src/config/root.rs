@@ -11,6 +11,7 @@ use intern::{LdapUpstream};
 use config::listen::{self, ListenSocket};
 use config::routing::{self, Routing};
 use config::handlers::{self, Handler};
+use config::authorizers::{self, Authorizer};
 use config::session_pools::{self, SessionPool};
 use config::http_destinations::{self, Destination};
 use config::ldap;
@@ -32,6 +33,7 @@ pub struct Config {
 
     pub routing: Routing,
     pub handlers: HashMap<HandlerName, Handler>,
+    pub authorizers: HashMap<HandlerName, Authorizer>,
     pub session_pools: HashMap<SessionPoolName, Arc<SessionPool>>,
     pub http_destinations: HashMap<Upstream, Destination>,
     pub ldap_destinations: HashMap<LdapUpstream, ldap::Destination>,
@@ -66,12 +68,15 @@ pub fn config_validator<'a>() -> Structure<'a> {
 
     .member("routing", routing::validator())
     .member("handlers", Mapping::new(Scalar::new(), handlers::validator()))
+    .member("authorizers",
+        Mapping::new(Scalar::new(), authorizers::validator()))
     .member("session_pools",
         Mapping::new(Scalar::new(), session_pools::validator()))
     .member("http_destinations",
         Mapping::new(Scalar::new(), http_destinations::validator()))
     .member("ldap_destinations",
         Mapping::new(Scalar::new(), ldap::destination_validator()))
+
     .member("debug_routing", Scalar::new().default(false))
     .member("server_name", Scalar::new().optional()
         .default(concat!("swindon/", env!("CARGO_PKG_VERSION"))))

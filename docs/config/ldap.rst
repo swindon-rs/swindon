@@ -12,6 +12,7 @@ Configuration of LDAP consists of three parts:
 3. And the last but least thing is to add authorizer configured at step #2 to
    actually handle parts of the site.
 
+
 LDAP Destination
 ----------------
 
@@ -34,7 +35,56 @@ Options:
    Each address may be resolved to a multiple IPs and each API participate in
    round-robin on it's own (not the whole hostname).
 
+
 LDAP Authorizer
 ---------------
 
-TBD
+Next thing is to configure an authorizer. The authorizer is a thing that
+picks specific rules for accessing the website.
+
+Here is an example of authorizer configuration:
+
+.. code-block:: yaml
+
+   authorizers:
+     ldap: !Ldap
+       destination: local-ldap
+       search-base: dc=users,dc=example,dc=org
+       login-attribute: uid
+       password-attibute: userPassword
+       login-header: X-User-Uid
+       additional-queries:
+         X-User-Groups:
+           search-base: cn=Group,dc=uaprom,dc=org
+           fetch-attribute: dn
+           filter: "member=${dn}"
+           dn-attribute-strip-base: cn=Group,dc=uaprom,dc=org
+
+Options:
+
+.. opt:: destination
+
+   Destination LDAP connection pool name (see :ref:`LDAP Destinations`)
+
+.. opt:: search-base
+
+   Base DN for searching for user
+
+.. opt:: login-attribute
+
+   The attribute that will be matched against when user is logging in.
+
+.. opt:: password-attribute
+
+   The password attribute name for authentication.
+
+.. opt:: login-header
+
+   A header where valid login will be passed when proxying request to a HTTP
+   destination (when authentication succeeds).
+
+.. opt:: additional-queries
+
+   Each of this query will be executed for already logged in user and result
+   of the query will be passed as the header value to the a HTTP destination.
+

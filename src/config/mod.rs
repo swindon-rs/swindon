@@ -10,6 +10,7 @@ mod listen;
 mod routing;
 mod handlers;
 mod session_pools;
+mod authorizers;
 pub mod http_destinations;
 pub mod ldap;
 // handlers
