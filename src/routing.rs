@@ -93,6 +93,8 @@ mod test {
                    Some((&3, "/static", "/i")));
         assert_eq!(route("www.example.com", "/static/favicon.ico", &table),
                    Some((&4, "/static/favicon.ico", "")));
+        assert_eq!(route("xxx.example.com", "/hello", &table),
+                   Some((&5, "", "/hello")));
         assert_eq!(route("example.org", "/", &table), None);
     }
     /*
