@@ -1,32 +1,30 @@
 use std::collections::BTreeMap;
 
-use config::Route;
+use config::{RouteHost, RoutePath};
 
 
 /// Map host port to a route of arbitrary type
 ///
 /// Returns destination route and relative path
-pub fn route<'x, D>(host: &str, path: &'x str, table: &'x BTreeMap<Route, D>)
+pub fn route<'x, D>(host: &str, path: &'x str,
+    table: &'x BTreeMap<RouteHost, BTreeMap<RoutePath, D>>)
     -> Option<(&'x D, &'x str, &'x str)>
 {
     // TODO(tailhook) transform into range iteration when `btree_range` is
     // stable
-    for (route, result) in table.iter().rev() {
-        if host_match(host, &route) && path_match(&route.path, path) {
-            // Longest match is the last in reversed iteration
-            let prefix = route.path.as_ref().map(|x| &x[..]).unwrap_or("");
-            return Some((result, prefix, &path[prefix.len()..]));
+    for (route_host, sub_table) in table.iter().rev() {
+        if route_host.matches(host) {
+            for (route_path, result) in sub_table.iter().rev() {
+                if path_match(&route_path, path) {
+                    // Longest match is the last in reversed iteration
+                    let prefix = route_path.as_ref().map(|x| &x[..]).unwrap_or("");
+                    return Some((result, prefix, &path[prefix.len()..]));
+                }
+            }
+            return None;
         }
     }
     return None;
-}
-
-fn host_match(host: &str, route: &Route) -> bool {
-    if route.is_suffix {
-        host.ends_with(route.host.as_str())
-    } else {
-        route.host == host
-    }
 }
 
 fn path_match<S: AsRef<str>>(pattern: &Option<S>, value: &str) -> bool {
@@ -56,13 +54,15 @@ pub fn parse_host(host_header: &str) -> &str {
 
 #[cfg(test)]
 mod test {
-    use config::Route;
+    use config::{RouteHost, RoutePath};
     use super::route;
 
     #[test]
     fn route_host() {
         let table = vec![
-            (Route { is_suffix: false, host: "example.com".into(), path: None }, 1),
+            (RouteHost::Exact("example.com".into()), vec![
+                (None, 1),
+                ].into_iter().collect()),
             ].into_iter().collect();
         assert_eq!(route("example.com", "/hello", &table),
                    Some((&1, "", "/hello")));
@@ -81,22 +81,25 @@ mod test {
         //   www.example.com/static/favicon.ico: 4
         //   xxx.example.com: 5
         let table = vec![
-            (Route { is_suffix: false, host: "example.com".into(), path: None }, 1),
-            (Route { is_suffix: true, host: ".example.com".into(), path: None }, 2),
-            (Route { is_suffix: true, host: ".example.com".into(),
-                     path: Some("/static".into()) }, 3),
-            (Route { is_suffix: false, host: "www.example.com".into(),
-                     path: Some("/static/favicon.ico".into()) }, 4),
-            (Route { is_suffix: false, host: "xxx.example.com".into(),
-                     path: None }, 5),
+            (RouteHost::Exact("example.com".into()), vec![
+                (None, 1),
+                ].into_iter().collect()),
+            (RouteHost::Suffix(".example.com".into()), vec![
+                (None, 2),
+                (Some("/static".into()), 3),
+                ].into_iter().collect()),
+            (RouteHost::Exact("www.example.com".into()), vec![
+                (Some("/static/favicon.ico".into()), 4),
+                ].into_iter().collect()),
+            (RouteHost::Exact("xxx.example.com".into()), vec![
+                (None, 5),
+                ].into_iter().collect()),
             ].into_iter().collect();
 
         assert_eq!(route("test.example.com", "/hello", &table),
                    Some((&2, "", "/hello")));
-        assert_eq!(route("www.example.com", "/", &table),
-                   Some((&2, "", "/")));
-        assert_eq!(route("www.example.com", "/static/i", &table),
-                   Some((&3, "/static", "/i")));
+        assert_eq!(route("www.example.com", "/", &table), None);
+        assert_eq!(route("www.example.com", "/static/i", &table), None);
         assert_eq!(route("www.example.com", "/static/favicon.ico", &table),
                    Some((&4, "/static/favicon.ico", "")));
         assert_eq!(route("xxx.example.com", "/hello", &table),
@@ -104,7 +107,8 @@ mod test {
         assert_eq!(route("example.org", "/", &table), None);
         assert_eq!(route("example.com", "/hello", &table),
                    Some((&1, "", "/hello")));
-        assert_eq!(route("www.example.com", "/static", &table), None);
+        assert_eq!(route("city.example.com", "/static", &table),
+                   Some((&3, "/static", "")));
     }
     /*
 

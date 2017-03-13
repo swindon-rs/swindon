@@ -104,17 +104,20 @@ pub fn read_config<P: AsRef<Path>>(filename: P)
 
     // Extra config validations
 
-    for (route, name) in &cfg.routing {
-        if cfg.handlers.get(name).is_none() {
-            err!("Unknown handler for route: {:?} {:?}", route, name)
-        }
-        if route.path.as_ref().map(|x| x.ends_with("/")).unwrap_or(false) {
-            err!("Path must not end with /: {:?} {:?}", route, name);
-        }
-        if let Some(&Handler::StripWWWRedirect) = cfg.handlers.get(name) {
-            if !route.host.starts_with("www.") {
-                err!(concat!("Expected `www.` prefix for StripWWWRedirect",
-                             " handler route: {:?} {:?}"), route, name);
+    for (route, sub) in cfg.routing.iter() {
+        for (path, name) in sub {
+            if cfg.handlers.get(name).is_none() {
+                err!("Unknown handler for route: {:?} {:?}", route, name)
+            }
+            if path.as_ref().map(|x| x.ends_with("/")).unwrap_or(false) {
+                err!("Path must not end with /: {:?} {:?} {:?}",
+                     route, path, name);
+            }
+            if let Some(&Handler::StripWWWRedirect) = cfg.handlers.get(name) {
+                if !route.starts_with("www.") {
+                    err!(concat!("Expected `www.` prefix for StripWWWRedirect",
+                                 " handler route: {:?} {:?}"), route, name);
+                }
             }
         }
     }
