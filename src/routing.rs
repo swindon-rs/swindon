@@ -12,7 +12,7 @@ pub fn route<'x, D>(host: &str, path: &'x str,
 {
     // TODO(tailhook) transform into range iteration when `btree_range` is
     // stable
-    for (route_host, sub_table) in table.iter().rev() {
+    for (route_host, sub_table) in table.iter() {
         if route_host.matches(host) {
             for (route_path, result) in sub_table.iter().rev() {
                 if path_match(&route_path, path) {
@@ -60,7 +60,7 @@ mod test {
     #[test]
     fn route_host() {
         let table = vec![
-            (RouteHost::Exact("example.com".into()), vec![
+            ("example.com".parse().unwrap(), vec![
                 (None, 1),
                 ].into_iter().collect()),
             ].into_iter().collect();
@@ -82,20 +82,20 @@ mod test {
         //   xxx.example.com: 5
         //   *.aaa.example.com: 6
         let table = vec![
-            (RouteHost::Exact("example.com".into()), vec![
+            ("example.com".parse().unwrap(), vec![
                 (None, 1),
                 ].into_iter().collect()),
-            (RouteHost::Suffix(".example.com".into()), vec![
+            ("*.example.com".parse().unwrap(), vec![
                 (None, 2),
                 (Some("/static".into()), 3),
                 ].into_iter().collect()),
-            (RouteHost::Exact("www.example.com".into()), vec![
+            ("www.example.com".parse().unwrap(), vec![
                 (Some("/static/favicon.ico".into()), 4),
                 ].into_iter().collect()),
-            (RouteHost::Exact("xxx.example.com".into()), vec![
+            ("xxx.example.com".parse().unwrap(), vec![
                 (None, 5),
                 ].into_iter().collect()),
-            (RouteHost::Suffix("*.aaa.example.com".into()), vec![
+            ("*.aaa.example.com".parse().unwrap(), vec![
                 (None, 6),
                 ].into_iter().collect()),
             ].into_iter().collect();
@@ -117,7 +117,6 @@ mod test {
                    Some((&3, "/static", "")));
     }
     /*
-
     #[test]
     fn route_path() {
         let table = vec![
