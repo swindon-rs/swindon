@@ -80,6 +80,7 @@ mod test {
         //   *.example.com/static: 3
         //   www.example.com/static/favicon.ico: 4
         //   xxx.example.com: 5
+        //   *.aaa.example.com: 6
         let table = vec![
             (RouteHost::Exact("example.com".into()), vec![
                 (None, 1),
@@ -94,6 +95,9 @@ mod test {
             (RouteHost::Exact("xxx.example.com".into()), vec![
                 (None, 5),
                 ].into_iter().collect()),
+            (RouteHost::Suffix("*.aaa.example.com".into()), vec![
+                (None, 6),
+                ].into_iter().collect()),
             ].into_iter().collect();
 
         assert_eq!(route("test.example.com", "/hello", &table),
@@ -107,6 +111,8 @@ mod test {
         assert_eq!(route("example.org", "/", &table), None);
         assert_eq!(route("example.com", "/hello", &table),
                    Some((&1, "", "/hello")));
+        assert_eq!(route("xxx.aaa.example.com", "/hello", &table),
+                   Some((&6, "", "/hello")));
         assert_eq!(route("city.example.com", "/static", &table),
                    Some((&3, "/static", "")));
     }
