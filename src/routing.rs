@@ -1,21 +1,27 @@
 use std::collections::BTreeMap;
 
-use config::Route;
+use config::{RouteHost, RoutePath};
 
 
 /// Map host port to a route of arbitrary type
 ///
 /// Returns destination route and relative path
-pub fn route<'x, D>(host: &str, path: &'x str, table: &'x BTreeMap<Route, D>)
+pub fn route<'x, D>(host: &str, path: &'x str,
+    table: &'x BTreeMap<RouteHost, BTreeMap<RoutePath, D>>)
     -> Option<(&'x D, &'x str, &'x str)>
 {
     // TODO(tailhook) transform into range iteration when `btree_range` is
     // stable
-    for (route, result) in table.iter().rev() {
-        if route.host == host && path_match(&route.path, path) {
-            // Longest match is the last in reversed iteration
-            let prefix = route.path.as_ref().map(|x| &x[..]).unwrap_or("");
-            return Some((result, prefix, &path[prefix.len()..]));
+    for (route_host, sub_table) in table.iter() {
+        if route_host.matches(host) {
+            for (route_path, result) in sub_table.iter().rev() {
+                if path_match(&route_path, path) {
+                    // Longest match is the last in reversed iteration
+                    let prefix = route_path.as_ref().map(|x| &x[..]).unwrap_or("");
+                    return Some((result, prefix, &path[prefix.len()..]));
+                }
+            }
+            return None;
         }
     }
     return None;
@@ -48,13 +54,15 @@ pub fn parse_host(host_header: &str) -> &str {
 
 #[cfg(test)]
 mod test {
-    use config::Route;
+    use config::{RouteHost, RoutePath};
     use super::route;
 
     #[test]
     fn route_host() {
         let table = vec![
-            (Route { host: "example.com".into(), path: None }, 1),
+            ("example.com".parse().unwrap(), vec![
+                (None, 1),
+                ].into_iter().collect()),
             ].into_iter().collect();
         assert_eq!(route("example.com", "/hello", &table),
                    Some((&1, "", "/hello")));
@@ -63,8 +71,52 @@ mod test {
         assert_eq!(route("example.org", "/hello", &table), None);
         assert_eq!(route("example.org", "/", &table), None);
     }
-    /*
 
+    #[test]
+    fn route_host_suffix() {
+        // Routing table
+        //   example.com: 1
+        //   *.example.com: 2
+        //   *.example.com/static: 3
+        //   www.example.com/static/favicon.ico: 4
+        //   xxx.example.com: 5
+        //   *.aaa.example.com: 6
+        let table = vec![
+            ("example.com".parse().unwrap(), vec![
+                (None, 1),
+                ].into_iter().collect()),
+            ("*.example.com".parse().unwrap(), vec![
+                (None, 2),
+                (Some("/static".into()), 3),
+                ].into_iter().collect()),
+            ("www.example.com".parse().unwrap(), vec![
+                (Some("/static/favicon.ico".into()), 4),
+                ].into_iter().collect()),
+            ("xxx.example.com".parse().unwrap(), vec![
+                (None, 5),
+                ].into_iter().collect()),
+            ("*.aaa.example.com".parse().unwrap(), vec![
+                (None, 6),
+                ].into_iter().collect()),
+            ].into_iter().collect();
+
+        assert_eq!(route("test.example.com", "/hello", &table),
+                   Some((&2, "", "/hello")));
+        assert_eq!(route("www.example.com", "/", &table), None);
+        assert_eq!(route("www.example.com", "/static/i", &table), None);
+        assert_eq!(route("www.example.com", "/static/favicon.ico", &table),
+                   Some((&4, "/static/favicon.ico", "")));
+        assert_eq!(route("xxx.example.com", "/hello", &table),
+                   Some((&5, "", "/hello")));
+        assert_eq!(route("example.org", "/", &table), None);
+        assert_eq!(route("example.com", "/hello", &table),
+                   Some((&1, "", "/hello")));
+        assert_eq!(route("xxx.aaa.example.com", "/hello", &table),
+                   Some((&6, "", "/hello")));
+        assert_eq!(route("city.example.com", "/static", &table),
+                   Some((&3, "/static", "")));
+    }
+    /*
     #[test]
     fn route_path() {
         let table = vec![
