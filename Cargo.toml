@@ -2,7 +2,16 @@
 
 name = "swindon"
 version = "0.2.0"
-authors = ["a.popravka@smartweb.com.ua"]
+authors = ["a.popravka@smartweb.com.ua", "paul@colomiets.name"]
+description = """
+    An HTTP edge (frontend) server with smart websockets support
+"""
+license = "MIT/Apache-2.0"
+readme = "README.rst"
+keywords = ["tokio", "http", "websockets", "server", "web"]
+categories = ["asynchronous", "web-programming::http-server"]
+homepage = "http://github.com/swindon-rs/swindon"
+documentation = "https://swindon-rs.github.io/swindon"
 
 [dependencies]
 futures = "0.1.9"
