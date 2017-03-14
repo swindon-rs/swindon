@@ -1,3 +1,4 @@
+import pytest
 import aiohttp
 
 
@@ -106,9 +107,14 @@ async def test_hostname(swindon, http_request, debug_routing):
         assert 'X-Swindon-File-Path' not in resp.headers
 
 
-async def test_url_with_query(swindon, http_request, debug_routing):
+@pytest.mark.parametrize('url_with', [
+    lambda u: u.with_query(foo='bar'),
+    lambda u: u.with_query(foo='bar').with_fragment('frag'),
+    lambda u: u.with_fragment('frag'),
+    ], ids='?foo=bar,?foo=bar#frag,#frag'.split(','))
+async def test_url_with_query(swindon, http_request, debug_routing, url_with):
     url = swindon.url / 'static' / 'static_file.txt'
-    url = url.with_query(foo='bar')
+    url = url_with(url)
     resp, data = await http_request(url)
     assert resp.status == 200
     assert resp.headers['Content-Type'] == 'text/plain'

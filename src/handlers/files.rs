@@ -116,6 +116,10 @@ fn path(settings: &Static, inp: &Input) -> Result<PathBuf, ()> {
         }
         Mode::relative_to_route => inp.suffix,
     };
+    let path = match path.find(|c| c == '?' || c == '#') {
+        Some(idx) => &path[..idx],
+        None => path
+    };
     let path = Path::new(path.trim_left_matches('/'));
     let mut buf = settings.path.to_path_buf();
     if settings.mode == Mode::with_hostname {
