@@ -38,6 +38,8 @@ routing:
   localhost/static-w-headers: static_w_headers
   localhost/static-w-ctype: static_w_ctype
   localhost/static-w-hostname: static_w_hostname
+  localhost/static-w-index: static_w_index
+  localhost/static-wo-index: static_wo_index
 
   # TODO: add overlapping routes:
   #   /static: !Proxy & /static/file: !SingleFile
@@ -114,6 +116,10 @@ handlers:
   static_w_hostname: !Static
     mode: with_hostname
     path: /work/tests/assets/
+  static_w_index: !Static
+    path: /work/tests/assets/index
+  static_wo_index: !Static
+    path: /work/tests/assets/index
 
   ### Proxy handlers ###
 

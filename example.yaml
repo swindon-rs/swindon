@@ -12,10 +12,11 @@ routing:
   example.com: example-chat-http
   httpbin.devd.io: http-bin
   proxy.devd.io: bin
+  mb.devd.io: mbst
   chat.example.com/: example-chat
-  chat.example.com/css: example-chat-static
-  chat.example.com/js: example-chat-static
-  chat.example.com/index.html: example-chat-static
+  #chat.example.com/css: example-chat-static
+  #chat.example.com/js: example-chat-static
+  #chat.example.com/index.html: example-chat-static
 
 handlers:
 
@@ -36,6 +37,11 @@ handlers:
   empty-gif: !EmptyGif
     extra-headers: &cool-headers
       X-Swindon-Hello: Greetings from tailhook!
+
+  mbst: !Static
+    mode: relative_to_domain_root
+    path: /work/examples/message-board/public
+    index-files: [index.html]
 
   websocket-echo-static: !Static
     mode: relative_to_domain_root

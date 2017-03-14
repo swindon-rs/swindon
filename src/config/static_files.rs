@@ -2,7 +2,7 @@ use std::ascii::AsciiExt;
 use std::path::PathBuf;
 use std::collections::HashMap;
 
-use quire::validate::{Nothing, Enum, Structure, Scalar, Mapping};
+use quire::validate::{Nothing, Enum, Structure, Scalar, Mapping, Sequence};
 use rustc_serialize::{Decoder, Decodable};
 
 use intern::DiskPoolName;
@@ -25,6 +25,7 @@ pub struct Static {
     pub pool: DiskPoolName,
     pub extra_headers: HashMap<String, String>,
     pub strip_host_suffix: Option<String>,
+    pub index_files: Vec<String>,
     // Computed values
     pub overrides_content_type: bool,
 }
@@ -50,6 +51,7 @@ pub fn validator<'x>() -> Structure<'x> {
     .member("pool", Scalar::new().default("default"))
     .member("extra_headers", Mapping::new(Scalar::new(), Scalar::new()))
     .member("strip_host_suffix", Scalar::new().optional())
+    .member("index_files", Sequence::new(Scalar::new()))
 }
 
 pub fn single_file<'x>() -> Structure<'x> {
@@ -69,6 +71,7 @@ impl Decodable for Static {
             pub text_charset: Option<String>,
             pub pool: DiskPoolName,
             pub extra_headers: HashMap<String, String>,
+            pub index_files: Vec<String>,
             pub strip_host_suffix: Option<String>,
         }
         let int = Internal::decode(d)?;
@@ -80,6 +83,7 @@ impl Decodable for Static {
             text_charset: int.text_charset,
             pool: int.pool,
             extra_headers: int.extra_headers,
+            index_files: int.index_files,
             strip_host_suffix: int.strip_host_suffix,
         })
     }

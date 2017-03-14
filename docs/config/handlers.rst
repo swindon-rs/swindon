@@ -135,6 +135,18 @@ Common settings:
    ``http://something.example.com/xx/yy`` will be searched in the directory
    ``something/xx/yy``.
 
+.. opt:: index-files
+
+   (default ``[]``) List of files to be used as a directory index.
+   If none of them found (or ``index-files`` is an empty list) the 403 error
+   is returned.
+
+   MIME type for index file is guessed just like for any other file.
+
+   Example::
+
+        index-files: ["index.html", "index.htm"]
+
 
 Swindon chat handler
 --------------------

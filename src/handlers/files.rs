@@ -1,8 +1,10 @@
 use std::collections::HashMap;
 use std::collections::hash_map::DefaultHasher;
 use std::collections::hash_map::Entry::{Occupied, Vacant};
+use std::fs::{File, metadata};
 use std::hash::{Hash, Hasher};
 use std::io;
+use std::os::unix::io::AsRawFd;
 use std::path::{Path, PathBuf, Component};
 use std::sync::{Arc, RwLock};
 
@@ -10,10 +12,10 @@ use futures_cpupool::CpuPool;
 use futures::{Future};
 use futures::future::{ok};
 use mime_guess::guess_mime_type;
-use mime::TopLevel;
+use mime::{TopLevel, Mime};
 use tk_http::server::Error;
 use tk_http::Status;
-use tk_sendfile::DiskPool;
+use tk_sendfile::{DiskPool, FileOpener, IntoFileOpener};
 
 use config;
 use config::static_files::{Static, Mode, SingleFile};
@@ -31,6 +33,12 @@ quick_error! {
             cause(err)
         }
     }
+}
+
+struct PathOpen {
+    path: PathBuf,
+    settings: Arc<Static>,
+    file: Option<(File, u64, Mime)>,
 }
 
 
@@ -51,17 +59,17 @@ pub fn serve_dir<S: Transport>(settings: &Arc<Static>, mut inp: Input)
             return serve_error_page(Status::Forbidden, inp);
         }
     };
-    let mime = guess_mime_type(&path);
     inp.debug.set_fs_path(&path);
     let pool = get_pool(&settings.pool);
     let settings = settings.clone();
     reply(inp, move |mut e| {
-        Box::new(pool.open(path)
+        Box::new(pool.open(PathOpen::new(path, &settings))
             .then(move |res| match res {
                 Ok(file) => {
                     e.status(Status::Ok);
                     e.add_length(file.size());
                     if !settings.overrides_content_type {
+                        let mime = file.get_inner().get_mime();
                         match (&mime.0, &settings.text_charset) {
                             (&TopLevel::Text, &Some(ref enc)) => {
                                 e.format_header("Content-Type", format_args!(
@@ -240,5 +248,70 @@ pub fn update_pools(config: &HashMap<DiskPoolName, config::Disk>) {
         cfg.hash(&mut hasher);
         let hash = hasher.finish();
         pools.insert(DEFAULT.clone(), (hash, new_pool(&cfg)));
+    }
+}
+
+impl PathOpen {
+    fn new(path: PathBuf, settings: &Arc<Static>) -> PathOpen {
+        PathOpen {
+            path: path,
+            settings: settings.clone(),
+            file: None,
+        }
+    }
+    fn get_mime(&self) -> &Mime {
+        self.file.as_ref()
+            .map(|&(_, _, ref m)| m)
+            .unwrap()
+    }
+}
+
+impl IntoFileOpener for PathOpen {
+    type Opener = PathOpen;
+    fn into_file_opener(self) -> Self::Opener {
+        self
+    }
+}
+
+fn find_index(path: &Path, settings: &Arc<Static>)
+    -> Result<(File, u64, Mime), io::Error>
+{
+    for file_name in &settings.index_files {
+        let file = match File::open(path.join(file_name)) {
+            Ok(x) => x,
+            Err(ref e) if e.kind() == io::ErrorKind::NotFound => {
+                continue;
+            }
+            Err(e) => return Err(e),
+        };
+        let meta = file.metadata()?;
+        if meta.is_file() {
+            let mime = guess_mime_type(&file_name);
+            return Ok((file, meta.len(), mime));
+        }
+    }
+    return Err(io::ErrorKind::Other.into());
+}
+
+impl FileOpener for PathOpen {
+    fn open(&mut self) -> Result<(&AsRawFd, u64), io::Error> {
+        if self.file.is_none() {
+            let file = File::open(&self.path)?;
+            let meta = file.metadata()?;
+            if meta.is_dir() {
+                if self.settings.index_files.len() > 0 &&
+                    metadata(&self.path)?.is_dir()
+                {
+                    self.file = Some(find_index(&self.path, &self.settings)?);
+                } else {
+                    return Err(io::ErrorKind::Other.into());
+                }
+            } else {
+                let mime = guess_mime_type(&self.path);
+                self.file = Some((file, meta.len(), mime));
+            }
+        }
+        Ok(self.file.as_ref()
+            .map(|&(ref f, s, _)| (f as &AsRawFd, s)).unwrap())
     }
 }

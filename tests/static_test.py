@@ -1,9 +1,23 @@
 import aiohttp
 
 
-async def test_index(swindon, http_request, debug_routing):
+async def test_no_index(swindon, http_request, debug_routing):
     # XXX: on resp.read() connection gets closed
     resp, data = await http_request(swindon.url / 'static')
+    assert resp.status == 403
+    assert resp.headers['Content-Type'] == 'text/html'
+
+
+async def test_index(swindon, http_request, debug_routing):
+    # XXX: on resp.read() connection gets closed
+    resp, data = await http_request(swindon.url / 'static-w-index')
+    assert resp.status == 200
+    assert resp.headers['Content-Type'] == 'text/html'
+    assert data == b'<!DOCTYPE html>\n<title>Hello</title>\n'
+
+async def test_disabled_index(swindon, http_request, debug_routing):
+    # XXX: on resp.read() connection gets closed
+    resp, data = await http_request(swindon.url / 'static-wo-index')
     assert resp.status == 403
     assert resp.headers['Content-Type'] == 'text/html'
 
