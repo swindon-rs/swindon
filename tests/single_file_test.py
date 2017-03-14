@@ -15,6 +15,23 @@ async def test_ok(swindon, http_request, debug_routing):
         assert 'X-Swindon-File-Path' not in resp.headers
 
 
+async def test_query_args(swindon, http_request, debug_routing):
+    url = swindon.url / 'static-file'
+    url = url.with_query(foo='bar')
+    resp, data = await http_request(url)
+    assert resp.status == 200
+    assert resp.headers['Content-Type'] == 'text/plain'
+    assert resp.headers['Content-Length'] == '17'
+    assert data == b'Static file test\n'
+    if debug_routing:
+        assert resp.headers['X-Swindon-Route'] == 'single_file'
+        assert resp.headers['X-Swindon-File-Path'] == \
+            '"/work/tests/assets/static_file.txt"'
+    else:
+        assert 'X-Swindon-Route' not in resp.headers
+        assert 'X-Swindon-File-Path' not in resp.headers
+
+
 async def test_request_method(swindon, http_request):
     resp, data = await http_request(swindon.url / 'static-file')
     assert resp.status == 200

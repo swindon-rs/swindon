@@ -15,6 +15,7 @@ async def test_index(swindon, http_request, debug_routing):
     assert resp.headers['Content-Type'] == 'text/html'
     assert data == b'<!DOCTYPE html>\n<title>Hello</title>\n'
 
+
 async def test_disabled_index(swindon, http_request, debug_routing):
     # XXX: on resp.read() connection gets closed
     resp, data = await http_request(swindon.url / 'static-wo-index')
@@ -101,5 +102,20 @@ async def test_hostname(swindon, http_request, debug_routing):
     if debug_routing:
         assert resp.headers.getall('X-Swindon-File-Path', []) == [
             '"/work/tests/assets/localhost/static-w-hostname/test.txt"']
+    else:
+        assert 'X-Swindon-File-Path' not in resp.headers
+
+
+async def test_url_with_query(swindon, http_request, debug_routing):
+    url = swindon.url / 'static' / 'static_file.txt'
+    url = url.with_query(foo='bar')
+    resp, data = await http_request(url)
+    assert resp.status == 200
+    assert resp.headers['Content-Type'] == 'text/plain'
+    assert resp.headers['Content-Length'] == '17'
+    assert data == b'Static file test\n'
+    if debug_routing:
+        assert resp.headers['X-Swindon-File-Path'] == \
+            '"/work/tests/assets/static_file.txt"'
     else:
         assert 'X-Swindon-File-Path' not in resp.headers
