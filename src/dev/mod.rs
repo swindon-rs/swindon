@@ -93,6 +93,7 @@ fn _generate_config(buf: &mut String, port: u16, routes: &[Route],
                 writeln!(buf, "")?;
                 writeln!(buf, "  h{}: !Static", idx)?;
                 writeln!(buf, "    mode: relative_to_route")?;
+                writeln!(buf, "    index-files: [index.html, index.htm]")?;
                 writeln!(buf, "    path: {:?}", path)?;
                 writeln!(buf, "    text-charset: utf-8")?;
                 if crossdomain {
