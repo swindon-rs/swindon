@@ -2,6 +2,9 @@
 Swindon
 =======
 
+:Status: Beta
+:Documentation: https://swindon-rs.github.io/swindon
+
 A HTTP edge (frontend) server with smart websocket support.
 
 
