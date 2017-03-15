@@ -21,8 +21,8 @@ async def test_request_methods(swindon, http_request):
     assert len(data) == 26
 
 
-async def test_request_HEAD(swindon):
-    async with aiohttp.ClientSession() as s:
+async def test_request_HEAD(swindon, loop):
+    async with aiohttp.ClientSession(loop=loop) as s:
         async with s.head(swindon.url / 'empty.gif') as resp:
             assert resp.status == 200
             assert resp.headers['Content-Type'] == 'image/gif'

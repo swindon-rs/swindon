@@ -1,6 +1,6 @@
 
 
-async def test_ok(swindon, http_request, debug_routing):
+async def test_ok(swindon, http_request, debug_routing, TESTS_DIR):
     resp, data = await http_request(swindon.url / 'static-file')
     assert resp.status == 200
     assert resp.headers['Content-Type'] == 'text/plain'
@@ -9,13 +9,13 @@ async def test_ok(swindon, http_request, debug_routing):
     if debug_routing:
         assert resp.headers['X-Swindon-Route'] == 'single_file'
         assert resp.headers['X-Swindon-File-Path'] == \
-            '"/work/tests/assets/static_file.txt"'
+            '"{}/assets/static_file.txt"'.format(TESTS_DIR)
     else:
         assert 'X-Swindon-Route' not in resp.headers
         assert 'X-Swindon-File-Path' not in resp.headers
 
 
-async def test_query_args(swindon, http_request, debug_routing):
+async def test_query_args(swindon, http_request, debug_routing, TESTS_DIR):
     url = swindon.url / 'static-file'
     url = url.with_query(foo='bar')
     resp, data = await http_request(url)
@@ -26,7 +26,7 @@ async def test_query_args(swindon, http_request, debug_routing):
     if debug_routing:
         assert resp.headers['X-Swindon-Route'] == 'single_file'
         assert resp.headers['X-Swindon-File-Path'] == \
-            '"/work/tests/assets/static_file.txt"'
+            '"{}/assets/static_file.txt"'.format(TESTS_DIR)
     else:
         assert 'X-Swindon-Route' not in resp.headers
         assert 'X-Swindon-File-Path' not in resp.headers
@@ -40,7 +40,7 @@ async def test_request_method(swindon, http_request):
     assert data == b'Static file test\n'
 
 
-async def test_missing_file(swindon, http_request, debug_routing):
+async def test_missing_file(swindon, http_request, debug_routing, TESTS_DIR):
     msg = (b'<!DOCTYPE html><html><head>'
            b'<title>404 Not Found</title></head>'
            b'<body><h1>404 Not Found</h1><hr>'
@@ -52,7 +52,7 @@ async def test_missing_file(swindon, http_request, debug_routing):
     assert resp.headers['Content-Length'] == str(len(msg))
     if debug_routing:
         assert resp.headers['X-Swindon-File-Path'] == \
-            '"/work/tests/assets/missing_file.txt"'
+            '"{}/assets/missing_file.txt"'.format(TESTS_DIR)
 
 
 async def test_permission(swindon, http_request):
@@ -75,7 +75,7 @@ async def test_extra_headers(swindon, http_request):
     assert 'X-Bad-Header' not in resp.headers
 
 
-async def test_symlink(swindon, http_request, debug_routing):
+async def test_symlink(swindon, http_request, debug_routing, TESTS_DIR):
     resp, data = await http_request(swindon.url / 'symlink')
     assert resp.status == 200
     assert resp.headers['Content-Type'] == 'text/plain'
@@ -84,7 +84,7 @@ async def test_symlink(swindon, http_request, debug_routing):
     if debug_routing:
         assert resp.headers['X-Swindon-Route'] == 'single_symlink'
         assert resp.headers['X-Swindon-File-Path'] == \
-            '"/work/tests/assets/link.txt"'
+            '"{}/assets/link.txt"'.format(TESTS_DIR)
     else:
         assert 'X-Swindon-Route' not in resp.headers
         assert 'X-Swindon-File-Path' not in resp.headers

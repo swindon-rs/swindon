@@ -24,7 +24,7 @@ async def test_disabled_index(swindon, http_request, debug_routing):
     assert resp.headers['Content-Type'] == 'text/html'
 
 
-async def test_ok(swindon, http_request, debug_routing):
+async def test_ok(swindon, http_request, debug_routing, TESTS_DIR):
     url = swindon.url / 'static' / 'static_file.txt'
     resp, data = await http_request(url)
     assert resp.status == 200
@@ -33,12 +33,12 @@ async def test_ok(swindon, http_request, debug_routing):
     assert data == b'Static file test\n'
     if debug_routing:
         assert resp.headers['X-Swindon-File-Path'] == \
-            '"/work/tests/assets/static_file.txt"'
+            '"{}/assets/static_file.txt"'.format(TESTS_DIR)
     else:
         assert 'X-Swindon-File-Path' not in resp.headers
 
 
-async def test_permission(swindon, http_request, debug_routing):
+async def test_permission(swindon, http_request, debug_routing, TESTS_DIR):
     msg = (b'<!DOCTYPE html><html><head>'
            b'<title>404 Not Found</title></head>'
            b'<body><h1>404 Not Found</h1><hr>'
@@ -51,12 +51,12 @@ async def test_permission(swindon, http_request, debug_routing):
     assert resp.headers['Content-Length'] == str(len(msg))
     if debug_routing:
         assert resp.headers.getall('X-Swindon-File-Path', []) == [
-            '"/work/tests/assets/no-permission"']
+            '"{}/assets/no-permission"'.format(TESTS_DIR)]
     else:
         assert 'X-Swindon-File-Path' not in resp.headers
 
 
-async def test_extra_headers(swindon, http_request, debug_routing):
+async def test_extra_headers(swindon, http_request, debug_routing, TESTS_DIR):
     url = swindon.url / 'static-w-headers' / 'static_file.html'
     resp, data = await http_request(url)
     assert resp.status == 200
@@ -66,16 +66,16 @@ async def test_extra_headers(swindon, http_request, debug_routing):
     assert data == b'Static file test\n'
     if debug_routing:
         assert resp.headers.getall('X-Swindon-File-Path', []) == [
-            '"/work/tests/assets/static_file.html"']
+            '"{}/assets/static_file.html"'.format(TESTS_DIR)]
     else:
         assert 'X-Swindon-File-Path' not in resp.headers
 
 
 async def test_headers_override(
-        swindon, request_method, http_version, debug_routing):
+        swindon, request_method, http_version, debug_routing, loop, TESTS_DIR):
     url = swindon.url / 'static-w-ctype' / 'static_file.txt'
     meth = request_method
-    async with aiohttp.ClientSession(version=http_version) as s:
+    async with aiohttp.ClientSession(version=http_version, loop=loop) as s:
         async with s.request(meth, url) as resp:
             assert resp.status == 200
             assert resp.version == http_version
@@ -88,12 +88,12 @@ async def test_headers_override(
             assert ctype[0] == b'something/other'
             if debug_routing:
                 assert resp.headers.getall('X-Swindon-File-Path', []) == [
-                    '"/work/tests/assets/static_file.txt"']
+                    '"{}/assets/static_file.txt"'.format(TESTS_DIR)]
             else:
                 assert 'X-Swindon-File-Path' not in resp.headers
 
 
-async def test_hostname(swindon, http_request, debug_routing):
+async def test_hostname(swindon, http_request, debug_routing, TESTS_DIR):
     url = swindon.url / 'static-w-hostname' / 'test.txt'
     resp, data = await http_request(url)
     assert resp.status == 200
@@ -102,7 +102,8 @@ async def test_hostname(swindon, http_request, debug_routing):
     assert data == b'localhost+static\n'
     if debug_routing:
         assert resp.headers.getall('X-Swindon-File-Path', []) == [
-            '"/work/tests/assets/localhost/static-w-hostname/test.txt"']
+            '"{}/assets/localhost/static-w-hostname/test.txt"'
+            .format(TESTS_DIR)]
     else:
         assert 'X-Swindon-File-Path' not in resp.headers
 
@@ -112,7 +113,8 @@ async def test_hostname(swindon, http_request, debug_routing):
     lambda u: u.with_query(foo='bar').with_fragment('frag'),
     lambda u: u.with_fragment('frag'),
     ], ids='?foo=bar,?foo=bar#frag,#frag'.split(','))
-async def test_url_with_query(swindon, http_request, debug_routing, url_with):
+async def test_url_with_query(
+        swindon, http_request, debug_routing, url_with, TESTS_DIR):
     url = swindon.url / 'static' / 'static_file.txt'
     url = url_with(url)
     resp, data = await http_request(url)
@@ -122,6 +124,6 @@ async def test_url_with_query(swindon, http_request, debug_routing, url_with):
     assert data == b'Static file test\n'
     if debug_routing:
         assert resp.headers['X-Swindon-File-Path'] == \
-            '"/work/tests/assets/static_file.txt"'
+            '"{}/assets/static_file.txt"'.format(TESTS_DIR)
     else:
         assert 'X-Swindon-File-Path' not in resp.headers

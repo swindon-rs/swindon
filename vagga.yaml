@@ -105,10 +105,6 @@ containers:
       install-python: false
       python-exe: /usr/bin/python3.6
     - !Py3Requirements "tests/requirements.txt"
-    - !Sh |
-        # For test_permission
-        echo "no-permission" > /no-permission.txt
-        chmod go-rwx /no-permission.txt
 
 commands:
 

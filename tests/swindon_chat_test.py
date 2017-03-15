@@ -33,6 +33,7 @@ async def test_simple_userinfo(proxy_server, swindon):
         assert msg == ['hello', {}, {'user_id': 'user:1', 'username': 'John'}]
 
 
+@pytest.mark.xfail(reason="shutdown is not implemented yet")
 async def test_ws_close_timeout(proxy_server, swindon):
     url = swindon.url / 'swindon-chat'
     with timeout(1):
@@ -281,7 +282,7 @@ async def test_prefix_routes(proxy_server, swindon):
             ]
 
 
-async def test_topic_subscribe_publish(proxy_server, swindon):
+async def test_topic_subscribe_publish(proxy_server, swindon, loop):
     url = swindon.url / 'swindon-chat'
     async with proxy_server.swindon_chat(url, timeout=1) as call:
         req, fut = await call.request()
@@ -293,7 +294,7 @@ async def test_topic_subscribe_publish(proxy_server, swindon):
 
         cid = meta['connection_id']
 
-        async with aiohttp.ClientSession() as s:
+        async with aiohttp.ClientSession(loop=loop) as s:
             sub_url = swindon.api / 'v1/connection' / cid / 'subscriptions'
             sub_url = sub_url / 'some/topic'
             async with s.put(sub_url) as resp:
@@ -313,7 +314,7 @@ async def test_topic_subscribe_publish(proxy_server, swindon):
         msg = await ws.receive_json()
         assert msg == ['message', {'topic': 'some.topic'}, {'Test': 'message'}]
 
-        async with aiohttp.ClientSession() as s:
+        async with aiohttp.ClientSession(loop=loop) as s:
             publish_url = swindon.api / 'v1/publish' / 'some/topic'
             data = b'"other message"'
             async with s.post(publish_url, data=data) as resp:
@@ -322,7 +323,7 @@ async def test_topic_subscribe_publish(proxy_server, swindon):
         assert msg == ['message', {'topic': 'some.topic'}, 'other message']
 
 
-async def test_lattice_subscribe_update(proxy_server, swindon):
+async def test_lattice_subscribe_update(proxy_server, swindon, loop):
     url = swindon.url / 'swindon-chat'
     async with proxy_server.swindon_chat(url, timeout=1) as call:
         req, fut = await call.request()
@@ -333,7 +334,7 @@ async def test_lattice_subscribe_update(proxy_server, swindon):
         assert kwargs
         cid = meta['connection_id']
 
-        async with aiohttp.ClientSession() as s:
+        async with aiohttp.ClientSession(loop=loop) as s:
             u = swindon.api / 'v1/connection' / cid / 'lattices'
             u = u / 'lattice/namespace'
             data = json.dumps({
@@ -366,7 +367,7 @@ async def test_lattice_subscribe_update(proxy_server, swindon):
         ]
 
 
-async def test_inactivity(proxy_server, swindon):
+async def test_inactivity(proxy_server, swindon, loop):
     chat_url = swindon.url / 'swindon-chat-w-timeouts'
     async with proxy_server.swindon_chat(chat_url, timeout=1) as call:
         req, fut = await call.request()
@@ -379,7 +380,9 @@ async def test_inactivity(proxy_server, swindon):
         assert hello == [
             'hello', {}, {'user_id': 'user:1', 'username': 'Jim'}]
 
-        req, fut = await asyncio.wait_for(call.request(), timeout=1.2)
+        req, fut = await asyncio.wait_for(call.request(),
+                                          timeout=1.2,
+                                          loop=loop)
         assert req.path == '/tangle/session_inactive'
         assert req.headers.getall('Authorization') == [
             'Tangle eyJ1c2VyX2lkIjoidXNlcjoxIn0='
@@ -396,7 +399,9 @@ async def test_inactivity(proxy_server, swindon):
             [], {}]
         fut.set_result(web.Response(status=200))
 
-        req, fut = await asyncio.wait_for(call.request(), timeout=3.2)
+        req, fut = await asyncio.wait_for(call.request(),
+                                          timeout=3.2,
+                                          loop=loop)
         assert req.path == '/tangle/session_inactive'
         assert req.headers.getall('Authorization') == [
             'Tangle eyJ1c2VyX2lkIjoidXNlcjoxIn0='

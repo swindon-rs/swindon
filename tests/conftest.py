@@ -69,10 +69,10 @@ def debug_routing(request):
 
 
 @pytest.fixture
-def http_request(request_method, http_version, debug_routing):
+def http_request(request_method, http_version, debug_routing, loop):
 
     async def inner(url, **kwargs):
-        async with aiohttp.ClientSession(version=http_version) as s:
+        async with aiohttp.ClientSession(version=http_version, loop=loop) as s:
             async with s.request(request_method, url, **kwargs) as resp:
                 data = await resp.read()
                 assert resp.version == http_version
@@ -101,6 +101,11 @@ SwindonInfo = namedtuple('SwindonInfo', 'proc url proxy api api2')
 
 
 @pytest.fixture(scope='session')
+def TESTS_DIR():
+    return os.path.dirname(__file__)
+
+
+@pytest.fixture(scope='session')
 def unused_port():
     used = set()
 
@@ -117,7 +122,7 @@ def unused_port():
 
 
 @pytest.fixture(scope='session', params=SWINDON_BIN)
-def swindon(_proc, request, debug_routing, unused_port):
+def swindon(_proc, request, debug_routing, unused_port, TESTS_DIR):
     SWINDON_ADDRESS = unused_port()
     PROXY_ADDRESS = unused_port()
     SESSION_POOL_ADDRESS1 = unused_port()
@@ -125,6 +130,11 @@ def swindon(_proc, request, debug_routing, unused_port):
 
     def to_addr(port):
         return '127.0.0.1:{}'.format(port)
+
+    no_permission_file = pathlib.Path(tempfile.gettempdir())
+    no_permission_file /= 'no-permission.txt'
+    if not no_permission_file.exists():
+        no_permission_file.touch(0o000)
 
     swindon_bin = request.param
     fd, fname = tempfile.mkstemp()
@@ -138,6 +148,7 @@ def swindon(_proc, request, debug_routing, unused_port):
                             proxy_address=to_addr(PROXY_ADDRESS),
                             spool_address1=to_addr(SESSION_POOL_ADDRESS1),
                             spool_address2=to_addr(SESSION_POOL_ADDRESS2),
+                            TESTS_DIR=TESTS_DIR,
                             )
     assert _check_config(config, returncode=0, __swindon_bin=swindon_bin) == ''
 
@@ -188,12 +199,12 @@ def _check_config(cfg='', returncode=1, *, __swindon_bin):
             ],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            encoding='utf-8',
+            # encoding='utf-8',
             timeout=15,
             )
         assert not res.stdout, res
         assert res.returncode == returncode, res
-        return res.stderr.replace(f.name, 'TEMP_FILE_NAME')
+        return res.stderr.decode('utf-8').replace(f.name, 'TEMP_FILE_NAME')
 
 
 @pytest.fixture
@@ -225,7 +236,8 @@ class ContextServer:
         assert self._srv is None
         self._srv = await self.loop.create_server(
             self.server, '127.0.0.1', self.port,
-            reuse_address=True, reuse_port=True)
+            reuse_address=True,
+            reuse_port=hasattr(socket, 'SO_REUSEPORT'))
 
     async def stop_server(self):
         assert self._srv is not None
@@ -237,7 +249,7 @@ class ContextServer:
         assert self._srv
 
         async def _send_request():
-            async with aiohttp.ClientSession() as sess:
+            async with aiohttp.ClientSession(loop=self.loop) as sess:
                 async with sess.request(method, url, **kwargs) as resp:
                     await resp.read()
                     return resp

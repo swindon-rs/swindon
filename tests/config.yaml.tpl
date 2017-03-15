@@ -80,22 +80,22 @@ handlers:
   ### SingleFile handlers ###
 
   single_file: !SingleFile
-    path: /work/tests/assets/static_file.txt
+    path: ${TESTS_DIR}/assets/static_file.txt
     content-type: text/plain
   missing_file: !SingleFile
-    path: /work/tests/assets/missing_file.txt
+    path: ${TESTS_DIR}/assets/missing_file.txt
     content-type: text/is/missing
   no_permission: !SingleFile
-    path: /no-permission.txt
+    path: /tmp/no-permission.txt
     content-type: text/no/permission
   extra_headers: !SingleFile
-    path: /work/tests/assets/static_file.txt
+    path: ${TESTS_DIR}/assets/static_file.txt
     content-type: text/plain
     extra-headers:
       X-Extra-Header: "extra value"
       X-Bad-Header: "bad header\r\n"
   single_symlink: !SingleFile
-    path: /work/tests/assets/link.txt
+    path: ${TESTS_DIR}/assets/link.txt
     content-type: text/plain
   dev_null: !SingleFile
     path: /dev/null
@@ -104,22 +104,24 @@ handlers:
   ### Static handlers ###
 
   static: !Static
-    path: /work/tests/assets/
+    path: ${TESTS_DIR}/assets/
   static_w_headers: !Static
-    path: /work/tests/assets/
+    path: ${TESTS_DIR}/assets/
     extra-headers:
       X-Some-Header: some value
   static_w_ctype: !Static
-    path: /work/tests/assets/
+    path: ${TESTS_DIR}/assets/
     extra-headers:
       Content-Type: something/other
   static_w_hostname: !Static
     mode: with_hostname
-    path: /work/tests/assets/
+    path: ${TESTS_DIR}/assets/
   static_w_index: !Static
-    path: /work/tests/assets/index
+    path: ${TESTS_DIR}/assets/index
+    index-files:
+    - index.html
   static_wo_index: !Static
-    path: /work/tests/assets/index
+    path: ${TESTS_DIR}/assets/index
 
   ### Proxy handlers ###
 
