@@ -34,6 +34,10 @@ pub struct Config {
     pub http_destinations: HashMap<Upstream, Destination>,
     pub debug_routing: bool,
     pub server_name: Option<String>,
+
+    pub set_user: Option<String>,
+    pub set_group: Option<String>,
+
     /// Note: "default" disk pool is always created, the only thing you can
     /// do is to update it's pool size, It's pool size can't be less than
     /// one, however.
@@ -66,5 +70,7 @@ pub fn config_validator<'a>() -> Structure<'a> {
     .member("debug_routing", Scalar::new().default(false))
     .member("server_name", Scalar::new().optional()
         .default(concat!("swindon/", env!("CARGO_PKG_VERSION"))))
+    .member("set_user", Scalar::new().optional())
+    .member("set_group", Scalar::new().optional())
     .member("disk_pools", Mapping::new(Scalar::new(), disk::validator()))
 }

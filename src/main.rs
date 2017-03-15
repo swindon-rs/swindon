@@ -15,6 +15,7 @@ extern crate time;
 extern crate argparse;
 extern crate tokio_core;
 extern crate tk_http;
+extern crate libc;
 extern crate netbuf;
 extern crate mime;
 extern crate sha1;
@@ -44,6 +45,7 @@ mod incoming;
 mod http_pools;  // TODO(tailhook) move to proxy?
 mod proxy;
 mod base64;
+mod privileges;
 
 use std::io::{self, Write};
 use std::time::Duration;
@@ -98,6 +100,14 @@ pub fn main() {
     let mut lp = Core::new().unwrap();
     let uhandle = lp.handle();
     let mut loop_state = startup::populate_loop(&lp.handle(), &cfg, verbose);
+
+    match privileges::drop(&cfg.get()) {
+        Ok(()) => {}
+        Err(e) => {
+            writeln!(&mut io::stderr(), "Can't drop privileges: {}", e).ok();
+            exit(2);
+        }
+    };
 
     let config_updater = Interval::new(Duration::new(10, 0), &lp.handle())
         .expect("interval created")

@@ -7,6 +7,10 @@ Welcome to Swindon's documentation!
 ===================================
 
 
+Swindon is a web server that eventually should develop all the features needed
+by х
+
+
 Contents:
 
 .. toctree::

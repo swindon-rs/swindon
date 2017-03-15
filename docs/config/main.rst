@@ -163,3 +163,13 @@ Options
    Server name that will be sent in ``Server`` header. By default it's
    ``swindon/VERSION``, but it might also be ``null`` (don't send ``Server``
    header) or any other value.
+
+.. opt:: set-user
+.. opt:: set-group
+
+   (no default) The name and group of the user to setuid into. This is useful
+   if you run swindon as root. If only user is specified, we're doing
+   `set-group` to user's primary group.
+
+   The trick here is: first time we bind addresses before setting user, but
+   when configuration is reloaded we might fail to bind to privileged ports.
