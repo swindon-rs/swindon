@@ -3,9 +3,9 @@ import asyncio
 import aiohttp
 
 
-async def test_echo_chat(swindon):
+async def test_echo_chat(swindon, loop):
     url = swindon.url / 'websocket-echo'
-    async with aiohttp.ClientSession() as s:
+    async with aiohttp.ClientSession(loop=loop) as s:
         async with s.ws_connect(url) as ws:
             ws.send_str('Hello')
             assert await ws.receive_str() == 'Hello'
