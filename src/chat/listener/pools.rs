@@ -12,6 +12,7 @@ use chat::listener::spawn::{listen, WorkerData};
 use chat::inactivity_handler;
 use chat::processor::{Processor};
 use chat::Shutdown;
+use chat::replication::RemoteSender;
 use config::{SessionPool, ListenSocket};
 
 
@@ -19,6 +20,7 @@ use config::{SessionPool, ListenSocket};
 pub struct SessionPools {
     pools: Arc<RwLock<HashMap<SessionPoolName, Worker>>>,
     pub processor: Processor,
+    remote_sender: RemoteSender,
 }
 
 struct Worker {
@@ -28,10 +30,13 @@ struct Worker {
 }
 
 impl SessionPools {
-    pub fn new() -> SessionPools {
+    pub fn new(processor: Processor, remote_sender: RemoteSender)
+        -> SessionPools
+    {
         SessionPools {
             pools: Arc::new(RwLock::new(HashMap::new())),
-            processor: Processor::new(),
+            processor: processor,
+            remote_sender: remote_sender,
         }
     }
     pub fn update(&self, cfg: &HashMap<SessionPoolName, Arc<SessionPool>>,
@@ -73,6 +78,7 @@ impl SessionPools {
                     runtime: runtime.clone(),
                     settings: settings.clone(),
                     processor: self.processor.pool(name),
+                    remote: self.remote_sender.pool(name),
                     handle: handle.clone(),
                 }),
                 shutters: HashMap::new(),

@@ -16,7 +16,8 @@ use config::SessionPool;
 use runtime::Runtime;
 use chat::Shutdown;
 use chat::listener::codec::Handler;
-use chat::processor::ProcessorPool;
+use chat::processor::{Action, ProcessorPool};
+use chat::replication::RemotePool;
 
 
 pub struct WorkerData {
@@ -24,6 +25,8 @@ pub struct WorkerData {
     pub runtime: Arc<Runtime>,
     pub settings: Arc<SessionPool>,
     pub processor: ProcessorPool,
+    pub remote: RemotePool,
+
     pub handle: Handle, // Does it belong here?
 }
 

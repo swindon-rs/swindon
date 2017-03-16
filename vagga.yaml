@@ -205,6 +205,28 @@ commands:
       httpbin: *httpbin
       swindon: *run
 
+  run-two: !Supervise
+    description: Run two instances of swindon with replication
+    children:
+      inst1: !Command
+        <<: *run
+        run:
+        - cargo
+        - run
+        - --bin=swindon
+        - "--"
+        - --verbose
+        - --config=example-peer-A.yaml
+      inst2: !Command
+        <<: *run
+        run:
+        - cargo
+        - run
+        - --bin=swindon
+        - "--"
+        - --verbose
+        - --config=example-peer-B.yaml
+
   _cargo-doc: !Command
     container: xenial
     description: build rust docs

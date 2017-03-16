@@ -1,0 +1,141 @@
+listen:
+- 127.0.0.1:8080
+
+debug-routing: true
+
+routing:
+  localhost/~~swindon-status: status
+  localhost/empty.gif: empty-gif
+  localhost/sources: src
+  localhost/websocket.html: websocket-echo-static
+  localhost/echo: websocket-echo-html
+  localhost/websocket-echo: websocket-echo
+  example.com: example-chat-http
+  httpbin.devd.io: http-bin
+  proxy.devd.io: bin
+  mb.devd.io: mbst
+  chat.example.com/: example-chat
+  #chat.example.com/css: example-chat-static
+  #chat.example.com/js: example-chat-static
+  #chat.example.com/index.html: example-chat-static
+
+authorization:
+  chat.example.com/admin: ldap
+  auth.example.com: ldap
+  localhost: local
+
+handlers:
+
+  example-chat: !SwindonChat
+
+    session-pool: example-chat-session
+    http-route: example-chat-http
+
+    message-handlers:
+      "*": superman/chat
+      sub.chat.*: superman/sub_chat
+
+  example-chat-http: !Proxy
+    mode: forward
+    ip-header: X-Remote-Ip
+    destination: superman/
+
+  empty-gif: !EmptyGif
+    extra-headers: &cool-headers
+      X-Swindon-Hello: Greetings from tailhook!
+
+  mbst: !Static
+    mode: relative_to_domain_root
+    path: /work/examples/message-board/public
+    index-files: [index.html]
+
+  websocket-echo-static: !Static
+    mode: relative_to_domain_root
+    path: /work/public
+    text-charset: utf-8
+    extra-headers: *cool-headers
+
+  websocket-echo-html: !SingleFile
+    path: /work/public/websocket.html
+    content-type: "text/html; charset=utf-8"
+    extra-headers: *cool-headers
+
+  websocket-echo: !WebsocketEcho
+
+  http-bin: !HttpBin
+
+  src: !Static
+    mode: relative_to_route
+    path: /work/src
+    text-charset: utf-8
+
+  bin: !Proxy
+    ip-header: X-Remote-Ip
+    destination: bin
+
+  status: !SelfStatus
+
+session-pools:
+
+  example-chat-session:
+    listen:
+    - 127.0.0.1:2007
+    inactivity-handlers:
+    - superman/chat
+
+
+http-destinations:
+
+  superman:
+
+    load-balancing: queue
+    queue-size-for-503: 100k
+    backend-connections-per-ip-port: 1
+    in-flight-requests-per-backend-connection: 1
+
+    addresses:
+    - example.com:5000
+
+  bin:
+
+    load-balancing: queue
+    queue-size-for-503: 100
+    backend-connections-per-ip-port: 1
+    in-flight-requests-per-backend-connection: 1
+
+    addresses:
+    - httpbin.org:80
+
+authorizers:
+
+  local: !SourceIp
+    allowed-network: localhost
+
+  ldap: !Ldap
+    destination: local-ldap
+    search-base: dc=users,dc=example,dc=org
+    login-attribute: uid
+    password-attribute: userPassword
+    login-header: X-User-Uid
+    additional-queries:
+      X-User-Groups:
+        search-base: cn=Group,dc=uaprom,dc=org
+        fetch-attribute: dn
+        filter: "member=${dn}"
+        dn-attribute-strip-base: cn=Group,dc=uaprom,dc=org
+
+ldap-destinations:
+
+  local-ldap:
+    addresses:
+    - localhost:8398
+
+networks:
+  localhost:
+  - "127.0.0.1/8"
+
+replication:
+  listen:
+  - 127.0.0.1:7878
+  peers:
+  - 127.0.0.2:7878

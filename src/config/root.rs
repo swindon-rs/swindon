@@ -18,6 +18,7 @@ use config::http_destinations::{self, Destination};
 use config::ldap;
 use config::networks;
 use config::disk::{self, Disk};
+use super::replication::{self, Replication};
 
 #[derive(RustcDecodable, PartialEq, Eq, Debug)]
 pub struct Config {
@@ -43,6 +44,7 @@ pub struct Config {
     pub ldap_destinations: HashMap<LdapUpstream, ldap::Destination>,
     pub networks: HashMap<Network, networks::NetworkList>,
 
+    pub replication: Replication,
     pub debug_routing: bool,
     pub server_name: Option<String>,
 
@@ -86,6 +88,7 @@ pub fn config_validator<'a>() -> Structure<'a> {
         Mapping::new(Scalar::new(), ldap::destination_validator()))
     .member("networks", Mapping::new(Scalar::new(), networks::validator()))
 
+    .member("replication", replication::validator())
     .member("debug_routing", Scalar::new().default(false))
     .member("server_name", Scalar::new().optional()
         .default(concat!("swindon/", env!("CARGO_PKG_VERSION"))))

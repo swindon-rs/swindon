@@ -37,6 +37,7 @@ pub use self::public::{Processor, ProcessorPool};
 pub use self::lattice::Delta;
 
 
+#[derive(Debug)]
 pub struct Event {
     pool: SessionPoolName,
     timestamp: Instant,
@@ -137,7 +138,7 @@ pub enum Action {
     /// initially attaches to the lattice
     Lattice {
         namespace: Namespace,
-        delta: lattice::Delta,
+        delta: Delta,
     },
     Detach {
         namespace: Namespace,
