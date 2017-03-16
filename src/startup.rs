@@ -14,6 +14,7 @@ use futures::sync::oneshot::{channel as oneshot, Sender, Receiver};
 use futures_cpupool;
 use tk_http;
 use tk_http::server::Proto;
+use tk_listen::ListenExt;
 
 use config::{ListenSocket, ConfigCell};
 use incoming::Router;
@@ -56,24 +57,13 @@ pub fn spawn_listener(addr: SocketAddr, handle: &Handle,
 
     handle.spawn(
         listener.incoming()
-        .then(move |item| match item {
-            Ok(x) => Either::A(ok(Some(x))),
-            Err(e) => {
-                warn!("Error accepting: {}", e);
-                let dur = r1.config.get().listen_error_timeout;
-                Either::B(Timeout::new(*dur, &r1.handle).unwrap()
-                    .and_then(|()| ok(None)))
-            }
-        })
-        .filter_map(|x| x)
+        .sleep_on_error(*r1.config.get().listen_error_timeout, &r1.handle)
         .map(move |(socket, saddr)| {
              Proto::new(socket, &hcfg,
                 Router::new(saddr, r2.clone(), h1.clone()), &h1)
-             // always succeed
-             .then(|_| Ok(()))
+             .map_err(|e| debug!("Http protocol error: {}", e))
         })
-        .buffer_unordered(root.max_connections)
-        .for_each(|()| Ok(()))
+        .listen(root.max_connections)
         .select(shutter.map_err(|_| unreachable!()))
         .map(move |(_, _)| info!("Listener {} exited", addr))
         .map_err(move |(_, _)| info!("Listener {} exited", addr))
@@ -137,6 +127,7 @@ pub fn populate_loop(handle: &Handle, cfg: &ConfigCell, verbose: bool)
         runtime: runtime,
     }
 }
+
 pub fn update_loop(state: &mut State, cfg: &ConfigCell, handle: &Handle) {
     // TODO(tailhook) update listening sockets
     handlers::files::update_pools(&cfg.get().disk_pools);

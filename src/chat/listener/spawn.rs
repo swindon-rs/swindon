@@ -6,6 +6,7 @@ use futures::future::Either;
 use futures::stream::Stream;
 use tk_http;
 use tk_http::server::Proto;
+use tk_listen::ListenExt;
 use futures::future::{Future, ok};
 use tokio_core::net::TcpListener;
 use tokio_core::reactor::{Handle, Timeout};
@@ -45,24 +46,12 @@ pub fn listen(addr: SocketAddr, worker_data: &Arc<WorkerData>,
 
     worker_data.handle.spawn(
         listener.incoming()
-        // we need stream that doesn't fail on error
-        .then(move |item| match item {
-            Ok(x) => Either::A(ok(Some(x))),
-            Err(e) => {
-                warn!("Error accepting: {}", e);
-                let dur = w1.settings.listen_error_timeout;
-                Either::B(Timeout::new(*dur, &runtime.handle).unwrap()
-                    .and_then(|()| ok(None)))
-            }
-        })
-        .filter_map(|x| x)
+        .sleep_on_error(*w1.settings.listen_error_timeout, &runtime.handle)
         .map(move |(socket, saddr)| {
              Proto::new(socket, &hcfg, Handler::new(saddr, w2.clone()), &h1)
-             // always succeed
-             .then(|_| Ok(()))
+             .map_err(|e| debug!("Chat backend protocol error: {}", e))
         })
-        .buffer_unordered(worker_data.settings.max_connections)
-        .for_each(move |()| Ok(()))
+        .listen(worker_data.settings.max_connections)
         .select(shutter.then(move |_| Ok(())))
         .map(move |(_, _)| info!("Listener {} exited", addr))
         .map_err(move |(_, _)| info!("Listener {} exited", addr))

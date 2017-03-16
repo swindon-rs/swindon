@@ -31,6 +31,7 @@ extern crate rand;
 extern crate tk_pool;
 extern crate abstract_ns;
 extern crate ns_std_threaded;
+extern crate tk_listen;
 
 mod intern;
 mod config;
