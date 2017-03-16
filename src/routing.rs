@@ -1,18 +1,130 @@
-use std::collections::BTreeMap;
+use std::cmp::{Ordering, PartialOrd, Ord};
+use std::collections::{BTreeMap, btree_map};
+use std::ops::Deref;
+use std::str::FromStr;
 
-use config::{RouteHost, RoutePath};
+use intern::HandlerName;
+use rustc_serialize::{Decoder, Decodable};
+use quire::validate::{Mapping, Scalar};
 
+
+pub type Path = Option<String>;
+
+#[derive(Debug, PartialEq, Eq)]
+pub struct RoutingTable<H>(BTreeMap<Host, BTreeMap<Path, H>>);
+
+#[derive(Debug, PartialEq, Eq)]
+pub struct Host(String);
+
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
+enum Match<'a> {
+    Word(&'a str),
+    Asterisk,
+}
+
+
+impl<T: Decodable> Decodable for RoutingTable<T> {
+    fn decode<D: Decoder>(d: &mut D) -> Result<Self, D::Error> {
+        d.read_map(|mut d, n| {
+            let mut rv = BTreeMap::new();
+            for idx in 0..n {
+                let (host, path) = d.read_map_elt_key(idx, |mut d| {
+                    d.read_str().map(parse_host_path)
+                })?;
+                let val = d.read_map_elt_val(idx, T::decode)?;
+                rv.entry(host)
+                .or_insert_with(|| BTreeMap::new())
+                .insert(path, val);
+            }
+            Ok(RoutingTable(rv))
+        })
+    }
+}
+
+impl<T> RoutingTable<T> {
+    pub fn hosts(&self) -> btree_map::Iter<Host, BTreeMap<Path, T>> {
+        self.0.iter()
+    }
+    pub fn num_hosts(&self) -> usize {
+        self.0.len()
+    }
+}
+
+impl<'a> Match<'a> {
+    fn new(val: &'a str) -> Match<'a> {
+        if val == "*" {
+            Match::Asterisk
+        } else {
+            Match::Word(val)
+        }
+    }
+}
+
+impl Ord for Host {
+    fn cmp(&self, other: &Host) -> Ordering {
+        let a = self.0.split('.').rev().map(Match::new);
+        let b = other.0.split('.').rev().map(Match::new);
+        a.cmp(b)
+    }
+}
+
+impl PartialOrd for Host {
+    fn partial_cmp(&self, other: &Host) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Host {
+    pub fn matches(&self, host: &str) -> bool {
+        let h = self.0.as_str();
+        if h.starts_with("*.") {
+            host.ends_with(&h[1..])
+        } else {
+            host == h
+        }
+    }
+}
+
+impl FromStr for Host {
+    type Err = ();
+
+    fn from_str(val: &str) -> Result<Host, ()> {
+        Ok(Host(val.to_string()))
+    }
+}
+
+impl Deref for Host {
+    type Target = String;
+
+    fn deref(&self) -> &String {
+        &self.0
+    }
+}
+
+
+fn parse_host_path(val: String) -> (Host, Path) {
+    let (host, path) = if let Some(i) = val.find('/') {
+        if &val[i..] == "/" {
+            (&val[..i], None)
+        } else {
+            (&val[..i], Some(val[i..].to_string()))
+        }
+    } else {
+        (val.as_str(), None)
+    };
+    (host.parse().unwrap(), path)
+}
 
 /// Map host port to a route of arbitrary type
 ///
 /// Returns destination route and relative path
 pub fn route<'x, D>(host: &str, path: &'x str,
-    table: &'x BTreeMap<RouteHost, BTreeMap<RoutePath, D>>)
+    table: &'x RoutingTable<D>)
     -> Option<(&'x D, &'x str, &'x str)>
 {
     // TODO(tailhook) transform into range iteration when `btree_range` is
     // stable
-    for (route_host, sub_table) in table.iter() {
+    for (route_host, sub_table) in table.hosts() {
         if route_host.matches(host) {
             for (route_path, result) in sub_table.iter().rev() {
                 if path_match(&route_path, path) {
@@ -53,17 +165,18 @@ pub fn parse_host(host_header: &str) -> &str {
 }
 
 #[cfg(test)]
-mod test {
-    use config::{RouteHost, RoutePath};
+mod route_test {
+    use super::{Host, Path};
     use super::route;
+    use super::RoutingTable;
 
     #[test]
     fn route_host() {
-        let table = vec![
+        let table = RoutingTable(vec![
             ("example.com".parse().unwrap(), vec![
                 (None, 1),
                 ].into_iter().collect()),
-            ].into_iter().collect();
+            ].into_iter().collect());
         assert_eq!(route("example.com", "/hello", &table),
                    Some((&1, "", "/hello")));
         assert_eq!(route("example.com", "/", &table),
@@ -81,7 +194,7 @@ mod test {
         //   www.example.com/static/favicon.ico: 4
         //   xxx.example.com: 5
         //   *.aaa.example.com: 6
-        let table = vec![
+        let table = RoutingTable(vec![
             ("example.com".parse().unwrap(), vec![
                 (None, 1),
                 ].into_iter().collect()),
@@ -98,7 +211,7 @@ mod test {
             ("*.aaa.example.com".parse().unwrap(), vec![
                 (None, 6),
                 ].into_iter().collect()),
-            ].into_iter().collect();
+            ].into_iter().collect());
 
         assert_eq!(route("test.example.com", "/hello", &table),
                    Some((&2, "", "/hello")));
@@ -142,5 +255,95 @@ mod test {
         assert_eq!(route("example.org", "/two", &table), None);
     }
     */
+
+}
+
+#[cfg(test)]
+mod parse_test {
+    use super::{Host, Path};
+    use super::parse_host_path;
+
+    #[test]
+    fn simple() {
+        let s = "example.com".to_string();
+        let (host, path) = parse_host_path(s);
+        assert_eq!(host, Host("example.com".into()));
+        assert!(path.is_none());
+    }
+
+    #[test]
+    fn base_host() {
+        let s = "*.example.com".to_string();
+        let (host, path) = parse_host_path(s);
+        assert_eq!(host, Host("*.example.com".into()));
+        assert!(path.is_none());
+    }
+
+    #[test]
+    fn invalid_base_host() {
+        let s = "*example.com".to_string();
+        let (host, path) = parse_host_path(s);
+        assert_eq!(host, Host("*example.com".into()));
+        assert!(path.is_none());
+
+        let s = ".example.com".to_string();
+        let (host, path) = parse_host_path(s);
+        assert_eq!(host, Host(".example.com".into()));
+        assert!(path.is_none());
+    }
+
+    #[test]
+    fn invalid_host() {
+        // FiXME: only dot is invalid
+        let s = "*.".to_string();
+        let (host, path) = parse_host_path(s);
+        assert_eq!(host, Host("*.".into()));
+        assert!(path.is_none());
+
+        let s = "*./".to_string();
+        let (host, path) = parse_host_path(s);
+        assert_eq!(host, Host("*.".into()));
+        assert!(path.is_none());
+    }
+
+    #[test]
+    fn match_host() {
+        let h = Host("example.com".into());
+        assert!(h.matches("example.com"));
+        assert!(!h.matches(".example.com"));
+        assert!(!h.matches("www.example.com"));
+
+        let h = Host("*.example.com".into());
+        assert!(!h.matches("example.com"));
+        assert!(h.matches("xxx.example.com"));
+        assert!(h.matches("www.example.com"));
+    }
+
+    #[test]
+    fn ordering() {
+        let mut ordered: Vec<Host> = vec![
+            "aaa".parse().unwrap(),
+            "*.bbb".parse().unwrap(),
+            "*.aaa.bbb".parse().unwrap(),
+            "*.zzz.bbb".parse().unwrap(),
+            "aaa.zzz".parse().unwrap(),
+        ];
+        ordered.sort();
+        assert_eq!(ordered, [
+            Host("aaa".into()),
+            Host("*.aaa.bbb".into()),
+            Host("*.zzz.bbb".into()),
+            Host("*.bbb".into()),
+            Host("aaa.zzz".into()),
+        ]);
+        ordered.reverse();
+        assert_eq!(ordered, [
+            Host("aaa.zzz".into()),
+            Host("*.bbb".into()),
+            Host("*.zzz.bbb".into()),
+            Host("*.aaa.bbb".into()),
+            Host("aaa".into()),
+        ]);
+    }
 
 }

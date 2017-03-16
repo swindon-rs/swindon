@@ -10,6 +10,7 @@ use intern::{HandlerName, Upstream, SessionPoolName, DiskPoolName};
 use intern::{LdapUpstream};
 use config::listen::{self, ListenSocket};
 use config::routing::{self, Routing};
+use config::authorization::{self, Authorization};
 use config::handlers::{self, Handler};
 use config::authorizers::{self, Authorizer};
 use config::session_pools::{self, SessionPool};
@@ -32,6 +33,8 @@ pub struct Config {
     pub output_body_whole_timeout: De<Duration>,
 
     pub routing: Routing,
+    pub authorization: Authorization,
+
     pub handlers: HashMap<HandlerName, Handler>,
     pub authorizers: HashMap<HandlerName, Authorizer>,
     pub session_pools: HashMap<SessionPoolName, Arc<SessionPool>>,
@@ -67,6 +70,8 @@ pub fn config_validator<'a>() -> Structure<'a> {
     .member("output_body_whole_timeout", Scalar::new().default("1 hour"))
 
     .member("routing", routing::validator())
+    .member("authorization", authorization::validator())
+
     .member("handlers", Mapping::new(Scalar::new(), handlers::validator()))
     .member("authorizers",
         Mapping::new(Scalar::new(), authorizers::validator()))

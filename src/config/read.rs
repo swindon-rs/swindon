@@ -104,7 +104,7 @@ pub fn read_config<P: AsRef<Path>>(filename: P)
 
     // Extra config validations
 
-    for (route, sub) in cfg.routing.iter() {
+    for (route, sub) in cfg.routing.hosts() {
         for (path, name) in sub {
             if cfg.handlers.get(name).is_none() {
                 err!("Unknown handler for route: {:?} {:?}", route, name)

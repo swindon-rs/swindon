@@ -11,6 +11,7 @@ mod routing;
 mod handlers;
 mod session_pools;
 mod authorizers;
+mod authorization;
 pub mod http_destinations;
 pub mod ldap;
 // handlers
@@ -25,8 +26,6 @@ pub mod self_status;
 pub use self::read::Error;
 pub use self::root::Config;
 pub use self::listen::ListenSocket;
-pub use self::routing::Host as RouteHost;
-pub use self::routing::Path as RoutePath;
 pub use self::handlers::Handler;
 pub use self::disk::Disk;
 pub use self::empty_gif::EmptyGif;
@@ -210,7 +209,7 @@ pub mod test {
         let cfg = make_config();
 
         assert_eq!(cfg.listen.len(), 1);
-        assert_eq!(cfg.routing.len(), 3);
+        assert_eq!(cfg.routing.num_hosts(), 3);
         assert_eq!(cfg.handlers.len(), 7);
         assert_eq!(cfg.session_pools.len(), 1);
         assert_eq!(cfg.http_destinations.len(), 1);
