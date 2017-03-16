@@ -110,7 +110,7 @@ authorizers:
     destination: local-ldap
     search-base: dc=users,dc=example,dc=org
     login-attribute: uid
-    password-attibute: userPassword
+    password-attribute: userPassword
     login-header: X-User-Uid
     additional-queries:
       X-User-Groups:
