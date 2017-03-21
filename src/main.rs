@@ -7,6 +7,7 @@
 #[macro_use] extern crate matches;
 #[macro_use] extern crate quick_error;
 #[macro_use] extern crate lazy_static;
+#[macro_use] extern crate scoped_tls;
 extern crate env_logger;
 extern crate futures;
 extern crate futures_cpupool;
@@ -47,6 +48,7 @@ mod http_pools;  // TODO(tailhook) move to proxy?
 mod proxy;
 mod base64;
 mod privileges;
+mod request_id;
 
 use std::io::{self, Write};
 use std::time::Duration;
@@ -98,33 +100,37 @@ pub fn main() {
         exit(0);
     }
 
-    let mut lp = Core::new().unwrap();
-    let uhandle = lp.handle();
-    let mut loop_state = startup::populate_loop(&lp.handle(), &cfg, verbose);
+    request_id::with_generator(|| {
+        let mut lp = Core::new().unwrap();
+        let uhandle = lp.handle();
+        let mut loop_state = startup::populate_loop(
+            &lp.handle(), &cfg, verbose);
 
-    match privileges::drop(&cfg.get()) {
-        Ok(()) => {}
-        Err(e) => {
-            writeln!(&mut io::stderr(), "Can't drop privileges: {}", e).ok();
-            exit(2);
-        }
-    };
-
-    let config_updater = Interval::new(Duration::new(10, 0), &lp.handle())
-        .expect("interval created")
-        .for_each(move |_| {
-            match configurator.try_update() {
-                Ok(false) => {}
-                Ok(true) => {
-                    info!("Updated config");
-                    startup::update_loop(&mut loop_state, &cfg, &uhandle);
-                }
-                Err(e) => {
-                    error!("{}", e);
-                }
+        match privileges::drop(&cfg.get()) {
+            Ok(()) => {}
+            Err(e) => {
+                writeln!(&mut io::stderr(),
+                    "Can't drop privileges: {}", e).ok();
+                exit(2);
             }
-            Ok(())
-        });
+        };
 
-    lp.run(config_updater).unwrap();
+        let config_updater = Interval::new(Duration::new(10, 0), &lp.handle())
+            .expect("interval created")
+            .for_each(move |_| {
+                match configurator.try_update() {
+                    Ok(false) => {}
+                    Ok(true) => {
+                        info!("Updated config");
+                        startup::update_loop(&mut loop_state, &cfg, &uhandle);
+                    }
+                    Err(e) => {
+                        error!("{}", e);
+                    }
+                }
+                Ok(())
+            });
+
+        lp.run(config_updater).unwrap();
+    });
 }

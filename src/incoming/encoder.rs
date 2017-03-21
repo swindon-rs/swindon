@@ -91,6 +91,10 @@ impl<S: Io> Encoder<S> {
                               format_args!("{:?}", path))
                 .map_err(|e| error!("Adding X-Swindon-File-Path: {}", e)).ok();
         }
+        if let Some(rid) = self.debug.get_request_id() {
+            enc.format_header("X-Swindon-Request-Id", rid)
+                .expect("request id valid");
+        }
 
         enc.done_headers().unwrap()
     }

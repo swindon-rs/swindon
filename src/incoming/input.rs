@@ -7,6 +7,7 @@ use tokio_core::reactor::Handle;
 use config::Config;
 use runtime::Runtime;
 use incoming::{Debug, IntoContext};
+use request_id::RequestId;
 
 
 pub struct Input<'a> {
@@ -18,6 +19,7 @@ pub struct Input<'a> {
     pub prefix: &'a str,
     pub suffix: &'a str,
     pub handle: &'a Handle,
+    pub request_id: RequestId,
 }
 
 impl<'a> IntoContext for Input<'a> {

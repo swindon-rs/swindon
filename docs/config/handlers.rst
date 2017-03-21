@@ -32,6 +32,10 @@ Settings:
 
    (default is null) Name of the HTTP header where to put source IP address to.
 
+.. opt:: request-id-header
+
+   (default is null) Creates a request id 
+
 .. opt:: max-payload-size
 
    (default ``10MiB``) Maximum payload size that might be send to this
