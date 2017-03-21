@@ -7,6 +7,7 @@
 #[macro_use] extern crate matches;
 #[macro_use] extern crate quick_error;
 #[macro_use] extern crate lazy_static;
+#[macro_use] extern crate scoped_tls;
 extern crate env_logger;
 extern crate futures;
 extern crate futures_cpupool;
@@ -46,6 +47,7 @@ mod incoming;
 mod http_pools;  // TODO(tailhook) move to proxy?
 mod proxy;
 mod base64;
+mod request_id;
 
 use std::process::exit;
 use std::env;
@@ -127,7 +129,9 @@ pub fn main() {
         }
     };
 
-    let mut lp = Core::new().unwrap();
-    let _state = startup::populate_loop(&lp.handle(), &cfg, verbose);
-    lp.run(futures::empty::<(), ()>()).unwrap();
+    request_id::with_generator(|| {
+        let mut lp = Core::new().unwrap();
+        let _state = startup::populate_loop(&lp.handle(), &cfg, verbose);
+        lp.run(futures::empty::<(), ()>()).unwrap();
+    });
 }
