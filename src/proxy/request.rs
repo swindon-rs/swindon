@@ -7,6 +7,7 @@ use tk_http::client::{Encoder, EncoderDone};
 
 use incoming::{Input};
 use config::proxy::Proxy;
+use request_id::RequestId;
 
 
 /// A repeatable (so fully-buffered) request structure
@@ -20,6 +21,7 @@ pub struct HalfReq {
     host: String,
     headers: Vec<(String, Vec<u8>)>,
     addr: SocketAddr,
+    request_id: RequestId,
 }
 
 #[derive(Debug)]
@@ -30,6 +32,7 @@ struct ReqData {
     host: String,
     headers: Vec<(String, Vec<u8>)>,
     addr: SocketAddr,
+    request_id: RequestId,
     body: Vec<u8>,
 }
 
@@ -53,6 +56,7 @@ impl HalfReq {
                 (k.to_string(), v.to_vec())
             }).collect(),
             addr: inp.addr,
+            request_id: inp.request_id,
         }
     }
     pub fn upgrade(self, body: Vec<u8>) -> RepReq {
@@ -63,6 +67,7 @@ impl HalfReq {
             host: self.host,
             headers: self.headers,
             addr: self.addr,
+            request_id: self.request_id,
             body: body,
         }))
     }
@@ -82,7 +87,11 @@ impl RepReq {
         e.add_header("Host", &r.host).unwrap();
         if let Some(ref h) = r.settings.ip_header {
             // NOTE: this can duplicate header value.
-            e.add_header(h, format!("{}", r.addr.ip())).unwrap();
+            e.format_header(h, r.addr.ip()).unwrap();
+        }
+        if let Some(ref h) = r.settings.request_id_header {
+            // NOTE: this can duplicate header value.
+            e.format_header(h, r.request_id).unwrap();
         }
 
         for &(ref k, ref v) in &r.headers {

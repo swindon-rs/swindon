@@ -70,6 +70,17 @@ async def test_ip_header(proxy_server, swindon):
         assert client_resp.status == 200
 
 
+async def test_request_id(proxy_server, swindon):
+    url = swindon.url / 'proxy-w-request-id'
+    async with proxy_server.send("GET", url) as inflight:
+        assert not inflight.has_client_response, await inflight.client_resp
+
+        assert len(inflight.req.headers.getall('X-Request-Id')[0]) == 32
+
+        client_resp = await inflight.send_resp(web.Response(text='OK'))
+        assert client_resp.status == 200
+
+
 async def test_post_form(proxy_server, swindon):
     url = swindon.url / 'proxy/post'
     async with proxy_server.send('POST', url, data=b'Some body') as inflight:

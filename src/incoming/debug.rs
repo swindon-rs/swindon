@@ -5,6 +5,7 @@ use tk_http::server::Head;
 
 use intern::HandlerName;
 use config::Config;
+use request_id::RequestId;
 
 pub struct Debug(Option<Box<DebugInfo>>);
 
@@ -12,15 +13,19 @@ struct DebugInfo {
     route: Option<HandlerName>,
     fs_path: Option<PathBuf>,
     config: Arc<Config>,
+    request_id: RequestId,
 }
 
 impl Debug {
-    pub fn new(_head: &Head, cfg: &Arc<Config>) -> Debug {
+    pub fn new(_head: &Head, request_id: RequestId, cfg: &Arc<Config>)
+        -> Debug
+    {
         if cfg.debug_routing {
             Debug(Some(Box::new(DebugInfo {
                 route: None,
                 fs_path: None,
                 config: cfg.clone(),
+                request_id: request_id,
             })))
         } else {
             Debug(None)
@@ -55,5 +60,9 @@ impl Debug {
         self.0.as_ref().and_then(|dinfo| {
             dinfo.fs_path.as_ref().map(|x| x as &Path)
         })
+    }
+
+    pub fn get_request_id(&self) -> Option<RequestId> {
+        self.0.as_ref().map(|dinfo| dinfo.request_id)
     }
 }

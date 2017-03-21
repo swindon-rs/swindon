@@ -9,6 +9,7 @@ use runtime::Runtime;
 use incoming::{Request, Debug, Input, Transport};
 use routing::{parse_host, route};
 use default_error_page::serve_error_page;
+use request_id;
 
 
 pub struct Router {
@@ -36,7 +37,8 @@ impl<S: Transport> Dispatcher<S> for Router {
     {
         // Keep config same while processing a single request
         let cfg = self.runtime.config.get();
-        let mut debug = Debug::new(headers, &cfg);
+        let request_id = request_id::new();
+        let mut debug = Debug::new(headers, request_id, &cfg);
 
         // No path means either CONNECT host, or OPTIONS *
         // in both cases we use root route for the domain to make decision
@@ -61,6 +63,7 @@ impl<S: Transport> Dispatcher<S> for Router {
             prefix: pref,
             suffix: suf,
             handle: &self.handle,
+            request_id: request_id,
         };
         if let Some(handler) = handler {
             handler.serve(inp)
