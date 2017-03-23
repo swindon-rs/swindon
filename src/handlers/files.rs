@@ -2,11 +2,13 @@ use std::collections::HashMap;
 use std::collections::hash_map::DefaultHasher;
 use std::collections::hash_map::Entry::{Occupied, Vacant};
 use std::fs::{File, metadata};
+use std::ffi::OsStr;
 use std::hash::{Hash, Hasher};
 use std::io;
 use std::os::unix::io::AsRawFd;
 use std::path::{Path, PathBuf, Component};
 use std::sync::{Arc, RwLock};
+use std::str::from_utf8;
 
 use futures_cpupool::CpuPool;
 use futures::{Future};
@@ -109,6 +111,35 @@ pub fn serve_dir<S: Transport>(settings: &Arc<Static>, mut inp: Input)
     })
 }
 
+fn from_hex(b: u8) -> Result<u8, ()> {
+    match b {
+        b'0'...b'9' => Ok(b & 0x0f),
+        b'a'...b'f' | b'A'...b'F' => Ok((b & 0x0f) + 9),
+        _ => Err(())
+    }
+}
+
+fn decode_component(buf: &mut Vec<u8>, component: &str) -> Result<(), ()>
+{
+    let mut chariter = component.as_bytes().iter();
+    while let Some(c) = chariter.next() {
+        match *c {
+            b'%' => {
+                let h = from_hex(*chariter.next().ok_or(())?)?;
+                let l = from_hex(*chariter.next().ok_or(())?)?;
+                let b = (h << 4) | l;
+                if b == 0 || b == b'/' {
+                    return Err(());
+                }
+                buf.push(b);
+            }
+            0 => return Err(()),
+            c => buf.push(c),
+        }
+    }
+    Ok(())
+}
+
 fn path(settings: &Static, inp: &Input) -> Result<PathBuf, ()> {
     let path = match settings.mode {
         Mode::relative_to_domain_root | Mode::with_hostname => {
@@ -120,8 +151,7 @@ fn path(settings: &Static, inp: &Input) -> Result<PathBuf, ()> {
         Some(idx) => &path[..idx],
         None => path
     };
-    let path = Path::new(path.trim_left_matches('/'));
-    let mut buf = settings.path.to_path_buf();
+    let mut buf = Vec::with_capacity(path.len());
     if settings.mode == Mode::with_hostname {
         match inp.headers.host()  {
             Some(host) => {
@@ -151,20 +181,31 @@ fn path(settings: &Static, inp: &Input) -> Result<PathBuf, ()> {
                 } else {
                     name
                 };
-                buf.push(name);
+                buf.extend(name.as_bytes());
             }
             None => return Err(()),
         }
     }
-    for cmp in path.components() {
+    for cmp in path.split("/") {
         match cmp {
-            Component::Normal(chunk) => {
-                buf.push(chunk);
+            "" | "." | "%2e" | "%2E" => {},
+            ".." | "%2e." | "%2E." | ".%2e" | ".%2E"
+            | "%2e%2e" | "%2E%2e" | "%2e%2E" | "%2E%2E" => return Err(()),
+            _ => {
+                if buf.len() > 0 {
+                    buf.push(b'/');
+                }
+                decode_component(&mut buf, cmp)?;
             }
-            _ => return Err(()),
         }
     }
-    Ok(buf)
+
+    // assert that we're not serving from root, this is a security check
+    assert!(buf.len() == 0 || buf[0] != b'/');
+
+    // only valid utf-8 supported so far
+    let utf8 = from_utf8(&buf).map_err(|_| ())?;
+    Ok(settings.path.join(utf8))
 }
 
 pub fn serve_file<S: Transport>(settings: &Arc<SingleFile>, mut inp: Input)

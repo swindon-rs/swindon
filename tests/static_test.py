@@ -38,6 +38,23 @@ async def test_ok(swindon, http_request, debug_routing, TESTS_DIR):
         assert 'X-Swindon-File-Path' not in resp.headers
 
 
+async def test_url_decoding(swindon, http_request, debug_routing, TESTS_DIR):
+
+    # Stringified url, because YARL normalizes some percent-encoded things
+    url = str(swindon.url) + '/static/a%2bb.txt'
+
+    resp, data = await http_request(url)
+    assert resp.status == 200
+    assert resp.headers['Content-Type'] == 'text/plain'
+    assert resp.headers['Content-Length'] == '4'
+    assert data == b'a+b\n'
+    if debug_routing:
+        assert resp.headers['X-Swindon-File-Path'] == \
+            '"{}/assets/a+b.txt"'.format(TESTS_DIR)
+    else:
+        assert 'X-Swindon-File-Path' not in resp.headers
+
+
 async def test_permission(swindon, http_request, debug_routing, TESTS_DIR):
     msg = (b'<!DOCTYPE html><html><head>'
            b'<title>404 Not Found</title></head>'
