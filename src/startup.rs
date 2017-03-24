@@ -2,6 +2,7 @@ use std::io;
 use std::sync::Arc;
 use std::net::SocketAddr;
 use std::collections::HashMap;
+use std::thread;
 
 use abstract_ns;
 use ns_std_threaded;
@@ -12,6 +13,7 @@ use futures::Stream;
 use futures::future::{Future, ok};
 use futures::sync::oneshot::{channel as oneshot, Sender, Receiver};
 use futures_cpupool;
+use self_meter_http::Meter;
 use tk_http;
 use tk_http::server::Proto;
 use tk_listen::ListenExt;
@@ -74,9 +76,24 @@ pub fn spawn_listener(addr: SocketAddr, handle: &Handle,
 pub fn populate_loop(handle: &Handle, cfg: &ConfigCell, verbose: bool)
     -> State
 {
-    // TODO(tailhook) configure it
-    let ns = ns_std_threaded::ThreadedResolver::new(
-        futures_cpupool::CpuPool::new(5));
+    let mut meter = Meter::new();
+    meter.spawn_scanner(handle);
+    meter.track_current_thread_by_name();
+
+    let ns_pool = {
+        let m1 = meter.clone();
+        let m2 = meter.clone();
+        futures_cpupool::Builder::new()
+        // TODO(tailhook) configure it
+        .pool_size(5)
+        .name_prefix("ns-resolver-")
+        .after_start(move || m1.track_current_thread_by_name())
+        .before_stop(move || m2.untrack_current_thread())
+        .create()
+    };
+
+    let ns = ns_std_threaded::ThreadedResolver::new(ns_pool);
+
     let mut rb = abstract_ns::RouterBuilder::new();
     rb.add_default(ns);
     let resolver = rb.into_resolver();
@@ -88,6 +105,7 @@ pub fn populate_loop(handle: &Handle, cfg: &ConfigCell, verbose: bool)
         handle: handle.clone(),
         http_pools: http_pools.clone(),
         session_pools: session_pools.clone(),
+        meter: meter,
     });
     let root = cfg.get();
 

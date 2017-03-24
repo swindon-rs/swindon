@@ -43,6 +43,9 @@ impl Handler {
             Handler::StripWWWRedirect => {
                 Ok(handlers::redirect::strip_www_redirect(input))
             }
+            Handler::SelfStatus(ref settings) => {
+                Ok(handlers::self_status::serve(settings, input))
+            }
         }
     }
 }

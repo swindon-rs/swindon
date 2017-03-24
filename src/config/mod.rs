@@ -19,6 +19,7 @@ pub mod proxy;
 pub mod disk;
 pub mod empty_gif;
 pub mod redirect;
+pub mod self_status;
 
 pub use self::read::Error;
 pub use self::root::Config;

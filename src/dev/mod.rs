@@ -74,6 +74,11 @@ fn _generate_config(buf: &mut String, port: u16, routes: &[Route],
     writeln!(buf, "listen: [127.0.0.1:{}]", port)?;
     writeln!(buf, "")?;
     writeln!(buf, "routing:")?;
+
+    // Default status routes
+    writeln!(buf, "  localhost/~~swindon-status/: status");
+    writeln!(buf, "  devd.io/~~swindon-status/: status");
+
     for (idx, route) in routes.iter().enumerate() {
         match *route {
             Route { subdomain: Some(ref subdomain), ref path, .. } => {
@@ -117,6 +122,11 @@ fn _generate_config(buf: &mut String, port: u16, routes: &[Route],
     }
     writeln!(buf, "")?;
     writeln!(buf, "http-destinations:")?;
+
+    // default status destinations
+    writeln!(buf, "")?;
+    writeln!(buf, "  status: !SelfStatus")?;
+
     for (idx, route) in routes.iter().enumerate() {
         match *route {
             Route { destination: Destination::Path(_), .. } => {}

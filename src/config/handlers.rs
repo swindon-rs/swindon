@@ -6,6 +6,7 @@ use super::chat;
 use super::static_files;
 use super::proxy;
 use super::empty_gif;
+use super::self_status;
 use super::redirect;
 
 
@@ -24,6 +25,7 @@ pub enum Handler {
     WebsocketEcho,
     BaseRedirect(Arc<redirect::BaseRedirect>),
     StripWWWRedirect,
+    SelfStatus(Arc<self_status::SelfStatus>),
 }
 
 pub fn validator<'x>() -> Enum<'x> {
@@ -37,4 +39,5 @@ pub fn validator<'x>() -> Enum<'x> {
     .option("WebsocketEcho", Nothing)
     .option("BaseRedirect", redirect::base_redirect())
     .option("StripWWWRedirect", Nothing)
+    .option("SelfStatus", self_status::validator())
 }

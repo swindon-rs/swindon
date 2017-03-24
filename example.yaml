@@ -4,6 +4,7 @@ listen:
 debug-routing: true
 
 routing:
+  localhost/~~swindon-status: status
   localhost/empty.gif: empty-gif
   localhost/sources: src
   localhost/websocket.html: websocket-echo-static
@@ -66,6 +67,8 @@ handlers:
   bin: !Proxy
     ip-header: X-Remote-Ip
     destination: bin
+
+  status: !SelfStatus
 
 session-pools:
 
