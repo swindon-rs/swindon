@@ -34,7 +34,7 @@ Settings:
 
 .. opt:: request-id-header
 
-   (default is null) Creates a request id 
+   (default is null) Creates a request id
 
 .. opt:: max-payload-size
 
@@ -76,6 +76,7 @@ Static & Single file handlers
 .. index::
    pair: !SingleFile; Handlers
    pair: !Static; Handlers
+   pair: !VersionedStatic; Handlers
 
 Handler for serving static files::
 
@@ -86,7 +87,8 @@ Handler for serving static files::
    static-files: !Static
       path: /www/my-host/static
 
-Common settings:
+Common Settings
+```````````````
 
 .. opt:: pool
 
@@ -106,7 +108,8 @@ Common settings:
 
    (required) Set Content type for served file.
 
-``!Static`` settings:
+!Static Settings
+````````````````
 
 .. opt:: path
 
@@ -150,6 +153,69 @@ Common settings:
    Example::
 
         index-files: ["index.html", "index.htm"]
+
+!VersionedStatic Settings
+`````````````````````````
+
+.. opt:: versioned-root
+
+   (required) Root of the directory where versioned files should be served
+   from. Basic pattern how files are served from there is::
+
+       <versioned-root>/xx/yyyyyy/filename.ext
+
+   In particular:
+
+   * ``xx/yyyyy`` is a value extracted from ``version-arg``
+   * Name of the file is original one, but without path. Name is kept barely
+     to debug issues easier.
+   * Extension (suffix) of the filename is kept as is to be able to find
+     out mime type.
+
+   So for example url ``/img/myimage.jpg?r=deadbeef`` is served from
+   ``/versioned-root/de/adbeef/myimage.jpg``.
+
+.. opt:: plain-root
+
+   (optional) When no file found in ``versioned-root`` we may search in
+   ``plain-root`` by original filename/path depending on
+   ``fallback-to-plain`` setting. This works in a way similar to
+   ``Static``.
+
+   It's expected that ``plain-root`` contains files of the latest version of
+   an application. And it's main purpose is to serve well-known files like
+   ``robots.txt`` or ``crossdomain.xml``.
+
+.. opt:: version-arg
+
+   (required) The query argument to get version from. It's usually some
+   short thing like ``r``, ``v``, ``ver``, ``revision``, ``hash``.
+
+.. opt:: version-split
+
+   (required) Parts to split version argument into, to search for a path.
+   Sum of all number here must be equal to the length of the version argument,
+   we do not support variable length yet.
+
+   For example ``version-split: [2, 6]`` means that value must
+   consist of eight characters and that ``myimage.gif?r=deadbeef`` is searched
+   in ``de/adbeef`` folder.
+
+.. opt:: version-chars
+
+   (required) Validates version chars allowed in hash string. Currently only
+   ``lowercase-hex`` mode is supported.
+
+.. opt:: fallback-to-plain
+
+   (default ``never``) When to fallback to serving files from ``plain-root``.
+   We have a very conservative default, it's useful for staging servers where
+   you want specifically, For production deployment, you may wish to change it
+   to more lenient ones.
+
+.. opt:: text-charset
+
+   (optional) Sets ``charset`` parameter of ``Content-Type`` header.
 
 
 Swindon chat handler

@@ -3,11 +3,11 @@ use std::sync::Arc;
 use quire::validate::{Enum, Nothing};
 
 use super::chat;
-use super::static_files;
-use super::proxy;
 use super::empty_gif;
-use super::self_status;
+use super::proxy;
 use super::redirect;
+use super::self_status;
+use super::static_files;
 
 
 #[derive(RustcDecodable, Debug, PartialEq, Eq)]
