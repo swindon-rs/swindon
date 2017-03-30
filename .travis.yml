@@ -17,7 +17,8 @@ cache:
 
 matrix:
   include:
-  - os: linux
+  - rust: beta
+  - rust: nightly
   - os: linux
     env: FUNC_TEST=y
   - os: osx
