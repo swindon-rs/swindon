@@ -17,7 +17,10 @@ cache:
 
 matrix:
   include:
-  - env: FUNC_TEST=y
+  - os: linux
+  - os: linux
+    env: FUNC_TEST=y
+  - os: osx
 
 install:
 - >
