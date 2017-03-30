@@ -9,10 +9,10 @@ use tk_http::server::{Error, Codec, RecvMode};
 use tk_http::server as http;
 use tk_http::websocket::{self, ServerCodec as WebsocketCodec, Packet, Accept};
 use tk_bufstream::{ReadBuf, WriteBuf};
-use tokio_core::io::Io;
 use futures::future::{ok};
 use futures::sync::mpsc::{UnboundedReceiver as Receiver};
 use tokio_core::reactor::Handle;
+use tokio_io::{AsyncRead, AsyncWrite};
 use rustc_serialize::json;
 
 use chat::{self, Cid, ConnectionMessage, ConnectionSender, TangleAuth};
@@ -38,7 +38,7 @@ struct ReplyData {
 }
 
 
-impl<S: Io + 'static> Codec<S> for WebsockReply {
+impl<S: AsyncRead + AsyncWrite + 'static> Codec<S> for WebsockReply {
     type ResponseFuture = Reply<S>;
     fn recv_mode(&mut self) -> RecvMode {
         RecvMode::hijack()

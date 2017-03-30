@@ -1,5 +1,3 @@
-use tokio_core::io::Io;
-
 use tk_http::{Status};
 use tk_http::client::Head;
 use tk_http::server::{EncoderDone};
@@ -49,7 +47,7 @@ impl HalfResp {
 }
 
 impl Response {
-    pub fn encode<S:Io>(&self, mut e: Encoder<S>) -> EncoderDone<S>{
+    pub fn encode<S>(&self, mut e: Encoder<S>) -> EncoderDone<S>{
         let body = match self.status {
             RespStatus::Normal(s) => {
                 e.status(s);

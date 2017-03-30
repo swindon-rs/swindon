@@ -1,7 +1,6 @@
 use std::sync::Arc;
 
 use tk_http::Status;
-use tokio_core::io::Io;
 use futures::future::{ok};
 
 use config::empty_gif::EmptyGif;
@@ -11,7 +10,7 @@ use incoming::{reply, Request, Input};
 const EMPTY_GIF: &'static [u8] = include_bytes!("../empty.gif");
 
 
-pub fn serve<S: Io + 'static>(settings: &Arc<EmptyGif>, inp: Input)
+pub fn serve<S: 'static>(settings: &Arc<EmptyGif>, inp: Input)
     -> Request<S>
 {
     let settings = settings.clone();

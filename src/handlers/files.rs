@@ -5,7 +5,6 @@ use std::fs::{File, metadata};
 use std::ffi::OsStr;
 use std::hash::{Hash, Hasher};
 use std::io;
-use std::os::unix::io::AsRawFd;
 use std::path::{Path, PathBuf, Component};
 use std::sync::{Arc, RwLock};
 use std::str::from_utf8;
@@ -17,7 +16,7 @@ use mime_guess::guess_mime_type;
 use mime::{TopLevel, Mime};
 use tk_http::server::Error;
 use tk_http::Status;
-use tk_sendfile::{DiskPool, FileOpener, IntoFileOpener};
+use tk_sendfile::{DiskPool, FileOpener, IntoFileOpener, FileReader};
 
 use config;
 use config::static_files::{Static, Mode, SingleFile};
@@ -339,7 +338,7 @@ fn find_index(path: &Path, settings: &Arc<Static>)
 }
 
 impl FileOpener for PathOpen {
-    fn open(&mut self) -> Result<(&AsRawFd, u64), io::Error> {
+    fn open(&mut self) -> Result<(&FileReader, u64), io::Error> {
         if self.file.is_none() {
             let file = File::open(&self.path)?;
             let meta = file.metadata()?;
@@ -357,6 +356,6 @@ impl FileOpener for PathOpen {
             }
         }
         Ok(self.file.as_ref()
-            .map(|&(ref f, s, _)| (f as &AsRawFd, s)).unwrap())
+            .map(|&(ref f, s, _)| (f as &FileReader, s)).unwrap())
     }
 }

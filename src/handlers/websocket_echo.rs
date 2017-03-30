@@ -7,9 +7,9 @@ use tk_http::server::{Error, Codec, RecvMode};
 use tk_http::server as http;
 use tk_http::websocket::{ServerCodec as WebsocketCodec, Accept};
 use tk_bufstream::{ReadBuf, WriteBuf};
-use tokio_core::io::Io;
 use futures::future::{ok};
 use tokio_core::reactor::Handle;
+use tokio_io::{AsyncRead, AsyncWrite};
 
 use config::Config;
 use incoming::{Request, Input, Debug, Reply, Encoder};
@@ -22,7 +22,7 @@ struct WebsockReply {
 }
 
 
-impl<S: Io + 'static> Codec<S> for WebsockReply {
+impl<S: AsyncRead + AsyncWrite + 'static> Codec<S> for WebsockReply {
     type ResponseFuture = Reply<S>;
     fn recv_mode(&mut self) -> RecvMode {
         RecvMode::hijack()
@@ -56,7 +56,7 @@ impl<S: Io + 'static> Codec<S> for WebsockReply {
     }
 }
 
-pub fn serve<S: Io + 'static>(inp: Input) -> Request<S> {
+pub fn serve<S: AsyncRead + AsyncWrite + 'static>(inp: Input) -> Request<S> {
     match inp.headers.get_websocket_upgrade() {
         Ok(Some(ws)) => {
             Box::new(WebsockReply {

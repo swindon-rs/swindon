@@ -2,7 +2,6 @@ use std::sync::Arc;
 use std::ascii::AsciiExt;
 
 use tk_http::Status;
-use tokio_core::io::Io;
 use futures::future::ok;
 
 use default_error_page::serve_error_page;
@@ -10,7 +9,7 @@ use config::redirect::BaseRedirect;
 use incoming::{reply, Request, Input};
 
 
-pub fn base_redirect<S: Io + 'static>(settings: &Arc<BaseRedirect>, inp: Input)
+pub fn base_redirect<S: 'static>(settings: &Arc<BaseRedirect>, inp: Input)
     -> Request<S>
 {
     serve_redirect(settings.redirect_to_domain.as_str(),
@@ -18,7 +17,7 @@ pub fn base_redirect<S: Io + 'static>(settings: &Arc<BaseRedirect>, inp: Input)
 }
 
 
-pub fn strip_www_redirect<S: Io + 'static>(inp: Input)
+pub fn strip_www_redirect<S: 'static>(inp: Input)
     -> Request<S>
 {
 
@@ -36,7 +35,7 @@ pub fn strip_www_redirect<S: Io + 'static>(inp: Input)
 }
 
 
-fn serve_redirect<S: Io + 'static>(host: &str, status: Status, inp: Input)
+fn serve_redirect<S: 'static>(host: &str, status: Status, inp: Input)
     -> Request<S>
 {
     // TODO: properly identify request scheme

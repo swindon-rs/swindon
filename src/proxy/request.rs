@@ -1,7 +1,6 @@
 use std::sync::Arc;
 use std::net::SocketAddr;
 
-use tokio_core::io::Io;
 use tk_http::Version;
 use tk_http::client::{Encoder, EncoderDone};
 
@@ -73,7 +72,7 @@ impl HalfReq {
     }
 }
 impl RepReq {
-    pub fn encode<S:Io>(&self, mut e: Encoder<S>) -> EncoderDone<S>{
+    pub fn encode<S>(&self, mut e: Encoder<S>) -> EncoderDone<S>{
         let ref r = *self.0;
         if r.settings.destination.path == "/" {
             e.request_line(&r.method, &r.path, Version::Http11);

@@ -2,7 +2,6 @@ use std::io::Write;
 
 use tk_http::{Status};
 use tk_http::server::{Error, EncoderDone};
-use tokio_core::io::Io;
 
 use futures::future::{ok, FutureResult};
 use incoming::{reply, Request, Input, Encoder};
@@ -31,12 +30,12 @@ const PART3: &'static str = concat!("\
     ");
 
 
-pub fn serve_error_page<S: Io + 'static>(status: Status, inp: Input)
+pub fn serve_error_page<S: 'static>(status: Status, inp: Input)
     -> Request<S> {
     reply(inp, move |e| Box::new(error_page(status, e)))
 }
 
-pub fn error_page<S: Io + 'static>(status: Status, mut e: Encoder<S>)
+pub fn error_page<S: 'static>(status: Status, mut e: Encoder<S>)
     -> FutureResult<EncoderDone<S>, Error>
 {
     e.status(status);

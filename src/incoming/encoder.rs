@@ -7,7 +7,6 @@ use time;
 use tk_http::Status;
 use tk_http::server as http;
 use tk_http::server::{EncoderDone, FutureRawBody};
-use tokio_core::io::Io;
 
 
 use config::Config;
@@ -16,7 +15,7 @@ use incoming::Debug;
 pub type Context = (Arc<Config>, Debug);
 
 
-pub struct Encoder<S: Io> {
+pub struct Encoder<S> {
     enc: http::Encoder<S>,
     config: Arc<Config>,
     debug: Debug,
@@ -28,7 +27,7 @@ pub trait IntoContext: Sized {
     fn into_context(self) -> Context;
 }
 
-impl<S: Io> Encoder<S> {
+impl<S> Encoder<S> {
     pub fn new(enc: http::Encoder<S>, context: Context)
         -> Encoder<S>
     {
@@ -41,7 +40,7 @@ impl<S: Io> Encoder<S> {
     }
 }
 
-impl<S: Io> Encoder<S> {
+impl<S> Encoder<S> {
     pub fn status(&mut self, status: Status) {
         self.enc.status(status);
     }
@@ -109,7 +108,7 @@ impl<S: Io> Encoder<S> {
     }
 }
 
-impl<S: Io> io::Write for Encoder<S> {
+impl<S> io::Write for Encoder<S> {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         self.enc.write(buf)
     }

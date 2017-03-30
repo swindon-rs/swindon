@@ -6,7 +6,6 @@ use std::net::SocketAddr;
 
 use futures::Async;
 use futures::future::{FutureResult, ok};
-use tokio_core::io::Io;
 use tk_http::Status;
 use tk_http::server::{Dispatcher, Error, Head};
 use tk_http::server as http;
@@ -83,7 +82,7 @@ impl Handler {
     }
 }
 
-impl<S: Io> Dispatcher<S> for Handler {
+impl<S> Dispatcher<S> for Handler {
     type Codec = Request;
     fn headers_received(&mut self, headers: &Head)
         -> Result<Self::Codec, Error>
@@ -184,7 +183,7 @@ impl Handler {
     }
 }
 
-impl<S: Io> http::Codec<S> for Request {
+impl<S> http::Codec<S> for Request {
     type ResponseFuture = FutureResult<EncoderDone<S>, Error>;
     fn recv_mode(&mut self) -> RecvMode {
         RecvMode::buffered_upfront(self.wdata.settings.max_payload_size)

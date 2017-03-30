@@ -4,7 +4,6 @@ use futures::Async;
 use futures::future::{FutureResult, ok};
 use futures::sync::oneshot;
 use tk_http::client as http;
-use tokio_core::io::Io;
 
 use proxy::{RepReq, HalfResp, Response};
 
@@ -31,7 +30,7 @@ impl Codec {
     }
 }
 
-impl<S: Io> http::Codec<S> for Codec {
+impl<S> http::Codec<S> for Codec {
     type Future = FutureResult<http::EncoderDone<S>, http::Error>;
 
     fn start_write(&mut self, e: http::Encoder<S>) -> Self::Future {

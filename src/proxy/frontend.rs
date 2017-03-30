@@ -8,7 +8,6 @@ use futures::sync::oneshot;
 use tk_http::Status;
 use tk_http::server::{Error, RecvMode};
 use tk_http::server as http;
-use tokio_core::io::Io;
 
 use config::proxy::Proxy;
 use incoming::{Input, Reply, Encoder, Context, IntoContext};
@@ -36,7 +35,7 @@ pub struct Codec {
     context: Option<Context>,
 }
 
-impl<S: Io + 'static> http::Codec<S> for Codec {
+impl<S: 'static> http::Codec<S> for Codec {
     type ResponseFuture = Reply<S>;
     fn recv_mode(&mut self) -> RecvMode {
         if self.settings.stream_requests {

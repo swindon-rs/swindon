@@ -7,7 +7,6 @@ use futures::Async;
 use futures::future::{FutureResult, ok};
 use tk_http::{Status, Version};
 use tk_http::client as http;
-use tokio_core::io::Io;
 use rustc_serialize::Encodable;
 use rustc_serialize::json::{as_json, Json};
 
@@ -106,7 +105,7 @@ impl InactivityCodec {
 }
 
 
-fn write_json_request<S: Io, E>(mut e: http::Encoder<S>, data: &E)
+fn write_json_request<S, E>(mut e: http::Encoder<S>, data: &E)
     -> http::EncoderDone<S>
     where E: Encodable,
 {
@@ -123,7 +122,7 @@ fn write_json_request<S: Io, E>(mut e: http::Encoder<S>, data: &E)
 }
 
 
-impl<S: Io> http::Codec<S> for AuthCodec {
+impl<S> http::Codec<S> for AuthCodec {
     type Future = FutureResult<http::EncoderDone<S>, http::Error>;
 
     fn start_write(&mut self, mut e: http::Encoder<S>) -> Self::Future {
@@ -199,7 +198,7 @@ impl<S: Io> http::Codec<S> for AuthCodec {
     }
 }
 
-impl<S: Io> http::Codec<S> for CallCodec {
+impl<S> http::Codec<S> for CallCodec {
     type Future = FutureResult<http::EncoderDone<S>, http::Error>;
 
     fn start_write(&mut self, mut e: http::Encoder<S>) -> Self::Future {
@@ -262,7 +261,7 @@ impl<S: Io> http::Codec<S> for CallCodec {
     }
 }
 
-impl<S: Io> http::Codec<S> for InactivityCodec {
+impl<S> http::Codec<S> for InactivityCodec {
     type Future = FutureResult<http::EncoderDone<S>, http::Error>;
 
     fn start_write(&mut self, mut e: http::Encoder<S>) -> Self::Future {

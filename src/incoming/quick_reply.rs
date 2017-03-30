@@ -1,6 +1,5 @@
 use std::sync::Arc;
 
-use tokio_core::io::Io;
 use futures::Async;
 use tk_http::server::{Error, Codec, RecvMode};
 use tk_http::server as http;
@@ -14,7 +13,7 @@ pub struct QuickReply<F> {
 }
 
 
-pub fn reply<F, C, S: Io + 'static>(ctx: C, f: F)
+pub fn reply<F, C, S: 'static>(ctx: C, f: F)
     -> Request<S>
     where F: FnOnce(Encoder<S>) -> Reply<S> + 'static,
           C: IntoContext,
@@ -25,7 +24,7 @@ pub fn reply<F, C, S: Io + 'static>(ctx: C, f: F)
     })
 }
 
-impl<F, S: Io> Codec<S> for QuickReply<F>
+impl<F, S> Codec<S> for QuickReply<F>
     where F: FnOnce(Encoder<S>) -> Reply<S>,
 {
     type ResponseFuture = Reply<S>;
