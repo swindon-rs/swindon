@@ -1,4 +1,5 @@
 setuptools
+aiohttp==1.3.4
 pytest>=3.0.5
 pytest-aiohttp
 pytest-xdist==1.15.0
