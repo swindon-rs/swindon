@@ -102,7 +102,7 @@ pub fn populate_loop(handle: &Handle, cfg: &ConfigCell, verbose: bool)
 
     let http_pools = HttpPools::new();
     let session_pools = chat::SessionPools::new();
-    let disk_pools = DiskPools::new();
+    let disk_pools = DiskPools::new(&meter);
     let runtime = Arc::new(Runtime {
         config: cfg.clone(),
         handle: handle.clone(),
