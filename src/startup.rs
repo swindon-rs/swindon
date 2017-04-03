@@ -24,11 +24,13 @@ use chat;
 use handlers;
 use runtime::Runtime;
 use http_pools::{HttpPools};
+use handlers::files::{DiskPools};
 
 
 pub struct State {
     http_pools: HttpPools,
     session_pools: chat::SessionPools,
+    disk_pools: DiskPools,
     ns: abstract_ns::Router,
     listener_shutters: HashMap<SocketAddr, Sender<()>>,
     runtime: Arc<Runtime>,
@@ -100,11 +102,13 @@ pub fn populate_loop(handle: &Handle, cfg: &ConfigCell, verbose: bool)
 
     let http_pools = HttpPools::new();
     let session_pools = chat::SessionPools::new();
+    let disk_pools = DiskPools::new();
     let runtime = Arc::new(Runtime {
         config: cfg.clone(),
         handle: handle.clone(),
         http_pools: http_pools.clone(),
         session_pools: session_pools.clone(),
+        disk_pools: disk_pools.clone(),
         meter: meter,
     });
     let root = cfg.get();
@@ -134,7 +138,7 @@ pub fn populate_loop(handle: &Handle, cfg: &ConfigCell, verbose: bool)
     }
 
 
-    handlers::files::update_pools(&root.disk_pools);
+    disk_pools.update(&root.disk_pools);
     http_pools.update(&root.http_destinations, &resolver, handle);
     session_pools.update(&root.session_pools, handle, &runtime);
     State {
@@ -143,12 +147,13 @@ pub fn populate_loop(handle: &Handle, cfg: &ConfigCell, verbose: bool)
         session_pools: session_pools,
         listener_shutters: listener_shutters,
         runtime: runtime,
+        disk_pools: disk_pools,
     }
 }
 
 pub fn update_loop(state: &mut State, cfg: &ConfigCell, handle: &Handle) {
     // TODO(tailhook) update listening sockets
-    handlers::files::update_pools(&cfg.get().disk_pools);
+    state.disk_pools.update(&cfg.get().disk_pools);
     state.http_pools.update(&cfg.get().http_destinations, &state.ns, handle);
     state.session_pools.update(&cfg.get().session_pools,
         handle, &state.runtime);

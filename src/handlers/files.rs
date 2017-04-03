@@ -24,6 +24,7 @@ use default_error_page::{serve_error_page, error_page};
 use incoming::{Input, Request, Reply, Transport};
 use incoming::reply;
 use intern::{DiskPoolName};
+use runtime::Runtime;
 
 
 quick_error! {
@@ -42,13 +43,13 @@ struct PathOpen {
     file: Option<(File, u64, Mime)>,
 }
 
+#[derive(Clone)]
+pub struct DiskPools(Arc<RwLock<PoolsInternal>>);
 
-lazy_static! {
-    static ref POOLS: RwLock<HashMap<DiskPoolName, (u64, DiskPool)>> =
-        RwLock::new(HashMap::new());
-    static ref DEFAULT: DiskPoolName = DiskPoolName::from("default");
+struct PoolsInternal {
+    pools: HashMap<DiskPoolName, (u64, DiskPool)>,
+    default: DiskPool,
 }
-
 
 pub fn serve_dir<S: Transport>(settings: &Arc<Static>, mut inp: Input)
     -> Request<S>
@@ -61,7 +62,7 @@ pub fn serve_dir<S: Transport>(settings: &Arc<Static>, mut inp: Input)
         }
     };
     inp.debug.set_fs_path(&path);
-    let pool = get_pool(&settings.pool);
+    let pool = get_pool(&inp.runtime, &settings.pool);
     let settings = settings.clone();
     reply(inp, move |mut e| {
         Box::new(pool.open(PathOpen::new(path, &settings))
@@ -215,7 +216,7 @@ pub fn serve_file<S: Transport>(settings: &Arc<SingleFile>, mut inp: Input)
         return serve_error_page(Status::Forbidden, inp);
     };
     inp.debug.set_fs_path(&settings.path);
-    let pool = get_pool(&settings.pool);
+    let pool = get_pool(&inp.runtime, &settings.pool);
     let settings = settings.clone();
     reply(inp, move |mut e| {
         Box::new(pool.open(settings.path.clone())
@@ -253,45 +254,55 @@ fn new_pool(cfg: &config::Disk) -> DiskPool {
     DiskPool::new(CpuPool::new(cfg.num_threads))
 }
 
-fn get_pool(name: &DiskPoolName) -> DiskPool {
-    let pools = POOLS.read().expect("readlock for pools");
-    match pools.get(name) {
+fn get_pool(runtime: &Runtime, name: &DiskPoolName) -> DiskPool {
+    let pools = runtime.disk_pools.0.read().expect("readlock for pools");
+    match pools.pools.get(name) {
         Some(&(_, ref x)) => x.clone(),
         None => {
             warn!("Unknown disk pool {}, using default", name);
-            pools.get(&*DEFAULT).unwrap().1.clone()
+            pools.default.clone()
         }
     }
 }
 
-pub fn update_pools(config: &HashMap<DiskPoolName, config::Disk>) {
-    let mut pools = POOLS.write().expect("writelock for pools");
-    for (name, props) in config {
-        let mut hasher = DefaultHasher::new();
-        props.hash(&mut hasher);
-        let new_hash = hasher.finish();
-        match pools.entry(name.clone()) {
-            Occupied(mut o) => {
-                let (ref mut old_hash, ref mut old_pool) = *o.get_mut();
-                debug!("Upgrading disk pool {} to {:?}", name, props);
-                if *old_hash != new_hash {
-                    *old_pool = new_pool(props);
-                    *old_hash = new_hash;
-                }
-            }
-            Vacant(v) => {
-                v.insert((new_hash, new_pool(props)));
-            }
-        }
-    }
-    if !pools.contains_key(&*DEFAULT) {
+impl DiskPools {
+    pub fn new() -> DiskPools {
+        let mut pools = HashMap::new();
         let cfg = config::Disk {
             num_threads: 40,
         };
         let mut hasher = DefaultHasher::new();
         cfg.hash(&mut hasher);
         let hash = hasher.finish();
-        pools.insert(DEFAULT.clone(), (hash, new_pool(&cfg)));
+        let default = new_pool(&cfg);
+        pools.insert(DiskPoolName::from("default"), (hash, default.clone()));
+
+        DiskPools(Arc::new(RwLock::new(PoolsInternal {
+            pools: pools,
+            default: default,
+        })))
+    }
+    pub fn update(&self, config: &HashMap<DiskPoolName, config::Disk>) {
+        let mut pools = self.0.write().expect("writelock for pools");
+        for (name, props) in config {
+            let mut hasher = DefaultHasher::new();
+            props.hash(&mut hasher);
+            let new_hash = hasher.finish();
+            match pools.pools.entry(name.clone()) {
+                Occupied(mut o) => {
+                    let (ref mut old_hash, ref mut old_pool) = *o.get_mut();
+                    debug!("Upgrading disk pool {} to {:?}", name, props);
+                    if *old_hash != new_hash {
+                        *old_pool = new_pool(props);
+                        *old_hash = new_hash;
+                    }
+                }
+                Vacant(v) => {
+                    v.insert((new_hash, new_pool(props)));
+                }
+            }
+        }
+        pools.default = pools.pools[&DiskPoolName::from("default")].1.clone();
     }
 }
 
