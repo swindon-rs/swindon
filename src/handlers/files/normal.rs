@@ -5,7 +5,7 @@ use std::fs::{File, metadata};
 use std::hash::{Hash, Hasher};
 use std::io;
 use std::path::{Path, PathBuf};
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc, RwLock, Mutex};
 use std::str::from_utf8;
 
 use futures_cpupool;
@@ -25,17 +25,9 @@ use incoming::{Input, Request, Reply, Transport};
 use incoming::reply;
 use intern::{DiskPoolName};
 use runtime::Runtime;
+use handlers::files::FileError;
+use handlers::files::pools::get_pool;
 
-
-quick_error! {
-    #[derive(Debug)]
-    enum FileError {
-        Sendfile(err: io::Error) {
-            description("sendfile error")
-            cause(err)
-        }
-    }
-}
 
 #[cfg(unix)]
 struct PathOpen {
@@ -49,15 +41,6 @@ struct PathOpen {
     path: PathBuf,
     settings: Arc<Static>,
     file: Option<(Mutex<File>, u64, Mime)>,
-}
-
-#[derive(Clone)]
-pub struct DiskPools(Arc<RwLock<PoolsInternal>>);
-
-struct PoolsInternal {
-    pools: HashMap<DiskPoolName, (u64, DiskPool)>,
-    default: DiskPool,
-    meter: Meter,
 }
 
 pub fn serve_dir<S: Transport>(settings: &Arc<Static>, mut inp: Input)
@@ -217,114 +200,6 @@ fn path(settings: &Static, inp: &Input) -> Result<PathBuf, ()> {
     Ok(settings.path.join(utf8))
 }
 
-pub fn serve_file<S: Transport>(settings: &Arc<SingleFile>, mut inp: Input)
-    -> Request<S>
-{
-    if !inp.headers.path().is_some() {
-        // Star or authority
-        return serve_error_page(Status::Forbidden, inp);
-    };
-    inp.debug.set_fs_path(&settings.path);
-    let pool = get_pool(&inp.runtime, &settings.pool);
-    let settings = settings.clone();
-    reply(inp, move |mut e| {
-        Box::new(pool.open(settings.path.clone())
-            .then(move |res| match res {
-                Ok(file) => {
-                    e.status(Status::Ok);
-                    e.add_length(file.size());
-                    e.add_header("Content-Type", &settings.content_type);
-                    e.add_extra_headers(&settings.extra_headers);
-                    if e.done_headers() {
-                        Box::new(e.raw_body()
-                            .and_then(|raw_body| file.write_into(raw_body))
-                            .map(|raw_body| raw_body.done())
-                            .map_err(FileError::Sendfile)
-                            .map_err(Error::custom))
-                        as Reply<_>
-                    } else {
-                        Box::new(ok(e.done()))
-                    }
-                }
-                Err(ref err) if err.kind() == io::ErrorKind::NotFound => {
-                    Box::new(error_page(Status::NotFound, e))
-                }
-                // TODO(tailhook) find out if we want to expose other
-                // errors, for example "Permission denied" and "is a directory"
-                Err(_) => {
-                    // TODO: log error.
-                    Box::new(error_page(Status::InternalServerError, e))
-                }
-            }))
-    })
-}
-
-fn new_pool(name: &DiskPoolName, cfg: &config::Disk, meter: &Meter)
-    -> DiskPool
-{
-    let m1 = meter.clone();
-    let m2 = meter.clone();
-    DiskPool::new(futures_cpupool::Builder::new()
-        .pool_size(cfg.num_threads)
-        .name_prefix(format!("disk-{}-", name))
-        .after_start(move || m1.track_current_thread_by_name())
-        .before_stop(move || m2.untrack_current_thread())
-        .create())
-}
-
-fn get_pool(runtime: &Runtime, name: &DiskPoolName) -> DiskPool {
-    let pools = runtime.disk_pools.0.read().expect("readlock for pools");
-    match pools.pools.get(name) {
-        Some(&(_, ref x)) => x.clone(),
-        None => {
-            warn!("Unknown disk pool {}, using default", name);
-            pools.default.clone()
-        }
-    }
-}
-
-impl DiskPools {
-    pub fn new(meter: &Meter) -> DiskPools {
-        let mut pools = HashMap::new();
-        let cfg = config::Disk {
-            num_threads: 40,
-        };
-        let mut hasher = DefaultHasher::new();
-        cfg.hash(&mut hasher);
-        let hash = hasher.finish();
-        let dname = DiskPoolName::from("default");
-        let default = new_pool(&dname, &cfg, meter);
-        pools.insert(dname, (hash, default.clone()));
-
-        DiskPools(Arc::new(RwLock::new(PoolsInternal {
-            pools: pools,
-            default: default,
-            meter: meter.clone(),
-        })))
-    }
-    pub fn update(&self, config: &HashMap<DiskPoolName, config::Disk>) {
-        let mut pools = &mut *self.0.write().expect("writelock for pools");
-        for (name, props) in config {
-            let mut hasher = DefaultHasher::new();
-            props.hash(&mut hasher);
-            let new_hash = hasher.finish();
-            match pools.pools.entry(name.clone()) {
-                Occupied(mut o) => {
-                    let (ref mut old_hash, ref mut old_pool) = *o.get_mut();
-                    debug!("Upgrading disk pool {} to {:?}", name, props);
-                    if *old_hash != new_hash {
-                        *old_pool = new_pool(name, props, &pools.meter);
-                        *old_hash = new_hash;
-                    }
-                }
-                Vacant(v) => {
-                    v.insert((new_hash, new_pool(name, props, &pools.meter)));
-                }
-            }
-        }
-        pools.default = pools.pools[&DiskPoolName::from("default")].1.clone();
-    }
-}
 
 impl PathOpen {
     fn new(path: PathBuf, settings: &Arc<Static>) -> PathOpen {
@@ -402,9 +277,3 @@ impl FileOpener for PathOpen {
     }
 }
 
-pub fn serve_versioned<S: Transport>(settings: &Arc<VersionedStatic>,
-    mut inp: Input)
-    -> Request<S>
-{
-    unimplemented!();
-}
