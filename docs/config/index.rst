@@ -15,4 +15,5 @@ Configuration sections:
    handlers
    session-pools
    http-destinations
+   auth
    ldap

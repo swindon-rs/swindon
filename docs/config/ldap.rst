@@ -1,6 +1,8 @@
 LDAP Support
 ============
 
+**LDAP doesn't work yet, this is provisional documentation**
+
 Swindon has experimental support of LDAP authorization.
 
 Configuration of LDAP consists of three parts:

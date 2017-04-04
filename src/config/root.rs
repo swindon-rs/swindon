@@ -7,7 +7,7 @@ use quire::validate::{Structure, Sequence, Mapping, Scalar, Numeric};
 use quire::De;
 
 use intern::{HandlerName, Upstream, SessionPoolName, DiskPoolName};
-use intern::{LdapUpstream};
+use intern::{LdapUpstream, Network};
 use config::listen::{self, ListenSocket};
 use config::routing::{self, Routing};
 use config::authorization::{self, Authorization};
@@ -16,6 +16,7 @@ use config::authorizers::{self, Authorizer};
 use config::session_pools::{self, SessionPool};
 use config::http_destinations::{self, Destination};
 use config::ldap;
+use config::networks;
 use config::disk::{self, Disk};
 
 #[derive(RustcDecodable, PartialEq, Eq, Debug)]
@@ -40,6 +41,8 @@ pub struct Config {
     pub session_pools: HashMap<SessionPoolName, Arc<SessionPool>>,
     pub http_destinations: HashMap<Upstream, Destination>,
     pub ldap_destinations: HashMap<LdapUpstream, ldap::Destination>,
+    pub networks: HashMap<Network, networks::NetworkList>,
+
     pub debug_routing: bool,
     pub server_name: Option<String>,
 
@@ -81,6 +84,7 @@ pub fn config_validator<'a>() -> Structure<'a> {
         Mapping::new(Scalar::new(), http_destinations::validator()))
     .member("ldap_destinations",
         Mapping::new(Scalar::new(), ldap::destination_validator()))
+    .member("networks", Mapping::new(Scalar::new(), networks::validator()))
 
     .member("debug_routing", Scalar::new().default(false))
     .member("server_name", Scalar::new().optional()

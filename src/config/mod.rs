@@ -12,6 +12,7 @@ mod handlers;
 mod session_pools;
 mod authorizers;
 mod authorization;
+pub mod networks;
 pub mod http_destinations;
 pub mod ldap;
 // handlers

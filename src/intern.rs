@@ -40,6 +40,9 @@ pub type LdapUpstream = Symbol<LdapValidator>;
 struct AuthorizerValidator;
 pub type Authorizer = Symbol<AuthorizerValidator>;
 
+struct NetworkValidator;
+pub type Network = Symbol<NetworkValidator>;
+
 quick_error! {
     #[derive(Debug)]
     pub enum BadIdent {
@@ -101,6 +104,19 @@ impl Validator for AuthorizerValidator {
     }
     fn display(value: &Symbol<Self>, fmt: &mut fmt::Formatter) -> fmt::Result {
         write!(fmt, "auth{:?}", value.as_ref())
+    }
+}
+
+impl Validator for NetworkValidator {
+    type Err = BadIdent;
+    fn validate_symbol(val: &str) -> Result<(), Self::Err> {
+        if !valid_ident(val) {
+            return Err(BadIdent::InvalidChar);
+        }
+        Ok(())
+    }
+    fn display(value: &Symbol<Self>, fmt: &mut fmt::Formatter) -> fmt::Result {
+        write!(fmt, "netw{:?}", value.as_ref())
     }
 }
 

@@ -22,6 +22,7 @@ routing:
 authorization:
   chat.example.com/admin: ldap
   auth.example.com: ldap
+  localhost: local
 
 handlers:
 
@@ -106,6 +107,10 @@ http-destinations:
     - httpbin.org:80
 
 authorizers:
+
+  local: !SourceIp
+    allowed-network: localhost
+
   ldap: !Ldap
     destination: local-ldap
     search-base: dc=users,dc=example,dc=org
@@ -124,3 +129,7 @@ ldap-destinations:
   local-ldap:
     addresses:
     - localhost:8398
+
+networks:
+  localhost:
+  - "127.0.0.1/8"
