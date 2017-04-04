@@ -6,7 +6,7 @@ use std::ffi::OsStr;
 use std::hash::{Hash, Hasher};
 use std::io;
 use std::path::{Path, PathBuf, Component};
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use std::str::from_utf8;
 
 use futures_cpupool;
@@ -38,10 +38,18 @@ quick_error! {
     }
 }
 
+#[cfg(unix)]
 struct PathOpen {
     path: PathBuf,
     settings: Arc<Static>,
     file: Option<(File, u64, Mime)>,
+}
+
+#[cfg(windows)]
+struct PathOpen {
+    path: PathBuf,
+    settings: Arc<Static>,
+    file: Option<(Mutex<File>, u64, Mime)>,
 }
 
 #[derive(Clone)]
@@ -361,6 +369,16 @@ fn find_index(path: &Path, settings: &Arc<Static>)
     return Err(io::ErrorKind::Other.into());
 }
 
+#[cfg(unix)]
+fn wrap_file(file: File) -> File {
+    file
+}
+
+#[cfg(windows)]
+fn wrap_file(file: File) -> Mutex<File> {
+    Mutex::new(file)
+}
+
 impl FileOpener for PathOpen {
     fn open(&mut self) -> Result<(&FileReader, u64), io::Error> {
         if self.file.is_none() {
@@ -370,13 +388,14 @@ impl FileOpener for PathOpen {
                 if self.settings.index_files.len() > 0 &&
                     metadata(&self.path)?.is_dir()
                 {
-                    self.file = Some(find_index(&self.path, &self.settings)?);
+                    let (f, mt, mm) = find_index(&self.path, &self.settings)?;
+                    self.file = Some((wrap_file(f), mt, mm));
                 } else {
                     return Err(io::ErrorKind::Other.into());
                 }
             } else {
                 let mime = guess_mime_type(&self.path);
-                self.file = Some((file, meta.len(), mime));
+                self.file = Some((wrap_file(file), meta.len(), mime));
             }
         }
         Ok(self.file.as_ref()
