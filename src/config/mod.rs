@@ -1,7 +1,6 @@
 use std::fs::{metadata, Metadata};
 use std::sync::{Arc, RwLock};
 use std::path::{PathBuf, Path};
-use std::os::unix::fs::MetadataExt;
 
 mod read;
 mod root;
@@ -61,6 +60,19 @@ impl ConfigCell {
     }
 }
 
+#[cfg(unix)]
+fn compare_metadata(meta: &Metadata, old_meta: &Metadata) -> bool {
+    use std::os::unix::fs::MetadataExt;
+    meta.modified().ok() != old_meta.modified().ok() ||
+        meta.ino() != old_meta.ino() ||
+        meta.dev() != old_meta.dev()
+}
+
+#[cfg(not(unix))]
+fn compare_metadata(meta: &Metadata, old_meta: &Metadata) -> bool {
+    meta.modified().ok() != old_meta.modified().ok()
+}
+
 impl Configurator {
     pub fn new<P: AsRef<Path>>(path: P) -> Result<Configurator, Error> {
         let path = path.as_ref();
@@ -82,11 +94,9 @@ impl Configurator {
     /// If error occured old config is still active
     pub fn try_update(&mut self) -> Result<bool, Error> {
         let changed = self.file_metadata.iter()
-            .any(|&(ref fname, ref oldmeta)| {
-                if let Ok(meta) = metadata(fname) {
-                    meta.modified().ok() != oldmeta.modified().ok() ||
-                        meta.ino() != oldmeta.ino() ||
-                        meta.dev() != oldmeta.dev()
+            .any(|&(ref fname, ref old_meta)| {
+                if let Ok(ref meta) = metadata(fname) {
+                    compare_metadata(meta, old_meta)
                 } else {
                     // We reread config on error for the case there is absent
                     // file that was previously present. And we want to account
