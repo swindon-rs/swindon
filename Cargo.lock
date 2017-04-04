@@ -24,7 +24,7 @@ dependencies = [
  "rand 0.3.15 (registry+https://github.com/rust-lang/crates.io-index)",
  "rustc-serialize 0.3.23 (registry+https://github.com/rust-lang/crates.io-index)",
  "scoped-tls 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "self-meter-http 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "self-meter-http 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "sha1 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "slab 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "string-intern 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -297,11 +297,6 @@ dependencies = [
 
 [[package]]
 name = "netbuf"
-version = "0.3.8"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-
-[[package]]
-name = "netbuf"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
@@ -448,7 +443,7 @@ dependencies = [
 
 [[package]]
 name = "self-meter-http"
-version = "0.1.1"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "futures 0.1.11 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -456,7 +451,7 @@ dependencies = [
  "self-meter 0.4.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 0.9.12 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_json 0.9.9 (registry+https://github.com/rust-lang/crates.io-index)",
- "tk-http 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tk-http 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio-core 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -588,17 +583,6 @@ dependencies = [
 
 [[package]]
 name = "tk-bufstream"
-version = "0.2.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-dependencies = [
- "futures 0.1.11 (registry+https://github.com/rust-lang/crates.io-index)",
- "netbuf 0.3.8 (registry+https://github.com/rust-lang/crates.io-index)",
- "quick-error 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "tokio-core 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
-name = "tk-bufstream"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
@@ -606,25 +590,6 @@ dependencies = [
  "netbuf 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "quick-error 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio-io 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
-name = "tk-http"
-version = "0.1.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-dependencies = [
- "byteorder 0.5.3 (registry+https://github.com/rust-lang/crates.io-index)",
- "futures 0.1.11 (registry+https://github.com/rust-lang/crates.io-index)",
- "httparse 1.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "log 0.3.7 (registry+https://github.com/rust-lang/crates.io-index)",
- "matches 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "netbuf 0.3.8 (registry+https://github.com/rust-lang/crates.io-index)",
- "quick-error 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "rand 0.3.15 (registry+https://github.com/rust-lang/crates.io-index)",
- "sha1 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "tk-bufstream 0.2.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "tokio-core 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "url 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -802,7 +767,6 @@ dependencies = [
 "checksum mio 0.6.6 (registry+https://github.com/rust-lang/crates.io-index)" = "f27d38f824a0d267d55b29b171e9e99269a53812e385fa75c1fe700ae254a6a4"
 "checksum miow 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)" = "8c1f2f3b1cf331de6896aabf6e9d55dca90356cc9960cca7eaaf408a355ae919"
 "checksum net2 0.2.27 (registry+https://github.com/rust-lang/crates.io-index)" = "18b9642ad6222faf5ce46f6966f59b71b9775ad5758c9e09fcf0a6c8061972b4"
-"checksum netbuf 0.3.8 (registry+https://github.com/rust-lang/crates.io-index)" = "6917d6a0bda749bbbea59c048147c784b0de36a3b3b1d880ce0eb313ebefac86"
 "checksum netbuf 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)" = "55e207462a9ce32b17e5ee075e2739dc689d392ce15b67e9a1c1065f0dc14b1b"
 "checksum ns-std-threaded 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "fce2e49dd898b78ee2e5f37305f31786c7ea72faf262fd2076a2fd8f1d2de95d"
 "checksum num-traits 0.1.37 (registry+https://github.com/rust-lang/crates.io-index)" = "e1cbfa3781f3fe73dc05321bed52a06d2d491eaa764c52335cf4399f046ece99"
@@ -822,7 +786,7 @@ dependencies = [
 "checksum rustc_version 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)" = "c5f5376ea5e30ce23c03eb77cbe4962b988deead10910c372b226388b594c084"
 "checksum scoped-tls 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "f417c22df063e9450888a7561788e9bd46d3bb3c1466435b4eccb903807f147d"
 "checksum self-meter 0.4.4 (registry+https://github.com/rust-lang/crates.io-index)" = "513a40ecf275ca6d3862c40ab07e63cbcf9c458796f7a58ba96af4540264cc3f"
-"checksum self-meter-http 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)" = "7075413a340a0c82042720f6c073d3e93d21c12df3b44797f34d073af102a082"
+"checksum self-meter-http 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "b85ab4a08a172f63e66c33f540b7692ed7fb200721aa0ff04df43b7bd0c2d098"
 "checksum semver 0.1.20 (registry+https://github.com/rust-lang/crates.io-index)" = "d4f410fedcf71af0345d7607d246e7ad15faaadd49d240ee3b24e5dc21a820ac"
 "checksum serde 0.8.23 (registry+https://github.com/rust-lang/crates.io-index)" = "9dad3f759919b92c3068c696c15c3d17238234498bbdcc80f2c469606f948ac8"
 "checksum serde 0.9.12 (registry+https://github.com/rust-lang/crates.io-index)" = "f023838e7e1878c679322dc7f66c3648bd33763a215fad752f378a623856898d"
@@ -839,9 +803,7 @@ dependencies = [
 "checksum thread-id 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)" = "a9539db560102d1cef46b8b78ce737ff0bb64e7e18d35b2a5688f7d097d0ff03"
 "checksum thread_local 0.2.7 (registry+https://github.com/rust-lang/crates.io-index)" = "8576dbbfcaef9641452d5cf0df9b0e7eeab7694956dd33bb61515fb8f18cfdd5"
 "checksum time 0.1.36 (registry+https://github.com/rust-lang/crates.io-index)" = "211b63c112206356ef1ff9b19355f43740fc3f85960c598a93d3a3d3ba7beade"
-"checksum tk-bufstream 0.2.4 (registry+https://github.com/rust-lang/crates.io-index)" = "0d9e8b91b51b9f87493f07ccd943fa02dc92c7120ddae694d67cca7687452bca"
 "checksum tk-bufstream 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)" = "9bb87b067cbeb3362045e3f97e40ff3bd5b369bd1b23e6e8d308354534b83237"
-"checksum tk-http 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)" = "59b0ba1321c0ee34915fe69ed2526e3e12af426f68ab7afd092efacac3b7f2db"
 "checksum tk-http 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "a6d44b5a7fab7fdb4bcc9a8a7ce084a255ce16809f25531541d7f53d285c842a"
 "checksum tk-listen 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "605a5fd5e3d5857a3eb8fd0aeb382dd1f483646e80be2098c09ae205e4f934c0"
 "checksum tk-pool 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)" = "7fef7f3fafec5b5f91f47a043a1509a1cbc8e8d806b5d17c1a9c1996c3ae7d0c"

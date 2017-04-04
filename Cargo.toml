@@ -47,7 +47,7 @@ abstract-ns = "0.3.1"
 ns-std-threaded = "0.2.0"
 libc = "0.2.21"
 scoped-tls = "0.1.0"
-self-meter-http = "0.1.1"
+self-meter-http = "0.2.0"
 
 [[bin]]
 name = "swindon"
