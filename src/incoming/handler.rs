@@ -28,6 +28,9 @@ impl Handler {
             Handler::SingleFile(ref settings) => {
                 Ok(handlers::files::serve_file(settings, input))
             }
+            Handler::VersionedStatic(ref settings) => {
+                Ok(handlers::files::serve_versioned(settings, input))
+            }
             Handler::WebsocketEcho => {
                 Ok(handlers::websocket_echo::serve(input))
             }

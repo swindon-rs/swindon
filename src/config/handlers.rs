@@ -15,6 +15,7 @@ pub enum Handler {
     SwindonChat(Arc<chat::Chat>),
     Static(Arc<static_files::Static>),
     SingleFile(Arc<static_files::SingleFile>),
+    VersionedStatic(Arc<static_files::VersionedStatic>),
     Proxy(Arc<proxy::Proxy>),
     EmptyGif(Arc<empty_gif::EmptyGif>),
     HttpBin,

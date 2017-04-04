@@ -19,7 +19,7 @@ use tk_sendfile::{DiskPool, FileOpener, IntoFileOpener, FileReader};
 use self_meter_http::Meter;
 
 use config;
-use config::static_files::{Static, Mode, SingleFile};
+use config::static_files::{Static, Mode, SingleFile, VersionedStatic};
 use default_error_page::{serve_error_page, error_page};
 use incoming::{Input, Request, Reply, Transport};
 use incoming::reply;
@@ -400,4 +400,11 @@ impl FileOpener for PathOpen {
         Ok(self.file.as_ref()
             .map(|&(ref f, s, _)| (f as &FileReader, s)).unwrap())
     }
+}
+
+pub fn serve_versioned<S: Transport>(settings: &Arc<VersionedStatic>,
+    mut inp: Input)
+    -> Request<S>
+{
+    unimplemented!();
 }
