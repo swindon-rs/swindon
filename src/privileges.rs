@@ -47,5 +47,5 @@ pub fn drop(cfg: &Config) -> Result<(), io::Error> {
 }
 #[cfg(not(unix))]
 pub fn drop(_: &Config) -> Result<(), io::Error> {
-
+    Ok(())
 }
