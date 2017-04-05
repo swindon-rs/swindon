@@ -63,6 +63,14 @@ routing:
   ### !StripWWWRedirect routes ###
   www.example.com: strip_www_redirect
 
+  ### !Authorized routes ###
+  localhost/auth/local: empty_gif
+  localhost/auth/by-header: empty_gif
+
+authorization:
+  localhost/auth/local: only-127-0-0-1
+  localhost/auth/by-header: by-header
+
 # Configure all possible handlers?
 handlers:
   # Allowed handlers are: SwindonChat, Static, SingleFile, Proxy,
@@ -195,3 +203,19 @@ http-destinations:
   swindon_chat_dest:
     addresses:
     - *PROXY_ADDRESS
+
+authorizers:
+
+  only-127-0-0-1: !SourceIp
+    allowed-network: only-127-0-0-1
+
+  by-header: !SourceIp
+    allowed-network: goog
+    forwarded-ip-header: X-Real-Ip
+    accept-forwarded-headers-from: only-127-0-0-1
+
+networks:
+  only-127-0-0-1:
+  - 127.0.0.1
+  goog:
+  - 8.0.0.0/8

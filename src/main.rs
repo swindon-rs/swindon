@@ -41,6 +41,7 @@ mod intern;
 mod config;
 mod runtime;
 mod handlers;
+mod authorizers;
 mod routing;
 mod default_error_page;
 mod chat;

@@ -28,6 +28,7 @@ pub use self::read::Error;
 pub use self::root::Config;
 pub use self::listen::ListenSocket;
 pub use self::handlers::Handler;
+pub use self::authorizers::Authorizer;
 pub use self::disk::Disk;
 pub use self::empty_gif::EmptyGif;
 pub use self::session_pools::{SessionPool};

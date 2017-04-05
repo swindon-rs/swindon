@@ -7,7 +7,7 @@ use quire::validate::{Structure, Sequence, Mapping, Scalar, Numeric};
 use quire::De;
 
 use intern::{HandlerName, Upstream, SessionPoolName, DiskPoolName};
-use intern::{LdapUpstream, Network};
+use intern::{LdapUpstream, Network, Authorizer as AuthorizerName};
 use config::listen::{self, ListenSocket};
 use config::routing::{self, Routing};
 use config::authorization::{self, Authorization};
@@ -37,7 +37,7 @@ pub struct Config {
     pub authorization: Authorization,
 
     pub handlers: HashMap<HandlerName, Handler>,
-    pub authorizers: HashMap<HandlerName, Authorizer>,
+    pub authorizers: HashMap<AuthorizerName, Authorizer>,
     pub session_pools: HashMap<SessionPoolName, Arc<SessionPool>>,
     pub http_destinations: HashMap<Upstream, Destination>,
     pub ldap_destinations: HashMap<LdapUpstream, ldap::Destination>,

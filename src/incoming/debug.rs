@@ -1,9 +1,10 @@
+use std::fmt::{Display, Write};
 use std::sync::Arc;
 use std::path::{Path, PathBuf};
 
 use tk_http::server::Head;
 
-use intern::HandlerName;
+use intern::{HandlerName, Authorizer};
 use config::Config;
 use request_id::RequestId;
 
@@ -14,6 +15,9 @@ struct DebugInfo {
     fs_path: Option<PathBuf>,
     config: Arc<Config>,
     request_id: RequestId,
+    authorizer: Option<Authorizer>,
+    allow: String,
+    deny: String,
 }
 
 impl Debug {
@@ -22,10 +26,13 @@ impl Debug {
     {
         if cfg.debug_routing {
             Debug(Some(Box::new(DebugInfo {
+                authorizer: None,
                 route: None,
                 fs_path: None,
                 config: cfg.clone(),
                 request_id: request_id,
+                allow: String::new(),
+                deny: String::new(),
             })))
         } else {
             Debug(None)
@@ -65,4 +72,53 @@ impl Debug {
     pub fn get_request_id(&self) -> Option<RequestId> {
         self.0.as_ref().map(|dinfo| dinfo.request_id)
     }
+
+    pub fn add_allow<D: Display>(&mut self, s: D) {
+        if let Some(ref mut dinfo) = self.0 {
+            if dinfo.allow.len() > 0 {
+                write!(&mut dinfo.allow, ", {}", s).unwrap();
+            } else {
+                write!(&mut dinfo.allow, "{}", s).unwrap();
+            }
+        }
+    }
+
+    pub fn get_allow(&self) -> Option<&str> {
+        self.0.as_ref().and_then(|dinfo| {
+            if dinfo.allow.len() == 0 {
+                None
+            } else {
+                Some(&dinfo.allow[..])
+            }
+        })
+    }
+
+    pub fn set_deny<D: Display>(&mut self, s: D) {
+        if let Some(ref mut dinfo) = self.0 {
+            dinfo.deny = s.to_string();
+        }
+    }
+
+    pub fn get_deny(&self) -> Option<&str> {
+        self.0.as_ref().and_then(|dinfo| {
+            if dinfo.deny.len() == 0 {
+                None
+            } else {
+                Some(&dinfo.deny[..])
+            }
+        })
+    }
+
+    pub fn set_authorizer(&mut self, s: &Authorizer) {
+        if let Some(ref mut dinfo) = self.0 {
+            dinfo.authorizer = Some(s.clone());
+        }
+    }
+
+    pub fn get_authorizer(&self) -> Option<&Authorizer> {
+        self.0.as_ref().and_then(|dinfo| {
+            dinfo.authorizer.as_ref()
+        })
+    }
+
 }

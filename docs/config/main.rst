@@ -155,6 +155,12 @@ Options
      (basically a value from the :ref:`routing table<routing>`).
    * ``X-Swindon-File-Path`` -- full path of the file that was served (or
      could be served if exists) for this request
+   * ``X-Swindon-Request-Id`` -- identifier of the request if the one was
+     generated for the request
+   * ``X-Swindon-Authorizer`` -- denotes current authorizer used for request
+     if any
+   * ``X-Swindon-Allow`` -- denotes why the request was allowed to pass
+   * ``X-Swindon-Deny`` -- denotes why the request was denied
 
    Note that headers are subject to change at any time.
 

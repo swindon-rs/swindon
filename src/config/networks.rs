@@ -1,3 +1,4 @@
+use std::fmt;
 use std::net::IpAddr;
 
 use quire::validate::{Structure, Sequence, Mapping, Scalar};
@@ -7,8 +8,11 @@ use intern::Network;
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct NetworkList {
-    list: Vec<(IpAddr, u32)>,
+    list: Vec<Subnet>,
 }
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Subnet(IpAddr, u32);
 
 #[derive(RustcDecodable, Debug, PartialEq, Eq)]
 pub struct SourceIpAuthorizer {
@@ -40,14 +44,26 @@ impl Decodable for NetworkList {
                             .map_err(|e| d.error(&e.to_string()))?;
                         let mask = item[pos+1..].parse::<u32>()
                             .map_err(|e| d.error(&e.to_string()))?;
-                        if mask > 24 {
-                            return Err(d.error("Mask must be 24 at max"));
+                        let max_mask = match ip {
+                            IpAddr::V4(_) => 24,
+                            IpAddr::V6(_) => 128,
+                        };
+                        if mask % 8 != 0 {
+                            return Err(d.error("Subnet mask must \
+                                be multiple of eight"));
                         }
-                        Ok((ip, mask))
+                        if mask > max_mask {
+                            return Err(d.error(
+                                &format!("Mask must be {} at max", max_mask)));
+                        }
+                        Ok(Subnet(ip, mask))
                     } else {
                         let ip = item.parse::<IpAddr>()
                             .map_err(|e| d.error(&e.to_string()))?;
-                        Ok((ip, 24))
+                        match ip {
+                            IpAddr::V4(_) => Ok(Subnet(ip, 24)),
+                            IpAddr::V6(_) => Ok(Subnet(ip, 128)),
+                        }
                     }
                 })?);
             }
@@ -55,5 +71,34 @@ impl Decodable for NetworkList {
                 list: result,
             })
         })
+    }
+}
+
+impl fmt::Display for Subnet {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}/{}", self.0, self.1)
+    }
+}
+
+impl NetworkList {
+    pub fn get_subnet(&self, ip: IpAddr) -> Option<&Subnet> {
+        for item in &self.list {
+            match (ip, item) {
+                (IpAddr::V4(my), &Subnet(IpAddr::V4(net), msk)) => {
+                    let bytes = (msk / 8) as usize;
+                    if my.octets()[..bytes] == net.octets()[..bytes] {
+                        return Some(item);
+                    }
+                }
+                (IpAddr::V6(my), &Subnet(IpAddr::V6(net), msk)) => {
+                    let bytes = (msk / 8) as usize;
+                    if my.octets()[..bytes] == net.octets()[..bytes] {
+                        return Some(item);
+                    }
+                }
+                _ => {}
+            }
+        }
+        return None;
     }
 }

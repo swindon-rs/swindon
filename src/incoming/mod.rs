@@ -9,11 +9,12 @@ mod debug;
 mod encoder;
 mod quick_reply;
 mod handler;
+mod authorizer;
 
 pub type Request<S> = Box<Codec<S, ResponseFuture=Reply<S>>>;
 pub type Reply<S> = Box<Future<Item=EncoderDone<S>, Error=Error>>;
 
-pub use self::input::Input;
+pub use self::input::{Input, AuthInput};
 pub use self::router::Router;
 pub use self::debug::Debug;
 pub use self::encoder::{Encoder, IntoContext, Context};

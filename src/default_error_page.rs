@@ -4,7 +4,7 @@ use tk_http::{Status};
 use tk_http::server::{Error, EncoderDone};
 
 use futures::future::{ok, FutureResult};
-use incoming::{reply, Request, Input, Encoder};
+use incoming::{reply, Request, Input, Encoder, IntoContext};
 
 
 const PART1: &'static str = "\
@@ -30,9 +30,10 @@ const PART3: &'static str = concat!("\
     ");
 
 
-pub fn serve_error_page<S: 'static>(status: Status, inp: Input)
-    -> Request<S> {
-    reply(inp, move |e| Box::new(error_page(status, e)))
+pub fn serve_error_page<S: 'static, C: IntoContext>(status: Status, ctx: C)
+    -> Request<S>
+{
+    reply(ctx, move |e| Box::new(error_page(status, e)))
 }
 
 pub fn error_page<S: 'static>(status: Status, mut e: Encoder<S>)

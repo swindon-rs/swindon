@@ -94,6 +94,18 @@ impl<S> Encoder<S> {
             enc.format_header("X-Swindon-Request-Id", rid)
                 .expect("request id valid");
         }
+        if let Some(value) = self.debug.get_allow() {
+            enc.format_header("X-Swindon-Authorizer", value)
+                .expect("authorizer is a valid header");
+        }
+        if let Some(value) = self.debug.get_allow() {
+            enc.format_header("X-Swindon-Allow", value)
+                .expect("allow debug info is a valid header");
+        }
+        if let Some(value) = self.debug.get_deny() {
+            enc.format_header("X-Swindon-Deny", value)
+                .expect("deny debug info is a valid header");
+        }
 
         enc.done_headers().unwrap()
     }
