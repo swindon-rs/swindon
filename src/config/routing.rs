@@ -1,13 +1,7 @@
-use std::str::FromStr;
-use std::collections::BTreeMap;
-use std::ops::Deref;
-use std::cmp::{Ordering, PartialOrd, Ord};
-
 use intern::HandlerName;
-use rustc_serialize::{Decoder, Decodable};
-use quire::validate::{Mapping, Scalar};
 use routing::RoutingTable;
 
+use quire::validate::{Mapping, Scalar};
 
 
 pub type Routing = RoutingTable<HandlerName>;

@@ -2,15 +2,13 @@ use std::io;
 use std::sync::Arc;
 use std::net::SocketAddr;
 use std::collections::HashMap;
-use std::thread;
 
 use abstract_ns;
 use ns_std_threaded;
-use futures::future::Either;
-use tokio_core::reactor::{Handle, Timeout};
+use tokio_core::reactor::{Handle};
 use tokio_core::net::TcpListener;
 use futures::Stream;
-use futures::future::{Future, ok};
+use futures::future::{Future};
 use futures::sync::oneshot::{channel as oneshot, Sender, Receiver};
 use futures_cpupool;
 use self_meter_http::Meter;
@@ -21,7 +19,6 @@ use tk_listen::ListenExt;
 use config::{ListenSocket, ConfigCell};
 use incoming::Router;
 use chat;
-use handlers;
 use runtime::Runtime;
 use http_pools::{HttpPools};
 use handlers::files::{DiskPools};
@@ -78,7 +75,7 @@ pub fn spawn_listener(addr: SocketAddr, handle: &Handle,
 pub fn populate_loop(handle: &Handle, cfg: &ConfigCell, verbose: bool)
     -> State
 {
-    let mut meter = Meter::new();
+    let meter = Meter::new();
     meter.spawn_scanner(handle);
     meter.track_current_thread_by_name();
 
@@ -151,6 +148,7 @@ pub fn populate_loop(handle: &Handle, cfg: &ConfigCell, verbose: bool)
     }
 }
 
+#[allow(dead_code)]
 pub fn update_loop(state: &mut State, cfg: &ConfigCell, handle: &Handle) {
     // TODO(tailhook) update listening sockets
     state.disk_pools.update(&cfg.get().disk_pools);

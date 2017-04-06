@@ -1,7 +1,7 @@
 use std::fmt;
 use std::net::IpAddr;
 
-use quire::validate::{Structure, Sequence, Mapping, Scalar};
+use quire::validate::{Structure, Sequence, Scalar};
 use rustc_serialize::{Decodable, Decoder};
 
 use intern::Network;

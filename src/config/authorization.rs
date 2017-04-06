@@ -1,5 +1,3 @@
-use std::collections::BTreeMap;
-
 use quire::validate::{Mapping, Scalar};
 
 use intern::Authorizer;

@@ -3,9 +3,7 @@ use std::collections::{BTreeMap, btree_map};
 use std::ops::Deref;
 use std::str::FromStr;
 
-use intern::HandlerName;
 use rustc_serialize::{Decoder, Decodable};
-use quire::validate::{Mapping, Scalar};
 
 
 pub type Path = Option<String>;
@@ -45,6 +43,7 @@ impl<T> RoutingTable<T> {
     pub fn hosts(&self) -> btree_map::Iter<Host, BTreeMap<Path, T>> {
         self.0.iter()
     }
+    #[allow(dead_code)]
     pub fn num_hosts(&self) -> usize {
         self.0.len()
     }

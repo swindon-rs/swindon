@@ -2,14 +2,13 @@ use std::io;
 use std::sync::Arc;
 use std::net::SocketAddr;
 
-use futures::future::Either;
 use futures::stream::Stream;
 use tk_http;
 use tk_http::server::Proto;
 use tk_listen::ListenExt;
-use futures::future::{Future, ok};
+use futures::future::{Future};
 use tokio_core::net::TcpListener;
-use tokio_core::reactor::{Handle, Timeout};
+use tokio_core::reactor::{Handle};
 use futures::sync::oneshot::{Receiver};
 
 use intern::SessionPoolName;

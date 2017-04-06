@@ -6,7 +6,6 @@
 #[macro_use] extern crate log;
 #[macro_use] extern crate matches;
 #[macro_use] extern crate quick_error;
-#[macro_use] extern crate lazy_static;
 #[macro_use] extern crate scoped_tls;
 extern crate env_logger;
 extern crate futures;
@@ -61,8 +60,6 @@ use futures::stream::Stream;
 use argparse::{ArgumentParser, Parse, StoreTrue, Print};
 use tokio_core::reactor::Core;
 use tokio_core::reactor::Interval;
-
-//pub use response::Pickler;
 
 
 pub fn main() {

@@ -268,6 +268,7 @@ impl<K, T, V> HeapMap<K, T, V>
             (key, ts, value)
         })
     }
+    #[allow(dead_code)]
     pub fn len(&self) -> usize {
         self.map.len()
     }

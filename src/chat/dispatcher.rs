@@ -9,13 +9,11 @@ use tk_http::websocket;
 use tk_http::websocket::{Error as WsError};
 use tk_http::websocket::Frame::{self, Text, Binary, Ping, Pong, Close};
 use tokio_core::reactor::Handle;
-use rustc_serialize::json::Json;
 
 use runtime::Runtime;
 use config::chat::Chat;
 use config::SessionPool;
 use chat::{Cid, ConnectionSender, CloseReason};
-use chat::cid::serialize_cid;
 use chat::message::{decode_message, get_active, Meta, Args, Kwargs};
 use chat::message::{ValidationError};
 use chat::processor::{Action, ProcessorPool, ConnectionMessage};
@@ -99,7 +97,7 @@ impl Dispatcher {
         match up.get_mut().get_mut() {
             Some(pool) => {
                 match pool.start_send(codec) {
-                    Ok(AsyncSink::NotReady(codec)) => {
+                    Ok(AsyncSink::NotReady(_codec)) => {
                         self.channel.send(ConnectionMessage::Error(meta,
                             MessageError::PoolOverflow));
                     }

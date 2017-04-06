@@ -51,6 +51,7 @@ impl ConfigCell {
     fn new(cfg: Config) -> ConfigCell {
         ConfigCell(Arc::new(RwLock::new(Arc::new(cfg))))
     }
+    #[allow(dead_code)]
     pub fn from_string(data: &str, name: &str) -> Result<ConfigCell, Error> {
         let v = root::config_validator();
         let o = Options::default();
@@ -76,6 +77,7 @@ fn compare_metadata(meta: &Metadata, old_meta: &Metadata) -> bool {
     meta.modified().ok() != old_meta.modified().ok()
 }
 
+#[allow(dead_code)] // not used in main-dev
 impl Configurator {
     pub fn new<P: AsRef<Path>>(path: P) -> Result<Configurator, Error> {
         let path = path.as_ref();
@@ -95,6 +97,7 @@ impl Configurator {
     /// if it's updated.
     ///
     /// If error occured old config is still active
+    #[allow(dead_code)]
     pub fn try_update(&mut self) -> Result<bool, Error> {
         let changed = self.file_metadata.iter()
             .any(|&(ref fname, ref old_meta)| {

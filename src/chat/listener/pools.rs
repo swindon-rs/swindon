@@ -10,7 +10,7 @@ use runtime::Runtime;
 use intern::SessionPoolName;
 use chat::listener::spawn::{listen, WorkerData};
 use chat::inactivity_handler;
-use chat::processor::{Processor, Action};
+use chat::processor::{Processor};
 use chat::Shutdown;
 use config::{SessionPool, ListenSocket};
 
@@ -50,9 +50,9 @@ impl SessionPools {
             if let Some(wrk) = pools.remove(&k) {
                 self.processor.destroy_pool(&k);
                 for (_, shutter) in wrk.shutters {
-                    shutter.complete(Shutdown);
+                    shutter.send(Shutdown).ok();
                 }
-                wrk.inactivity_shutter.complete(Shutdown);
+                wrk.inactivity_shutter.send(Shutdown).ok();
             }
         }
 
@@ -93,7 +93,7 @@ impl SessionPools {
             }
             for addr in to_delete {
                 if let Some(shutter) = worker.shutters.remove(&addr) {
-                    shutter.complete(Shutdown);
+                    shutter.send(Shutdown).ok();
                 }
             }
 
@@ -116,8 +116,5 @@ impl SessionPools {
                 }
             }
         }
-    }
-    pub fn send(&self, pool: &SessionPoolName, action: Action) {
-        self.processor.send(pool, action)
     }
 }

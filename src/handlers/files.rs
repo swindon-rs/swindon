@@ -2,11 +2,10 @@ use std::collections::HashMap;
 use std::collections::hash_map::DefaultHasher;
 use std::collections::hash_map::Entry::{Occupied, Vacant};
 use std::fs::{File, metadata};
-use std::ffi::OsStr;
 use std::hash::{Hash, Hasher};
 use std::io;
-use std::path::{Path, PathBuf, Component};
-use std::sync::{Arc, Mutex, RwLock};
+use std::path::{Path, PathBuf};
+use std::sync::{Arc, RwLock};
 use std::str::from_utf8;
 
 use futures_cpupool;

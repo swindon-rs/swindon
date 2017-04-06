@@ -60,7 +60,7 @@ impl<S> http::Codec<S> for Codec {
         match mem::replace(&mut self.state, State::Void) {
             State::Headers(hr) => {
                 let resp = hr.complete(data.to_vec());
-                self.sender.take().unwrap().complete(resp);
+                self.sender.take().unwrap().send(resp).ok();
             }
             _ => unreachable!(),
         }

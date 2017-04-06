@@ -43,6 +43,7 @@ macro_rules! err {
 }
 
 
+#[allow(dead_code)]
 pub fn include_file(files: &RefCell<&mut Vec<(PathBuf, Metadata)>>,
     pos: &Pos, include: &Include,
     err: &ErrorCollector, options: &Options)

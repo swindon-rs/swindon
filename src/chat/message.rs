@@ -7,7 +7,7 @@ use std::str;
 use std::ascii::AsciiExt;
 use std::collections::BTreeMap;
 
-use rustc_serialize::json::{self, Json};
+use rustc_serialize::json::{Json};
 use rustc_serialize::{Encodable, Encoder};
 
 pub type Meta = BTreeMap<String, Json>;

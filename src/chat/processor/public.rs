@@ -66,6 +66,7 @@ impl Processor {
     }
 
     /// Send directly without getting pool
+    #[allow(dead_code)]
     pub fn send(&self, pool: &SessionPoolName, action: Action) {
         debug!("Sending pool action {:?} {:?}", pool, action);
         self.queue.send(Event {

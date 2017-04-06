@@ -1,4 +1,3 @@
-use std::sync::Arc;
 use std::time::Duration;
 use quire::De;
 use quire::validate::{Structure, Sequence, Scalar, Numeric};

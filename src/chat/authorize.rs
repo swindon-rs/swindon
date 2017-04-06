@@ -83,7 +83,7 @@ pub fn start_authorize(inp: &Input, conn_id: Cid, settings: &Arc<Chat>,
     match up.get_mut().get_mut() {
         Some(pool) => {
             match pool.start_send(codec) {
-                Ok(AsyncSink::NotReady(codec)) => {
+                Ok(AsyncSink::NotReady(_codec)) => {
                     messages.send(StopSocket(CloseReason::AuthHttp(
                         Status::ServiceUnavailable)));
                 }

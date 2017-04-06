@@ -6,7 +6,6 @@
 #[macro_use] extern crate log;
 #[macro_use] extern crate matches;
 #[macro_use] extern crate quick_error;
-#[macro_use] extern crate lazy_static;
 #[macro_use] extern crate scoped_tls;
 extern crate env_logger;
 extern crate futures;

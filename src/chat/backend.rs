@@ -275,7 +275,7 @@ impl<S> http::Codec<S> for InactivityCodec {
         e.write_body(INACTIVITY_PAYLOAD);
         ok(e.done())
     }
-    fn headers_received(&mut self, headers: &http::Head)
+    fn headers_received(&mut self, _: &http::Head)
         -> Result<http::RecvMode, http::Error>
     {
         // TODO(tailhook) retry request if failed

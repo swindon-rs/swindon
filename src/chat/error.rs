@@ -7,7 +7,7 @@ use rustc_serialize::json::{Json, ParserError};
 use tk_http::Status;
 use tk_http::client;
 
-use super::message::{Meta, ValidationError};
+use super::message::{ValidationError};
 
 quick_error! {
     #[derive(Debug)]
@@ -97,23 +97,5 @@ impl Encodable for MessageError {
                 s.emit_str("unexpected_pool_error")
             }
         }
-    }
-}
-
-impl MessageError {
-    pub fn update_meta(&self, meta: &mut Meta) {
-        use self::MessageError::*;
-        let kind = match *self {
-            HttpError(s, _) => {
-                meta.insert("http_error".to_string(),
-                    Json::U64(s.code() as u64));
-                "http_error"
-            }
-            IoError(_) | Utf8Error(_) | JsonError(_) => "invalid_content",
-            Proto(_) | ValidationError(_) => "protocol_error",
-            PoolError => "unexpected_error",
-            PoolOverflow => "too_many_requests",
-        };
-        meta.insert("error_kind".to_string(), Json::String(kind.to_string()));
     }
 }
