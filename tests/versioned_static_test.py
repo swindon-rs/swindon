@@ -10,6 +10,10 @@ async def test_no_index(swindon, http_request, debug_routing, path):
     resp, data = await http_request(swindon.url / path)
     assert resp.status == 403
     assert resp.headers['Content-Type'] == 'text/html'
+    if debug_routing:
+        assert resp.headers['X-Swindon-Deny'] == "no-index"
+    else:
+        assert 'X-Swindon-Deny' not in resp.headers
 
 
 @pytest.mark.parametrize("path", ALL_EQUAL)
@@ -40,6 +44,32 @@ async def test_by_version2(swindon, http_request, debug_routing, path):
     assert data == b'<!DOCTYPE html>\n<title>Greetings</title>\n'
 
 
+async def test_version_404(swindon, http_request, debug_routing, path):
+    resp, data = await http_request(swindon.url / path /
+        'non-existent-file.html?r=aabbbbbb')
+    assert resp.status == 404
+    assert resp.headers['Content-Type'] == 'text/html'
+    if debug_routing:
+        assert resp.headers['X-Swindon-File-Path'] == \
+            '"{}/hashed/aa/bbbbbb/non-existent-file.html"'.format(TESTS_DIR)
+    else:
+        assert 'X-Swindon-File-Path' not in resp.headers
+    assert 'X-Swindon-Deny' not in resp.headers
+
+
+async def test_no_version(swindon, http_request, debug_routing, path):
+    resp, data = await http_request(swindon.url / path /
+        'test.html?r=aabbbbbb')
+    assert resp.status == 404
+    assert resp.headers['Content-Type'] == 'text/html'
+    if debug_routing:
+        assert resp.headers['X-Swindon-File-Path'] == \
+            '"{}/hashed/aa/bbbbbb/non-existent-file.html"'.format(TESTS_DIR)
+    else:
+        assert 'X-Swindon-File-Path' not in resp.headers
+    assert 'X-Swindon-Deny' not in resp.headers
+
+
 @pytest.mark.parametrize("path", ALL_EQUAL)
 async def path_encoding(swindon, http_request, debug_routing, path):
     resp, data = await http_request(swindon.url / path /
@@ -65,6 +95,20 @@ async def path_encoding_fallback(swindon, http_request, debug_routing, path):
     else:
         assert 'X-Swindon-File-Path' not in resp.headers
     assert data == b'a+b\n'
+
+
+async def path_fallback_404(swindon, http_request, debug_routing, path):
+    resp, data = await http_request(swindon.url / path /
+        'non-existent-file.html')
+    assert resp.status == 404
+    assert resp.headers['Content-Type'] == 'text/html'
+    if debug_routing:
+        assert resp.headers['X-Swindon-File-Path'] == \
+            '"{}/assets/non-existent-file.html"'.format(TESTS_DIR)
+    else:
+        assert 'X-Swindon-File-Path' not in resp.headers
+    assert 'X-Swindon-Deny' not in resp.headers
+
 
 async def path_other_params(swindon, http_request, debug_routing, path):
     resp, data = await http_request(swindon.url / path /
@@ -96,3 +140,17 @@ async def test_no_version_forbidden(swindon, http_request, debug_routing):
         'versioned/test.html')
     assert resp.status == 404
     assert resp.headers['Content-Type'] == 'text/html'
+    if debug_routing:
+        assert resp.headers['X-Swindon-Deny'] == "no-version"
+    else:
+        assert 'X-Swindon-Deny' not in resp.headers
+
+async def test_bad_version_forbidden(swindon, http_request, debug_routing):
+    resp, data = await http_request(swindon.url /
+        'versioned/test.html?r=xxx')
+    assert resp.status == 404
+    assert resp.headers['Content-Type'] == 'text/html'
+    if debug_routing:
+        assert resp.headers['X-Swindon-Deny'] == "bad-version"
+    else:
+        assert 'X-Swindon-Deny' not in resp.headers
