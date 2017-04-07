@@ -43,6 +43,7 @@ routing:
 
   ### !VersionedStatic routes ###
   localhost/versioned: versioned
+  localhost/versioned-fallback: versioned-fallback
 
   # TODO: add overlapping routes:
   #   /static: !Proxy & /static/file: !SingleFile
@@ -142,6 +143,14 @@ handlers:
     version-split: [2, 8]
     version-chars: lowercase_hex
     fallback-to-plain: never
+
+  versioned-fallback: !VersionedStatic
+    versioned-root: ${TESTS_DIR}/hashed
+    plain-root: ${TESTS_DIR}/assets
+    version-arg: "r"
+    version-split: [2, 8]
+    version-chars: lowercase_hex
+    fallback-to-plain: always
 
   ### Proxy handlers ###
 
