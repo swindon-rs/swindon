@@ -34,6 +34,7 @@ pub fn validator<'x>() -> Enum<'x> {
     .option("SwindonChat", chat::validator())
     .option("Static", static_files::validator())
     .option("SingleFile", static_files::single_file())
+    .option("VersionedStatic", static_files::versioned_validator())
     .option("Proxy", proxy::validator())
     .option("HttpBin", Nothing)
     .option("EmptyGif", empty_gif::validator())

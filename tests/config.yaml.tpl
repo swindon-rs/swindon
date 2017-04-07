@@ -41,6 +41,9 @@ routing:
   localhost/static-w-index: static_w_index
   localhost/static-wo-index: static_wo_index
 
+  ### !VersionedStatic routes ###
+  localhost/versioned: versioned
+
   # TODO: add overlapping routes:
   #   /static: !Proxy & /static/file: !SingleFile
 
@@ -131,6 +134,14 @@ handlers:
     - index.html
   static_wo_index: !Static
     path: ${TESTS_DIR}/assets/index
+
+  versioned: !VersionedStatic
+    versioned-root: ${TESTS_DIR}/hashed
+    plain-root: ${TESTS_DIR}/assets
+    version-arg: "r"
+    version-split: [2, 8]
+    version-chars: lowercase_hex
+    fallback-to-plain: never
 
   ### Proxy handlers ###
 
