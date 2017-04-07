@@ -140,7 +140,7 @@ handlers:
     versioned-root: ${TESTS_DIR}/hashed
     plain-root: ${TESTS_DIR}/assets
     version-arg: "r"
-    version-split: [2, 8]
+    version-split: [2, 6]
     version-chars: lowercase_hex
     fallback-to-plain: never
 
@@ -148,7 +148,7 @@ handlers:
     versioned-root: ${TESTS_DIR}/hashed
     plain-root: ${TESTS_DIR}/assets
     version-arg: "r"
-    version-split: [2, 8]
+    version-split: [2, 6]
     version-chars: lowercase_hex
     fallback-to-plain: always
 

@@ -1,5 +1,6 @@
 mod error;
 mod pools;
+mod decode;
 
 mod normal;
 mod single;

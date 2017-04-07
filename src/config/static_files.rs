@@ -66,6 +66,7 @@ pub struct VersionedStatic {
     pub pool: DiskPoolName,
     pub extra_headers: HashMap<String, String>,
     // Computed values
+    pub version_len: usize,
     pub overrides_content_type: bool,
 }
 
@@ -189,6 +190,7 @@ impl Decodable for VersionedStatic {
         }
         let int = Internal::decode(d)?;
         return Ok(VersionedStatic {
+            version_len: int.version_split.iter().map(|&x| x as usize).sum(),
             overrides_content_type:
                 header_contains(&int.extra_headers, "Content-Type"),
             versioned_root: int.versioned_root,
