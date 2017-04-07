@@ -213,9 +213,15 @@ Common Settings
    you want specifically, For production deployment, you may wish to change it
    to more lenient ones.
 
+.. opt:: fallback-mode
+
+   (default ``relative_to_route``) A mode to serve url if there is no versioned
+   file. This directly corresponds to :opt:`mode` of ``!Static``.
+
 .. opt:: text-charset
 
    (optional) Sets ``charset`` parameter of ``Content-Type`` header.
+
 
 
 Swindon chat handler

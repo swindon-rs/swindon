@@ -61,6 +61,7 @@ pub struct VersionedStatic {
     pub version_split: Vec<u32>,
     pub version_chars: VersionChars,
     pub fallback_to_plain: FallbackMode,
+    pub fallback_mode: Mode,
     pub text_charset: Option<String>,
     pub pool: DiskPoolName,
     pub extra_headers: HashMap<String, String>,
@@ -68,14 +69,18 @@ pub struct VersionedStatic {
     pub overrides_content_type: bool,
 }
 
-pub fn validator<'x>() -> Structure<'x> {
-    Structure::new()
-    .member("mode", Enum::new()
+fn serve_mode<'x>() -> Enum<'x> {
+    Enum::new()
         .option("relative_to_domain_root", Nothing)
         .option("relative_to_route", Nothing)
         .option("with_hostname", Nothing)
         .allow_plain()
-        .plain_default("relative_to_route"))
+        .plain_default("relative_to_route")
+}
+
+pub fn validator<'x>() -> Structure<'x> {
+    Structure::new()
+    .member("mode", serve_mode())
     .member("path", Scalar::new())
     .member("text_charset", Scalar::new().optional())
     .member("pool", Scalar::new().default("default"))
@@ -109,6 +114,7 @@ pub fn versioned_validator<'x>() -> Structure<'x> {
         .option("never", Nothing)
         .allow_plain()
         .plain_default("never"))
+    .member("fallback_mode", serve_mode())
     .member("text_charset", Scalar::new().optional())
     .member("pool", Scalar::new().default("default"))
     .member("extra_headers", Mapping::new(Scalar::new(), Scalar::new()))
@@ -176,6 +182,7 @@ impl Decodable for VersionedStatic {
             pub version_split: Vec<u32>,
             pub version_chars: VersionChars,
             pub fallback_to_plain: FallbackMode,
+            pub fallback_mode: Mode,
             pub text_charset: Option<String>,
             pub pool: DiskPoolName,
             pub extra_headers: HashMap<String, String>,
@@ -190,6 +197,7 @@ impl Decodable for VersionedStatic {
             version_split: int.version_split,
             version_chars: int.version_chars,
             fallback_to_plain: int.fallback_to_plain,
+            fallback_mode: int.fallback_mode,
             text_charset: int.text_charset,
             pool: int.pool,
             extra_headers: int.extra_headers,
