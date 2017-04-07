@@ -46,6 +46,20 @@ async def path_encoding_fallback(swindon, http_request, debug_routing, path):
     assert resp.headers['Content-Type'] == 'text/plain'
     assert data == b'a+b\n'
 
+async def path_other_params(swindon, http_request, debug_routing, path):
+    resp, data = await http_request(swindon.url / path /
+        'a+b.html?some=param&another=param')
+    assert resp.status == 200
+    assert resp.headers['Content-Type'] == 'text/plain'
+    assert data == b'a+b\n'
+
+async def path_crappy_query(swindon, http_request, debug_routing, path):
+    resp, data = await http_request(swindon.url / path /
+        'a+b.html?just_some_garbage')
+    assert resp.status == 200
+    assert resp.headers['Content-Type'] == 'text/plain'
+    assert data == b'a+b\n'
+
 
 async def test_no_version_forbidden(swindon, http_request, debug_routing):
     resp, data = await http_request(swindon.url /
