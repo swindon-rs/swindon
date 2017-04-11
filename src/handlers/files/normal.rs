@@ -104,7 +104,7 @@ pub fn serve_dir<S: Transport>(settings: &Arc<Static>, mut inp: Input)
     })
 }
 
-fn path(settings: &Static, inp: &Input) -> Result<PathBuf, ()> {
+pub fn path(settings: &Static, inp: &Input) -> Result<PathBuf, ()> {
     let path = match settings.mode {
         Mode::relative_to_domain_root | Mode::with_hostname => {
             inp.headers.path().unwrap_or("/")

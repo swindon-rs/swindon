@@ -29,28 +29,32 @@ use runtime::Runtime;
 use handlers::files::FileError;
 use handlers::files::decode::decode_component;
 use handlers::files::pools::get_pool;
+use handlers::files::normal;
 
 
 quick_error! {
-    #[derive(Debug)]
+    #[derive(Debug, Copy, Clone)]
     pub enum VersionError {
         NoVersion
         BadVersion  // length or chars
         InvalidPath
+        NoFile
     }
 }
 
 
 #[cfg(unix)]
 struct PathOpen {
-    path: PathBuf,
+    version_path: Result<PathBuf, VersionError>,
+    plain_path: Option<PathBuf>,
     settings: Arc<VersionedStatic>,
     file: Option<(File, u64, Mime)>,
 }
 
 #[cfg(windows)]
 struct PathOpen {
-    path: PathBuf,
+    version_path: Option<PathBuf>,
+    plain_path: Option<PathBuf>,
     settings: Arc<VersionedStatic>,
     file: Option<(Mutex<File>, u64, Mime)>,
 }
@@ -128,18 +132,22 @@ pub fn serve_versioned<S: Transport>(settings: &Arc<VersionedStatic>,
     mut inp: Input)
     -> Request<S>
 {
-    let path = match path(settings, &inp) {
-        Ok(p) => p,
-        Err(e) => {
-            inp.debug.set_deny(e.to_header_string());
-            return serve_error_page(Status::NotFound, inp);
-        }
-    };
-    inp.debug.set_fs_path(&path);
+    let path = path(settings, &inp);
+    let npath = normal::path(&settings.fallback, &inp).ok();
+    inp.debug.set_fs_path( // TODO(tailhook)
+        &path.as_ref().ok().map(|x| -> &Path { x.as_ref() })
+        .or(npath.as_ref().map(|x| -> &Path { x.as_ref() }))
+        .unwrap_or(&Path::new("")));
     let pool = get_pool(&inp.runtime, &settings.pool);
     let settings = settings.clone();
+    if path.is_err() && npath.is_none() {
+        inp.debug.set_deny(path.unwrap_err().to_header_string());
+        return reply(inp, move |mut e| {
+            Box::new(error_page(Status::NotFound, e))
+        });
+    }
     reply(inp, move |mut e| {
-        Box::new(pool.open(PathOpen::new(path, &settings))
+        Box::new(pool.open(PathOpen::new(path, npath, &settings))
             .then(move |res| match res {
                 Ok(file) => {
                     e.status(Status::Ok);
@@ -186,9 +194,13 @@ pub fn serve_versioned<S: Transport>(settings: &Arc<VersionedStatic>,
 }
 
 impl PathOpen {
-    fn new(path: PathBuf, settings: &Arc<VersionedStatic>) -> PathOpen {
+    fn new(vpath: Result<PathBuf, VersionError>, npath: Option<PathBuf>,
+        settings: &Arc<VersionedStatic>)
+        -> PathOpen
+    {
         PathOpen {
-            path: path,
+            version_path: vpath,
+            plain_path: npath,
             settings: settings.clone(),
             file: None,
         }
@@ -202,13 +214,49 @@ impl PathOpen {
 
 impl FileOpener for PathOpen {
     fn open(&mut self) -> Result<(&FileReader, u64), io::Error> {
+        use self::VersionError::*;
+        use config::static_files::FallbackMode::*;
         if self.file.is_none() {
-            let file = File::open(&self.path)?;
+            let vers = match self.version_path.as_ref().map(|x| File::open(&x))
+            {
+                Ok(Ok(file)) => Ok(file),
+                Ok(Err(ref e)) if e.kind() == io::ErrorKind::NotFound => {
+                    Err(NoFile)
+                }
+                Ok(Err(e)) => {
+                    debug!("Error opening version: {}", e);
+                    return Err(e);
+                }
+                Err(&e) => Err(e),
+            };
+            println!("Version {:?}, plainp {:?}, {:?}",
+                vers, self.plain_path, self.settings.fallback_to_plain);
+            let file = match (vers, &self.plain_path,
+                              self.settings.fallback_to_plain)
+            {
+                (Ok(x), _, _) => x,
+                (Err(_), &Some(ref pp), always)
+                | (Err(NoFile), &Some(ref pp), no_file)
+                | (Err(BadVersion), &Some(ref pp), no_file)
+                | (Err(InvalidPath), &Some(ref pp), no_file)
+                | (Err(NoVersion), &Some(ref pp), no_file)
+                | (Err(BadVersion), &Some(ref pp), bad_version)
+                | (Err(NoVersion), &Some(ref pp), bad_version)
+                | (Err(NoVersion), &Some(ref pp), no_version)
+                => {
+                    File::open(pp)?
+                }
+                (Err(_), _, _) => {
+                    return Err(io::ErrorKind::NotFound.into());
+                }
+            };
             let meta = file.metadata()?;
             if meta.is_dir() {
                 return Err(io::ErrorKind::Other.into());
             } else {
-                let mime = guess_mime_type(&self.path);
+                let mime = guess_mime_type(
+                    &self.version_path.as_ref().ok()
+                    .unwrap_or(self.plain_path.as_ref().unwrap()));
                 self.file = Some((wrap_file(file), meta.len(), mime));
             }
         }
@@ -230,6 +278,7 @@ impl VersionError {
             VersionError::NoVersion => "no-version",
             VersionError::BadVersion => "bad-version",
             VersionError::InvalidPath => "invalid-path",
+            VersionError::NoFile => "no-file",
         }
     }
 }

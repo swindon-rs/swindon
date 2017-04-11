@@ -1,3 +1,4 @@
+use std::sync::Arc;
 use std::ascii::AsciiExt;
 use std::path::PathBuf;
 use std::collections::HashMap;
@@ -8,7 +9,7 @@ use rustc_serialize::{Decoder, Decodable};
 use intern::DiskPoolName;
 
 
-#[derive(RustcDecodable, Debug, PartialEq, Eq)]
+#[derive(RustcDecodable, Debug, PartialEq, Eq, Clone, Copy)]
 #[allow(non_camel_case_types)]
 pub enum Mode {
     relative_to_domain_root,
@@ -22,7 +23,7 @@ pub enum VersionChars {
     lowercase_hex,
 }
 
-#[derive(RustcDecodable, Debug, PartialEq, Eq)]
+#[derive(RustcDecodable, Debug, PartialEq, Eq, Clone, Copy)]
 #[allow(non_camel_case_types)]
 pub enum FallbackMode {
     always,
@@ -68,6 +69,7 @@ pub struct VersionedStatic {
     // Computed values
     pub version_len: usize,
     pub overrides_content_type: bool,
+    pub fallback: Arc<Static>,
 }
 
 fn serve_mode<'x>() -> Enum<'x> {
@@ -193,6 +195,17 @@ impl Decodable for VersionedStatic {
             version_len: int.version_split.iter().map(|&x| x as usize).sum(),
             overrides_content_type:
                 header_contains(&int.extra_headers, "Content-Type"),
+            fallback: Arc::new(Static {
+                overrides_content_type:
+                    header_contains(&int.extra_headers, "Content-Type"),
+                mode: int.fallback_mode.clone(),
+                path: int.plain_root.clone(),
+                text_charset: int.text_charset.clone(),
+                pool: int.pool.clone(),
+                extra_headers: int.extra_headers.clone(),
+                index_files: Vec::new(),
+                strip_host_suffix: None,
+            }),
             versioned_root: int.versioned_root,
             plain_root: int.plain_root,
             version_arg: int.version_arg,
