@@ -219,8 +219,6 @@ impl FileOpener for PathOpen {
                 }
                 Err(&e) => Err(e),
             };
-            println!("Version {:?}, plainp {:?}, {:?}",
-                vers, self.plain_path, self.settings.fallback_to_plain);
             let file = match (vers, &self.plain_path,
                               self.settings.fallback_to_plain)
             {
