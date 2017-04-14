@@ -176,6 +176,21 @@ containers:
       python-exe: /usr/bin/python3.6
     - !Py3Requirements "tests/requirements.txt"
 
+    # for ldap tests
+    - !Install [slapd, ldap-utils]
+    - !Text
+      /etc/ldap/slapd.conf: |
+        include     /etc/ldap/schema/core.schema
+        include     /etc/ldap/schema/cosine.schema
+        include     /etc/ldap/schema/nis.schema
+        include     /etc/ldap/schema/inetorgperson.schema
+        database    ldif
+        suffix      "dc=ldap,dc=example,dc=org"
+        rootdn      "cn=Manager,dc=ldap,dc=example,dc=org"
+        rootpw      1234
+        directory   /var/lib/ldap
+    # end of ldap
+
 commands:
 
   rustc: !Command

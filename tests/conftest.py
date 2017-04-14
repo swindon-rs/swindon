@@ -161,7 +161,7 @@ def unused_port():
 
 
 @pytest.fixture(scope='module')
-def swindon_ports(unused_port, debug_routing, swindon_bin):
+def swindon_ports(unused_port, debug_routing, swindon_bin, slapd):
     class Dict(dict):
         def __missing__(self, key):
             self[key] = val = {
@@ -172,6 +172,7 @@ def swindon_ports(unused_port, debug_routing, swindon_bin):
                 'session_pool_3': unused_port(),
                 'session_pool_4': unused_port(),
                 'replication': unused_port(),
+                'ldap_port': slapd.port,
             }
             return val
     return Dict()
@@ -189,7 +190,7 @@ def swindon_bin(request):
 
 @pytest.fixture(scope='module')
 def swindon(_proc, request, debug_routing,
-            swindon_bin, swindon_ports, TESTS_DIR):
+            swindon_bin, slapd, swindon_ports, TESTS_DIR):
     default = swindon_ports['default']
 
     def to_addr(port):
@@ -200,6 +201,7 @@ def swindon(_proc, request, debug_routing,
     options = dict(
         swindon_port=default['main'],
         proxy_port=default['proxy'],
+        ldap_port=default['ldap_port'],
         session_pool1_port=default['session_pool_1'],
         session_pool2_port=default['session_pool_2'],
         session_pool3_port=default['session_pool_3'],
@@ -334,13 +336,71 @@ def run_swindon(_proc, bin, config, log, *wait_ports, **options):
         os.remove(fname)
 
 
+LdapInfo = namedtuple('LdapInfo', 'port')
+
+INIT_LDIF = """
+dn: dc=ldap,dc=example,dc=org
+objectClass: top
+objectClass: dcObject
+objectClass: organization
+o: example
+dc: ldap
+"""
+
+USER1_LDIF = """
+dn: uid=user1,dc=ldap,dc=example,dc=org
+objectClass: top
+objectClass: person
+objectClass: organizationalPerson
+objectClass: inetOrgPerson
+objectClass: posixAccount
+objectClass: shadowAccount
+uid: user1
+cn: user1
+sn: Doe
+loginShell: /bin/bash
+uidNumber: 88888
+gidNumber: 88888
+homeDirectory: /home/user1/
+userPassword: {SSHA}XnjCdRGr5tD5cjmcBM7WvfKeBTumAYgW
+"""
+
+@pytest.fixture(scope='module')
+def slapd(_proc, request, debug_routing, unused_port):
+    LDAP_PORT = unused_port()
+
+    proc = _proc('/usr/sbin/slapd',
+                 '-f/etc/ldap/slapd.conf',
+                 '-hldap://127.0.0.1:{}'.format(LDAP_PORT),
+                 '-dnone')
+    while True:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            try:
+                s.connect(('127.0.0.1', LDAP_PORT))
+            except ConnectionRefusedError:
+                continue
+            break
+
+    subprocess.Popen(['ldapadd',
+        '-Hldap://127.0.0.1:{}'.format(LDAP_PORT),
+        '-Dcn=Manager,dc=ldap,dc=example,dc=org', '-w1234', '-x',
+        ]).communicate(INIT_LDIF)
+
+    subprocess.Popen(['ldapadd',
+        '-Hldap://127.0.0.1:{}'.format(LDAP_PORT),
+        '-Dcn=Manager,dc=ldap,dc=example,dc=org', '-w1234', '-x',
+        ]).communicate(USER1_LDIF)
+
+    yield LdapInfo(LDAP_PORT)
+
+
 @pytest.fixture()
 def check_config(request, swindon_bin):
     return partial(_check_config, __swindon_bin=swindon_bin)
 
 
 @pytest.fixture()
-def check_fingerprint(swindon_bin):
+def check_fingerprint(request, swindon_bin):
     return partial(_check_fingerprint, __swindon_bin=swindon_bin)
 
 

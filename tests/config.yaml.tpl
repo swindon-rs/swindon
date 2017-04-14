@@ -6,6 +6,7 @@ _VARS:
   - &SPOOL_ADDRESS2 ${spool_address2}
   - &SPOOL_ADDRESS3 ${spool_address3}
   - &SPOOL_ADDRESS4 ${spool_address4}
+  - &LDAP_ADDRESS 127.0.0.1:${ldap_port}
 
 listen:
 - *LISTEN
@@ -83,6 +84,7 @@ routing:
   ### !Authorized routes ###
   localhost/auth/local: empty_gif @only-127-0-0-1
   localhost/auth/by-header: empty_gif @by-header
+  localhost/auth/ldap: empty_gif @ldap
 
 # Configure all possible handlers?
 handlers:
@@ -329,8 +331,21 @@ authorizers:
     forwarded-ip-header: X-Real-Ip
     accept-forwarded-headers-from: only-127-0-0-1
 
+  ldap: !Ldap
+    destination: local-ldap
+    search-base: dc=users,dc=example,dc=org
+    login-attribute: uid
+    password-attribute: userPassword
+    login-header: X-User-Uid
+
 networks:
   only-127-0-0-1:
   - 127.0.0.1
   goog:
   - 8.0.0.0/8
+
+ldap-destinations:
+
+  local-ldap:
+    addresses:
+    - *LDAP_ADDRESS

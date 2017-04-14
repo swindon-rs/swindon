@@ -62,10 +62,15 @@ void = "1.0.0"
 async-slot = "0.1.0"
 crossbeam = "0.3.0"
 owning_ref = "0.3.3"
+ldap = { version="0.2.0", optional=true }
 
 [profile.release]
 debug = true
 
+
+
+[features]
+auth_ldap = ["ldap"]
 
 [[bin]]
 name = "swindon"
