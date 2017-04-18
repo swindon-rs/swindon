@@ -178,19 +178,19 @@ impl Watcher {
     }
 
     fn handle_outgoing(&self, action: ReplAction) {
-        // TODO: remove expect here
-        let data = json::encode(&action).expect("encodable");
-        let mut peers = self.peers.write().expect("acquired for update");
-        for (_, state) in peers.iter_mut() {
-            let err = match *state {
-                State::Connected { ref tx } => {
-                    debug!("Publishing data: {:?}", data);
-                    tx.send(Packet::Text(data.clone())).is_err()
+        if let Ok(data) = json::encode(&action) {
+            let mut peers = self.peers.write().expect("acquired for update");
+            for (_, state) in peers.iter_mut() {
+                let err = match *state {
+                    State::Connected { ref tx } => {
+                        debug!("Publishing data: {:?}", data);
+                        tx.send(Packet::Text(data.clone())).is_err()
+                    }
+                    _ => continue,
+                };
+                if err {
+                    mem::replace(state, State::Disconnected);
                 }
-                _ => continue,
-            };
-            if err {
-                mem::replace(state, State::Disconnected);
             }
         }
     }
