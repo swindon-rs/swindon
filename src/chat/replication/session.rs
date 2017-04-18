@@ -2,7 +2,7 @@ use std::mem;
 use std::sync::{Arc, RwLock};
 use std::net::SocketAddr;
 use std::collections::HashMap;
-use std::time::Duration;
+use std::time::{Instant, Duration};
 use tokio_core::reactor::Handle;
 use tokio_core::reactor::Interval;
 use futures::{Stream};
@@ -38,7 +38,9 @@ pub struct Watcher {
 #[derive(Debug)]
 enum State {
     Unknown,
-    Connecting,
+    Connecting {
+        timeout: Instant
+    },
     Connected {
         tx: OutgoingChannel,
     },
@@ -147,17 +149,34 @@ impl ReplicationSession {
 }
 
 impl Watcher {
+    // TODO: add &Replication settings here
     pub fn reconnect(&self, runtime_id: &RuntimeId, handle: &Handle) {
         let mut peers = self.peers.write().expect("writable");
-
+        // TODO: Configure timeout value;
+        let now = Instant::now();
+        let timeout = now + Duration::new(5, 0);
         for (addr, state) in peers.iter_mut() {
             match *state {
-                State::Unknown => {}
-                _ => continue,
+                State::Unknown => {
+                    debug!("Connecting new unkown peer: {}", addr);
+                }
+                State::Disconnected => {
+                    debug!("Retrying disconnected peer: {}", addr);
+                }
+                State::Connecting { ref timeout } => {
+                    if timeout < &now {
+                        debug!("Retrying timeouted peer: {}", addr);
+                    } else {
+                        continue
+                    }
+                },
+                State::Connected {..} => continue,
             }
             debug!("Spawn connect({})...", addr);
-            mem::replace(state, State::Connecting);
-            connect(*addr, self.tx.clone(), runtime_id, handle);
+            mem::replace(state, State::Connecting {
+                timeout: timeout.clone(),
+            });
+            connect(*addr, self.tx.clone(), runtime_id, timeout, handle);
         }
     }
 
