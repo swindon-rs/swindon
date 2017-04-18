@@ -96,6 +96,16 @@ impl RequestId {
             str::from_utf8_unchecked(&self.0[..])
         }
     }
+
+    pub fn from_str(val: &str) -> Option<RequestId> {
+        if val.as_bytes().len() == 32 {
+            let mut buf = [0u8; 32];
+            buf[..].copy_from_slice(&val.as_bytes()[..32]);
+            Some(RequestId(buf))
+        } else {
+            None
+        }
+    }
 }
 
 impl fmt::Debug for RequestId {

@@ -12,6 +12,7 @@ mod handlers;
 mod session_pools;
 mod authorizers;
 mod authorization;
+mod replication;
 pub mod networks;
 pub mod http_destinations;
 pub mod ldap;
@@ -34,6 +35,7 @@ pub use self::empty_gif::EmptyGif;
 pub use self::session_pools::{SessionPool};
 pub use self::http::Destination;
 pub use self::redirect::BaseRedirect;
+pub use self::replication::Replication;
 
 use quire::{parse_string, Options};
 

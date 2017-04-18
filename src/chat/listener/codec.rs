@@ -15,7 +15,9 @@ use rustc_serialize::json;
 use intern::{Topic, Lattice as Namespace};
 use chat::Cid;
 use chat::processor::Action;
+use chat::processor::Delta;
 use chat::listener::spawn::WorkerData;
+use chat::replication::RemoteAction;
 
 
 pub struct Handler {
@@ -200,6 +202,10 @@ impl<S> http::Codec<S> for Request {
                 if data.len() == 0 {
                     self.wdata.processor.send(Action::Subscribe {
                         conn_id: cid,
+                        topic: topic.clone(),
+                    });
+                    self.wdata.remote.send(RemoteAction::Subscribe {
+                        conn_id: cid,
                         topic: topic,
                     });
                     State::Done
@@ -209,6 +215,10 @@ impl<S> http::Codec<S> for Request {
             }
             State::Query(Unsubscribe(cid, topic)) => {
                 if data.len() == 0 {
+                    self.wdata.remote.send(RemoteAction::Unsubscribe {
+                        conn_id: cid,
+                        topic: topic.clone(),
+                    });
                     self.wdata.processor.send(Action::Unsubscribe {
                         conn_id: cid,
                         topic: topic,
@@ -232,9 +242,15 @@ impl<S> http::Codec<S> for Request {
                     }));
                 match data {
                     Ok(json) => {
+                        // Send this Action to Replication Queue
+                        let data = Arc::new(json);
+                        self.wdata.remote.send(RemoteAction::Publish {
+                            topic: topic.clone(),
+                            data: data.clone(),
+                        });
                         self.wdata.processor.send(Action::Publish {
                             topic: topic,
-                            data: Arc::new(json),
+                            data: data,
                         });
                         State::Done
                     }
@@ -245,7 +261,7 @@ impl<S> http::Codec<S> for Request {
             }
             State::Query(LatticeSubscribe(cid, ns)) => {
                 // TODO(tailhook) check content-type
-                let data = from_utf8(data)
+                let data: Result<Delta,_> = from_utf8(data)
                     .map_err(|e| {
                         info!("Error decoding utf-8 for \
                             '/v1/lattice/_/subscribe': \
@@ -259,6 +275,14 @@ impl<S> http::Codec<S> for Request {
                     }));
                 match data {
                     Ok(delta) => {
+                        self.wdata.remote.send(RemoteAction::Lattice {
+                            namespace: ns.clone(),
+                            delta: delta.clone(),
+                        });
+                        self.wdata.remote.send(RemoteAction::Attach {
+                            namespace: ns.clone(),
+                            conn_id: cid,
+                        });
                         self.wdata.processor.send(Action::Lattice {
                             namespace: ns.clone(),
                             delta: delta,
@@ -275,6 +299,10 @@ impl<S> http::Codec<S> for Request {
                 }
             }
             State::Query(Detach(cid, ns)) => {
+                self.wdata.remote.send(RemoteAction::Detach {
+                    namespace: ns.clone(),
+                    conn_id: cid.clone()
+                });
                 self.wdata.processor.send(Action::Detach {
                     namespace: ns.clone(),
                     conn_id: cid,
@@ -283,7 +311,7 @@ impl<S> http::Codec<S> for Request {
             }
             State::Query(Lattice(ns)) => {
                 // TODO(tailhook) check content-type
-                let data = from_utf8(data)
+                let data: Result<Delta,_> = from_utf8(data)
                     .map_err(|e| {
                         info!("Error decoding utf-8 for \
                             '/v1/lattice': \
@@ -297,6 +325,11 @@ impl<S> http::Codec<S> for Request {
                     }));
                 match data {
                     Ok(delta) => {
+                        // Send this Action to Replication Queue
+                        self.wdata.remote.send(RemoteAction::Lattice {
+                            namespace: ns.clone(),
+                            delta: delta.clone(),
+                        });
                         self.wdata.processor.send(Action::Lattice {
                             namespace: ns.clone(),
                             delta: delta,

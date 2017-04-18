@@ -31,7 +31,7 @@ pub struct Lattice {
     pub subscriptions: HashMap<Key, HashSet<SessionId>>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, RustcEncodable)]
 pub struct Delta {
     pub shared: HashMap<Key, Values>,
     pub private: HashMap<SessionId, HashMap<Key, Values>>,
