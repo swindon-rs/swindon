@@ -1,6 +1,7 @@
 use std::io;
 use std::net::SocketAddr;
 use std::time::Instant;
+use std::sync::Arc;
 use futures::{Future, Stream};
 use futures::future::{FutureResult, Either, ok, err};
 use futures::sync::oneshot::Receiver;
@@ -22,7 +23,7 @@ use super::{IncomingChannel, ReplAction};
 
 
 pub fn listen(addr: SocketAddr, sender: IncomingChannel,
-    runtime_id: &RuntimeId, settings: &Replication,
+    runtime_id: &RuntimeId, settings: &Arc<Replication>,
     handle: &Handle, shutter: Receiver<()>)
     -> Result<(), io::Error>
 {

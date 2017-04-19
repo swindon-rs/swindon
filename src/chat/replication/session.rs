@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use std::time::{Instant, Duration};
 use tokio_core::reactor::Handle;
 use tokio_core::reactor::Interval;
-use futures::{Stream};
+use futures::{Future, Stream};
 use futures::sync::mpsc::{unbounded, UnboundedSender};
 use futures::sync::oneshot::{channel as oneshot, Sender};
 use tk_http::websocket::Packet;
@@ -26,6 +26,7 @@ pub struct ReplicationSession {
     pub remote_sender: RemoteSender,
     runtime_id: RuntimeId,
     shutters: HashMap<SocketAddr, Sender<()>>,
+    reconnect_shutter: Option<Sender<()>>,
 }
 
 pub struct Watcher {
@@ -70,8 +71,6 @@ impl ReplicationSession {
         });
         let w1 = watcher.clone();
         let w2 = watcher.clone();
-        let w3 = watcher.clone();
-        let h2 = handle.clone();
         let runtime_id = request_id::new();
 
         handle.spawn(inc_rx.for_each(move |e| {
@@ -82,23 +81,17 @@ impl ReplicationSession {
             w2.handle_outgoing(e);
             Ok(())
         }));
-        handle.spawn(Interval::new(Duration::new(1, 0), &handle)
-            .expect("interval created")
-            .map_err(|e| error!("Interval error: {}", e))
-            .for_each(move |_| {
-                w3.reconnect(&runtime_id, &h2);
-                Ok(())
-            }));
 
         ReplicationSession {
             runtime_id: runtime_id,
             watcher: watcher,
             remote_sender: RemoteSender { queue: out_tx },
             shutters: HashMap::new(),
+            reconnect_shutter: None,
         }
     }
 
-    pub fn update(&mut self, cfg: &Replication, _runtime: &Arc<Runtime>,
+    pub fn update(&mut self, cfg: &Arc<Replication>, _runtime: &Arc<Runtime>,
         handle: &Handle)
     {
         let mut to_delete = Vec::new();
@@ -136,6 +129,12 @@ impl ReplicationSession {
         // TODO:
         // drop/delete removed peers
         // add new to watcher queue
+
+        // stop reconnecting
+        if let Some(tx) = self.reconnect_shutter.take() {
+            tx.send(());
+        }
+
         let mut peers = self.watcher.peers.write().expect("writable");
         for addr in &cfg.peers {
             match *addr {
@@ -144,17 +143,35 @@ impl ReplicationSession {
                 }
             }
         }
+
+        let runtime_id = self.runtime_id.clone();
+        let w = self.watcher.clone();
+        let h = handle.clone();
+        let s = cfg.clone();
+        let (tx, shutter) = oneshot();
+        self.reconnect_shutter = Some(tx);
+        handle.spawn(Interval::new(Duration::new(1, 0), &handle)
+            .expect("interval created")
+            .map_err(|e| error!("Interval error: {}", e))
+            .for_each(move |_| {
+                w.reconnect(&runtime_id, &s, &h);
+                Ok(())
+            })
+            .select(shutter.map_err(|_| unreachable!()))
+            .map(|(_, _)| info!("Reconnector stopped"))
+            .map_err(|(_, _)| info!("Reconnector stopped")));
     }
 
 }
 
 impl Watcher {
-    // TODO: add &Replication settings here
-    pub fn reconnect(&self, runtime_id: &RuntimeId, handle: &Handle) {
+    pub fn reconnect(&self, runtime_id: &RuntimeId,
+        settings: &Arc<Replication>, handle: &Handle)
+    {
         let mut peers = self.peers.write().expect("writable");
         // TODO: Configure timeout value;
         let now = Instant::now();
-        let timeout = now + Duration::new(5, 0);
+        let timeout = now + *settings.reconnect_timeout;
         for (addr, state) in peers.iter_mut() {
             match *state {
                 State::Unknown => {

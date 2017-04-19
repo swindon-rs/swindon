@@ -44,7 +44,7 @@ pub struct Config {
     pub ldap_destinations: HashMap<LdapUpstream, ldap::Destination>,
     pub networks: HashMap<Network, networks::NetworkList>,
 
-    pub replication: Replication,
+    pub replication: Arc<Replication>,
     pub debug_routing: bool,
     pub server_name: Option<String>,
 
