@@ -50,7 +50,7 @@ script:
   else
     py.test --swindon-bin=$(pwd)/target/debug/swindon \
       --swindon-config=$(pwd)/tests/config.yaml.tpl \
-      --swindon-replicaton-config=$(pwd)/tests/config-w-replication.yaml.tpl \
+      --swindon-replication-config=$(pwd)/tests/config-w-replication.yaml.tpl \
       -rsxX -vv
   fi
 
