@@ -46,3 +46,29 @@ Request Format
    Named arguments for the remote method.
 
 .. note:: All four arguments are **required** even if some of them are empty.
+
+
+Example
+~~~~~~~
+
+Request:
+
+.. code-block:: json
+
+   ["chat.send_message",
+    {"request_id": 123},
+    [{"text": "Arbitrary message"}],
+    {"room": "room1"}
+    ]
+
+Possible responses:
+
+.. code-block:: json
+
+   # Success result
+   ["result", {"request_id": 123}, result_json_object]
+
+   # Error results
+   ["error", {"request_id": 123, "tangle_code": "http_error", "error_code": 400}, json_body_object]
+   ["error", {"request_id": 123, "tangle_code": "validation_error"},
+    json_body_object]
