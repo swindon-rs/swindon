@@ -72,3 +72,96 @@ Possible responses:
    ["error", {"request_id": 123, "tangle_code": "http_error", "error_code": 400}, json_body_object]
    ["error", {"request_id": 123, "tangle_code": "validation_error"},
     json_body_object]
+
+
+Response Format
+---------------
+
+.. code-block:: javascript
+
+   [event_type, response_meta, data]
+
+``event_type``
+   Event type (see :ref:`Event Types`)
+
+``response_meta``
+   A dictionary (a object in terms of Javascript/JSON) that contains
+   auxilliary data about the event.
+
+   For responses this dictionary contains fields from ``request_meta``
+
+``data``
+   Event data. Type and format of this value depends on ``event_type``
+
+Event Types
+-----------
+
+.. contents:: Local
+   :local:
+
+
+Method Call Result (``result``/``error``)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+:event_type: ``result``
+
+.. code-block:: javascript
+
+   ["result", {"request_id": 123}, json_result_object]
+
+
+**Error result**
+
+:event_type: ``error``
+
+.. code-block:: javascript
+
+   ["error",
+    {"request_id": 123, "error_kind": "http_error", "http_error": 400},
+    json_body_object]
+
+   ["error",
+    {"request_id": 123, "error_kind": "validation_error"},
+    json_body_object]
+
+In case of error ``request_meta`` always has ``error_kind`` field.
+Other fields may contain error details depending on the type of error.
+
+Possible ``error_kind`` values:
+
+   ``http_error``
+      HTTP error from backend server. This error contains additional field
+      ``http_error`` which contains *HTTP status code*. The ``data`` field
+      may contain error data if response has
+      ``Content-Type: application/json``.
+
+   ``validation_error``
+      Error validating request. ``data`` contains addition information.
+
+   ``invalid_content_type``
+      Wrong (i.e. unsupported) ``Content-Type`` in response from a backend.
+
+   ``internal_error``
+      Swindon encountered internal error while processing the request.
+
+   ``forbidden``
+      This call is forbidden to call from frontend. This is used when you
+      are trying to call ``tangle.*`` methods. These names are reserved
+      for calls initiated by swindon.
+
+
+User Information (``hello``)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+   :event_type: ``hello``
+
+   .. code-block:: json
+
+      ["hello", {}, {"username": "John"}]
+
+   Initial event set just after websocket handshake is complete, which
+   in turn means backend has authorized connection.
+
+   Format of the data sent (third item in the tuple above) is defined
+   by a backend (i.e. it's JSON data sent from a backend).
+   See :ref:`backend-auth` for more info.
