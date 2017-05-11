@@ -159,9 +159,48 @@ User Information (``hello``)
 
       ["hello", {}, {"username": "John"}]
 
-   Initial event set just after websocket handshake is complete, which
+   Initial event sent just after websocket handshake is complete, which
    in turn means backend has authorized connection.
 
    Format of the data sent (third item in the tuple above) is defined
    by a backend (i.e. it's JSON data sent from a backend).
    See :ref:`backend-auth` for more info.
+
+Message (``message``)
+~~~~~~~~~~~~~~~~~~~~~
+
+   :event_type: ``message``
+
+   .. code-block:: json
+
+      ["message",
+       {"topic": "test-chat.room1"},
+       {"id": 1,
+        "message": "...",
+        "author": ".."
+        }]
+
+   This message type is used to propagate published messages to frontend.
+   See :ref:`topic-publish` for more info.
+
+
+Lattice Update (``lattice``)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+   More about lattice updates in :ref:`lattice-definition`
+
+   :event_type: ``lattice``
+
+   .. code-block:: json
+
+      ["lattice",
+       {"namespace": "test-chat.rooms"},
+       {
+         "room1": {
+           "last_message_count": 2,
+           "last_seen_count": 3
+         },
+         "room2": {
+           "last_message_count": 123
+         },
+      }]
