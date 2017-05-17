@@ -103,7 +103,7 @@ impl ReplicationSession {
         }
         for addr in to_delete {
             if let Some(shutter) = self.shutters.remove(&addr) {
-                shutter.send(());
+                shutter.send(()).ok();
             }
         }
         for addr in &cfg.listen {
@@ -132,7 +132,7 @@ impl ReplicationSession {
 
         // stop reconnecting
         if let Some(tx) = self.reconnect_shutter.take() {
-            tx.send(());
+            tx.send(()).ok();
         }
 
         let mut peers = self.watcher.peers.write().expect("writable");

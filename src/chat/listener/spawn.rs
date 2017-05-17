@@ -16,7 +16,7 @@ use config::SessionPool;
 use runtime::Runtime;
 use chat::Shutdown;
 use chat::listener::codec::Handler;
-use chat::processor::{Action, ProcessorPool};
+use chat::processor::{ProcessorPool};
 use chat::replication::RemotePool;
 
 

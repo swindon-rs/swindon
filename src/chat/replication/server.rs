@@ -103,10 +103,10 @@ impl<S: AsyncRead + AsyncWrite + 'static> Codec<S> for WebsocketCodec {
 
     fn start_response(&mut self, mut e: Encoder<S>) -> Reply<S> {
         e.status(Status::SwitchingProtocol);
-        e.add_header("Connection", "upgrade");
-        e.add_header("Upgrade", "websocket");
-        e.format_header("Sec-Websocket-Accept", &self.accept);
-        e.format_header("X-Swindon-Node-Id", &self.runtime_id);
+        e.add_header("Connection", "upgrade").unwrap();
+        e.add_header("Upgrade", "websocket").unwrap();
+        e.format_header("Sec-Websocket-Accept", &self.accept).unwrap();
+        e.format_header("X-Swindon-Node-Id", &self.runtime_id).unwrap();
         e.done_headers().unwrap();
         Box::new(ok(e.done()))
     }
@@ -153,7 +153,7 @@ impl<S: 'static> Codec<S> for QuickReply {
     }
     fn start_response(&mut self, mut e: Encoder<S>) -> Reply<S> {
         e.status(self.0.take().expect("start response called once"));
-        e.add_length(0);
+        e.add_length(0).unwrap();
         e.done_headers().unwrap();
         Box::new(ok(e.done()))
     }

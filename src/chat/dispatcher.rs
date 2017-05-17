@@ -12,7 +12,7 @@ use tokio_core::reactor::Handle;
 
 use runtime::Runtime;
 use config::chat::Chat;
-use config::{SessionPool, ConfigCell};
+use config::SessionPool;
 use chat::{Cid, ConnectionSender, CloseReason};
 use chat::message::{decode_message, get_active, Meta, Args, Kwargs};
 use chat::message::{ValidationError};
