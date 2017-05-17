@@ -35,9 +35,21 @@ pub fn run(runtime: &Arc<Runtime>, settings: &Arc<SessionPool>,
                 InactiveSession { session_id, .. } => {
                     info!("Sending inactivity: {:?}", session_id);
                     for &(ref path, ref upname) in &handlers {
+                        let config = runtime.config.get();
+                        let dest_settings = match
+                            config.http_destinations.get(upname)
+                        {
+                            Some(x) => x,
+                            None => {
+                                error!("No such destination {:?} \
+                                    for sending inactivity",
+                                    upname);
+                                continue;
+                            }
+                        };
                         let mut up = runtime.http_pools.upstream(&upname);
                         let codec = Box::new(backend::InactivityCodec::new(
-                            path, &session_id));
+                            path, &session_id, dest_settings));
                         match up.get_mut().get_mut() {
                             Some(pool) => {
                                 match pool.start_send(codec) {

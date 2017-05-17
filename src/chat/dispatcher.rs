@@ -12,7 +12,7 @@ use tokio_core::reactor::Handle;
 
 use runtime::Runtime;
 use config::chat::Chat;
-use config::SessionPool;
+use config::{SessionPool, ConfigCell};
 use chat::{Cid, ConnectionSender, CloseReason};
 use chat::message::{decode_message, get_active, Meta, Args, Kwargs};
 use chat::message::{ValidationError};
@@ -90,9 +90,20 @@ impl Dispatcher {
         };
         let mut up = self.runtime.http_pools.upstream(&dest.upstream);
         let meta = Arc::new(meta);
+        let cfg = self.runtime.config.get();
+        let dest_settings = match cfg.http_destinations.get(&dest.upstream) {
+            Some(h) => h,
+            None => {
+                error!("No such destination {:?}", dest.upstream);
+                self.channel.send(ConnectionMessage::Error(meta,
+                    MessageError::PoolError));
+                return;
+            }
+        };
         let codec = Box::new(CallCodec::new(
             self.auth.clone(),
             path, self.cid, &meta, args, kw,
+            dest_settings,
             self.channel.clone()));
         match up.get_mut().get_mut() {
             Some(pool) => {

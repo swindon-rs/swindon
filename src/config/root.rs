@@ -40,7 +40,7 @@ pub struct Config {
     pub handlers: HashMap<HandlerName, Handler>,
     pub authorizers: HashMap<AuthorizerName, Authorizer>,
     pub session_pools: HashMap<SessionPoolName, Arc<SessionPool>>,
-    pub http_destinations: HashMap<Upstream, Destination>,
+    pub http_destinations: HashMap<Upstream, Arc<Destination>>,
     pub ldap_destinations: HashMap<LdapUpstream, ldap::Destination>,
     pub networks: HashMap<Network, networks::NetworkList>,
 

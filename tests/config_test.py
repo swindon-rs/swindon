@@ -127,6 +127,7 @@ def test_unknown_chat_message_handlers(check_config):
                 - dummy/
         http-destinations:
             dummy:
+                override-host-header: swindon.internal
                 addresses:
                 - 1.2.3.4:5
     """
@@ -156,6 +157,32 @@ def test_unknown_chat_message_handlers(check_config):
     err = check_config(cfg)
     assert (
         "handler\"chat\": unknown http destination upstream\"unknown-dest\""
+        ) in err
+
+def test_override_host_header_is_set(check_config):
+    cfg = """
+        routing:
+            localhost:/abc: chat
+        handlers:
+            chat: !SwindonChat
+                session-pool: chat
+                message-handlers:
+                    "*": dummy/
+                    "test": unknown-dest/
+        session-pools:
+            chat:
+                inactivity-handlers:
+                - dummy/
+        http-destinations:
+            dummy:
+                addresses:
+                - 1.2.3.4:5
+    """
+    err = check_config(cfg)
+    assert (
+        'validation error: http destination upstream"dummy" '
+        'is used in message-handler of handler"chat", '
+        'so must contain override-host-header setting.'
         ) in err
 
 

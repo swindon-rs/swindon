@@ -53,6 +53,7 @@ routing:
   localhost/proxy-w-prefix: proxy_w_prefix
   localhost/proxy-w-ip-header: proxy_w_ip_header
   localhost/proxy-w-request-id: proxy_w_request_id
+  localhost/proxy-w-host: proxy_w_host
 
   ### !SwindonChat routes ###
   localhost/swindon-chat: swindon_chat
@@ -164,6 +165,8 @@ handlers:
   proxy_w_request_id: !Proxy
     destination: proxy_dest
     request-id-header: X-Request-Id
+  proxy_w_host: !Proxy
+    destination: proxy_host
   swindon_proxy: !Proxy
     destination: swindon_http_dest
 
@@ -216,11 +219,17 @@ http-destinations:
     addresses:
     - *PROXY_ADDRESS
 
+  proxy_host:
+    override-host-header: swindon.proxy.example.org
+    addresses:
+    - *PROXY_ADDRESS
+
   ### SwindonChat destinations ###
   swindon_http_dest:
     addresses:
     - *PROXY_ADDRESS
   swindon_chat_dest:
+    override-host-header: swindon.internal
     addresses:
     - *PROXY_ADDRESS
 

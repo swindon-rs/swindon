@@ -4,8 +4,9 @@ use std::net::SocketAddr;
 use tk_http::Version;
 use tk_http::client::{Encoder, EncoderDone};
 
-use incoming::{Input};
+use config::http_destinations::Destination;
 use config::proxy::Proxy;
+use incoming::{Input};
 use request_id::RequestId;
 
 
@@ -72,7 +73,9 @@ impl HalfReq {
     }
 }
 impl RepReq {
-    pub fn encode<S>(&self, mut e: Encoder<S>) -> EncoderDone<S>{
+    pub fn encode<S>(&self, mut e: Encoder<S>, dest: &Arc<Destination>)
+        -> EncoderDone<S>
+    {
         let ref r = *self.0;
         if r.settings.destination.path == "/" {
             e.request_line(&r.method, &r.path, Version::Http11);
@@ -83,7 +86,11 @@ impl RepReq {
         }
 
         // Spec doesn't mandate, but recomments it to be first
-        e.add_header("Host", &r.host).unwrap();
+        if let Some(ref header) = dest.override_host_header {
+            e.add_header("Host", header).unwrap();
+        } else {
+            e.add_header("Host", &r.host).unwrap();
+        }
         if let Some(ref h) = r.settings.ip_header {
             // NOTE: this can duplicate header value.
             e.format_header(h, r.addr.ip()).unwrap();

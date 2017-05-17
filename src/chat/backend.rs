@@ -10,16 +10,17 @@ use tk_http::client as http;
 use rustc_serialize::Encodable;
 use rustc_serialize::json::{as_json, Json};
 
-use proxy::{Response};
-use intern::SessionId;
+use chat::authorize::{parse_userinfo, good_status};
 use chat::{Cid, ConnectionSender, ConnectionMessage, TangleAuth};
 use chat::cid::{serialize_cid};
+use chat::CloseReason::{AuthHttp};
+use chat::ConnectionMessage::{Hello, StopSocket};
 use chat::error::MessageError;
 use chat::message::{AuthData, Auth, Call, Meta, Args, Kwargs};
 use chat::processor::{ProcessorPool, Action};
-use chat::authorize::{parse_userinfo, good_status};
-use chat::ConnectionMessage::{Hello, StopSocket};
-use chat::CloseReason::{AuthHttp};
+use config::http_destinations::Destination;
+use intern::SessionId;
+use proxy::{Response};
 
 
 const INACTIVITY_PAYLOAD: &'static [u8] = b"[{}, [], {}]";
@@ -47,6 +48,7 @@ pub struct AuthCodec {
     state: AuthState,
     chat: ProcessorPool,
     conn_id: Cid,
+    destination: Arc<Destination>,
     sender: ConnectionSender,
 }
 
@@ -54,23 +56,27 @@ pub struct CallCodec {
     state: CallState,
     meta: Arc<Meta>,
     conn_id: Cid,
+    destination: Arc<Destination>,
     sender: ConnectionSender,
 }
 
 pub struct InactivityCodec {
     path: Arc<String>,
+    destination: Arc<Destination>,
     session_id: SessionId,
 }
 
 impl AuthCodec {
     pub fn new(path: String, cid: Cid, req: AuthData,
-        chat: ProcessorPool, tx: ConnectionSender)
+        chat: ProcessorPool, destination: &Arc<Destination>,
+        tx: ConnectionSender)
         -> AuthCodec
     {
         AuthCodec {
             state: AuthState::Init(path, req),
             chat: chat,
             conn_id: cid,
+            destination: destination.clone(),
             sender: tx,
         }
     }
@@ -78,7 +84,9 @@ impl AuthCodec {
 
 impl CallCodec {
     pub fn new(auth: Arc<String>, path: String, cid: Cid,
-        meta: &Arc<Meta>, args: Args, kw: Kwargs, sender: ConnectionSender)
+        meta: &Arc<Meta>, args: Args, kw: Kwargs,
+        destination: &Arc<Destination>,
+        sender: ConnectionSender)
         -> CallCodec
     {
         CallCodec {
@@ -90,15 +98,20 @@ impl CallCodec {
             },
             meta: meta.clone(),
             conn_id: cid,
+            destination: destination.clone(),
             sender: sender,
         }
     }
 }
 
 impl InactivityCodec {
-    pub fn new(path: &Arc<String>, sid: &SessionId) -> InactivityCodec {
+    pub fn new(path: &Arc<String>, sid: &SessionId,
+        destination: &Arc<Destination>)
+        -> InactivityCodec
+    {
         InactivityCodec {
             path: path.clone(),
+            destination: destination.clone(),
             session_id: sid.clone(),
         }
     }
@@ -131,6 +144,9 @@ impl<S> http::Codec<S> for AuthCodec {
         {
             self.state = Wait;
             e.request_line("POST", &p, Version::Http11);
+            if let Some(ref header) = self.destination.override_host_header {
+                e.add_header("Host", header).unwrap();
+            }
             ok(write_json_request(e,
                 &Auth(&serialize_cid(&self.conn_id), &i)))
         } else {
@@ -208,6 +224,9 @@ impl<S> http::Codec<S> for CallCodec {
             mem::replace(&mut self.state, Void)
         {
             e.request_line("POST", &path, Version::Http11);
+            if let Some(ref header) = self.destination.override_host_header {
+                e.add_header("Host", header).unwrap();
+            }
             // TODO(tailhook) implement authrization
             e.add_header("Authorization", &*auth).unwrap();
             let cid = serialize_cid(&self.conn_id);
@@ -266,6 +285,9 @@ impl<S> http::Codec<S> for InactivityCodec {
 
     fn start_write(&mut self, mut e: http::Encoder<S>) -> Self::Future {
         e.request_line("POST", &self.path, Version::Http11);
+        if let Some(ref header) = self.destination.override_host_header {
+            e.add_header("Host", header).unwrap();
+        }
         // TODO(tailhook) implement authrization
         e.format_header("Authorization",
                         TangleAuth(&self.session_id)).unwrap();

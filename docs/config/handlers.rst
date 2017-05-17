@@ -236,9 +236,13 @@ Swindon chat handler::
       session-pool: example-chat-session
       http-route: backend/fallback
       message-handlers:
-      "*": backend/path
+        "*": backend/path
 
-Settings
+The ``backend/path`` here, i.e. the message handler, should have
+:opt:`override-host-header` setting set, so that swindon knows what ``Host``
+header to send for RPC requests.
+
+Settings:
 
 .. opt:: session-pool
 

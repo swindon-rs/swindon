@@ -50,7 +50,7 @@ impl HttpPools {
             upstream: &dest,
         }
     }
-    pub fn update(&self, cfg: &HashMap<Upstream, Destination>,
+    pub fn update(&self, cfg: &HashMap<Upstream, Arc<Destination>>,
         resolver: &Router, handle: &Handle)
     {
         let mut plain = self.plain.write().expect("pools not poisoned");

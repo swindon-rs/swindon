@@ -1,10 +1,12 @@
 use std::mem;
+use std::sync::Arc;
 
 use futures::Async;
 use futures::future::{FutureResult, ok};
 use futures::sync::oneshot;
 use tk_http::client as http;
 
+use config::http_destinations::Destination;
 use proxy::{RepReq, HalfResp, Response};
 
 enum State {
@@ -18,13 +20,18 @@ enum State {
 
 pub struct Codec {
     state: State,
+    destination: Arc<Destination>,
     sender: Option<oneshot::Sender<Response>>,
 }
 
 impl Codec {
-    pub fn new(req: RepReq, tx: oneshot::Sender<Response>) -> Codec {
+    pub fn new(req: RepReq, destination: &Arc<Destination>,
+        tx: oneshot::Sender<Response>)
+        -> Codec
+    {
         Codec {
             state: State::Init(req),
+            destination: destination.clone(),
             sender: Some(tx),
         }
     }
@@ -36,7 +43,7 @@ impl<S> http::Codec<S> for Codec {
     fn start_write(&mut self, e: http::Encoder<S>) -> Self::Future {
         if let State::Init(req) = mem::replace(&mut self.state, State::Void) {
             self.state = State::Wait;
-            ok(req.encode(e))
+            ok(req.encode(e, &self.destination))
         } else {
             panic!("wrong state");
         }

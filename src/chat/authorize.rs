@@ -63,6 +63,18 @@ pub fn start_authorize(inp: &Input, conn_id: Cid, settings: &Arc<Chat>,
 
     let dest = settings.message_handlers
         .resolve("tangle.authorize_connection");
+
+    let dest_settings = match inp.config.http_destinations.get(&dest.upstream)
+    {
+        Some(h) => h,
+        None => {
+            error!("No such destination {:?}", dest.upstream);
+            messages.send(StopSocket(CloseReason::AuthHttp(
+                Status::InternalServerError)));
+            return;
+        }
+    };
+
     let path: Cow<_> = if dest.path == "/" {
         "/tangle/authorize_connection".into()
     } else {
@@ -78,7 +90,9 @@ pub fn start_authorize(inp: &Input, conn_id: Cid, settings: &Arc<Chat>,
         }
     };
     let codec = Box::new(backend::AuthCodec::new(path.into_owned(),
-        conn_id, auth_data, pool.clone(), messages.clone()));
+        conn_id, auth_data, pool.clone(),
+        dest_settings,
+        messages.clone()));
 
     match up.get_mut().get_mut() {
         Some(pool) => {

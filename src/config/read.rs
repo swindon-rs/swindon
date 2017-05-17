@@ -145,7 +145,13 @@ pub fn read_config<P: AsRef<Path>>(filename: P)
                     }
                 }
                 let u = &chat.message_handlers.default.upstream;
-                if !cfg.http_destinations.contains_key(u) {
+                if let Some(http_dest) = cfg.http_destinations.get(u) {
+                    if http_dest.override_host_header.is_none() {
+                        err!("http destination {:?} is used \
+                             in message-handler of {:?}, so must contain \
+                             override-host-header setting.", u, name);
+                    }
+                } else {
                     err!("{:?}: unknown http destination {:?}", name, u)
                 }
                 for (_, dest) in &chat.message_handlers.map {

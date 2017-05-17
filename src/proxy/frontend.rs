@@ -55,35 +55,44 @@ impl<S: 'static> http::Codec<S> for Codec {
             State::Headers(r) => {
                 assert!(end);
                 let r = r.upgrade(data.to_vec());
-                let mut up = self.pools.upstream(
-                    &self.settings.destination.upstream);
+                let dest_name = &self.settings.destination.upstream;
+                let mut up = self.pools.upstream(dest_name);
                 let (tx, rx) = oneshot::channel();
-                let codec = Box::new(backend::Codec::new(r.clone(), tx));
-                match up.get_mut().get_mut() {
-                    Some(pool) => {
-                        match pool.start_send(codec) {
-                            Ok(AsyncSink::NotReady(_)) => {
-                                State::Error(Status::ServiceUnavailable)
-                            }
-                            Ok(AsyncSink::Ready) => {
-                                debug!("Sent request {:?} to proxy", r);
-                                State::Sent {
-                                    request: r,
-                                    response: rx,
+                let ref cfg = self.context.as_ref().unwrap().0;
+                let opt_dest = cfg.http_destinations.get(dest_name);
+                if let Some(dest_settings) = opt_dest {
+                    let codec = Box::new(backend::Codec::new(r.clone(),
+                        dest_settings, tx));
+                    match up.get_mut().get_mut() {
+                        Some(pool) => {
+                            match pool.start_send(codec) {
+                                Ok(AsyncSink::NotReady(_)) => {
+                                    State::Error(Status::ServiceUnavailable)
+                                }
+                                Ok(AsyncSink::Ready) => {
+                                    debug!("Sent request {:?} to proxy", r);
+                                    State::Sent {
+                                        request: r,
+                                        response: rx,
+                                    }
+                                }
+                                Err(e) => {
+                                    error!("Error sending to pool {:?}: {}",
+                                        self.settings.destination.upstream, e);
+                                    State::Error(Status::InternalServerError)
                                 }
                             }
-                            Err(e) => {
-                                error!("Error sending to pool {:?}: {}",
-                                    self.settings.destination.upstream, e);
-                                State::Error(Status::InternalServerError)
-                            }
+                        }
+                        None => {
+                            error!("No such pool {:?}",
+                                self.settings.destination.upstream);
+                            State::Error(Status::NotFound)
                         }
                     }
-                    None => {
-                        error!("No such pool {:?}",
-                            self.settings.destination.upstream);
-                        State::Error(Status::NotFound)
-                    }
+                } else {
+                    error!("No such destination {:?}",
+                        self.settings.destination.upstream);
+                    State::Error(Status::NotFound)
                 }
             }
             State::Sent { .. } => unimplemented!(),

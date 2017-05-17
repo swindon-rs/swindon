@@ -10,6 +10,8 @@ async def test_simple_request(proxy_server, swindon,
         assert inflight.req.method == 'GET'
         assert inflight.req.path == '/proxy/hello'
         assert inflight.req.version == HttpVersion11
+        # original host (random port)
+        assert inflight.req.headers['Host'].startswith('localhost:')
 
         srv_resp = web.Response(body=b'OK', content_type='text/test')
         client_resp = await inflight.send_resp(srv_resp)
@@ -18,6 +20,28 @@ async def test_simple_request(proxy_server, swindon,
         assert client_resp.headers['Content-Type'] == 'text/test'
         if debug_routing:
             assert client_resp.headers['X-Swindon-Route'] == 'proxy'
+        else:
+            assert 'X-Swindon-Route' not in client_resp.headers
+        assert await client_resp.read() == b'OK'
+
+async def test_host_override(proxy_server, swindon,
+                              http_version, debug_routing):
+    url = swindon.url / 'proxy-w-host/hello'
+    async with proxy_server.send('get', url, version=http_version) as inflight:
+        assert not inflight.has_client_response, await inflight.client_resp
+
+        assert inflight.req.method == 'GET'
+        assert inflight.req.path == '/proxy-w-host/hello'
+        assert inflight.req.version == HttpVersion11
+        assert inflight.req.headers['Host'] == 'swindon.proxy.example.org'
+
+        srv_resp = web.Response(body=b'OK', content_type='text/test')
+        client_resp = await inflight.send_resp(srv_resp)
+        assert client_resp.status == 200
+        assert client_resp.version == http_version
+        assert client_resp.headers['Content-Type'] == 'text/test'
+        if debug_routing:
+            assert client_resp.headers['X-Swindon-Route'] == 'proxy_w_host'
         else:
             assert 'X-Swindon-Route' not in client_resp.headers
         assert await client_resp.read() == b'OK'

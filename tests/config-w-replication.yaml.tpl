@@ -223,6 +223,7 @@ http-destinations:
     addresses:
     - *PROXY_ADDRESS
   swindon_chat_dest:
+    override-host-header: swindon.internal
     addresses:
     - *PROXY_ADDRESS
 

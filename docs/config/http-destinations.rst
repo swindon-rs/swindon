@@ -104,3 +104,15 @@ Options
    ``backend-connections-per-ip-port`` it might help loosing smaller number
    of requests.
 
+.. opt:: override-host-header
+
+   (optional) Replace host header for the original request into this one.
+   This is kind of rewrite of a request url if your backend accepts different
+   domain name than frontend shows.
+
+   .. note::
+
+      This setting is currently required for handlers used for
+      :opt:`message-handlers` for ``SwindonChat`` protocol. We're seeking for
+      a way to provide sane default `Host` header for such handlers.
+
