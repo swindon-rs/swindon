@@ -92,6 +92,7 @@ http-destinations:
     queue-size-for-503: 100k
     backend-connections-per-ip-port: 1
     in-flight-requests-per-backend-connection: 1
+    override-host-header: chat.backend.example.com
 
     addresses:
     - example.com:5000

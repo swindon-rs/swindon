@@ -40,5 +40,6 @@ session-pools:
 
 http-destinations:
   chat:
+    override-host-header: swindon.internal
     addresses:
     - 127.0.0.1:8082
