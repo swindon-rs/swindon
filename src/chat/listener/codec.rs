@@ -352,6 +352,7 @@ impl<S> http::Codec<S> for Request {
         if let State::Error(status) = self.state {
             e.status(status);
             // TODO(tailhook) add some body describing the error
+            e.add_length(0).unwrap();
             e.done_headers().unwrap();
             ok(e.done())
         } else {
