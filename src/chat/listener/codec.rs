@@ -133,6 +133,7 @@ impl Handler {
                 match middle {
                     Some("subscriptions") => {
                         let topic = tail.and_then(|x| {
+                            // TODO: check no dots are present
                             x.replace("/", ".").parse().ok()
                         });
                         match (method, cid, topic) {

@@ -67,11 +67,17 @@ fn valid_var(val: &str) -> bool {
 }
 
 fn valid_namespace(val: &str) -> bool {
+    if val.len() == 0 {
+        return false;
+    }
     val.chars().all(|c| c.is_ascii() &&
         (c.is_alphanumeric() || c == '-' || c == '_' || c == '.'))
 }
 
 fn valid_topic(val: &str) -> bool {
+    if val.len() == 0 {
+        return false;
+    }
     val.chars().all(|c| c.is_ascii() &&
         (c.is_alphanumeric() || c == '-' || c == '_' || c == '.' || c == ':'))
 }
