@@ -6,6 +6,7 @@ import os
 import string
 import socket
 import textwrap
+import hashlib
 
 import yarl
 import aiohttp
@@ -32,6 +33,8 @@ def pytest_addoption(parser):
                      help=("Path to swindon config template"
                            " with chat replication enabled(!),"
                            " default is `%(default)s`"))
+    parser.addoption('--kcov', default=None,
+                     help="Path 'kcov' executable to collect coverage")
     parser.addoption('--rust-log',
                      default='debug,tokio_core=warn',
                      help=("Set RUST_LOG for swindon, default is"
@@ -441,13 +444,31 @@ class WSInflight(_WSInflight):
 
 
 @pytest.fixture(scope='session')
-def _proc():
+def _proc(request):
     # Process runner
     processes = []
+    PWD = pathlib.Path(__file__).parent.parent
 
     def run(*cmdline, **kwargs):
+        kcov_cmd = []
         cmdline = list(map(str, cmdline))
-        proc = subprocess.Popen(cmdline, **kwargs)
+        if request.config.getoption('--kcov'):
+            exe = pathlib.Path(cmdline[0])
+            h = hashlib.md5()
+            for s in cmdline:
+                h.update(s.encode('utf-8'))
+            h = h.digest().hex()[:8]
+            target = PWD / 'target/cov' / '{}-{}'.format(exe.name, h)
+            if not target.exists():
+                target.mkdir(parents=True)
+            kcov_cmd = [
+                str(request.config.getoption('--kcov')),
+                '--include-path',
+                str(PWD),
+                '--verify',
+                str(target),
+            ]
+        proc = subprocess.Popen(kcov_cmd + cmdline, **kwargs)
         processes.append(proc)
         return proc
 
