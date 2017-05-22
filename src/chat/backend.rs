@@ -8,7 +8,7 @@ use futures::future::{FutureResult, ok};
 use tk_http::{Status, Version};
 use tk_http::client as http;
 use rustc_serialize::Encodable;
-use rustc_serialize::json::{as_json, Json};
+use rustc_serialize::json::{encode, as_json, Json};
 
 use chat::authorize::{parse_userinfo, good_status};
 use chat::{Cid, ConnectionSender, ConnectionMessage, TangleAuth};
@@ -124,14 +124,24 @@ fn write_json_request<S, E>(mut e: http::Encoder<S>, data: &E)
 {
     use std::io::Write;
     e.add_header("Content-Type", "application/json").unwrap();
-    e.add_chunked().unwrap();
+    let body = encode(data).unwrap();
+    let body = body.as_bytes();
+    e.add_length(body.len() as u64).unwrap();
     e.done_headers().unwrap();
-    let mut buf = BufWriter::new(e);
-    write!(&mut buf, "{}", as_json(data)).unwrap();
-    match buf.into_inner() {
-        Ok(x) => x.done(),
-        Err(_) => unreachable!(),
-    }
+    e.write_body(body);
+    e.done()
+    // NOTE: disabling chunked encoding because of the following:
+    //      https://github.com/pallets/flask/issues/367
+    //      yeap, its flask/werkzeug/wsgi, baby.
+
+    // e.add_chunked().unwrap();
+    // e.done_headers().unwrap();
+    // let mut buf = BufWriter::new(e);
+    // write!(&mut buf, "{}", body).unwrap();
+    // match buf.into_inner() {
+    //     Ok(x) => x.done(),
+    //     Err(_) => unreachable!(),
+    // }
 }
 
 
