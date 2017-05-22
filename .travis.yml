@@ -1,4 +1,6 @@
 language: rust
+rust: stable
+os: linux
 dist: trusty
 sudo: false
 addons:
@@ -25,41 +27,46 @@ cache:
 
 before_cache:
 - rm -r $TRAVIS_BUILD_DIR/target/cov
-- find $TRAVIS_BUILD_DIR/target/debug -maxdepth 1 -executable -type f -delete
-
-matrix:
-  include:
-  - rust: beta
-  - rust: nightly
-  - os: linux
-    env: FUNC_TEST=y
-  - os: osx
+- rm -r $TRAVIS_BUILD_DIR/target/debug
 
 install:
-- >
-  if [ "$FUNC_TEST" = "y" ]; then
-    curl https://bootstrap.pypa.io/get-pip.py -o - | python3.5 - --user
-    pip3 install -r tests/requirements.txt --user
-  fi
+- source .travis/coverage.sh && build_kcov
 
 script:
-- cargo build --verbose
-- source .travis/coverage.sh && build_kcov
-- >
-  if [ "$FUNC_TEST" != "y" ]; then
-    cargo test --verbose
-    source .travis/coverage.sh && coverage
-  else
-    py.test --swindon-bin=$(pwd)/target/debug/swindon \
-      --swindon-config=$(pwd)/tests/config.yaml.tpl \
-      --swindon-replication-config=$(pwd)/tests/config-w-replication.yaml.tpl \
-      -rsxX -vv --kcov=$HOME/.local/bin/kcov
-  fi
+- cargo build $CARGO_ARGS
+- cargo test $CARGO_ARGS
+- source .travis/coverage.sh && coverage
 - bash <(curl -s https://codecov.io/bash)
 
-env:
-  secure: "nMdJpTAF6TAIKY3+Aev8CLKBs39BcqPmXuJJj2Sww2wSoM2F4In/YQ2roWXBU6BEUfyP88ShpRXRpaFg7J6y1yqL5xCBrqfRHI/2V4pL4cRBsqe6Ehv5J65Kvo+aJ/dpI+LwD7rnSIAwQ2rG3yCnwOaTFdsQERK8wxyKcu41Sk3j4n9yAmd3Pd/DG3E0QAuAATRqHopzyDHK7NSS8zGSw1XD1nZn6TjuUJ645xJxKn7msxawmEKfXBZ/AD/fHhDCDlKh5jSQMu8SFBrSgzC5FUIO8ttGRTDEjcGwtwLOQK6rovbUaeu4WlrGMCCdWCQSxeDVqlwCu4lPTRJlDfg9MieugLNtWc+EYhcciIpvjM7cO39lCq8e7GpKb4rKtwj7Z2iVhBTuz/M4DlkUGNiqV66jMnqlgzhsWwXCVvVD1djFmKBlO1I5xOWJxsgaxM5IRXNbNzeaveJxjQcsRttTJ4FFFsxa/3CXrr2NipbhzOp3WRTByFMUqKJF5v0VKeApA35sSuAu7+jgmszhlk+v3ufFz/MBgB3we0N7aNvz/jAfUGjbLWWDPNvvIRf34hGVOpy6oOV3OIYq1sry3G8oIp5Zk5WfK2cAaKrhpYvwQFHrLzcsw/I1l0+2hN75FgWr1cPJB9PKI1GrBpq9wV1yP+T4dSWO0IXcmfKHLABBmyI="
-after_success: |
-  [ $TRAVIS_BRANCH = master ] &&
-  [ $TRAVIS_PULL_REQUEST = false ] &&
-  .travis/publish-docs.sh
+jobs:
+  include:
+  # tests
+  - rust: stable
+  - rust: stable
+    os: osx
+  - rust: beta
+  - rust: nightly
+  - env: 
+    - FUNC_TEST=y
+    install:
+    - source .travis/coverage.sh && build_kcov
+    - curl https://bootstrap.pypa.io/get-pip.py -o - | python3.5 - --user
+    - pip3 install -r tests/requirements.txt --user
+    script:
+    - cargo build $CARGO_ARGS
+    - >
+      py.test --swindon-bin=$(pwd)/target/debug/swindon \
+        --swindon-config=$(pwd)/tests/config.yaml.tpl \
+        --swindon-replication-config=$(pwd)/tests/config-w-replication.yaml.tpl \
+        -rsxX --kcov=$HOME/.local/bin/kcov $TEST_ARGS
+    - bash <(curl -s https://codecov.io/bash)
+      
+  # deploy
+  - stage: publish docs
+    env:
+      secure: "nMdJpTAF6TAIKY3+Aev8CLKBs39BcqPmXuJJj2Sww2wSoM2F4In/YQ2roWXBU6BEUfyP88ShpRXRpaFg7J6y1yqL5xCBrqfRHI/2V4pL4cRBsqe6Ehv5J65Kvo+aJ/dpI+LwD7rnSIAwQ2rG3yCnwOaTFdsQERK8wxyKcu41Sk3j4n9yAmd3Pd/DG3E0QAuAATRqHopzyDHK7NSS8zGSw1XD1nZn6TjuUJ645xJxKn7msxawmEKfXBZ/AD/fHhDCDlKh5jSQMu8SFBrSgzC5FUIO8ttGRTDEjcGwtwLOQK6rovbUaeu4WlrGMCCdWCQSxeDVqlwCu4lPTRJlDfg9MieugLNtWc+EYhcciIpvjM7cO39lCq8e7GpKb4rKtwj7Z2iVhBTuz/M4DlkUGNiqV66jMnqlgzhsWwXCVvVD1djFmKBlO1I5xOWJxsgaxM5IRXNbNzeaveJxjQcsRttTJ4FFFsxa/3CXrr2NipbhzOp3WRTByFMUqKJF5v0VKeApA35sSuAu7+jgmszhlk+v3ufFz/MBgB3we0N7aNvz/jAfUGjbLWWDPNvvIRf34hGVOpy6oOV3OIYq1sry3G8oIp5Zk5WfK2cAaKrhpYvwQFHrLzcsw/I1l0+2hN75FgWr1cPJB9PKI1GrBpq9wV1yP+T4dSWO0IXcmfKHLABBmyI="
+    install: true
+    script: |
+      if [[ $TRAVIS_BRANCH = master && $TRAVIS_PULL_REQUEST = false ]]; then
+        .travis/publish-docs.sh;
+      fi
