@@ -436,18 +436,18 @@ async def test_inactivity(proxy_server, swindon, loop):
     '/v1/connection/1/subscriptions/',
     '/v1/connection/invalid-cid/subscriptions',
     '/v1/connection/invalid-cid/subscriptions/',
-    pytest.mark.xfail('/v1/connection/1/subscriptions/some.topic'),
+    '/v1/connection/1/subscriptions/some.topic',
     '/v1/connection/1/lattices',
     '/v1/connection/1/lattices/',
-    pytest.mark.xfail('/v1/connection/1/lattices/invalid.namespace'),
+    '/v1/connection/1/lattices/invalid.namespace',
     '/v1/connection/invalid-cid/lattices/',
     '/v1/connection/invalid-cid/lattices/invalid.namespace',
     '/v1/publish',
     '/v1/publish/',
-    pytest.mark.xfail('/v1/publish/invalid.topic'),
+    '/v1/publish/invalid.topic',
     '/v1/lattice',
     '/v1/lattice/',
-    pytest.mark.xfail('/v1/lattice/invalid.namespace'),
+    '/v1/lattice/invalid.namespace',
 ])
 async def test_invalid_api_path(proxy_server, swindon, loop, path):
     async with aiohttp.ClientSession(loop=loop) as s:
@@ -470,9 +470,8 @@ async def test_invalid_api_method_connection(
             assert resp.status == 404
 
 
-@pytest.mark.xfail
 @pytest.mark.parametrize('method', [
-    'GET', 'HEAD', 'POST', 'UPDATE', 'PATCH', 'XXX',
+    'GET', 'HEAD', 'PUT', 'UPDATE', 'PATCH', 'XXX',
 ])
 @pytest.mark.parametrize('path', [
     'v1/publish/topic',
@@ -482,4 +481,4 @@ async def test_invalid_api_method_publish(
         proxy_server, swindon, loop, path, method):
     async with aiohttp.ClientSession(loop=loop) as s:
         async with s.request(method, swindon.api / path, data='{}') as resp:
-            assert resp.status == 400
+            assert resp.status == 404

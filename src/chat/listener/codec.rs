@@ -124,8 +124,8 @@ impl Handler {
         let mut iter = path.splitn(2, '/');
         let head = iter.next().unwrap();
         let tail = iter.next();
-        match (head, tail) {
-            ("connection", Some(tail)) => {
+        match (method, head, tail) {
+            (_, "connection", Some(tail)) => {
                 let mut p = tail.splitn(3, '/');
                 let cid = p.next().and_then(|x| x.parse().ok());
                 let middle = p.next();
@@ -133,8 +133,11 @@ impl Handler {
                 match middle {
                     Some("subscriptions") => {
                         let topic = tail.and_then(|x| {
-                            // TODO: check no dots are present
-                            x.replace("/", ".").parse().ok()
+                            if !x.contains('.') {
+                                x.replace("/", ".").parse().ok()
+                            } else {
+                                None
+                            }
                         });
                         match (method, cid, topic) {
                             ("PUT", Some(cid), Some(t)) => {
@@ -148,7 +151,11 @@ impl Handler {
                     }
                     Some("lattices") => {
                         let ns = tail.and_then(|x| {
-                            x.replace("/", ".").parse().ok()
+                            if !x.contains('.') {
+                                x.replace("/", ".").parse().ok()
+                            } else {
+                                None
+                            }
                         });
                         match (method, cid, ns) {
                             ("PUT", Some(cid), Some(ns)) => {
@@ -163,18 +170,26 @@ impl Handler {
                     _ => State::Error(Status::NotFound),
                 }
             }
-            ("publish", Some(tail)) => {
-                let topic = tail.replace("/", ".").parse().ok();
+            ("POST", "publish", Some(tail)) => {
+                let topic = if !tail.contains('.') {
+                    tail.replace("/", ".").parse().ok()
+                } else {
+                    None
+                };
                 if let Some(topic) = topic {
                     State::Query(Route::Publish(topic))
                 } else {
                     State::Error(Status::NotFound)
                 }
             }
-            ("lattice", Some(tail)) => {
-                let topic = tail.replace("/", ".").parse().ok();
-                if let Some(topic) = topic {
-                    State::Query(Route::Lattice(topic))
+            ("POST", "lattice", Some(tail)) => {
+                let ns = if !tail.contains('.') {
+                    tail.replace("/", ".").parse().ok()
+                } else {
+                    None
+                };
+                if let Some(ns) = ns {
+                    State::Query(Route::Lattice(ns))
                 } else {
                     State::Error(Status::NotFound)
                 }
