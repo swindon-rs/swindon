@@ -11,6 +11,11 @@ use routing::{parse_host, route};
 use default_error_page::serve_error_page;
 use request_id;
 
+use metrics::{Counter};
+
+lazy_static! {
+    pub static ref REQUESTS: Counter = Counter::new();
+}
 
 pub struct Router {
     addr: SocketAddr,
@@ -35,6 +40,7 @@ impl<S: Transport> Dispatcher<S> for Router {
     fn headers_received(&mut self, headers: &Head)
         -> Result<Self::Codec, Error>
     {
+        REQUESTS.incr(1);
         // Keep config same while processing a single request
         let cfg = self.runtime.config.get();
         let request_id = request_id::new();

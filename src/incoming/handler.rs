@@ -3,9 +3,10 @@ use std::path::Path;
 use tk_http::server::{Dispatcher, Error};
 use httpbin::HttpBin;
 
-use incoming::{Request, Input, Transport};
 use config::{Handler};
 use handlers;
+use incoming::{Request, Input, Transport};
+
 
 // TODO(tailhook) this should eventually be a virtual method on Handler trait
 impl Handler {

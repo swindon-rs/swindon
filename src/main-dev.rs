@@ -3,53 +3,56 @@
 // the crate
 #![allow(private_in_public)]
 
+#[macro_use] extern crate lazy_static;
 #[macro_use] extern crate log;
 #[macro_use] extern crate matches;
 #[macro_use] extern crate quick_error;
 #[macro_use] extern crate scoped_tls;
+extern crate abstract_ns;
+extern crate argparse;
+extern crate byteorder;
 extern crate env_logger;
 extern crate futures;
 extern crate futures_cpupool;
-extern crate quire;
-extern crate time;
-extern crate argparse;
-extern crate tokio_core;
-extern crate tokio_io;
-extern crate tk_http;
-extern crate netbuf;
-extern crate mime;
-extern crate sha1;
-extern crate mime_guess;
-extern crate tk_sendfile;
-extern crate tk_bufstream;
-extern crate rustc_serialize;
-extern crate byteorder;
 extern crate httparse;
 extern crate httpbin;
+extern crate libcantal;
+extern crate mime;
+extern crate mime_guess;
+extern crate netbuf;
+extern crate ns_std_threaded;
+extern crate quire;
+extern crate rand;
+extern crate rustc_serialize;
+extern crate self_meter_http;
+extern crate sha1;
 extern crate slab;
 extern crate string_intern;
-extern crate rand;
-extern crate tk_pool;
-extern crate abstract_ns;
-extern crate ns_std_threaded;
+extern crate time;
+extern crate tk_bufstream;
+extern crate tk_http;
 extern crate tk_listen;
-extern crate self_meter_http;
+extern crate tk_pool;
+extern crate tk_sendfile;
+extern crate tokio_core;
+extern crate tokio_io;
 
-mod intern;
-mod config;
-mod runtime;
-mod handlers;
 mod authorizers;
-mod routing;
-mod default_error_page;
-mod chat;
-mod dev;
-mod startup;
-mod incoming;
-mod http_pools;  // TODO(tailhook) move to proxy?
-mod proxy;
 mod base64;
+mod chat;
+mod config;
+mod default_error_page;
+mod dev;
+mod handlers;
+mod http_pools;  // TODO(tailhook) move to proxy?
+mod incoming;
+mod intern;
+mod metrics;
+mod proxy;
 mod request_id;
+mod routing;
+mod runtime;
+mod startup;
 
 use std::process::exit;
 use std::env;
