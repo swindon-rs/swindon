@@ -8,6 +8,7 @@
 #[macro_use] extern crate matches;
 #[macro_use] extern crate quick_error;
 #[macro_use] extern crate scoped_tls;
+#[macro_use] extern crate serde_derive;
 extern crate abstract_ns;
 extern crate argparse;
 extern crate byteorder;
@@ -25,6 +26,8 @@ extern crate quire;
 extern crate rand;
 extern crate rustc_serialize;
 extern crate self_meter_http;
+extern crate serde;
+extern crate serde_json;
 extern crate sha1;
 extern crate slab;
 extern crate string_intern;
