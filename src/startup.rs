@@ -142,7 +142,7 @@ pub fn populate_loop(handle: &Handle, cfg: &ConfigCell, verbose: bool)
     disk_pools.update(&root.disk_pools);
     http_pools.update(&root.http_destinations, &resolver, handle);
     session_pools.update(&root.session_pools, handle, &runtime);
-    replication_session.update(&root.replication, &runtime, handle);
+    replication_session.update(&root.replication, &resolver, handle);
     State {
         ns: resolver,
         http_pools: http_pools,
@@ -162,5 +162,5 @@ pub fn update_loop(state: &mut State, cfg: &ConfigCell, handle: &Handle) {
     state.session_pools.update(&cfg.get().session_pools,
         handle, &state.runtime);
     state.replication_session.update(&cfg.get().replication,
-        &state.runtime, handle);
+        &state.ns, handle);
 }

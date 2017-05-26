@@ -10,6 +10,7 @@ use futures::sync::mpsc::{unbounded, UnboundedSender};
 use futures::sync::oneshot::{channel as oneshot, Sender};
 use tk_http::websocket::Packet;
 use rustc_serialize::json;
+use abstract_ns::{Router};
 
 use request_id;
 use intern::SessionPoolName;
@@ -31,7 +32,7 @@ pub struct ReplicationSession {
 
 pub struct Watcher {
     // TODO: revise Arc<RwLock<>> on peers -- operations performed often;
-    peers: Arc<RwLock<HashMap<SocketAddr, State>>>,
+    peers: Arc<RwLock<HashMap<String, State>>>,
     pub tx: IncomingChannel,
     processor: Processor,
 }
@@ -91,7 +92,7 @@ impl ReplicationSession {
         }
     }
 
-    pub fn update(&mut self, cfg: &Arc<Replication>, _runtime: &Arc<Runtime>,
+    pub fn update(&mut self, cfg: &Arc<Replication>, resolver: &Router,
         handle: &Handle)
     {
         let mut to_delete = Vec::new();
@@ -136,25 +137,22 @@ impl ReplicationSession {
         }
 
         let mut peers = self.watcher.peers.write().expect("writable");
-        for addr in &cfg.peers {
-            match *addr {
-                ListenSocket::Tcp(addr) => {
-                    peers.insert(addr, State::Unknown);
-                }
-            }
+        for peer in &cfg.peers {
+            peers.insert(peer.clone(), State::Unknown);
         }
 
         let runtime_id = self.runtime_id.clone();
         let w = self.watcher.clone();
         let h = handle.clone();
         let s = cfg.clone();
+        let r = resolver.clone();
         let (tx, shutter) = oneshot();
         self.reconnect_shutter = Some(tx);
         handle.spawn(Interval::new(Duration::new(1, 0), &handle)
             .expect("interval created")
             .map_err(|e| error!("Interval error: {}", e))
             .for_each(move |_| {
-                w.reconnect(&runtime_id, &s, &h);
+                w.reconnect(&runtime_id, &s, &r, &h);
                 Ok(())
             })
             .select(shutter.map_err(|_| unreachable!()))
@@ -166,10 +164,9 @@ impl ReplicationSession {
 
 impl Watcher {
     pub fn reconnect(&self, runtime_id: &RuntimeId,
-        settings: &Arc<Replication>, handle: &Handle)
+        settings: &Arc<Replication>, resolver: &Router, handle: &Handle)
     {
         let mut peers = self.peers.write().expect("writable");
-        // TODO: Configure timeout value;
         let now = Instant::now();
         let timeout = now + *settings.reconnect_timeout;
         for (addr, state) in peers.iter_mut() {
@@ -193,17 +190,19 @@ impl Watcher {
             mem::replace(state, State::Connecting {
                 timeout: timeout.clone(),
             });
-            connect(*addr, self.tx.clone(), runtime_id, timeout, handle);
+            connect(addr, self.tx.clone(), runtime_id,
+                timeout, handle, resolver);
         }
     }
 
     fn handle_incoming(&self, action: ReplAction) {
         let mut peers = self.peers.write().expect("acquired for update");
         match action {
-            ReplAction::Attach { tx, runtime_id, addr } => {
-                debug!("Got connection from: {}, {}", addr, runtime_id);
+            ReplAction::Attach { tx, runtime_id, addr, peer } => {
+                debug!("Got connection from: {}, {}, {}",
+                    peer, addr, runtime_id);
                 let s = State::Connected { tx: tx };
-                if let Some(prev) = peers.insert(addr, s) {
+                if let Some(prev) = peers.insert(peer, s) {
                     debug!("Replaced prev connection {}: {:?}", addr, prev);
                 };
             }

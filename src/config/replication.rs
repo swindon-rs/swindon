@@ -8,7 +8,7 @@ use super::listen::{self, ListenSocket};
 #[derive(Debug, RustcDecodable, PartialEq, Eq)]
 pub struct Replication {
     pub listen: Vec<ListenSocket>,
-    pub peers: Vec<ListenSocket>,
+    pub peers: Vec<String>,
     pub max_connections: usize,
     pub listen_error_timeout: De<Duration>,
     pub reconnect_timeout: De<Duration>,

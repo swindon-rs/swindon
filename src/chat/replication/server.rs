@@ -122,6 +122,7 @@ impl<S: AsyncRead + AsyncWrite + 'static> Codec<S> for WebsocketCodec {
             tx: tx,
             runtime_id: self.remote_id,
             addr: self.remote_addr,
+            peer: format!("{}", self.remote_addr),
         });
 
         self.handle.spawn(

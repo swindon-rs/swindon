@@ -10,28 +10,32 @@ use runtime::RuntimeId;
 pub struct Authorizer {
     runtime_id: RuntimeId,
     addr: SocketAddr,
+    peername: String,
 }
 
 
 impl Authorizer {
-    pub fn new(addr: SocketAddr, runtime_id: RuntimeId) -> Authorizer {
+    pub fn new(addr: SocketAddr, peer: String, runtime_id: RuntimeId)
+        -> Authorizer
+    {
         Authorizer {
             runtime_id: runtime_id,
             addr: addr,
+            peername: peer,
         }
     }
 }
 
 impl<S> ws::Authorizer<S> for Authorizer {
-    type Result = (SocketAddr, RuntimeId);
+    type Result = (SocketAddr, String, RuntimeId);
 
     fn write_headers(&mut self, mut e: Encoder<S>)
         -> EncoderDone<S>
     {
         e.request_line("/v1/swindon-chat");
-        e.format_header("Host", &self.addr).unwrap();
+        e.format_header("Host", &self.peername).unwrap();
         e.format_header("Origin",
-            format_args!("http://{}/v1/swindon-chat", self.addr)).unwrap();
+            format_args!("http://{}/v1/swindon-chat", self.peername)).unwrap();
         e.format_header("X-Swindon-Node-Id", &self.runtime_id).unwrap();
         e.done()
     }
@@ -44,6 +48,6 @@ impl<S> ws::Authorizer<S> for Authorizer {
         .and_then(|h| str::from_utf8(h.value).ok())
         .and_then(|s| RuntimeId::from_str(s))
         .ok_or(Error::custom("invalid node id"))
-        .map(|x| (self.addr.clone(), x))
+        .map(|x| (self.addr.clone(), self.peername.clone(), x))
     }
 }
