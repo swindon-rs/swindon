@@ -2,45 +2,38 @@ use std::fmt;
 use std::ascii::AsciiExt;
 use string_intern::{Symbol, Validator};
 
+mod private {
+    // These structs are implementation details.
+    pub struct UpstreamValidator;
+    pub struct HandlerValidator;
+    pub struct DiskPoolValidator;
+    pub struct SessionPoolValidator;
+    pub struct SessionIdValidator;
+    pub struct TopicValidator;
+    pub struct LatticeNamespaceValidator;
+    pub struct LatticeKeyValidator;
+    pub struct LatticeVarValidator;
+    pub struct LdapValidator;
+    pub struct AuthorizerValidator;
+    pub struct NetworkValidator;
+}
+use self::private::*;
 
-struct UpstreamValidator;
 pub type Upstream = Symbol<UpstreamValidator>;
-
-struct HandlerValidator;
 pub type HandlerName = Symbol<HandlerValidator>;
-
-struct DiskPoolValidator;
 pub type DiskPoolName = Symbol<DiskPoolValidator>;
-
-struct SessionPoolValidator;
 pub type SessionPoolName = Symbol<SessionPoolValidator>;
-
-struct SessionIdValidator;
 pub type SessionId = Symbol<SessionIdValidator>;
-
-struct TopicValidator;
 pub type Topic = Symbol<TopicValidator>;
-
-struct LatticeNamespaceValidator;
 /// Name of the lattice namespace (set of keys)
 pub type Lattice = Symbol<LatticeNamespaceValidator>;
-
-struct LatticeKeyValidator;
 /// Key in lattice namespace (set of CRDT variables),
 /// logically should validate same as Topic
 pub type LatticeKey = Symbol<LatticeKeyValidator>;
-
-struct LatticeVarValidator;
 /// CRDT variable name in lattice
 pub type LatticeVar = Symbol<LatticeVarValidator>;
-
-struct LdapValidator;
 pub type LdapUpstream = Symbol<LdapValidator>;
-
-struct AuthorizerValidator;
 pub type Authorizer = Symbol<AuthorizerValidator>;
-
-struct NetworkValidator;
 pub type Network = Symbol<NetworkValidator>;
 
 quick_error! {
