@@ -1,8 +1,3 @@
-// I don't see **any** reason for this warning to be enabled. We only build binary
-// and most of these warnings do not apply to real visibility of types inside
-// the crate
-#![allow(private_in_public)]
-
 #[macro_use] extern crate lazy_static;
 #[macro_use] extern crate log;
 #[macro_use] extern crate matches;
