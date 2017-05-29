@@ -14,6 +14,7 @@ pub enum ReplAction {
 
     Attach {
         tx: OutgoingChannel,
+        peer: String,
         addr: SocketAddr,
         runtime_id: RuntimeId,
     },

@@ -14,6 +14,7 @@ use tk_http::websocket::{Config as WsConfig, Loop};
 use tk_http::websocket::{Dispatcher, Frame, Error};
 use tk_http::websocket::client::HandshakeProto;
 use rustc_serialize::json;
+use abstract_ns::{Router, Resolver};
 
 use config::Replication;
 use runtime::RuntimeId;
@@ -48,16 +49,28 @@ pub fn listen(addr: SocketAddr, sender: IncomingChannel,
     Ok(())
 }
 
-pub fn connect(addr: SocketAddr, sender: IncomingChannel,
-    runtime_id: &RuntimeId, timeout_at: Instant, handle: &Handle)
+pub fn connect(peer: &str, sender: IncomingChannel,
+    runtime_id: &RuntimeId, timeout_at: Instant, handle: &Handle,
+    resolver: &Router)
 {
     let wcfg = WsConfig::new().done();
     let runtime_id = runtime_id.clone();
+    let h1 = handle.clone();
+    let name = peer.to_string();
 
     let timeout = Timeout::new_at(timeout_at, &handle)
     .expect("timeout created");
 
-    handle.spawn(TcpStream::connect(&addr, &handle)
+    handle.spawn(
+    resolver.resolve(peer)
+    // .map_err(|e| e.into_io())  // error: has no into_io()
+    .map_err(|e| io::Error::new(io::ErrorKind::Other, "cant resolve"))
+    .and_then(|addr| {
+        addr.pick_one().map_or(
+            err(io::Error::new(io::ErrorKind::Other, "no address")),
+            |a| ok(a))
+    })
+    .and_then(move |addr| TcpStream::connect(&addr, &h1))
     .select2(timeout)
     .then(|res| {
         match res {
@@ -68,16 +81,18 @@ pub fn connect(addr: SocketAddr, sender: IncomingChannel,
         }
     })
     .and_then(move |sock| {
-        HandshakeProto::new(sock, Authorizer::new(addr, runtime_id))
+        let addr = sock.peer_addr().expect("address exist");
+        HandshakeProto::new(sock, Authorizer::new(addr, name, runtime_id))
         .map_err(|e| format!("WS auth error: {}", e))
     })
-    .and_then(move |(out, inp, (addr, runtime_id))| {
+    .and_then(move |(out, inp, (addr, peer, runtime_id))| {
         let (tx, rx) = unbounded();
         let rx = rx.map_err(|_| format!("receiver error"));
         sender.send(ReplAction::Attach {
             tx: tx,
             runtime_id: runtime_id,
             addr: addr,
+            peer: peer,
         });
         Loop::client(out, inp, rx, Handler(sender), &wcfg)
         .map_err(|e| format!("WS loop error: {}", e))
