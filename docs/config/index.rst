@@ -17,3 +17,4 @@ Configuration sections:
    http-destinations
    auth
    ldap
+   replication
