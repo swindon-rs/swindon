@@ -1,6 +1,12 @@
 Replication configuration
 =========================
 
+Swindon employs a special protocol we call "replication" to keep in sync
+swindon instances serving same session pools.  This is required to allow users
+to connect to any instance and get all updates that target the user, and also
+allows backends to send requests and data to any swindon instance without
+doing any sophisticated logic.
+
 
 Example
 -------
