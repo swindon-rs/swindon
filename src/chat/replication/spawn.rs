@@ -63,8 +63,9 @@ pub fn connect(peer: &str, sender: IncomingChannel,
 
     handle.spawn(
     resolver.resolve(peer)
-    // .map_err(|e| e.into_io())  // error: has no into_io()
-    .map_err(|e| io::Error::new(io::ErrorKind::Other, "cant resolve"))
+    .map_err(|e|
+        // I'm not sure this is a good idea actually
+        e.into_io())
     .and_then(|addr| {
         addr.pick_one().map_or(
             err(io::Error::new(io::ErrorKind::Other, "no address")),
