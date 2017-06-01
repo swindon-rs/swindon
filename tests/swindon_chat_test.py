@@ -33,6 +33,57 @@ async def test_simple_userinfo(proxy_server, swindon):
         assert msg == ['hello', {}, {'user_id': 'user:1', 'username': 'John'}]
 
 
+@pytest.mark.parametrize('resp,meta,data', [
+    ({'status': 400, 'text': '[invalid json'},
+     {'error_kind': 'http_error', 'http_error': 400},
+     None),
+    ({'status': 400, 'text': '{"fields_missing": ["args"]}'},
+     {'error_kind': 'http_error', 'http_error': 400},
+     {"fields_missing": ['args']}),
+    ({'status': 200, 'text': '[not a valid json'},
+     {'error_kind': 'data_error'},
+     'expected ident at line 1 column 3'),
+], ids=[
+    'http_error; invalid json',
+    'http_error; valid json ',
+    'data_error; invalid json',
+])
+async def test_backend_errors(proxy_server, swindon, resp, meta, data):
+    url = swindon.url / 'swindon-chat'
+    async with proxy_server.swindon_chat(url, timeout=1) as call:
+        req, fut = await call.request()
+        assert req.path == '/tangle/authorize_connection'
+        assert req.headers['Content-Type'] == 'application/json'
+        assert 'Authorization' not in req.headers
+        expected = [
+            {'connection_id': mock.ANY},
+            [],
+            {'http_cookie': None,
+             'http_authorization': None,
+             'url_querystring': '',
+             }]
+        assert await req.json() == expected
+
+        fut.set_result(
+            web.Response(text='{"user_id": "user:1", "username": "John"}'))
+        ws = await call.websocket
+        msg = await ws.receive_json()
+        assert msg == ['hello', {}, {'user_id': 'user:1', 'username': 'John'}]
+
+        ws.send_json(['test.bad_call', {'request_id': '1'}, [], {}])
+        req, fut = await call.request()
+        assert req.path == '/test/bad_call'
+        assert req.headers["Host"] == "swindon.internal"
+        assert await req.json() == [
+            {'request_id': '1', 'connection_id': mock.ANY}, [], {},
+        ]
+
+        fut.set_result(web.Response(**resp))
+        msg = await ws.receive_json()
+        meta.update(request_id='1')
+        assert msg == ["error", meta, data]
+
+
 @pytest.mark.xfail(reason="shutdown is not implemented yet")
 async def test_ws_close_timeout(proxy_server, swindon):
     url = swindon.url / 'swindon-chat'

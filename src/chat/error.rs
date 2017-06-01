@@ -73,7 +73,7 @@ impl Serialize for MessageError {
                 serializer.serialize_none()
             }
             HttpError(_, Some(ref j)) => {
-                j.serialize(serializer)
+                serializer.serialize_some(j)
             }
             Utf8Error(ref err) => {
                 serializer.serialize_str(format!("{}", err).as_str())

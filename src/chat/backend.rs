@@ -261,7 +261,6 @@ impl<S> http::Codec<S> for CallCodec {
         assert!(end);
         match mem::replace(&mut self.state, Void) {
             Headers(Status::Ok) => {
-                // TODO: connection_id must be dropped from meta
                 match serde_json::from_slice(data) {
                     Ok(x) => {
                         self.sender.send(ConnectionMessage::Result(
@@ -275,8 +274,8 @@ impl<S> http::Codec<S> for CallCodec {
             }
             Headers(status) => {
                 self.sender.send(ConnectionMessage::Error(self.meta.clone(),
-                    // TODO(tailhook) should we put body here?
-                    MessageError::HttpError(status, None)));
+                    MessageError::HttpError(status,
+                        serde_json::from_slice(data).ok())));
             }
             _ => unreachable!(),
         }
