@@ -1,7 +1,6 @@
 #!/bin/bash
-set -ex
 
-coverage() {
+build_kcov() {
   wget -c https://github.com/SimonKagstrom/kcov/archive/master.tar.gz &&
   tar xzf master.tar.gz &&
   cd kcov-master &&
@@ -11,12 +10,14 @@ coverage() {
   make &&
   make install &&
   cd ../.. &&
-  export PATH=$PATH:~/.local/bin &&
+  export PATH=$PATH:~/.local/bin
+  rm -r kcov-master
+}
+
+coverage() {
   for file in $(find target/debug -maxdepth 1 -name "swindon*-*" -not -name "*-dev" -executable); do
     echo "Running ${file}" &&
     mkdir -p "target/cov/$(basename $file)" &&
     kcov --include-path=$(pwd) --verify "target/cov/$(basename $file)/" "$file" || exit 1
-  done &&
-  bash <(curl -s https://codecov.io/bash) &&
-  echo "Uploaded code coverage"
-} && coverage
+  done
+}
