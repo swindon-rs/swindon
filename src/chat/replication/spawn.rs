@@ -13,8 +13,8 @@ use tk_http::server::{Proto, Config};
 use tk_http::websocket::{Config as WsConfig, Loop};
 use tk_http::websocket::{Dispatcher, Frame, Error};
 use tk_http::websocket::client::HandshakeProto;
-use rustc_serialize::json;
 use abstract_ns::{Router, Resolver};
+use serde_json;
 
 use config::Replication;
 use runtime::RuntimeId;
@@ -109,7 +109,7 @@ impl Dispatcher for Handler {
 
     fn frame (&mut self, frame: &Frame) -> Self::Future {
         if let &Frame::Text(data) = frame {
-            match json::decode(data) {
+            match serde_json::from_str(data) {
                 Ok(action) => {
                     debug!("Received action: {:?}", action);
                     self.0.send(action);

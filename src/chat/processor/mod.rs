@@ -13,15 +13,15 @@ use std::sync::Arc;
 use std::collections::HashMap;
 use std::fmt;
 
-use rustc_serialize::json::Json;
-use rustc_serialize::{Encodable, Encoder};
+use serde_json::Value as Json;
+use serde::ser::{Serialize, Serializer, SerializeTuple};
 use futures::sync::mpsc::{UnboundedSender as Sender};
 
 use config;
 use intern::{Topic, SessionId, SessionPoolName, Lattice as Namespace};
 use intern::LatticeKey;
 use chat::{Cid, ConnectionSender, CloseReason};
-use chat::message::Meta;
+use chat::message::{Meta, MetaWithExtra};
 use chat::error::MessageError;
 
 mod main;
@@ -146,70 +146,71 @@ pub enum Action {
     },
 }
 
-impl Encodable for ConnectionMessage {
-    fn encode<S: Encoder>(&self, s: &mut S) -> Result<(), S::Error>
+impl Serialize for ConnectionMessage {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error>
     {
         use self::ConnectionMessage::*;
+        let mut tup = serializer.serialize_tuple(3)?;
         match *self {
             Publish(ref topic, ref json) => {
-                s.emit_seq(3, |s| {
-                    #[derive(RustcEncodable)]
-                    struct Meta<'a> {
-                        topic: &'a Topic,
-                    }
-                    s.emit_seq_elt(0, |s| s.emit_str("message"))?;
-                    s.emit_seq_elt(1, |s| {
-                        Meta { topic: topic }.encode(s)
-                    })?;
-                    s.emit_seq_elt(2, |s| json.encode(s))
-                })
+                #[derive(Serialize)]
+                struct Meta<'a> {
+                    topic: &'a Topic,
+                }
+                tup.serialize_element("message")?;
+                tup.serialize_element(&Meta { topic: topic })?;
+                tup.serialize_element(json)?;
             }
             // We don't serialize session id, it's already in dict
             Hello(_, ref json) => {
-                s.emit_seq(3, |s| {
-                    s.emit_seq_elt(0, |s| s.emit_str("hello"))?;
-                    s.emit_seq_elt(1, |s| s.emit_map(0, |_| Ok(())))?;
-                    s.emit_seq_elt(2, |s| json.encode(s))
-                })
+                tup.serialize_element("hello")?;
+                tup.serialize_element(&json!({}))?;
+                tup.serialize_element(json)?;
             }
             Lattice(ref namespace, ref json) => {
-                s.emit_seq(3, |s| {
-                    #[derive(RustcEncodable)]
-                    struct Meta<'a> {
-                        namespace: &'a Namespace,
-                    }
-                    s.emit_seq_elt(0, |s| s.emit_str("lattice"))?;
-                    s.emit_seq_elt(1, |s| {
-                        Meta { namespace: namespace }.encode(s)
-                    })?;
-                    s.emit_seq_elt(2, |s| json.encode(s))
-                })
+                #[derive(Serialize)]
+                struct Meta<'a> {
+                    namespace: &'a Namespace,
+                }
+                tup.serialize_element("lattice")?;
+                tup.serialize_element(&Meta { namespace: namespace })?;
+                tup.serialize_element(json)?;
             }
             Result(ref meta, ref json) => {
-                s.emit_seq(3, |s| {
-                    s.emit_seq_elt(0, |s| s.emit_str("result"))?;
-                    s.emit_seq_elt(1, |s| meta.encode(s))?;
-                    s.emit_seq_elt(2, |s| json.encode(s))
-                })
+                tup.serialize_element("result")?;
+                tup.serialize_element(&meta)?;
+                tup.serialize_element(json)?;
             }
             Error(ref meta, ref err) => {
-                s.emit_seq(3, |s| {
-                    s.emit_seq_elt(0, |s| s.emit_str("error"))?;
-                    s.emit_seq_elt(1, |s| meta.encode(s))?;
-                    s.emit_seq_elt(2, |s| err.encode(s))
-                })
+                tup.serialize_element("error")?;
+                let extra = match err {
+                    &MessageError::HttpError(ref status, _) => {
+                        json!({
+                            "error_kind": "http_error",
+                            "http_error": status.code(),
+                        })
+                    }
+                    &MessageError::JsonError(_) => {
+                        json!({"error_kind": "data_error"})
+                    }
+                    _ => {
+                        json!({"error_kind": "internal_error"})
+                    }
+                };
+                tup.serialize_element(&MetaWithExtra {
+                    meta: meta, extra: extra
+                })?;
+                tup.serialize_element(&err)?;
             }
             StopSocket(ref reason) => {
                 // this clause should never actually be called
                 // but we think it's unwise to put assertions in serializer
-                s.emit_seq(2, |s| {
-                    s.emit_seq_elt(0, |s| s.emit_str("stop"))?;
-                    s.emit_seq_elt(1, |s| {
-                        s.emit_str(&format!("{:?}", reason))
-                    })
-                })
+                tup.serialize_element("stop")?;
+                tup.serialize_element(&format!("{:?}", reason))?;
+                tup.serialize_element(&json!(null))?;
             }
         }
+        tup.end()
     }
 }
 

@@ -5,83 +5,25 @@
 /// ```
 use std::str;
 use std::ascii::AsciiExt;
-use std::collections::BTreeMap;
 
-use rustc_serialize::json::{Json};
-use rustc_serialize::{Encodable, Encoder};
+use serde_json::{self, Value as Json, Map, Error as JsonError};
+use serde::ser::{Serialize, Serializer, SerializeTuple};
+use serde::de::Error;
 
-pub type Meta = BTreeMap<String, Json>;
+pub type Meta = Map<String, Json>;
 pub type Args = Vec<Json>;
-pub type Kwargs = BTreeMap<String, Json>;
+pub type Kwargs = Map<String, Json>;
 
-
-quick_error! {
-    #[derive(Debug, PartialEq)]
-    pub enum ValidationError {
-        /// Invalid message length;
-        InvalidLength {}
-        /// Invalid method ("tangle." or contains ".");
-        InvalidMethod {}
-        /// request_id is missing or invalid in request_meta object;
-        InvalidRequestId {}
-        /// user_id is missing or invalid in request_meta object;
-        InvalidUserId {}
-        /// Array of args expected;
-        ArrayExpected {}
-        /// Meta/Kwargs object expected;
-        ObjectExpected {}
-    }
-}
 
 /// Decode Websocket json message into Meta & Message structs.
 pub fn decode_message(s: &str)
-    -> Result<(String, Meta, Args, Kwargs), ValidationError>
+    -> Result<(String, Meta, Args, Kwargs), JsonError>
 {
-    use self::ValidationError::*;
-    let valid_method = |m: &str| {
-        !m.starts_with("tangle.") &&
-        m.chars().all(|c| c.is_ascii() &&
-            (c.is_alphanumeric() || c == '-' || c == '_' || c == '.' ))
-    };
-    match Json::from_str(s) {
-        Ok(Json::Array(mut message)) => {
-            use rustc_serialize::json::Json::*;
 
-            if message.len() != 4 {
-                return Err(InvalidLength)
-            }
-            let kwargs = match message.pop() {
-                Some(Object(kwargs)) => kwargs,
-                _ => return Err(ObjectExpected),
-            };
-            let args = match message.pop() {
-                Some(Array(args)) => args,
-                _ => return Err(ArrayExpected),
-            };
-            let meta = match message.pop() {
-                Some(Object(meta)) => meta,
-                _ => return Err(ObjectExpected),
-            };
-            match meta.get("request_id".into()) {
-                Some(&Json::String(ref s)) if s.len() > 0 => {}
-                Some(&Json::I64(_)) |
-                    Some(&Json::U64(_)) |
-                    Some(&Json::F64(_)) => {},
-                _ => return Err(InvalidRequestId),
-            };
-            let method = match message.pop() {
-                Some(Json::String(method)) => {
-                    if !valid_method(&method) {
-                        return Err(InvalidMethod);
-                    }
-                    method
-                }
-                _ => return Err(InvalidMethod),
-            };
-            Ok((method, meta, args, kwargs))
-        }
-        _ => Err(ArrayExpected),
-    }
+    let res = serde_json::from_str::<Request>(s)?;
+    res.validate()?;
+    let Request(method, meta, args, kwargs) = res;
+    Ok((method, meta, args, kwargs))
 }
 
 
@@ -89,15 +31,11 @@ pub fn decode_message(s: &str)
 /// it either set to true or uint timeout (in seconds).
 pub fn get_active(meta: &Meta) -> Option<u64>
 {
-    let duration = meta.get(&"active".to_string());
-    match duration {
-        Some(&Json::U64(v)) => Some(v),
-        _ => None,
-    }
+    meta.get(&"active".to_string()).and_then(|v| v.as_u64())
 }
 
 
-#[derive(RustcEncodable)]
+#[derive(Serialize)]
 pub struct AuthData {
     pub http_cookie: Option<String>,
     pub http_authorization: Option<String>,
@@ -108,52 +46,75 @@ pub struct AuthData {
 
 pub struct Auth<'a>(pub &'a String, pub &'a AuthData);
 
-impl<'a> Encodable for Auth<'a> {
-    fn encode<S: Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
-        s.emit_seq(3, |s| {
-            s.emit_seq_elt(0, |s| {
-                s.emit_map(1, |s| {
-                    s.emit_map_elt_key(0, |s| s.emit_str("connection_id"))?;
-                    s.emit_map_elt_val(0, |s| self.0.encode(s))?;
-                    Ok(())
-                })?;
-                Ok(())
-            })?;
-            s.emit_seq_elt(1, |s| s.emit_seq(0, |_| Ok(())))?;
-            s.emit_seq_elt(2, |s| self.1.encode(s))?;
-            Ok(())
-        })?;
-        Ok(())
+impl<'a> Serialize for Auth<'a> {
+    fn serialize<S: Serializer>(&self, serializer: S)
+        -> Result<S::Ok, S::Error>
+    {
+        let mut tup = serializer.serialize_tuple(3)?;
+        tup.serialize_element(&json!({"connection_id": self.0}))?;
+        tup.serialize_element(&json!([]))?;
+        tup.serialize_element(&self.1)?;
+        tup.end()
     }
 }
 
 pub struct Call<'a>(pub &'a Meta, pub &'a String, pub &'a Args, pub &'a Kwargs);
 
-impl<'a> Encodable for Call<'a> {
-    fn encode<S: Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
-        s.emit_seq(3, |s| {
-            s.emit_seq_elt(0, |s| {
-                let n = match self.0.get("connection_id") {
-                    Some(_) => self.0.len(),
-                    None => self.0.len() + 1,
-                };
-                s.emit_map(n, |s| {
-                    s.emit_map_elt_key(0, |s| s.emit_str("connection_id"))?;
-                    s.emit_map_elt_val(0, |s| self.1.encode(s))?;
-                    let m = self.0.iter()
-                        .filter(|&(&ref k, _)| k != "connection_id")
-                        .enumerate();
-                    for (i, (ref k, ref v)) in m {
-                        s.emit_map_elt_key(i+1, |s| s.emit_str(k))?;
-                        s.emit_map_elt_val(i+1, |s| v.encode(s))?;
-                    }
-                    Ok(())
-                })
-            })?;
-            s.emit_seq_elt(1, |s| self.2.encode(s))?;
-            s.emit_seq_elt(2, |s| self.3.encode(s))?;
-            Ok(())
+impl<'a> Serialize for Call<'a> {
+    fn serialize<S: Serializer>(&self, serializer: S)
+        -> Result<S::Ok, S::Error>
+    {
+        let mut tup = serializer.serialize_tuple(3)?;
+        tup.serialize_element(&MetaWithExtra {
+            meta: self.0,
+            extra: json!({"connection_id": self.1}),
         })?;
+        tup.serialize_element(&self.2)?;
+        tup.serialize_element(&self.3)?;
+        tup.end()
+    }
+}
+
+pub struct MetaWithExtra<'a> {
+    pub meta: &'a Meta,
+    pub extra: Json,
+}
+impl<'a> Serialize for MetaWithExtra<'a> {
+    fn serialize<S>(&self, s: S) -> Result<S::Ok, S::Error>
+        where S: Serializer
+    {
+        if let Json::Object(ref extra) = self.extra {
+            s.collect_map(extra.iter()
+                .chain(self.meta.iter()
+                    .filter(|&(&ref k,_)| extra.get(k).is_none())))
+        } else {
+            s.collect_map(self.meta.iter())
+        }
+    }
+}
+
+#[derive(Deserialize)]
+struct Request(String, Meta, Args, Kwargs);
+
+impl Request {
+    fn validate(&self) -> Result<(), JsonError> {
+        let method = self.0.as_str();
+        if method.len() == 0 {
+            return Err(JsonError::custom("invalid method"))
+        }
+        if method.starts_with("tangle.") {
+            return Err(JsonError::custom("invalid method"))
+        }
+        if !method.chars().all(|c| c.is_ascii() &&
+            (c.is_alphanumeric() || c == '-' || c == '_' || c == '.'))
+        {
+            return Err(JsonError::custom("invalid method"))
+        }
+        match self.1.get("request_id") {
+            Some(&Json::Number(_)) => {},
+            Some(&Json::String(ref s)) if s.len() > 0 => {}
+            _ => return Err(JsonError::custom("invalid request_id"))
+        }
         Ok(())
     }
 }
@@ -161,44 +122,113 @@ impl<'a> Encodable for Call<'a> {
 
 #[cfg(test)]
 mod test {
-    use rustc_serialize::json::{self, Json};
+    use serde_json::Value as Json;
+    use serde_json::to_string as json_encode;
 
     use chat::message::{self, Call, Meta, Args, Kwargs, Auth, AuthData};
-    use super::ValidationError as V;
 
     #[test]
     fn decode_message_errors() {
-        macro_rules! err {
+        macro_rules! error_starts {
             ($a:expr, $b:expr) => {
-                assert_eq!(message::decode_message($a).err().unwrap(), $b);
-            }
+                {
+                    let rv = message::decode_message($a);
+                    assert!(rv.is_err(),
+                        format!("unexpectedly valid: {}", $a));
+                    let err = format!("{}", rv.err().unwrap());
+                    assert!(err.starts_with($b),
+                        format!("{}: {} != {}", $a, err, $b));
+                }
+            };
+            ($( $a:expr, $b:expr ),+) => {
+                $( error_starts!($a, $b) );*
+            };
         }
-        err!("", V::ArrayExpected);
-        err!("[invalid json", V::ArrayExpected);
-        err!("{}", V::ArrayExpected);
-        err!("[]", V::InvalidLength);
-        err!("[1, 2, 3, 4, 5]", V::InvalidLength);
-        err!("[1, 2, 3, 4]", V::ObjectExpected);
-        err!("[null, null, null, 4]", V::ObjectExpected);
-        err!("[1, 2, 3, {}]", V::ArrayExpected);
-        err!("[1, 2, [], {}]", V::ObjectExpected);
-        err!("[1, {}, [], {}]", V::InvalidRequestId);
-        err!("[1, {\"request_id\": null}, [], {}]", V::InvalidRequestId);
-        err!("[1, {\"request_id\": []}, [], {}]", V::InvalidRequestId);
-        err!("[1, {\"request_id\": {}}, [], {}]", V::InvalidRequestId);
-        err!("[1, {\"request_id\": \"\"}, [], {}]", V::InvalidRequestId);
-        err!("[1, {\"request_id\": 123}, [], {}]", V::InvalidMethod);
-        err!("[null, {\"request_id\": 123}, [], {}]", V::InvalidMethod);
-        err!("[[], {\"request_id\": 123}, [], {}]", V::InvalidMethod);
-        err!("[{}, {\"request_id\": 123}, [], {}]", V::InvalidMethod);
-        err!("[\"bad/method\", {\"request_id\": 123}, [], {}]",
-            V::InvalidMethod);
-        err!("[\"very bad method\", {\"request_id\": 123}, [], {}]",
-            V::InvalidMethod);
-        err!("[\"tangle.auth\", {\"request_id\": 123}, [], {}]",
-            V::InvalidMethod);
-        err!("[\"   bad.method   \", {\"request_id\": 123}, [], {}]",
-            V::InvalidMethod);
+
+        error_starts!(
+            "",
+                "EOF while parsing a value"
+        );
+        error_starts!(
+            "[invalid json",
+                "expected value at line 1"
+        );
+        error_starts!(
+            "{}",
+                "invalid type: map, expected tuple struct"
+        );
+        error_starts!(
+            "[]",
+                "invalid length 0"
+        );
+        error_starts!(
+            "[1, 2, 3, 4, 5]",
+                "invalid type: integer `1`, expected a string"
+        );
+        error_starts!(
+            "[1, 2, 3, 4]",
+                "invalid type: integer `1`, expected a string"
+        );
+        error_starts!(
+            "[null, null, null, 4]",
+                "invalid type: unit value, expected a string"
+        );
+        error_starts!(
+            "[\"1\", 2, 3, 4]",
+                "invalid type: integer `2`, expected a map"
+        );
+        error_starts!(
+            "[\"1\", {}, 3, 4]",
+                "invalid type: integer `3`, expected a sequence"
+        );
+        error_starts!(
+            "[\"1\", {}, [], 4]",
+                "invalid type: integer `4`, expected a map"
+        );
+        error_starts!(
+            "[\"1\", {}, [], {}]",
+                "invalid request_id"
+        );
+        error_starts!(
+            "[\"1\", {\"request_id\": null}, [], {}]",
+                "invalid request_id"
+        );
+        error_starts!(
+            "[\"foo\", {\"request_id\": []}, [], {}]",
+                "invalid request_id"
+        );
+        error_starts!(
+            "[\"foo\", {\"request_id\": {}}, [], {}]",
+                "invalid request_id"
+        );
+        error_starts!(
+            "[\"foo\", {\"request_id\": \"\"}, [], {}]",
+                "invalid request_id"
+        );
+        error_starts!(
+            "[\"\", {\"request_id\": 123}, [], {}]",
+                "invalid method"
+        );
+        error_starts!(
+            "[\"bad/method\", {\"request_id\": 123}, [], {}]",
+                "invalid method"
+        );
+        error_starts!(
+            "[\"very bad method\", {\"request_id\": 123}, [], {}]",
+                "invalid method"
+        );
+        error_starts!(
+            "[\"tangle.auth\", {\"request_id\": 123}, [], {}]",
+                "invalid method"
+        );
+        error_starts!(
+            "[\"   tangle.auth\", {\"request_id\": 123}, [], {}]",
+                "invalid method"
+        );
+        error_starts!(
+            "[\"   bad.method   \", {\"request_id\": 123}, [], {}]",
+                "invalid method"
+        );
     }
 
     #[test]
@@ -208,7 +238,7 @@ mod test {
             "#).unwrap();
         let (method, meta, args, kwargs) = res;
         assert_eq!(method, "some.method".to_string());
-        match meta.get("request_id".into()).unwrap() {
+        match meta.get("request_id").unwrap() {
             &Json::String(ref s) => assert_eq!(s, &"123".to_string()),
             _ => unreachable!(),
         }
@@ -221,7 +251,7 @@ mod test {
 
     #[test]
     fn encode_auth() {
-        let res = json::encode(&Auth(&"conn:1".to_string(), &AuthData {
+        let res = json_encode(&Auth(&"conn:1".to_string(), &AuthData {
             http_cookie: None, http_authorization: None,
             url_querystring: "".to_string(),
         })).unwrap();
@@ -236,7 +266,7 @@ mod test {
             url_querystring: "".to_string(),
         };
 
-        let res = json::encode(&Auth(&"conn:2".to_string(), &kw)).unwrap();
+        let res = json_encode(&Auth(&"conn:2".to_string(), &kw)).unwrap();
         assert_eq!(res, concat!(
             r#"[{"connection_id":"conn:2"},"#,
             r#"[],{"http_cookie":"auth=ok","#,
@@ -250,22 +280,22 @@ mod test {
         let mut kw = Kwargs::new();
         let cid = "123".to_string();
 
-        let res = json::encode(&Call(&meta, &cid, &args, &kw)).unwrap();
+        let res = json_encode(&Call(&meta, &cid, &args, &kw)).unwrap();
         assert_eq!(res, "[{\"connection_id\":\"123\"},[],{}]");
 
-        meta.insert("request_id".into(), Json::String("123".into()));
-        args.push(Json::String("Hello".into()));
-        args.push(Json::String("World!".into()));
-        kw.insert("room".into(), Json::U64(123));
+        meta.insert("request_id".into(), json!("123"));
+        args.push(json!("Hello"));
+        args.push(json!("World!"));
+        kw.insert("room".into(), json!(123));
 
-        let res = json::encode(&Call(&meta, &cid, &args, &kw)).unwrap();
+        let res = json_encode(&Call(&meta, &cid, &args, &kw)).unwrap();
         assert_eq!(res, concat!(
             r#"[{"connection_id":"123","request_id":"123"},"#,
             r#"["Hello","World!"],"#,
             r#"{"room":123}]"#));
 
-        meta.insert("connection_id".into(), Json::String("321".into()));
-        let res = json::encode(&Call(&meta, &cid, &args, &kw)).unwrap();
+        meta.insert("connection_id".into(), json!("321"));
+        let res = json_encode(&Call(&meta, &cid, &args, &kw)).unwrap();
         assert_eq!(res, concat!(
             r#"[{"connection_id":"123","request_id":"123"},"#,
             r#"["Hello","World!"],"#,
@@ -278,25 +308,22 @@ mod test {
 
         assert!(message::get_active(&meta).is_none());
 
-        meta.insert("active".into(), Json::String("".into()));
+        meta.insert("active".into(), json!(""));
         assert!(message::get_active(&meta).is_none());
 
-        meta.insert("active".into(), Json::Boolean(true));
+        meta.insert("active".into(), json!(true));
         assert!(message::get_active(&meta).is_none());
 
-        meta.insert("active".into(), Json::I64(123i64));
-        assert!(message::get_active(&meta).is_none());
-
-        meta.insert("active".into(), Json::F64(123f64));
-        assert!(message::get_active(&meta).is_none());
-
-        meta.insert("active".into(), Json::U64(123));
+        meta.insert("active".into(), json!(123i64));
         assert_eq!(message::get_active(&meta).unwrap(), 123u64);
 
-        if let Json::Object(meta) = Json::from_str("{\"active\": 123}")
-            .unwrap()
-        {
-            assert!(message::get_active(&meta).is_some());
-        }
+        meta.insert("active".into(), json!(-123));
+        assert!(message::get_active(&meta).is_none());
+
+        meta.insert("active".into(), json!(123f64));
+        assert!(message::get_active(&meta).is_none());
+
+        meta.insert("active".into(), json!(123));
+        assert_eq!(message::get_active(&meta).unwrap(), 123u64);
     }
 }

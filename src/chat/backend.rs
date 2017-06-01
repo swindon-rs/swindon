@@ -1,4 +1,3 @@
-use std::str::from_utf8;
 use std::sync::Arc;
 use std::io::BufWriter;
 use std::mem;
@@ -7,8 +6,8 @@ use futures::Async;
 use futures::future::{FutureResult, ok};
 use tk_http::{Status, Version};
 use tk_http::client as http;
-use rustc_serialize::Encodable;
-use rustc_serialize::json::{encode, as_json, Json};
+use serde_json::{self, Value as Json};
+use serde::ser::Serialize;
 
 use chat::authorize::{parse_userinfo, good_status};
 use chat::{Cid, ConnectionSender, ConnectionMessage, TangleAuth};
@@ -120,11 +119,11 @@ impl InactivityCodec {
 
 fn write_json_request<S, E>(mut e: http::Encoder<S>, data: &E)
     -> http::EncoderDone<S>
-    where E: Encodable,
+    where E: Serialize,
 {
     use std::io::Write;
     e.add_header("Content-Type", "application/json").unwrap();
-    let body = encode(data).unwrap();
+    let body = serde_json::to_string(data).unwrap();
     let body = body.as_bytes();
     e.add_length(body.len() as u64).unwrap();
     e.done_headers().unwrap();
@@ -184,13 +183,7 @@ impl<S> http::Codec<S> for AuthCodec {
         assert!(end);
         match mem::replace(&mut self.state, Void) {
             Headers(Status::Ok) => {
-                let result = from_utf8(data)
-                    .map_err(|e| debug!("Invalid utf-8 in auth data: {}", e))
-                .and_then(|s| Json::from_str(s)
-                    .map_err(|e| debug!("Invalid json in auth data: {}", e)))
-                .and_then(|j| parse_userinfo(j)
-                    .map_err(|e| debug!("Bad user info in auth data: {}", e)));
-                match result {
+                match parse_userinfo(data) {
                     Ok((sess_id, userinfo)) => {
                         let userinfo = Arc::new(userinfo);
                         debug!("Auth data received {:?}: {:?}",
@@ -203,8 +196,9 @@ impl<S> http::Codec<S> for AuthCodec {
                             metadata: userinfo,
                         });
                     }
-                    Err(()) => {
-                        debug!("Auth error");
+                    Err(e) => {
+                        debug!(
+                            "Invalid JSON or user info in auth data: {}", e);
                         self.sender.send(StopSocket(
                             AuthHttp(Status::InternalServerError)));
                     }
@@ -267,22 +261,21 @@ impl<S> http::Codec<S> for CallCodec {
         assert!(end);
         match mem::replace(&mut self.state, Void) {
             Headers(Status::Ok) => {
-                // TODO: connection_id must be dropped from meta
-                match parse_response(data) {
+                match serde_json::from_slice(data) {
                     Ok(x) => {
                         self.sender.send(ConnectionMessage::Result(
                             self.meta.clone(), x));
                     }
                     Err(e) => {
                         self.sender.send(ConnectionMessage::Error(
-                            self.meta.clone(), e));
+                            self.meta.clone(), e.into()));
                     }
                 }
             }
             Headers(status) => {
                 self.sender.send(ConnectionMessage::Error(self.meta.clone(),
-                    // TODO(tailhook) should we put body here?
-                    MessageError::HttpError(status, None)));
+                    MessageError::HttpError(status,
+                        serde_json::from_slice(data).ok())));
             }
             _ => unreachable!(),
         }
@@ -319,8 +312,4 @@ impl<S> http::Codec<S> for InactivityCodec {
         assert!(end);
         Ok((Async::Ready(data.len())))
     }
-}
-
-fn parse_response(data: &[u8]) -> Result<Json, MessageError> {
-    Ok(Json::from_str(from_utf8(data)?)?)
 }

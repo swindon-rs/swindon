@@ -10,7 +10,7 @@ use tk_http::Status;
 use tk_http::server::{Dispatcher, Error, Head};
 use tk_http::server as http;
 use tk_http::server::{EncoderDone, RecvMode};
-use rustc_serialize::json;
+use serde_json::{self, Value as Json};
 
 use intern::{Topic, Lattice as Namespace};
 use chat::Cid;
@@ -246,20 +246,10 @@ impl<S> http::Codec<S> for Request {
             }
             State::Query(Publish(topic)) => {
                 // TODO(tailhook) check content-type
-                let data = from_utf8(data)
-                    .map_err(|e| {
-                        info!("Error decoding utf-8 for '/v1/publish': \
-                            {:?}", e);
-                    })
-                    .and_then(|data| json::Json::from_str(data)
-                    .map_err(|e| {
-                        info!("Error decoding json for '/v1/publish': \
-                            {:?}", e);
-                    }));
-                match data {
+                match serde_json::from_slice(data) {
                     Ok(json) => {
                         // Send this Action to Replication Queue
-                        let data = Arc::new(json);
+                        let data: Arc<Json> = Arc::new(json);
                         self.wdata.remote.send(RemoteAction::Publish {
                             topic: topic.clone(),
                             data: data.clone(),
@@ -270,25 +260,21 @@ impl<S> http::Codec<S> for Request {
                         });
                         State::Done
                     }
-                    Err(_) => {
+                    Err(e) => {
+                        info!("Error decoding json for '/v1/publish': \
+                            {:?}", e);
                         State::Error(Status::BadRequest)
                     }
                 }
             }
             State::Query(LatticeSubscribe(cid, ns)) => {
                 // TODO(tailhook) check content-type
-                let data: Result<Delta,_> = from_utf8(data)
-                    .map_err(|e| {
-                        info!("Error decoding utf-8 for \
-                            '/v1/lattice/_/subscribe': \
-                            {:?}", e);
-                    })
-                    .and_then(|data| json::decode(data)
+                let data: Result<Delta,_> = serde_json::from_slice(data)
                     .map_err(|e| {
                         info!("Error decoding json for \
                             '/v1/lattice/_/subscribe': \
                             {:?}", e);
-                    }));
+                    });
                 match data {
                     Ok(delta) => {
                         self.wdata.remote.send(RemoteAction::Lattice {
@@ -327,18 +313,12 @@ impl<S> http::Codec<S> for Request {
             }
             State::Query(Lattice(ns)) => {
                 // TODO(tailhook) check content-type
-                let data: Result<Delta,_> = from_utf8(data)
-                    .map_err(|e| {
-                        info!("Error decoding utf-8 for \
-                            '/v1/lattice': \
-                            {:?}", e);
-                    })
-                    .and_then(|data| json::decode(data)
+                let data: Result<Delta,_> = serde_json::from_slice(data)
                     .map_err(|e| {
                         info!("Error decoding json for \
                             '/v1/lattice': \
                             {:?}", e);
-                    }));
+                    });
                 match data {
                     Ok(delta) => {
                         // Send this Action to Replication Queue

@@ -9,7 +9,7 @@ use futures::{Future, Stream};
 use futures::sync::mpsc::{unbounded, UnboundedSender};
 use futures::sync::oneshot::{channel as oneshot, Sender};
 use tk_http::websocket::Packet;
-use rustc_serialize::json;
+use serde_json::to_string as json_encode;
 use abstract_ns::{Router};
 
 use request_id;
@@ -213,7 +213,7 @@ impl Watcher {
     }
 
     fn handle_outgoing(&self, action: ReplAction) {
-        if let Ok(data) = json::encode(&action) {
+        if let Ok(data) = json_encode(&action) {
             let mut peers = self.peers.write().expect("acquired for update");
             for (_, state) in peers.iter_mut() {
                 let err = match *state {

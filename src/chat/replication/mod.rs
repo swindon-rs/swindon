@@ -6,7 +6,6 @@ mod session;
 mod spawn;
 mod server;
 mod client;
-mod serialize;
 
 pub use self::action::{ReplAction, RemoteAction};
 pub use self::session::ReplicationSession;

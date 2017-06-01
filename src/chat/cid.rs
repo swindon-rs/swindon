@@ -3,7 +3,7 @@ use std::str::FromStr;
 use std::num::ParseIntError;
 
 /// Internal connection id
-#[derive(Hash, PartialEq, Eq, Clone, Copy)]
+#[derive(Hash, PartialEq, Eq, Clone, Copy, Serialize, Deserialize)]
 pub struct Cid(u64);
 
 

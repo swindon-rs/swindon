@@ -3,7 +3,7 @@ use std::time::{Instant, Duration};
 use std::collections::{HashMap, HashSet};
 use std::collections::hash_map::Entry::Occupied;
 
-use rustc_serialize::json::Json;
+use serde_json::Value as Json;
 use futures::sync::mpsc::{UnboundedSender as Sender};
 
 use intern::{Topic, SessionId, SessionPoolName, Lattice as Namespace};
@@ -468,7 +468,6 @@ mod test {
     use std::sync::Arc;
     use std::time::{Instant, Duration};
     use std::collections::HashMap;
-    use rustc_serialize::json::Json;
     use futures::{Async};
     use futures::stream::Stream;
     use futures::sync::mpsc::{unbounded as channel};
@@ -511,11 +510,7 @@ mod test {
         let (tx, rx) = ConnectionSender::new();
         pool.add_connection(cid, tx);
         pool.associate(cid, SessionId::from("user1"), Instant::now(),
-            Arc::new(Json::Object(vec![
-                ("user_id", "user1"),
-            ].into_iter().map(|(x, y)| {
-                (x.into(), Json::String(y.into()))
-            }).collect())));
+            Arc::new(json!({"user_id": "user1"})));
         return (cid, rx);
     }
 
@@ -524,11 +519,7 @@ mod test {
         let (tx, rx) = ConnectionSender::new();
         pool.add_connection(cid, tx);
         pool.associate(cid, SessionId::from("user2"), Instant::now(),
-            Arc::new(Json::Object(vec![
-                ("user_id", "user2"),
-            ].into_iter().map(|(x, y)| {
-                (x.into(), Json::String(y.into()))
-            }).collect())));
+            Arc::new(json!({"user_id": "user2"})));
         return (cid, rx);
     }
 
@@ -622,11 +613,7 @@ mod test {
         });
         pool.lattice_attach(cid, Ns::from("rooms"));
         pool.associate(cid, SessionId::from("user1"), Instant::now(),
-            Arc::new(Json::Object(vec![
-                ("user_id", "user1"),
-            ].into_iter().map(|(x, y)| {
-                (x.into(), Json::String(y.into()))
-            }).collect())));
+            Arc::new(json!({"user_id": "user1"})));
         assert_matches!(get_item(&mut rx),
             ConnectionMessage::Lattice(..)); // TODO(tailhook)
     }
