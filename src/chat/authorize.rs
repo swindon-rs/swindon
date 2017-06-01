@@ -7,7 +7,7 @@ use futures::{AsyncSink};
 use futures::sink::Sink;
 use tk_http::Status;
 use tk_http::server::Head;
-use rustc_serialize::json::Json;
+use serde_json::{self, Value as Json};
 
 use intern::SessionId;
 use config::chat::Chat;
@@ -140,24 +140,21 @@ pub fn good_status(status: Status) -> bool {
 }
 
 /// Parse userinfo received on Auth call;
-pub fn parse_userinfo(response: Json)
+pub fn parse_userinfo(data: &[u8])
     -> Result<(SessionId, Json), MessageError>
 {
-    use super::message::ValidationError::*;
-    use super::error::MessageError::*;
-    match response {
-        Json::Object(data) => {
-            let sess_id = match data.get("user_id".into()) {
-                Some(&Json::String(ref s)) => {
-                    SessionId::from_str(s.as_str())
-                    .map_err(|_| ValidationError(InvalidUserId))?
-                }
-                _ => return Err(ValidationError(InvalidUserId)),
-            };
-            Ok((sess_id, Json::Object(data)))
+    use super::message::ValidationError::InvalidUserId;
+    use super::error::MessageError::ValidationError;
+
+    let data: Json = serde_json::from_slice(data)?;
+    let ssid = match data.get("user_id") {
+        Some(&Json::String(ref ssid)) => {
+            SessionId::from_str(ssid.as_str())
+            .map_err(|_| ValidationError(InvalidUserId))?
         }
         _ => {
-            Err(ValidationError(ObjectExpected))
+            return Err(ValidationError(InvalidUserId))
         }
-    }
+    };
+    Ok((ssid, data))
 }

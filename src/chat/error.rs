@@ -2,8 +2,8 @@ use std::io;
 use std::str::Utf8Error;
 use futures::sync::mpsc::SendError;
 
-use rustc_serialize::{Encodable, Encoder};
-use rustc_serialize::json::{Json, ParserError};
+use serde::ser::{Serialize, Serializer};
+use serde_json::{Error as JsonError, Value};
 use tk_http::Status;
 use tk_http::client;
 
@@ -25,7 +25,7 @@ quick_error! {
             from()
         }
         /// JSON Parser Error;
-        JsonError(err: ParserError) {
+        JsonError(err: JsonError) {
             description(err.description())
             display("JSON error: {}", err)
             from()
@@ -37,7 +37,7 @@ quick_error! {
             from()
         }
         /// Backend application Error;
-        HttpError(status: Status, body: Option<Json>) {
+        HttpError(status: Status, body: Option<Value>) {
             // from()
             description("Http error")
             display("Http error: {}: {:?}", status.code(), body)
@@ -65,36 +65,38 @@ impl<T> From<SendError<T>> for MessageError {
     }
 }
 
-impl Encodable for MessageError {
-    fn encode<S: Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
+impl Serialize for MessageError {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where S: Serializer
+    {
         use self::MessageError::*;
         match *self {
             HttpError(_, None) => {
-                s.emit_nil()
+                serializer.serialize_none()
             }
             HttpError(_, Some(ref j)) => {
-                j.encode(s)
+                j.serialize(serializer)
             }
             Utf8Error(ref err) => {
-                s.emit_str(format!("{}", err).as_str())
+                serializer.serialize_str(format!("{}", err).as_str())
             }
             JsonError(ref err) => {
-                s.emit_str(format!("{}", err).as_str())
+                serializer.serialize_str(format!("{}", err).as_str())
             }
             ValidationError(ref err) => {
-                s.emit_str(format!("{:?}", err).as_str())
+                serializer.serialize_str(format!("{:?}", err).as_str())
             }
             IoError(ref err) => {
-                s.emit_str(format!("{:?}", err).as_str())
+                serializer.serialize_str(format!("{:?}", err).as_str())
             }
             Proto(_) => {
-                s.emit_str("backend_protocol_error")
+                serializer.serialize_str("backend_protocol_error")
             }
             PoolOverflow => {
-                s.emit_str("too_many_requests")
+                serializer.serialize_str("too_many_requests")
             }
             PoolError => {
-                s.emit_str("unexpected_pool_error")
+                serializer.serialize_str("unexpected_pool_error")
             }
         }
     }

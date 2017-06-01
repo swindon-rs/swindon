@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use std::collections::{HashSet, HashMap};
 
-use rustc_serialize::json::Json;
+use serde_json::Value as Json;
 
 use chat::{Cid, CloseReason, ConnectionSender};
 use intern::{Topic, SessionId, Lattice as Namespace, LatticeKey};

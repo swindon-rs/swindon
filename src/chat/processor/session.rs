@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use std::collections::{BTreeMap, HashSet, HashMap};
 
-use rustc_serialize::json::Json;
+use serde_json::Value as Json;
 
 use chat::Cid;
 use intern::Lattice;
@@ -18,7 +18,7 @@ impl Session {
         Session {
             connections: HashSet::new(),
             lattices: HashMap::new(),
-            metadata: Arc::new(Json::Object(BTreeMap::new())),
+            metadata: Arc::new(json!({})),
         }
     }
 }

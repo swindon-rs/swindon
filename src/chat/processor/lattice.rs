@@ -1,9 +1,11 @@
 use std::sync::Arc;
 use std::hash::Hash;
+use std::fmt;
 use std::collections::{HashMap, HashSet};
 use std::collections::hash_map::Entry::{Occupied, Vacant};
 
-use rustc_serialize::{Encodable, Encoder, Decodable, Decoder};
+use serde::ser::{Serialize, Serializer, SerializeMap};
+use serde::de::{self, Deserialize, Deserializer, Visitor, MapAccess};
 
 use intern::{LatticeKey as Key, LatticeVar as Var, SessionId};
 
@@ -31,7 +33,7 @@ pub struct Lattice {
     pub subscriptions: HashMap<Key, HashSet<SessionId>>,
 }
 
-#[derive(Debug, Clone, RustcEncodable)]
+#[derive(Debug, Clone, Serialize)]
 pub struct Delta {
     pub shared: HashMap<Key, Values>,
     pub private: HashMap<SessionId, HashMap<Key, Values>>,
@@ -57,23 +59,21 @@ impl Values {
     }
 }
 
-impl Encodable for Values {
-    fn encode<S: Encoder>(&self, s: &mut S) -> Result<(), S::Error>
+impl Serialize for Values {
+    fn serialize<S: Serializer>(&self, serialize: S)
+        -> Result<S::Ok, S::Error>
     {
-        s.emit_map(self.counters.len() + self.sets.len(), |s| {
-            let mut i = 0;
-            for (k, counter) in &self.counters {
-                s.emit_map_elt_key(i, |s| format!("{}_counter", k).encode(s))?;
-                s.emit_map_elt_val(i, |s| s.emit_u64(counter.0))?;
-                i += 1;
-            }
-            for (k, set) in &self.sets {
-                s.emit_map_elt_key(i, |s| format!("{}_set", k).encode(s))?;
-                s.emit_map_elt_val(i, |s| set.0.encode(s))?;
-                i += 1;
-            }
-            Ok(())
-        })
+        let mut map = serialize.serialize_map(
+            Some(self.counters.len() + self.sets.len()))?;
+        for (k, counter) in &self.counters {
+            map.serialize_key(&format!("{}_counter", k))?;
+            map.serialize_value(&counter.0)?;
+        }
+        for (k, set) in &self.sets {
+            map.serialize_key(&format!("{}_set", k))?;
+            map.serialize_value(&set.0)?;
+        }
+        map.end()
     }
 }
 
@@ -177,15 +177,16 @@ fn crdt_update<K, V>(original: &mut HashMap<K, V>, delta: &mut HashMap<K, V>)
     }
 }
 
-impl Decodable for Delta {
-    fn decode<D: Decoder>(d: &mut D) -> Result<Self, D::Error>
+impl<'de> Deserialize<'de> for Delta {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where D: Deserializer<'de>
     {
-        #[derive(RustcDecodable)]
+        #[derive(Deserialize)]
         struct DeltaOpt {
             pub shared: Option<HashMap<Key, Values>>,
             pub private: Option<HashMap<SessionId, HashMap<Key, Values>>>,
         }
-        let tmp = DeltaOpt::decode(d)?;
+        let tmp = DeltaOpt::deserialize(deserializer)?;
         Ok(Delta {
             shared: tmp.shared.unwrap_or_else(HashMap::new),
             private: tmp.private.unwrap_or_else(HashMap::new),
@@ -193,46 +194,63 @@ impl Decodable for Delta {
     }
 }
 
-impl Decodable for Values {
-    fn decode<D: Decoder>(d: &mut D) -> Result<Self, D::Error>
+
+struct ValuesVisitor;
+
+impl<'de> Visitor<'de> for ValuesVisitor {
+    type Value = Values;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_str("map expected")
+    }
+
+    fn visit_map<M>(self, mut access: M) -> Result<Self::Value, M::Error>
+        where M: MapAccess<'de>
     {
         let mut values = Values {
             counters: HashMap::new(),
             sets: HashMap::new(),
         };
-        d.read_map(|d, size| {
-            for idx in 0..size {
-                let key = d.read_map_elt_key(idx, |d| d.read_str())?;
-                if key[..].ends_with("_counter") {
-                    let val = d.read_map_elt_val(idx, |d| d.read_u64())?;
-                    let key = key[..key.len() - "_counter".len()].parse()
-                        .map_err(|_| d.error("invalid lattice var"))?;
-                    values.counters.insert(key, Counter(val));
-                } else if key[..].ends_with("_set") {
-                    let val = d.read_map_elt_val(idx, |d| Set::decode(d))?;
-                    let key = key[..key.len() - "_set".len()].parse()
-                        .map_err(|_| d.error("invalid lattice var"))?;
-                    values.sets.insert(key, val);
-                } else {
-                    return Err(d.error(format!(
-                        "Unsupported key {:?}", key).as_str()))
-                }
+        while let Some(key) = access.next_key::<&str>()? {
+            if key.ends_with("_counter") {
+                let val = access.next_value()?;
+                let key = key[..key.len() - "_counter".len()].parse()
+                    .map_err(de::Error::custom)?;
+                values.counters.insert(key, Counter(val));
+            } else if key.ends_with("_set") {
+                let val = access.next_value()?;
+                let key = key[..key.len() - "_set".len()].parse()
+                    .map_err(de::Error::custom)?;
+                values.sets.insert(key, val);
+            } else {
+                return Err(de::Error::custom(format!(
+                    "Unsupported key {:?}", key)))
             }
-            Ok(values)
-        })
+        }
+        Ok(values)
     }
 }
 
-impl Decodable for Set {
-    fn decode<D: Decoder>(d: &mut D) -> Result<Self, D::Error> {
-        Ok(Set(Decodable::decode(d)?))
+impl<'de> Deserialize<'de> for Values {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where D: Deserializer<'de>
+    {
+        deserializer.deserialize_map(ValuesVisitor)
+    }
+}
+
+impl<'de> Deserialize<'de> for Set {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where D: Deserializer<'de>
+    {
+        Ok(Set(Deserialize::deserialize(deserializer)?))
     }
 }
 
 #[cfg(test)]
 mod test {
     use std::str::FromStr;
-    use rustc_serialize::json;
+    use serde_json::from_str as json_decode;
 
     use super::{Delta, Values, Set};
     use intern::{LatticeKey as Key, LatticeVar as Var};
@@ -244,7 +262,7 @@ mod test {
                 "last_seen_set": ["123", "124"]
             }}}}"#;
 
-        let delta: Delta = json::decode(val).unwrap();
+        let delta: Delta = json_decode(val).unwrap();
         assert_eq!(delta.shared.len(), 1);
         assert_eq!(delta.private.len(), 1);
         assert!(delta.shared.contains_key(&Key::from_str("room_1").unwrap()));
@@ -253,7 +271,7 @@ mod test {
     #[test]
     fn decode_values() {
         let val = r#"{"last_message_counter": 123}"#;
-        let val: Values = json::decode(val).unwrap();
+        let val: Values = json_decode(val).unwrap();
         assert_eq!(val.counters.len(), 1);
         assert_eq!(val.sets.len(), 0);
 
@@ -264,7 +282,7 @@ mod test {
 
     #[test]
     fn decode_set() {
-        let set: Set = json::decode(r#"["123", "123", "abc"]"#).unwrap();
+        let set: Set = json_decode(r#"["123", "123", "abc"]"#).unwrap();
         assert_eq!(set.0.len(), 2);
     }
 }

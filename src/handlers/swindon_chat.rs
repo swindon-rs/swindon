@@ -13,7 +13,7 @@ use futures::future::{ok};
 use futures::sync::mpsc::{UnboundedReceiver as Receiver};
 use tokio_core::reactor::Handle;
 use tokio_io::{AsyncRead, AsyncWrite};
-use rustc_serialize::json;
+use serde_json::to_string as json_encode;
 
 use chat::{self, Cid, ConnectionMessage, ConnectionSender, TangleAuth};
 use chat::ConnectionMessage::{Hello, StopSocket};
@@ -94,12 +94,12 @@ impl<S: AsyncRead + AsyncWrite + 'static> Codec<S> for WebsockReply {
                         format!("{}", TangleAuth(&session_id)));
                     Either::A(
                         out.send(Packet::Text(
-                            json::encode(&Hello(session_id, data))
+                            json_encode(&Hello(session_id, data))
                             .expect("every message can be encoded")))
                         .map_err(|e| info!("error sending userinfo: {:?}", e))
                         .and_then(move |out| {
                             let rx = rx.map(|x| {
-                                Packet::Text(json::encode(&x)
+                                Packet::Text(json_encode(&x)
                                     .expect("any data can be serialized"))
                             }).map_err(|_| -> &str {
                                 // There shouldn't be a real-life case for
