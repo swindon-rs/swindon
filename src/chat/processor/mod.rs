@@ -21,7 +21,7 @@ use config;
 use intern::{Topic, SessionId, SessionPoolName, Lattice as Namespace};
 use intern::LatticeKey;
 use chat::{Cid, ConnectionSender, CloseReason};
-use chat::message::Meta;
+use chat::message::{Meta, MetaWithExtra};
 use chat::error::MessageError;
 
 mod main;
@@ -183,8 +183,26 @@ impl Serialize for ConnectionMessage {
             }
             Error(ref meta, ref err) => {
                 tup.serialize_element("error")?;
-                // TODO: Error info must be propagated into meta;
-                tup.serialize_element(&meta)?;
+                let extra = match err {
+                    &MessageError::HttpError(ref status, _) => {
+                        json!({
+                            "error_kind": "http_error",
+                            "http_error": status.code(),
+                        })
+                    }
+                    &MessageError::JsonError(ref err) => {
+                        json!({
+                            "error_kind": "data_error",
+                            "data_error": format!("{}", err)
+                        })
+                    }
+                    _ => {
+                        json!({"error_kind": "internal_error"})
+                    }
+                };
+                tup.serialize_element(&MetaWithExtra {
+                    meta: meta, extra: extra
+                })?;
                 tup.serialize_element(&err)?;
             }
             StopSocket(ref reason) => {

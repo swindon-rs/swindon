@@ -143,17 +143,17 @@ pub fn good_status(status: Status) -> bool {
 pub fn parse_userinfo(data: &[u8])
     -> Result<(SessionId, Json), MessageError>
 {
-    use super::message::ValidationError::InvalidUserId;
     use super::error::MessageError::ValidationError;
 
     let data: Json = serde_json::from_slice(data)?;
     let ssid = match data.get("user_id") {
         Some(&Json::String(ref ssid)) => {
             SessionId::from_str(ssid.as_str())
-            .map_err(|_| ValidationError(InvalidUserId))?
+            .map_err(|_| ValidationError("Invalid user_id".into()))?
         }
         _ => {
-            return Err(ValidationError(InvalidUserId))
+            return Err(ValidationError(
+                "user_id is missing or invalid".into()))
         }
     };
     Ok((ssid, data))

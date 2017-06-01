@@ -7,8 +7,6 @@ use serde_json::{Error as JsonError, Value};
 use tk_http::Status;
 use tk_http::client;
 
-use super::message::{ValidationError};
-
 quick_error! {
     #[derive(Debug)]
     pub enum MessageError {
@@ -31,9 +29,9 @@ quick_error! {
             from()
         }
         /// Protocol Message validation error;
-        ValidationError(err: ValidationError) {
+        ValidationError(reason: String) {
             description("Message validation error")
-            display("Validation error: {:?}", err)
+            display("Validation error: {}", reason)
             from()
         }
         /// Backend application Error;

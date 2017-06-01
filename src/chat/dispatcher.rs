@@ -9,13 +9,13 @@ use tk_http::websocket;
 use tk_http::websocket::{Error as WsError};
 use tk_http::websocket::Frame::{self, Text, Binary, Ping, Pong, Close};
 use tokio_core::reactor::Handle;
+use serde_json::{Error as JsonError};
 
 use runtime::Runtime;
 use config::chat::Chat;
 use config::SessionPool;
 use chat::{Cid, ConnectionSender, CloseReason};
 use chat::message::{decode_message, get_active, Meta, Args, Kwargs};
-use chat::message::{ValidationError};
 use chat::processor::{Action, ProcessorPool, ConnectionMessage};
 use chat::backend::CallCodec;
 use chat::error::MessageError;
@@ -35,7 +35,7 @@ pub struct Dispatcher {
 quick_error! {
     #[derive(Debug)]
     pub enum Error {
-        Validation(e: ValidationError) {
+        Validation(e: JsonError) {
             description(e.description())
             cause(e)
             from()
@@ -51,11 +51,11 @@ impl websocket::Dispatcher for Dispatcher {
     fn frame(&mut self, frame: &Frame) -> FutureResult<(), WsError> {
         match *frame {
             Text(data) => match decode_message(data) {
-                Ok((name, meta, args, kwargs)) => {
+                Ok((method, meta, args, kwargs)) => {
                     if let Some(duration) = get_active(&meta) {
                         self.update_activity(duration);
                     }
-                    self.method_call(name, meta, args, kwargs);
+                    self.method_call(method, meta, args, kwargs);
                     ok(()) // no backpressure, yet
                 }
                 Err(e) => {
