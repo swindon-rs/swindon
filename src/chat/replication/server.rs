@@ -1,6 +1,5 @@
 use std::str;
 use std::ascii::AsciiExt;
-use std::net::SocketAddr;
 use futures::{Stream, Future, Async};
 use futures::future::{ok};
 use futures::sync::mpsc::unbounded;
@@ -21,7 +20,6 @@ use super::{IncomingChannel, ReplAction};
 pub struct Incoming {
     sender: IncomingChannel,
     handle: Handle,
-    remote_addr: SocketAddr,
     runtime_id: RuntimeId,
 }
 
@@ -29,20 +27,17 @@ struct WebsocketCodec {
     sender: IncomingChannel,
     handle: Handle,
     accept: Accept,
-    remote_addr: SocketAddr,
     runtime_id: RuntimeId,
     remote_id: RuntimeId,
 }
 
 impl Incoming {
 
-    pub fn new(addr: SocketAddr, sender: IncomingChannel,
-        runtime_id: RuntimeId, handle: &Handle)
+    pub fn new(sender: IncomingChannel, runtime_id: RuntimeId, handle: &Handle)
         -> Incoming
     {
         Incoming {
             sender: sender,
-            remote_addr: addr,
             handle: handle.clone(),
             runtime_id: runtime_id,
         }
@@ -73,7 +68,6 @@ impl<S: Transport> Dispatcher<S> for Incoming {
                         accept: ws.accept,
                         runtime_id: self.runtime_id,
                         remote_id: remote_id,
-                        remote_addr: self.remote_addr,
                         handle: self.handle.clone(),
                     }))
                 } else {
@@ -121,9 +115,8 @@ impl<S: AsyncRead + AsyncWrite + 'static> Codec<S> for WebsocketCodec {
         self.sender.send(ReplAction::Attach {
             tx: tx,
             runtime_id: self.remote_id,
-            addr: self.remote_addr,
-            peer: format!("{}", self.remote_addr),
-        });
+            peer: None,
+        }).ok();
 
         self.handle.spawn(
             Loop::server(out, inp, rx, Handler(self.sender.clone()), &wcfg)

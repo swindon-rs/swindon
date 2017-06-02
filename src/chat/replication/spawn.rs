@@ -36,8 +36,8 @@ pub fn listen(addr: SocketAddr, sender: IncomingChannel,
     let listener = TcpListener::bind(&addr, &handle)?;
     handle.spawn(listener.incoming()
         .sleep_on_error(*settings.listen_error_timeout, &handle)
-        .map(move |(socket, saddr)| {
-            let disp = Incoming::new(saddr, sender.clone(), rid, &h1);
+        .map(move |(socket, _)| {
+            let disp = Incoming::new(sender.clone(), rid, &h1);
             Proto::new(socket, &hcfg, disp, &h1)
             .map_err(|e| debug!("Http protocol error: {}", e))
         })
@@ -56,7 +56,8 @@ pub fn connect(peer: &str, sender: IncomingChannel,
     let wcfg = WsConfig::new().done();
     let runtime_id = runtime_id.clone();
     let h1 = handle.clone();
-    let name = peer.to_string();
+    let p1 = peer.to_string();
+    let p2 = p1.clone();
 
     let timeout = Timeout::new_at(timeout_at, &handle)
     .expect("timeout created");
@@ -82,19 +83,17 @@ pub fn connect(peer: &str, sender: IncomingChannel,
         }
     })
     .and_then(move |sock| {
-        let addr = sock.peer_addr().expect("address exist");
-        HandshakeProto::new(sock, Authorizer::new(addr, name, runtime_id))
+        HandshakeProto::new(sock, Authorizer::new(p1, runtime_id))
         .map_err(|e| format!("WS auth error: {}", e))
     })
-    .and_then(move |(out, inp, (addr, peer, runtime_id))| {
+    .and_then(move |(out, inp, runtime_id)| {
         let (tx, rx) = unbounded();
         let rx = rx.map_err(|_| format!("receiver error"));
         sender.send(ReplAction::Attach {
             tx: tx,
             runtime_id: runtime_id,
-            addr: addr,
-            peer: peer,
-        });
+            peer: Some(p2),
+        }).ok();
         Loop::client(out, inp, rx, Handler(sender), &wcfg)
         .map_err(|e| format!("WS loop error: {}", e))
     })
@@ -110,12 +109,11 @@ impl Dispatcher for Handler {
     fn frame (&mut self, frame: &Frame) -> Self::Future {
         if let &Frame::Text(data) = frame {
             match serde_json::from_str(data) {
-                Ok(action) => {
-                    debug!("Received action: {:?}", action);
-                    self.0.send(action);
+                Ok(msg) => {
+                    // TODO: make proper result handling
+                    self.0.send(ReplAction::Incoming(msg)).ok();
                 }
                 Err(e) => {
-                    error!("Error decoding message: {}", e);
                     return err(Error::custom(
                         format!("Error decoding message: {}", e)));
                 }

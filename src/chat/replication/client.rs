@@ -1,6 +1,5 @@
 use std::str;
 use std::ascii::AsciiExt;
-use std::net::SocketAddr;
 use tk_http::websocket::client::{self as ws, Head, Encoder, EncoderDone};
 use tk_http::websocket::Error;
 
@@ -9,25 +8,23 @@ use runtime::RuntimeId;
 
 pub struct Authorizer {
     runtime_id: RuntimeId,
-    addr: SocketAddr,
     peername: String,
 }
 
 
 impl Authorizer {
-    pub fn new(addr: SocketAddr, peer: String, runtime_id: RuntimeId)
+    pub fn new(peer: String, runtime_id: RuntimeId)
         -> Authorizer
     {
         Authorizer {
             runtime_id: runtime_id,
-            addr: addr,
             peername: peer,
         }
     }
 }
 
 impl<S> ws::Authorizer<S> for Authorizer {
-    type Result = (SocketAddr, String, RuntimeId);
+    type Result = RuntimeId;
 
     fn write_headers(&mut self, mut e: Encoder<S>)
         -> EncoderDone<S>
@@ -48,6 +45,5 @@ impl<S> ws::Authorizer<S> for Authorizer {
         .and_then(|h| str::from_utf8(h.value).ok())
         .and_then(|s| RuntimeId::from_str(s))
         .ok_or(Error::custom("invalid node id"))
-        .map(|x| (self.addr.clone(), self.peername.clone(), x))
     }
 }

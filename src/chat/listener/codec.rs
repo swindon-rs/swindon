@@ -1,6 +1,5 @@
 use std::fmt;
 use std::mem;
-use std::str::from_utf8;
 use std::sync::Arc;
 use std::net::SocketAddr;
 

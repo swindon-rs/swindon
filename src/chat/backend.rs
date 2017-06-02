@@ -1,13 +1,12 @@
 use std::sync::Arc;
-use std::io::BufWriter;
 use std::mem;
 
 use futures::Async;
 use futures::future::{FutureResult, ok};
 use tk_http::{Status, Version};
 use tk_http::client as http;
-use serde_json::{self, Value as Json};
 use serde::ser::Serialize;
+use serde_json;
 
 use chat::authorize::{parse_userinfo, good_status};
 use chat::{Cid, ConnectionSender, ConnectionMessage, TangleAuth};
@@ -121,7 +120,6 @@ fn write_json_request<S, E>(mut e: http::Encoder<S>, data: &E)
     -> http::EncoderDone<S>
     where E: Serialize,
 {
-    use std::io::Write;
     e.add_header("Content-Type", "application/json").unwrap();
     let body = serde_json::to_string(data).unwrap();
     let body = body.as_bytes();
