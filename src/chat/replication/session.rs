@@ -1,5 +1,4 @@
-use std::mem;
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
 use std::net::SocketAddr;
 use std::collections::HashMap;
 use std::time::{Instant, Duration};
@@ -14,39 +13,42 @@ use abstract_ns::{Router};
 
 use request_id;
 use intern::SessionPoolName;
-use runtime::{RuntimeId, Runtime};
+use runtime::{RuntimeId};
 use config::{ListenSocket, Replication};
 use chat::processor::Processor;
 
 use super::{ReplAction, RemoteAction, IncomingChannel, OutgoingChannel};
+use super::action::Message;
 use super::spawn::{listen, connect};
 
 
 pub struct ReplicationSession {
-    pub watcher: Arc<Watcher>,
     pub remote_sender: RemoteSender,
+    tx: IncomingChannel,
     runtime_id: RuntimeId,
     shutters: HashMap<SocketAddr, Sender<()>>,
     reconnect_shutter: Option<Sender<()>>,
 }
 
 pub struct Watcher {
-    // TODO: revise Arc<RwLock<>> on peers -- operations performed often;
-    peers: Arc<RwLock<HashMap<String, State>>>,
+    peers: HashMap<String, State>,
+    links: HashMap<RuntimeId, OutgoingChannel>,
     pub tx: IncomingChannel,
     processor: Processor,
+    runtime_id: RuntimeId,
+    resolver: Router,
+    handle: Handle,
 }
 
 #[derive(Debug)]
 enum State {
-    Unknown,
-    Connecting {
-        timeout: Instant
-    },
-    Connected {
-        tx: OutgoingChannel,
-    },
-    Disconnected,
+    /// Connect started for outbound connection.
+    /// RuntimeId is still unknown.
+    Connecting(Instant),
+    /// Either outbound or inbound live connection.
+    /// RuntimeId is known.
+    /// Also for outbound connection peer name is known.
+    Connected(RuntimeId),
 }
 
 #[derive(Clone)]
@@ -60,40 +62,35 @@ pub struct RemotePool {
 }
 
 impl ReplicationSession {
-    pub fn new(processor: Processor, handle: &Handle)
+    pub fn new(processor: Processor, resolver: &Router, handle: &Handle)
         -> ReplicationSession
     {
-        let (inc_tx, inc_rx) = unbounded();
-        let (out_tx, out_rx) = unbounded();
-        let watcher = Arc::new(Watcher {
-            processor: processor,
-            peers: Arc::new(RwLock::new(HashMap::new())),
-            tx: inc_tx,
-        });
-        let w1 = watcher.clone();
-        let w2 = watcher.clone();
         let runtime_id = request_id::new();
-
-        handle.spawn(inc_rx.for_each(move |e| {
-            w1.handle_incoming(e);
-            Ok(())
-        }));
-        handle.spawn(out_rx.for_each(move |e| {
-            w2.handle_outgoing(e);
+        let (tx, rx) = unbounded();
+        let mut watcher = Watcher {
+            processor: processor,
+            peers: HashMap::new(),
+            links: HashMap::new(),
+            tx: tx.clone(),
+            runtime_id: runtime_id.clone(),
+            handle: handle.clone(),
+            resolver: resolver.clone(),
+        };
+        handle.spawn(rx.for_each(move |action| {
+            watcher.process(action);
             Ok(())
         }));
 
         ReplicationSession {
             runtime_id: runtime_id,
-            watcher: watcher,
-            remote_sender: RemoteSender { queue: out_tx },
+            tx: tx.clone(),
+            remote_sender: RemoteSender { queue: tx },
             shutters: HashMap::new(),
             reconnect_shutter: None,
         }
     }
 
-    pub fn update(&mut self, cfg: &Arc<Replication>, resolver: &Router,
-        handle: &Handle)
+    pub fn update(&mut self, cfg: &Arc<Replication>, handle: &Handle)
     {
         let mut to_delete = Vec::new();
         for (&addr, _) in &self.shutters {
@@ -111,7 +108,7 @@ impl ReplicationSession {
             match *addr {
                 ListenSocket::Tcp(addr) => {
                     let (tx, rx) = oneshot();
-                    match listen(addr, self.watcher.tx.clone(),
+                    match listen(addr, self.tx.clone(),
                         &self.runtime_id, &cfg, handle, rx)
                     {
                         Ok(()) => {
@@ -127,106 +124,115 @@ impl ReplicationSession {
             }
         }
 
-        // TODO:
-        // drop/delete removed peers
-        // add new to watcher queue
-
         // stop reconnecting
         if let Some(tx) = self.reconnect_shutter.take() {
             tx.send(()).ok();
         }
-
-        let mut peers = self.watcher.peers.write().expect("writable");
-        for peer in &cfg.peers {
-            peers.insert(peer.clone(), State::Unknown);
-        }
-
-        let runtime_id = self.runtime_id.clone();
-        let w = self.watcher.clone();
-        let h = handle.clone();
-        let s = cfg.clone();
-        let r = resolver.clone();
         let (tx, shutter) = oneshot();
         self.reconnect_shutter = Some(tx);
+        let s = cfg.clone();
+        let tx = self.tx.clone();
         handle.spawn(Interval::new(Duration::new(1, 0), &handle)
             .expect("interval created")
+            .map(move |_| ReplAction::Reconnect(s.clone()))
             .map_err(|e| error!("Interval error: {}", e))
-            .for_each(move |_| {
-                w.reconnect(&runtime_id, &s, &r, &h);
+            .for_each(move |action| {
+                tx.send(action)
+                .map_err(|_| error!("Error sending action"))
+                .ok();
                 Ok(())
             })
             .select(shutter.map_err(|_| unreachable!()))
-            .map(|(_, _)| info!("Reconnector stopped"))
-            .map_err(|(_, _)| info!("Reconnector stopped")));
+            .map(|_| info!("Reconnector stopped"))
+            .map_err(|_| info!("Reconnector stopped"))
+        );
     }
 
 }
 
 impl Watcher {
-    pub fn reconnect(&self, runtime_id: &RuntimeId,
-        settings: &Arc<Replication>, resolver: &Router, handle: &Handle)
+
+    fn process(&mut self, action: ReplAction) {
+        match action {
+            ReplAction::Attach { tx, runtime_id, peer } => {
+                debug!("Got connection from: {:?}:{}", peer, runtime_id);
+                self.attach(tx, runtime_id, peer);
+            }
+            ReplAction::Incoming(msg) => {
+                debug!("Received incoming message: {:?}", msg);
+                self.processor.send(&msg.0, msg.1.into());
+            }
+            ReplAction::Outgoing(msg) => {
+                debug!("Sending outgoing message: {:?}", msg);
+                self.remote_send(msg);
+            }
+            ReplAction::Reconnect(ref cfg) => {
+                self.reconnect(cfg);
+            }
+        }
+    }
+
+    fn attach(&mut self, tx: OutgoingChannel,
+        runtime_id: RuntimeId, peer: Option<String>)
     {
-        let mut peers = self.peers.write().expect("writable");
+        if let Some(peer) = peer {
+            self.peers.insert(peer, State::Connected(runtime_id));
+        }
+        self.links.insert(runtime_id, tx);
+    }
+
+    fn remote_send(&mut self, msg: Message) {
+        if let Ok(data) = json_encode(&msg) {
+            // TODO: use HashMap::retain() when in stable
+            let to_delete = self.links.iter().filter_map(|(remote, tx)| {
+                tx.send(Packet::Text(data.clone())).err()
+                .map(|_| remote.clone())    // XXX
+            }).collect::<Vec<_>>();         // XXX
+            for remote in to_delete {
+                self.links.remove(&remote);
+            }
+        } else {
+            debug!("error encoding message: {:?}", msg);
+        }
+    }
+
+    fn reconnect(&mut self, settings: &Arc<Replication>)
+    {
+        use self::State::*;
+
         let now = Instant::now();
         let timeout = now + *settings.reconnect_timeout;
-        for (addr, state) in peers.iter_mut() {
-            match *state {
-                State::Unknown => {
-                    debug!("Connecting new unkown peer: {}", addr);
+
+        // TODO: use HashMap::retain() when in stable
+        let to_delete = self.peers.keys()
+            .filter(|p| !settings.peers.contains(p))
+            .map(|p| p.clone()).collect::<Vec<_>>();  // XXX
+        for peer in to_delete {
+            match self.peers.remove(&peer) {
+                Some(Connected(runtime_id)) => {
+                    self.links.remove(&runtime_id);
                 }
-                State::Disconnected => {
-                    debug!("Retrying disconnected peer: {}", addr);
-                }
-                State::Connecting { ref timeout } => {
-                    if timeout < &now {
-                        debug!("Retrying timeouted peer: {}", addr);
-                    } else {
+                _ => continue,
+            }
+        };
+
+        for peer in &settings.peers {
+            match self.peers.get(peer) {
+                Some(&Connected(ref runtime_id)) => {
+                    if let Some(_) = self.links.get(runtime_id) {
                         continue
                     }
-                },
-                State::Connected {..} => continue,
-            }
-            debug!("Spawn connect({})...", addr);
-            mem::replace(state, State::Connecting {
-                timeout: timeout.clone(),
-            });
-            connect(addr, self.tx.clone(), runtime_id,
-                timeout, handle, resolver);
-        }
-    }
-
-    fn handle_incoming(&self, action: ReplAction) {
-        let mut peers = self.peers.write().expect("acquired for update");
-        match action {
-            ReplAction::Attach { tx, runtime_id, addr, peer } => {
-                debug!("Got connection from: {}, {}, {}",
-                    peer, addr, runtime_id);
-                let s = State::Connected { tx: tx };
-                if let Some(prev) = peers.insert(peer, s) {
-                    debug!("Replaced prev connection {}: {:?}", addr, prev);
-                };
-            }
-            ReplAction::RemoteAction { pool, action } => {
-                self.processor.send(&pool, action.into());
-            }
-        }
-    }
-
-    fn handle_outgoing(&self, action: ReplAction) {
-        if let Ok(data) = json_encode(&action) {
-            let mut peers = self.peers.write().expect("acquired for update");
-            for (_, state) in peers.iter_mut() {
-                let err = match *state {
-                    State::Connected { ref tx } => {
-                        debug!("Publishing data: {:?}", data);
-                        tx.send(Packet::Text(data.clone())).is_err()
-                    }
-                    _ => continue,
-                };
-                if err {
-                    mem::replace(state, State::Disconnected);
                 }
-            }
+                Some(&Connecting(ref timeout)) => {
+                    if timeout >= &now {
+                        continue
+                    }
+                }
+                _ => {}
+            };
+            self.peers.insert(peer.clone(), Connecting(timeout));
+            connect(peer, self.tx.clone(), &self.runtime_id,
+                timeout, &self.handle, &self.resolver);
         }
     }
 }
@@ -243,9 +249,8 @@ impl RemoteSender {
 impl RemotePool {
 
     pub fn send(&self, action: RemoteAction) {
-        self.queue.send(ReplAction::RemoteAction {
-            pool: self.pool.clone(),
-            action: action,
-        }).map_err(|e| error!("Error sending event: {}", e)).ok();
+        let msg = Message(self.pool.clone(), action);
+        self.queue.send(ReplAction::Outgoing(msg))
+            .map_err(|e| error!("Error sending event: {}", e)).ok();
     }
 }
