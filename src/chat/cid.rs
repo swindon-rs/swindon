@@ -50,7 +50,7 @@ impl FromStr for PubCid {
         let s = src.rfind('-').ok_or(())?;
         let (rid, cid) = src.split_at(s);
         let rid = rid.parse().map_err(|_| ())?;
-        let cid = cid.trim_left_matches('-').parse().map_err(|_| ())?;
+        let cid = cid[1..].parse().map_err(|_| ())?;
         Ok(PubCid(cid, rid))
     }
 }
