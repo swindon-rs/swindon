@@ -11,9 +11,8 @@ use tk_http::websocket::Packet;
 use serde_json::to_string as json_encode;
 use abstract_ns::{Router};
 
-use request_id;
 use intern::SessionPoolName;
-use runtime::{RuntimeId};
+use runtime::{Runtime, RuntimeId};
 use config::{ListenSocket, Replication};
 use chat::processor::Processor;
 
@@ -25,7 +24,6 @@ use super::spawn::{listen, connect};
 pub struct ReplicationSession {
     pub remote_sender: RemoteSender,
     tx: IncomingChannel,
-    runtime_id: RuntimeId,
     shutters: HashMap<SocketAddr, Sender<()>>,
     reconnect_shutter: Option<Sender<()>>,
 }
@@ -62,10 +60,10 @@ pub struct RemotePool {
 }
 
 impl ReplicationSession {
-    pub fn new(processor: Processor, resolver: &Router, handle: &Handle)
+    pub fn new(processor: Processor, resolver: &Router, handle: &Handle,
+        runtime_id: &RuntimeId)
         -> ReplicationSession
     {
-        let runtime_id = request_id::new();
         let (tx, rx) = unbounded();
         let mut watcher = Watcher {
             processor: processor,
@@ -82,7 +80,6 @@ impl ReplicationSession {
         }));
 
         ReplicationSession {
-            runtime_id: runtime_id,
             tx: tx.clone(),
             remote_sender: RemoteSender { queue: tx },
             shutters: HashMap::new(),
@@ -90,7 +87,8 @@ impl ReplicationSession {
         }
     }
 
-    pub fn update(&mut self, cfg: &Arc<Replication>, handle: &Handle)
+    pub fn update(&mut self, cfg: &Arc<Replication>,
+        handle: &Handle, runtime: &Arc<Runtime>)
     {
         let mut to_delete = Vec::new();
         for (&addr, _) in &self.shutters {
@@ -109,7 +107,7 @@ impl ReplicationSession {
                 ListenSocket::Tcp(addr) => {
                     let (tx, rx) = oneshot();
                     match listen(addr, self.tx.clone(),
-                        &self.runtime_id, &cfg, handle, rx)
+                        &runtime.runtime_id, &cfg, handle, rx)
                     {
                         Ok(()) => {
                             self.shutters.insert(addr, tx);

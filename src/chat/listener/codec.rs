@@ -12,7 +12,7 @@ use tk_http::server::{EncoderDone, RecvMode};
 use serde_json::{self, Value as Json};
 
 use intern::{Topic, Lattice as Namespace};
-use chat::Cid;
+use chat::cid::PubCid;
 use chat::processor::Action;
 use chat::processor::Delta;
 use chat::listener::spawn::WorkerData;
@@ -37,15 +37,15 @@ pub struct Request {
 
 pub enum Route {
     /// `PUT /v1/connection/<conn_id>/subscriptions/<path>`
-    Subscribe(Cid, Topic),
+    Subscribe(PubCid, Topic),
     /// `DELETE /v1/connection/<conn_id>/subscriptions/<path>`
-    Unsubscribe(Cid, Topic),
+    Unsubscribe(PubCid, Topic),
     /// `POST /v1/publish/<path>`
     Publish(Topic),
     /// `PUT /v1/connection/<conn_id>/lattices/<namespace>`
-    LatticeSubscribe(Cid, Namespace),
+    LatticeSubscribe(PubCid, Namespace),
     /// `DELETE /v1/connection/<conn_id>/lattices/<namespace>`
-    Detach(Cid, Namespace),
+    Detach(PubCid, Namespace),
     /// `POST /v1/lattice/<namespace>`
     Lattice(Namespace),
 }
@@ -54,18 +54,18 @@ impl fmt::Display for Route {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         use self::Route::*;
         match *self {
-            Subscribe(cid, ref tpc) => {
-                write!(f, "Subscribe {:#?} {:?}", cid, tpc)
+            Subscribe(ref cid, ref tpc) => {
+                write!(f, "Subscribe {:#?} {:?}", cid.0, tpc)
             }
-            Unsubscribe(cid, ref tpc) => {
-                write!(f, "Unsubscribe {:#?} {:?}", cid, tpc)
+            Unsubscribe(ref cid, ref tpc) => {
+                write!(f, "Unsubscribe {:#?} {:?}", cid.0, tpc)
             }
             Publish(ref topic) => write!(f, "Publish {:?}", topic),
-            LatticeSubscribe(cid, ref ns) => {
-                write!(f, "Lattice subscribe {:#?} {:?}", cid, ns)
+            LatticeSubscribe(ref cid, ref ns) => {
+                write!(f, "Lattice subscribe {:#?} {:?}", cid.0, ns)
             }
-            Detach(cid, ref ns) => {
-                write!(f, "Lattice detach {:#?} {:?}", cid, ns)
+            Detach(ref cid, ref ns) => {
+                write!(f, "Lattice detach {:#?} {:?}", cid.0, ns)
             }
             Lattice(ref ns) => write!(f, "Lattice update {:?}", ns),
         }
@@ -210,15 +210,20 @@ impl<S> http::Codec<S> for Request {
     {
         use self::Route::*;
         assert!(end);
+        let my_rid = self.wdata.runtime.runtime_id;
         let query = mem::replace(&mut self.state,
                                  State::Error(Status::InternalServerError));
         self.state = match query {
-            State::Query(Subscribe(cid, topic)) => {
+            State::Query(Subscribe(PubCid(cid, rid), topic)) => {
                 if data.len() == 0 {
-                    self.wdata.processor.send(Action::Subscribe {
-                        conn_id: cid,
-                        topic: topic.clone(),
-                    });
+                    if rid == my_rid {
+                        self.wdata.processor.send(Action::Subscribe {
+                            conn_id: cid,
+                            topic: topic.clone(),
+                        });
+                    } else {
+                        debug!("Skipping action with non-local cid");
+                    }
                     self.wdata.remote.send(RemoteAction::Subscribe {
                         conn_id: cid,
                         topic: topic,
@@ -228,12 +233,16 @@ impl<S> http::Codec<S> for Request {
                     State::Error(Status::BadRequest)
                 }
             }
-            State::Query(Unsubscribe(cid, topic)) => {
+            State::Query(Unsubscribe(PubCid(cid, rid), topic)) => {
                 if data.len() == 0 {
-                    self.wdata.remote.send(RemoteAction::Unsubscribe {
-                        conn_id: cid,
-                        topic: topic.clone(),
-                    });
+                    if rid == my_rid {
+                        self.wdata.remote.send(RemoteAction::Unsubscribe {
+                            conn_id: cid,
+                            topic: topic.clone(),
+                        });
+                    } else {
+                        debug!("Skipping action with non-local cid");
+                    }
                     self.wdata.processor.send(Action::Unsubscribe {
                         conn_id: cid,
                         topic: topic,
@@ -266,7 +275,7 @@ impl<S> http::Codec<S> for Request {
                     }
                 }
             }
-            State::Query(LatticeSubscribe(cid, ns)) => {
+            State::Query(LatticeSubscribe(PubCid(cid, rid), ns)) => {
                 // TODO(tailhook) check content-type
                 let data: Result<Delta,_> = serde_json::from_slice(data)
                     .map_err(|e| {
@@ -288,10 +297,14 @@ impl<S> http::Codec<S> for Request {
                             namespace: ns.clone(),
                             delta: delta,
                         });
-                        self.wdata.processor.send(Action::Attach {
-                            namespace: ns.clone(),
-                            conn_id: cid,
-                        });
+                        if rid == my_rid {
+                            self.wdata.processor.send(Action::Attach {
+                                namespace: ns.clone(),
+                                conn_id: cid,
+                            });
+                        } else {
+                            debug!("Skipping action with non-local cid");
+                        }
                         State::Done
                     }
                     Err(_) => {
@@ -299,15 +312,19 @@ impl<S> http::Codec<S> for Request {
                     }
                 }
             }
-            State::Query(Detach(cid, ns)) => {
+            State::Query(Detach(PubCid(cid, rid), ns)) => {
                 self.wdata.remote.send(RemoteAction::Detach {
                     namespace: ns.clone(),
                     conn_id: cid.clone()
                 });
-                self.wdata.processor.send(Action::Detach {
-                    namespace: ns.clone(),
-                    conn_id: cid,
-                });
+                if rid == my_rid {
+                    self.wdata.processor.send(Action::Detach {
+                        namespace: ns.clone(),
+                        conn_id: cid,
+                    });
+                } else {
+                    debug!("Skipping action with non-local cid");
+                }
                 State::Done
             }
             State::Query(Lattice(ns)) => {

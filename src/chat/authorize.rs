@@ -92,7 +92,8 @@ pub fn start_authorize(inp: &Input, conn_id: Cid, settings: &Arc<Chat>,
     let codec = Box::new(backend::AuthCodec::new(path.into_owned(),
         conn_id, auth_data, pool.clone(),
         dest_settings,
-        messages.clone()));
+        messages.clone(),
+        inp.runtime.runtime_id.clone()));
 
     match up.get_mut().get_mut() {
         Some(pool) => {

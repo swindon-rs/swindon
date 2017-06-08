@@ -15,6 +15,7 @@ pub struct Runtime {
     pub session_pools: chat::SessionPools,
     pub disk_pools: files::DiskPools,
     pub meter: Meter,
+    pub runtime_id: RuntimeId,
 }
 
 /// Worker Id generated on startup.

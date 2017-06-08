@@ -22,6 +22,7 @@ use chat;
 use runtime::Runtime;
 use http_pools::{HttpPools};
 use handlers::files::{DiskPools};
+use request_id;
 
 
 pub struct State {
@@ -98,10 +99,11 @@ pub fn populate_loop(handle: &Handle, cfg: &ConfigCell, verbose: bool)
     rb.add_default(ns);
     let resolver = rb.into_resolver();
 
+    let runtime_id = request_id::new();
     let http_pools = HttpPools::new();
     let processor = chat::Processor::new();
     let mut replication_session = chat::ReplicationSession::new(
-        processor.clone(), &resolver, handle);
+        processor.clone(), &resolver, handle, &runtime_id);
     let session_pools = chat::SessionPools::new(
         processor, replication_session.remote_sender.clone());
     let disk_pools = DiskPools::new(&meter);
@@ -112,6 +114,7 @@ pub fn populate_loop(handle: &Handle, cfg: &ConfigCell, verbose: bool)
         session_pools: session_pools.clone(),
         disk_pools: disk_pools.clone(),
         meter: meter,
+        runtime_id: runtime_id,
     });
     let root = cfg.get();
 
@@ -142,7 +145,7 @@ pub fn populate_loop(handle: &Handle, cfg: &ConfigCell, verbose: bool)
     disk_pools.update(&root.disk_pools);
     http_pools.update(&root.http_destinations, &resolver, handle);
     session_pools.update(&root.session_pools, handle, &runtime);
-    replication_session.update(&root.replication, handle);
+    replication_session.update(&root.replication, handle, &runtime);
     State {
         ns: resolver,
         http_pools: http_pools,
@@ -161,5 +164,6 @@ pub fn update_loop(state: &mut State, cfg: &ConfigCell, handle: &Handle) {
     state.http_pools.update(&cfg.get().http_destinations, &state.ns, handle);
     state.session_pools.update(&cfg.get().session_pools,
         handle, &state.runtime);
-    state.replication_session.update(&cfg.get().replication, handle);
+    state.replication_session.update(&cfg.get().replication,
+        handle, &state.runtime);
 }
