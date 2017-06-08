@@ -42,8 +42,10 @@ impl<S> ws::Authorizer<S> for Authorizer {
     {
         headers.all_headers().iter()
         .find(|h| h.name.eq_ignore_ascii_case("X-Swindon-Node-Id"))
-        .and_then(|h| str::from_utf8(h.value).ok())
-        .and_then(|s| RuntimeId::from_str(s))
-        .ok_or(Error::custom("invalid node id"))
+        .ok_or(Error::custom("missing X-Swindon-Node-Id header"))
+        .and_then(|h| str::from_utf8(h.value)
+            .map_err(|_| Error::custom("invalid node id")))
+        .and_then(|s| s.parse()
+            .map_err(|_| Error::custom("invalid node id")))
     }
 }

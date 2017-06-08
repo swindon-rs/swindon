@@ -13,7 +13,7 @@
 //!
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::fmt;
-use std::str;
+use std::str::{self, FromStr};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use rand::{thread_rng, Rng};
@@ -96,16 +96,6 @@ impl RequestId {
             str::from_utf8_unchecked(&self.0[..])
         }
     }
-
-    pub fn from_str(val: &str) -> Option<RequestId> {
-        if val.as_bytes().len() == 32 {
-            let mut buf = [0u8; 32];
-            buf[..].copy_from_slice(&val.as_bytes()[..32]);
-            Some(RequestId(buf))
-        } else {
-            None
-        }
-    }
 }
 
 impl fmt::Debug for RequestId {
@@ -117,5 +107,24 @@ impl fmt::Debug for RequestId {
 impl fmt::Display for RequestId {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         self.str().fmt(f)
+    }
+}
+
+#[derive(Debug)]
+pub struct ParseRequestIdError;
+
+impl FromStr for RequestId {
+    type Err = ParseRequestIdError;
+
+    fn from_str(src: &str) -> Result<Self, Self::Err> {
+        if !src.chars().all(|c| c.is_digit(36) || c == '-' || c == '_') {
+            return Err(ParseRequestIdError)
+        }
+        if src.as_bytes().len() != 32 {
+            return Err(ParseRequestIdError)
+        }
+        let mut buf = [0u8; 32];
+        buf[..].copy_from_slice(&src.as_bytes()[..32]);
+        Ok(RequestId(buf))
     }
 }

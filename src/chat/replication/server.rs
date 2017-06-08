@@ -48,7 +48,7 @@ impl Incoming {
         headers.all_headers().iter()
         .find(|h| h.name.eq_ignore_ascii_case("X-Swindon-Node-Id"))
         .and_then(|h| str::from_utf8(h.value).ok())
-        .and_then(|s| RuntimeId::from_str(s))
+        .and_then(|s| s.parse().ok())
     }
 }
 
