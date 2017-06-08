@@ -20,7 +20,7 @@ use rand::{thread_rng, Rng};
 
 scoped_thread_local!(static REQUEST_ID: RequestIdGenerator);
 
-#[derive(Clone, Copy, Hash, PartialEq, Eq)]
+#[derive(Clone, Copy, Hash, PartialEq, Eq, Serialize, Deserialize)]
 pub struct RequestId([u8; 32]);
 
 struct RequestIdGenerator {

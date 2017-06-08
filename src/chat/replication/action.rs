@@ -37,10 +37,12 @@ pub struct Message(pub SessionPoolName, pub RemoteAction);
 pub enum RemoteAction {
     Subscribe {
         conn_id: Cid,
+        remote_id: RuntimeId,
         topic: Topic,
     },
     Unsubscribe {
         conn_id: Cid,
+        remote_id: RuntimeId,
         topic: Topic,
     },
     Publish {
@@ -51,10 +53,12 @@ pub enum RemoteAction {
 
     Attach {
         conn_id: Cid,
+        remote_id: RuntimeId,
         namespace: Namespace,
     },
     Detach {
         conn_id: Cid,
+        remote_id: RuntimeId,
         namespace: Namespace,
     },
     Lattice {
@@ -68,13 +72,13 @@ impl Into<Action> for RemoteAction {
     fn into(self) -> Action {
         use self::RemoteAction::*;
         match self {
-            Subscribe { conn_id, topic } => {
+            Subscribe { conn_id, topic, .. } => {
                 Action::Subscribe {
                     conn_id: conn_id,
                     topic: topic,
                 }
             }
-            Unsubscribe { conn_id, topic } => {
+            Unsubscribe { conn_id, topic, .. } => {
                 Action::Unsubscribe {
                     conn_id: conn_id,
                     topic: topic,
@@ -86,13 +90,13 @@ impl Into<Action> for RemoteAction {
                     data: data,
                 }
             }
-            Attach { conn_id, namespace } => {
+            Attach { conn_id, namespace, .. } => {
                 Action::Attach {
                     conn_id: conn_id,
                     namespace: namespace,
                 }
             }
-            Detach { conn_id, namespace } => {
+            Detach { conn_id, namespace, .. } => {
                 Action::Detach {
                     conn_id: conn_id,
                     namespace: namespace,

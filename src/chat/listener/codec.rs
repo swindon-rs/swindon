@@ -226,6 +226,7 @@ impl<S> http::Codec<S> for Request {
                     }
                     self.wdata.remote.send(RemoteAction::Subscribe {
                         conn_id: cid,
+                        remote_id: rid,
                         topic: topic,
                     });
                     State::Done
@@ -238,6 +239,7 @@ impl<S> http::Codec<S> for Request {
                     if rid == my_rid {
                         self.wdata.remote.send(RemoteAction::Unsubscribe {
                             conn_id: cid,
+                            remote_id: rid,
                             topic: topic.clone(),
                         });
                     } else {
@@ -292,6 +294,7 @@ impl<S> http::Codec<S> for Request {
                         self.wdata.remote.send(RemoteAction::Attach {
                             namespace: ns.clone(),
                             conn_id: cid,
+                            remote_id: rid,
                         });
                         self.wdata.processor.send(Action::Lattice {
                             namespace: ns.clone(),
@@ -315,7 +318,8 @@ impl<S> http::Codec<S> for Request {
             State::Query(Detach(PubCid(cid, rid), ns)) => {
                 self.wdata.remote.send(RemoteAction::Detach {
                     namespace: ns.clone(),
-                    conn_id: cid.clone()
+                    conn_id: cid.clone(),
+                    remote_id: rid,
                 });
                 if rid == my_rid {
                     self.wdata.processor.send(Action::Detach {

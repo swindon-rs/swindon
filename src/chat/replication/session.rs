@@ -158,7 +158,7 @@ impl Watcher {
             }
             ReplAction::Incoming(msg) => {
                 debug!("Received incoming message: {:?}", msg);
-                self.processor.send(&msg.0, msg.1.into());
+                self.local_send(msg);
             }
             ReplAction::Outgoing(msg) => {
                 debug!("Sending outgoing message: {:?}", msg);
@@ -177,6 +177,23 @@ impl Watcher {
             self.peers.insert(peer, State::Connected(runtime_id));
         }
         self.links.insert(runtime_id, tx);
+    }
+
+    fn local_send(&self, msg: Message) {
+        use super::RemoteAction::*;
+        let Message(pool, action) = msg;
+        match action {
+            Subscribe { remote_id, .. } |
+            Unsubscribe { remote_id, .. } |
+            Attach { remote_id, .. } |
+            Detach { remote_id, .. } if self.runtime_id != remote_id =>
+            {
+                debug!("Skipping remote action with non-local cid");
+                return;
+            }
+            _ => {}
+        }
+        self.processor.send(&pool, action.into());
     }
 
     fn remote_send(&mut self, msg: Message) {
