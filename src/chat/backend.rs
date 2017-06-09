@@ -10,7 +10,6 @@ use serde_json;
 
 use chat::authorize::{parse_userinfo, good_status};
 use chat::{Cid, ConnectionSender, ConnectionMessage, TangleAuth};
-use chat::cid::{PubCid};
 use chat::CloseReason::{AuthHttp};
 use chat::ConnectionMessage::{Hello, StopSocket};
 use chat::error::MessageError;
@@ -160,8 +159,8 @@ impl<S> http::Codec<S> for AuthCodec {
             if let Some(ref header) = self.destination.override_host_header {
                 e.add_header("Host", header).unwrap();
             }
-            let cid = PubCid(self.conn_id.clone(), self.server_id.clone());
-            ok(write_json_request(e, &Auth(&cid, &i)))
+            ok(write_json_request(e,
+                &Auth(&self.conn_id, &self.server_id, &i)))
         } else {
             panic!("wrong state");
         }
@@ -237,8 +236,8 @@ impl<S> http::Codec<S> for CallCodec {
             }
             // TODO(tailhook) implement authrization
             e.add_header("Authorization", &*auth).unwrap();
-            let cid = PubCid(self.conn_id.clone(), self.server_id.clone());
-            let done = write_json_request(e, &Call(&*self.meta, &cid, &args, &kw));
+            let done = write_json_request(e, &Call(
+                &*self.meta, &self.conn_id, &self.server_id, &args, &kw));
             self.state = Wait;
             ok(done)
         } else {

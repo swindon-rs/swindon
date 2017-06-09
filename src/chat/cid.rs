@@ -1,7 +1,6 @@
 use std::fmt;
 use std::str::FromStr;
 use std::num::ParseIntError;
-use serde::ser::{Serialize, Serializer};
 use serde::de::{self, Deserialize, Deserializer, Visitor};
 
 use runtime::ServerId;
@@ -43,6 +42,12 @@ impl fmt::Debug for Cid {
     }
 }
 
+impl fmt::Display for Cid {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
 impl FromStr for PubCid {
     type Err = ();
 
@@ -52,14 +57,6 @@ impl FromStr for PubCid {
         let rid = rid.parse().map_err(|_| ())?;
         let cid = cid[1..].parse().map_err(|_| ())?;
         Ok(PubCid(cid, rid))
-    }
-}
-
-impl Serialize for PubCid {
-    fn serialize<S>(&self, s: S) -> Result<S::Ok, S::Error>
-        where S: Serializer
-    {
-        s.serialize_str(&format!("{}-{}", self.1, (self.0).0))
     }
 }
 
