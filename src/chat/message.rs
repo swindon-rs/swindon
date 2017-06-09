@@ -5,10 +5,12 @@
 /// ```
 use std::str;
 use std::ascii::AsciiExt;
-
 use serde_json::{self, Value as Json, Map, Error as JsonError};
 use serde::ser::{Serialize, Serializer, SerializeTuple};
 use serde::de::Error;
+
+use super::cid::Cid;
+use runtime::ServerId;
 
 pub type Meta = Map<String, Json>;
 pub type Args = Vec<Json>;
@@ -44,33 +46,37 @@ pub struct AuthData {
 
 // Private tools
 
-pub struct Auth<'a>(pub &'a String, pub &'a AuthData);
+pub struct Auth<'a>(pub &'a Cid, pub &'a ServerId, pub &'a AuthData);
 
 impl<'a> Serialize for Auth<'a> {
     fn serialize<S: Serializer>(&self, serializer: S)
         -> Result<S::Ok, S::Error>
     {
+        let &Auth(cid, sid, auth) = self;
         let mut tup = serializer.serialize_tuple(3)?;
-        tup.serialize_element(&json!({"connection_id": self.0}))?;
+        tup.serialize_element(&json!({
+            "connection_id": format!("{}-{}", sid, cid)}))?;
         tup.serialize_element(&json!([]))?;
-        tup.serialize_element(&self.1)?;
+        tup.serialize_element(auth)?;
         tup.end()
     }
 }
 
-pub struct Call<'a>(pub &'a Meta, pub &'a String, pub &'a Args, pub &'a Kwargs);
+pub struct Call<'a>(
+    pub &'a Meta, pub &'a Cid, pub &'a ServerId, pub &'a Args, pub &'a Kwargs);
 
 impl<'a> Serialize for Call<'a> {
     fn serialize<S: Serializer>(&self, serializer: S)
         -> Result<S::Ok, S::Error>
     {
+        let &Call(meta, cid, sid, args, kwargs) = self;
         let mut tup = serializer.serialize_tuple(3)?;
         tup.serialize_element(&MetaWithExtra {
-            meta: self.0,
-            extra: json!({"connection_id": self.1}),
+            meta: meta,
+            extra: json!({"connection_id": format!("{}-{}", sid, cid)}),
         })?;
-        tup.serialize_element(&self.2)?;
-        tup.serialize_element(&self.3)?;
+        tup.serialize_element(args)?;
+        tup.serialize_element(kwargs)?;
         tup.end()
     }
 }
@@ -125,6 +131,8 @@ mod test {
     use serde_json::Value as Json;
     use serde_json::to_string as json_encode;
 
+    use request_id;
+    use chat::cid::Cid;
     use chat::message::{self, Call, Meta, Args, Kwargs, Auth, AuthData};
 
     #[test]
@@ -251,12 +259,15 @@ mod test {
 
     #[test]
     fn encode_auth() {
-        let res = json_encode(&Auth(&"conn:1".to_string(), &AuthData {
+        let cid = "1".parse().unwrap();
+        let sid = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa".parse().unwrap();
+
+        let res = json_encode(&Auth(&cid, &sid, &AuthData {
             http_cookie: None, http_authorization: None,
             url_querystring: "".to_string(),
         })).unwrap();
         assert_eq!(res, concat!(
-            r#"[{"connection_id":"conn:1"},[],{"#,
+            r#"[{"connection_id":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-1"},[],{"#,
             r#""http_cookie":null,"http_authorization":null,"#,
             r#""url_querystring":""}]"#));
 
@@ -266,9 +277,10 @@ mod test {
             url_querystring: "".to_string(),
         };
 
-        let res = json_encode(&Auth(&"conn:2".to_string(), &kw)).unwrap();
+        let cid = "2".parse().unwrap();
+        let res = json_encode(&Auth(&cid, &sid, &kw)).unwrap();
         assert_eq!(res, concat!(
-            r#"[{"connection_id":"conn:2"},"#,
+            r#"[{"connection_id":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-2"},"#,
             r#"[],{"http_cookie":"auth=ok","#,
             r#""http_authorization":null,"url_querystring":""}]"#));
     }
@@ -278,26 +290,31 @@ mod test {
         let mut meta = Meta::new();
         let mut args = Args::new();
         let mut kw = Kwargs::new();
-        let cid = "123".to_string();
+        let cid = "123".parse().unwrap();
+        let sid = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa".parse().unwrap();
 
-        let res = json_encode(&Call(&meta, &cid, &args, &kw)).unwrap();
-        assert_eq!(res, "[{\"connection_id\":\"123\"},[],{}]");
+        let res = json_encode(&Call(&meta, &cid, &sid, &args, &kw)).unwrap();
+        assert_eq!(res, concat!(
+            r#"[{"connection_id":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-123"},"#,
+            r#"[],{}]"#));
 
         meta.insert("request_id".into(), json!("123"));
         args.push(json!("Hello"));
         args.push(json!("World!"));
         kw.insert("room".into(), json!(123));
 
-        let res = json_encode(&Call(&meta, &cid, &args, &kw)).unwrap();
+        let res = json_encode(&Call(&meta, &cid, &sid, &args, &kw)).unwrap();
         assert_eq!(res, concat!(
-            r#"[{"connection_id":"123","request_id":"123"},"#,
+            r#"[{"connection_id":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-123","#,
+            r#""request_id":"123"},"#,
             r#"["Hello","World!"],"#,
             r#"{"room":123}]"#));
 
         meta.insert("connection_id".into(), json!("321"));
-        let res = json_encode(&Call(&meta, &cid, &args, &kw)).unwrap();
+        let res = json_encode(&Call(&meta, &cid, &sid, &args, &kw)).unwrap();
         assert_eq!(res, concat!(
-            r#"[{"connection_id":"123","request_id":"123"},"#,
+            r#"[{"connection_id":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-123","#,
+            r#""request_id":"123"},"#,
             r#"["Hello","World!"],"#,
             r#"{"room":123}]"#));
     }

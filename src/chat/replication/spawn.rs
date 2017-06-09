@@ -17,27 +17,27 @@ use abstract_ns::{Router, Resolver};
 use serde_json;
 
 use config::Replication;
-use runtime::RuntimeId;
+use runtime::ServerId;
 use super::server::Incoming;
 use super::client::Authorizer;
 use super::{IncomingChannel, ReplAction};
 
 
 pub fn listen(addr: SocketAddr, sender: IncomingChannel,
-    runtime_id: &RuntimeId, settings: &Arc<Replication>,
+    server_id: &ServerId, settings: &Arc<Replication>,
     handle: &Handle, shutter: Receiver<()>)
     -> Result<(), io::Error>
 {
     // TODO: setup proper configuration;
     let hcfg = Config::new().done();
     let h1 = handle.clone();
-    let rid = runtime_id.clone();
+    let srv_id = server_id.clone();
 
     let listener = TcpListener::bind(&addr, &handle)?;
     handle.spawn(listener.incoming()
         .sleep_on_error(*settings.listen_error_timeout, &handle)
         .map(move |(socket, _)| {
-            let disp = Incoming::new(sender.clone(), rid, &h1);
+            let disp = Incoming::new(sender.clone(), srv_id, &h1);
             Proto::new(socket, &hcfg, disp, &h1)
             .map_err(|e| debug!("Http protocol error: {}", e))
         })
@@ -50,11 +50,11 @@ pub fn listen(addr: SocketAddr, sender: IncomingChannel,
 }
 
 pub fn connect(peer: &str, sender: IncomingChannel,
-    runtime_id: &RuntimeId, timeout_at: Instant, handle: &Handle,
+    server_id: &ServerId, timeout_at: Instant, handle: &Handle,
     resolver: &Router)
 {
     let wcfg = WsConfig::new().done();
-    let runtime_id = runtime_id.clone();
+    let server_id = server_id.clone();
     let h1 = handle.clone();
     let p1 = peer.to_string();
     let p2 = p1.clone();
@@ -83,15 +83,15 @@ pub fn connect(peer: &str, sender: IncomingChannel,
         }
     })
     .and_then(move |sock| {
-        HandshakeProto::new(sock, Authorizer::new(p1, runtime_id))
+        HandshakeProto::new(sock, Authorizer::new(p1, server_id))
         .map_err(|e| format!("WS auth error: {}", e))
     })
-    .and_then(move |(out, inp, runtime_id)| {
+    .and_then(move |(out, inp, remote_srv_id)| {
         let (tx, rx) = unbounded();
         let rx = rx.map_err(|_| format!("receiver error"));
         sender.send(ReplAction::Attach {
             tx: tx,
-            runtime_id: runtime_id,
+            server_id: remote_srv_id,
             peer: Some(p2),
         }).ok();
         Loop::client(out, inp, rx, Handler(sender), &wcfg)

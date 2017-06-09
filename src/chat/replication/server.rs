@@ -11,7 +11,7 @@ use tk_http::websocket::{Accept, Loop, ServerCodec, Config as WsConfig};
 use tk_bufstream::{WriteBuf, ReadBuf};
 
 use incoming::{Request, Reply, Transport};
-use runtime::{RuntimeId};
+use runtime::ServerId;
 use super::spawn::Handler;
 use super::{IncomingChannel, ReplAction};
 
@@ -20,35 +20,35 @@ use super::{IncomingChannel, ReplAction};
 pub struct Incoming {
     sender: IncomingChannel,
     handle: Handle,
-    runtime_id: RuntimeId,
+    server_id: ServerId,
 }
 
 struct WebsocketCodec {
     sender: IncomingChannel,
     handle: Handle,
     accept: Accept,
-    runtime_id: RuntimeId,
-    remote_id: RuntimeId,
+    server_id: ServerId,
+    remote_id: ServerId,
 }
 
 impl Incoming {
 
-    pub fn new(sender: IncomingChannel, runtime_id: RuntimeId, handle: &Handle)
+    pub fn new(sender: IncomingChannel, server_id: ServerId, handle: &Handle)
         -> Incoming
     {
         Incoming {
             sender: sender,
             handle: handle.clone(),
-            runtime_id: runtime_id,
+            server_id: server_id,
         }
     }
 
-    fn parse_remote_id(&self, headers: &Head) -> Option<RuntimeId>
+    fn parse_remote_id(&self, headers: &Head) -> Option<ServerId>
     {
         headers.all_headers().iter()
         .find(|h| h.name.eq_ignore_ascii_case("X-Swindon-Node-Id"))
         .and_then(|h| str::from_utf8(h.value).ok())
-        .and_then(|s| RuntimeId::from_str(s))
+        .and_then(|s| s.parse().ok())
     }
 }
 
@@ -66,7 +66,7 @@ impl<S: Transport> Dispatcher<S> for Incoming {
                     Ok(Box::new(WebsocketCodec {
                         sender: self.sender.clone(),
                         accept: ws.accept,
-                        runtime_id: self.runtime_id,
+                        server_id: self.server_id,
                         remote_id: remote_id,
                         handle: self.handle.clone(),
                     }))
@@ -100,7 +100,7 @@ impl<S: AsyncRead + AsyncWrite + 'static> Codec<S> for WebsocketCodec {
         e.add_header("Connection", "upgrade").unwrap();
         e.add_header("Upgrade", "websocket").unwrap();
         e.format_header("Sec-Websocket-Accept", &self.accept).unwrap();
-        e.format_header("X-Swindon-Node-Id", &self.runtime_id).unwrap();
+        e.format_header("X-Swindon-Node-Id", &self.server_id).unwrap();
         e.done_headers().unwrap();
         Box::new(ok(e.done()))
     }
@@ -114,7 +114,7 @@ impl<S: AsyncRead + AsyncWrite + 'static> Codec<S> for WebsocketCodec {
         let rx = rx.map_err(|e| format!("receive error: {:?}", e));
         self.sender.send(ReplAction::Attach {
             tx: tx,
-            runtime_id: self.remote_id,
+            server_id: self.remote_id,
             peer: None,
         }).ok();
 

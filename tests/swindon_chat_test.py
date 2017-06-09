@@ -18,13 +18,16 @@ async def test_simple_userinfo(proxy_server, swindon):
         assert req.headers['Content-Type'] == 'application/json'
         assert 'Authorization' not in req.headers
         expected = [
-            {'connection_id': '0'},
+            {'connection_id': mock.ANY},
             [],
             {'http_cookie': None,
              'http_authorization': None,
              'url_querystring': '',
              }]
-        assert await req.json() == expected
+        body = await req.json()
+        assert body == expected
+        assert isinstance(body[0]['connection_id'], str)
+        assert len(body[0]['connection_id']) > 0
 
         fut.set_result(
             web.Response(text='{"user_id": "user:1", "username": "John"}'))

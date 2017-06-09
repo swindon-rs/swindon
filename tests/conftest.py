@@ -7,6 +7,7 @@ import string
 import socket
 import textwrap
 import hashlib
+import time
 
 import yarl
 import aiohttp
@@ -225,6 +226,7 @@ def swindon_two(_proc, request, debug_routing,
         with run_swindon(_proc, swindon_bin, config, rust_log,
                          peer2['main'], peer2['replication'],
                          **options2) as peer2:
+            time.sleep(1.5)
             yield peer1, peer2
 
 

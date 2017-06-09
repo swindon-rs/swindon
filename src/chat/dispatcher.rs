@@ -104,7 +104,8 @@ impl Dispatcher {
             self.auth.clone(),
             path, self.cid, &meta, args, kw,
             dest_settings,
-            self.channel.clone()));
+            self.channel.clone(),
+            self.runtime.server_id.clone()));
         match up.get_mut().get_mut() {
             Some(pool) => {
                 match pool.start_send(codec) {

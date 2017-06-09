@@ -10,13 +10,13 @@ use serde_json;
 
 use chat::authorize::{parse_userinfo, good_status};
 use chat::{Cid, ConnectionSender, ConnectionMessage, TangleAuth};
-use chat::cid::{serialize_cid};
 use chat::CloseReason::{AuthHttp};
 use chat::ConnectionMessage::{Hello, StopSocket};
 use chat::error::MessageError;
 use chat::message::{AuthData, Auth, Call, Meta, Args, Kwargs};
 use chat::processor::{ProcessorPool, Action};
 use config::http_destinations::Destination;
+use runtime::ServerId;
 use intern::SessionId;
 use proxy::{Response};
 
@@ -48,12 +48,14 @@ pub struct AuthCodec {
     conn_id: Cid,
     destination: Arc<Destination>,
     sender: ConnectionSender,
+    server_id: ServerId,
 }
 
 pub struct CallCodec {
     state: CallState,
     meta: Arc<Meta>,
     conn_id: Cid,
+    server_id: ServerId,
     destination: Arc<Destination>,
     sender: ConnectionSender,
 }
@@ -67,13 +69,14 @@ pub struct InactivityCodec {
 impl AuthCodec {
     pub fn new(path: String, cid: Cid, req: AuthData,
         chat: ProcessorPool, destination: &Arc<Destination>,
-        tx: ConnectionSender)
+        tx: ConnectionSender, server_id: ServerId)
         -> AuthCodec
     {
         AuthCodec {
             state: AuthState::Init(path, req),
             chat: chat,
             conn_id: cid,
+            server_id: server_id,
             destination: destination.clone(),
             sender: tx,
         }
@@ -84,7 +87,8 @@ impl CallCodec {
     pub fn new(auth: Arc<String>, path: String, cid: Cid,
         meta: &Arc<Meta>, args: Args, kw: Kwargs,
         destination: &Arc<Destination>,
-        sender: ConnectionSender)
+        sender: ConnectionSender,
+        server_id: ServerId)
         -> CallCodec
     {
         CallCodec {
@@ -96,6 +100,7 @@ impl CallCodec {
             },
             meta: meta.clone(),
             conn_id: cid,
+            server_id: server_id,
             destination: destination.clone(),
             sender: sender,
         }
@@ -155,7 +160,7 @@ impl<S> http::Codec<S> for AuthCodec {
                 e.add_header("Host", header).unwrap();
             }
             ok(write_json_request(e,
-                &Auth(&serialize_cid(&self.conn_id), &i)))
+                &Auth(&self.conn_id, &self.server_id, &i)))
         } else {
             panic!("wrong state");
         }
@@ -231,8 +236,8 @@ impl<S> http::Codec<S> for CallCodec {
             }
             // TODO(tailhook) implement authrization
             e.add_header("Authorization", &*auth).unwrap();
-            let cid = serialize_cid(&self.conn_id);
-            let done = write_json_request(e, &Call(&*self.meta, &cid, &args, &kw));
+            let done = write_json_request(e, &Call(
+                &*self.meta, &self.conn_id, &self.server_id, &args, &kw));
             self.state = Wait;
             ok(done)
         } else {

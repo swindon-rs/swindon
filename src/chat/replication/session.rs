@@ -4,16 +4,15 @@ use std::collections::HashMap;
 use std::time::{Instant, Duration};
 use tokio_core::reactor::Handle;
 use tokio_core::reactor::Interval;
-use futures::{Future, Stream};
+use futures::{self, Future, Stream, Async, AsyncSink};
 use futures::sync::mpsc::{unbounded, UnboundedSender};
 use futures::sync::oneshot::{channel as oneshot, Sender};
 use tk_http::websocket::Packet;
 use serde_json::to_string as json_encode;
 use abstract_ns::{Router};
 
-use request_id;
 use intern::SessionPoolName;
-use runtime::{RuntimeId};
+use runtime::{Runtime, ServerId};
 use config::{ListenSocket, Replication};
 use chat::processor::Processor;
 
@@ -25,17 +24,16 @@ use super::spawn::{listen, connect};
 pub struct ReplicationSession {
     pub remote_sender: RemoteSender,
     tx: IncomingChannel,
-    runtime_id: RuntimeId,
     shutters: HashMap<SocketAddr, Sender<()>>,
     reconnect_shutter: Option<Sender<()>>,
 }
 
-pub struct Watcher {
+struct Watcher {
     peers: HashMap<String, State>,
-    links: HashMap<RuntimeId, OutgoingChannel>,
-    pub tx: IncomingChannel,
+    links: HashMap<ServerId, OutgoingChannel>,
+    tx: IncomingChannel,
     processor: Processor,
-    runtime_id: RuntimeId,
+    server_id: ServerId,
     resolver: Router,
     handle: Handle,
 }
@@ -43,12 +41,12 @@ pub struct Watcher {
 #[derive(Debug)]
 enum State {
     /// Connect started for outbound connection.
-    /// RuntimeId is still unknown.
+    /// ServerId is still unknown.
     Connecting(Instant),
     /// Either outbound or inbound live connection.
-    /// RuntimeId is known.
+    /// ServerId is known.
     /// Also for outbound connection peer name is known.
-    Connected(RuntimeId),
+    Connected(ServerId),
 }
 
 #[derive(Clone)]
@@ -62,27 +60,25 @@ pub struct RemotePool {
 }
 
 impl ReplicationSession {
-    pub fn new(processor: Processor, resolver: &Router, handle: &Handle)
+    pub fn new(processor: Processor, resolver: &Router, handle: &Handle,
+        server_id: &ServerId)
         -> ReplicationSession
     {
-        let runtime_id = request_id::new();
         let (tx, rx) = unbounded();
-        let mut watcher = Watcher {
+        let watcher = Watcher {
             processor: processor,
             peers: HashMap::new(),
             links: HashMap::new(),
             tx: tx.clone(),
-            runtime_id: runtime_id.clone(),
+            server_id: server_id.clone(),
             handle: handle.clone(),
             resolver: resolver.clone(),
         };
-        handle.spawn(rx.for_each(move |action| {
-            watcher.process(action);
-            Ok(())
-        }));
+        handle.spawn(rx.forward(watcher)
+            .map(|_| debug!("rx stopped"))
+            .map_err(|_| debug!("watcher error")));
 
         ReplicationSession {
-            runtime_id: runtime_id,
             tx: tx.clone(),
             remote_sender: RemoteSender { queue: tx },
             shutters: HashMap::new(),
@@ -90,7 +86,8 @@ impl ReplicationSession {
         }
     }
 
-    pub fn update(&mut self, cfg: &Arc<Replication>, handle: &Handle)
+    pub fn update(&mut self, cfg: &Arc<Replication>,
+        handle: &Handle, runtime: &Arc<Runtime>)
     {
         let mut to_delete = Vec::new();
         for (&addr, _) in &self.shutters {
@@ -109,7 +106,7 @@ impl ReplicationSession {
                 ListenSocket::Tcp(addr) => {
                     let (tx, rx) = oneshot();
                     match listen(addr, self.tx.clone(),
-                        &self.runtime_id, &cfg, handle, rx)
+                        &runtime.server_id, &cfg, handle, rx)
                     {
                         Ok(()) => {
                             self.shutters.insert(addr, tx);
@@ -132,16 +129,13 @@ impl ReplicationSession {
         self.reconnect_shutter = Some(tx);
         let s = cfg.clone();
         let tx = self.tx.clone();
+
+        use futures::Sink; // conflicting with tx.send in RemotePool
         handle.spawn(Interval::new(Duration::new(1, 0), &handle)
             .expect("interval created")
             .map(move |_| ReplAction::Reconnect(s.clone()))
             .map_err(|e| error!("Interval error: {}", e))
-            .for_each(move |action| {
-                tx.send(action)
-                .map_err(|_| error!("Error sending action"))
-                .ok();
-                Ok(())
-            })
+            .forward(tx.sink_map_err(|_| error!("sink error"))).map(|_| ())
             .select(shutter.map_err(|_| unreachable!()))
             .map(|_| info!("Reconnector stopped"))
             .map_err(|_| info!("Reconnector stopped"))
@@ -152,33 +146,30 @@ impl ReplicationSession {
 
 impl Watcher {
 
-    fn process(&mut self, action: ReplAction) {
-        match action {
-            ReplAction::Attach { tx, runtime_id, peer } => {
-                debug!("Got connection from: {:?}:{}", peer, runtime_id);
-                self.attach(tx, runtime_id, peer);
-            }
-            ReplAction::Incoming(msg) => {
-                debug!("Received incoming message: {:?}", msg);
-                self.processor.send(&msg.0, msg.1.into());
-            }
-            ReplAction::Outgoing(msg) => {
-                debug!("Sending outgoing message: {:?}", msg);
-                self.remote_send(msg);
-            }
-            ReplAction::Reconnect(ref cfg) => {
-                self.reconnect(cfg);
-            }
-        }
-    }
-
     fn attach(&mut self, tx: OutgoingChannel,
-        runtime_id: RuntimeId, peer: Option<String>)
+        server_id: ServerId, peer: Option<String>)
     {
         if let Some(peer) = peer {
-            self.peers.insert(peer, State::Connected(runtime_id));
+            self.peers.insert(peer, State::Connected(server_id));
         }
-        self.links.insert(runtime_id, tx);
+        self.links.insert(server_id, tx);
+    }
+
+    fn local_send(&self, msg: Message) {
+        use super::RemoteAction::*;
+        let Message(pool, action) = msg;
+        match action {
+            Subscribe { server_id, .. } |
+            Unsubscribe { server_id, .. } |
+            Attach { server_id, .. } |
+            Detach { server_id, .. } if self.server_id != server_id =>
+            {
+                debug!("Skipping remote action with non-local cid");
+                return;
+            }
+            _ => {}
+        }
+        self.processor.send(&pool, action.into());
     }
 
     fn remote_send(&mut self, msg: Message) {
@@ -209,8 +200,8 @@ impl Watcher {
             .map(|p| p.clone()).collect::<Vec<_>>();  // XXX
         for peer in to_delete {
             match self.peers.remove(&peer) {
-                Some(Connected(runtime_id)) => {
-                    self.links.remove(&runtime_id);
+                Some(Connected(server_id)) => {
+                    self.links.remove(&server_id);
                 }
                 _ => continue,
             }
@@ -218,8 +209,8 @@ impl Watcher {
 
         for peer in &settings.peers {
             match self.peers.get(peer) {
-                Some(&Connected(ref runtime_id)) => {
-                    if let Some(_) = self.links.get(runtime_id) {
+                Some(&Connected(ref server_id)) => {
+                    if let Some(_) = self.links.get(server_id) {
                         continue
                     }
                 }
@@ -231,7 +222,7 @@ impl Watcher {
                 _ => {}
             };
             self.peers.insert(peer.clone(), Connecting(timeout));
-            connect(peer, self.tx.clone(), &self.runtime_id,
+            connect(peer, self.tx.clone(), &self.server_id,
                 timeout, &self.handle, &self.resolver);
         }
     }
@@ -252,5 +243,41 @@ impl RemotePool {
         let msg = Message(self.pool.clone(), action);
         self.queue.send(ReplAction::Outgoing(msg))
             .map_err(|e| error!("Error sending event: {}", e)).ok();
+    }
+}
+
+impl futures::Sink for Watcher {
+    type SinkItem = ReplAction;
+    type SinkError = ();
+
+    fn start_send(&mut self, item: Self::SinkItem)
+        -> futures::StartSend<Self::SinkItem, Self::SinkError>
+    {
+        match item {
+            ReplAction::Attach { tx, server_id, peer } => {
+                if let Some(ref peer) = peer {
+                    debug!("Got connected to {}: {}", peer, server_id);
+                } else {
+                    debug!("Got connection from: {}", server_id);
+                }
+                self.attach(tx, server_id, peer);
+            }
+            ReplAction::Incoming(msg) => {
+                debug!("Received incoming message: {:?}", msg);
+                self.local_send(msg);
+            }
+            ReplAction::Outgoing(msg) => {
+                debug!("Sending outgoing message: {:?}", msg);
+                self.remote_send(msg);
+            }
+            ReplAction::Reconnect(ref cfg) => {
+                self.reconnect(cfg);
+            }
+        }
+        Ok(AsyncSink::Ready)
+    }
+    fn poll_complete(&mut self) -> futures::Poll<(), Self::SinkError>
+    {
+        Ok(Async::Ready(()))
     }
 }
