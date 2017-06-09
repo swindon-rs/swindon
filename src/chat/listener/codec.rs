@@ -210,13 +210,13 @@ impl<S> http::Codec<S> for Request {
     {
         use self::Route::*;
         assert!(end);
-        let my_rid = self.wdata.runtime.runtime_id;
+        let my_srv_id = self.wdata.runtime.server_id;
         let query = mem::replace(&mut self.state,
                                  State::Error(Status::InternalServerError));
         self.state = match query {
-            State::Query(Subscribe(PubCid(cid, rid), topic)) => {
+            State::Query(Subscribe(PubCid(cid, srv_id), topic)) => {
                 if data.len() == 0 {
-                    if rid == my_rid {
+                    if srv_id == my_srv_id {
                         self.wdata.processor.send(Action::Subscribe {
                             conn_id: cid,
                             topic: topic.clone(),
@@ -226,7 +226,7 @@ impl<S> http::Codec<S> for Request {
                     }
                     self.wdata.remote.send(RemoteAction::Subscribe {
                         conn_id: cid,
-                        remote_id: rid,
+                        server_id: srv_id,
                         topic: topic,
                     });
                     State::Done
@@ -234,12 +234,12 @@ impl<S> http::Codec<S> for Request {
                     State::Error(Status::BadRequest)
                 }
             }
-            State::Query(Unsubscribe(PubCid(cid, rid), topic)) => {
+            State::Query(Unsubscribe(PubCid(cid, srv_id), topic)) => {
                 if data.len() == 0 {
-                    if rid == my_rid {
+                    if srv_id == my_srv_id {
                         self.wdata.remote.send(RemoteAction::Unsubscribe {
                             conn_id: cid,
-                            remote_id: rid,
+                            server_id: srv_id,
                             topic: topic.clone(),
                         });
                     } else {
@@ -277,7 +277,7 @@ impl<S> http::Codec<S> for Request {
                     }
                 }
             }
-            State::Query(LatticeSubscribe(PubCid(cid, rid), ns)) => {
+            State::Query(LatticeSubscribe(PubCid(cid, srv_id), ns)) => {
                 // TODO(tailhook) check content-type
                 let data: Result<Delta,_> = serde_json::from_slice(data)
                     .map_err(|e| {
@@ -294,13 +294,13 @@ impl<S> http::Codec<S> for Request {
                         self.wdata.remote.send(RemoteAction::Attach {
                             namespace: ns.clone(),
                             conn_id: cid,
-                            remote_id: rid,
+                            server_id: srv_id,
                         });
                         self.wdata.processor.send(Action::Lattice {
                             namespace: ns.clone(),
                             delta: delta,
                         });
-                        if rid == my_rid {
+                        if srv_id == my_srv_id {
                             self.wdata.processor.send(Action::Attach {
                                 namespace: ns.clone(),
                                 conn_id: cid,
@@ -315,13 +315,13 @@ impl<S> http::Codec<S> for Request {
                     }
                 }
             }
-            State::Query(Detach(PubCid(cid, rid), ns)) => {
+            State::Query(Detach(PubCid(cid, srv_id), ns)) => {
                 self.wdata.remote.send(RemoteAction::Detach {
                     namespace: ns.clone(),
                     conn_id: cid.clone(),
-                    remote_id: rid,
+                    server_id: srv_id,
                 });
-                if rid == my_rid {
+                if srv_id == my_srv_id {
                     self.wdata.processor.send(Action::Detach {
                         namespace: ns.clone(),
                         conn_id: cid,

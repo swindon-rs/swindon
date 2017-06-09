@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use serde_json::Value as Json;
 
-use runtime::RuntimeId;
+use runtime::ServerId;
 use intern::{SessionPoolName, Topic, Lattice as Namespace};
 use config::Replication;
 use chat::Cid;
@@ -16,7 +16,7 @@ pub enum ReplAction {
     Attach {
         tx: OutgoingChannel,
         peer: Option<String>,
-        runtime_id: RuntimeId,
+        server_id: ServerId,
     },
 
     /// Send replicated message to remote peers;
@@ -37,12 +37,12 @@ pub struct Message(pub SessionPoolName, pub RemoteAction);
 pub enum RemoteAction {
     Subscribe {
         conn_id: Cid,
-        remote_id: RuntimeId,
+        server_id: ServerId,
         topic: Topic,
     },
     Unsubscribe {
         conn_id: Cid,
-        remote_id: RuntimeId,
+        server_id: ServerId,
         topic: Topic,
     },
     Publish {
@@ -53,12 +53,12 @@ pub enum RemoteAction {
 
     Attach {
         conn_id: Cid,
-        remote_id: RuntimeId,
+        server_id: ServerId,
         namespace: Namespace,
     },
     Detach {
         conn_id: Cid,
-        remote_id: RuntimeId,
+        server_id: ServerId,
         namespace: Namespace,
     },
     Lattice {

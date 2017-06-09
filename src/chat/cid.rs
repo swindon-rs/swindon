@@ -4,7 +4,7 @@ use std::num::ParseIntError;
 use serde::ser::{Serialize, Serializer};
 use serde::de::{self, Deserialize, Deserializer, Visitor};
 
-use runtime::RuntimeId;
+use runtime::ServerId;
 
 /// Internal connection id
 #[derive(Hash, PartialEq, Eq, Clone, Copy, Serialize, Deserialize)]
@@ -12,7 +12,7 @@ pub struct Cid(u64);
 
 
 /// Public connection id
-pub struct PubCid(pub Cid, pub RuntimeId);
+pub struct PubCid(pub Cid, pub ServerId);
 
 impl Cid {
     #[cfg(target_pointer_width = "64")]

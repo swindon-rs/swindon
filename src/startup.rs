@@ -99,11 +99,11 @@ pub fn populate_loop(handle: &Handle, cfg: &ConfigCell, verbose: bool)
     rb.add_default(ns);
     let resolver = rb.into_resolver();
 
-    let runtime_id = request_id::new();
+    let server_id = request_id::new();
     let http_pools = HttpPools::new();
     let processor = chat::Processor::new();
     let mut replication_session = chat::ReplicationSession::new(
-        processor.clone(), &resolver, handle, &runtime_id);
+        processor.clone(), &resolver, handle, &server_id);
     let session_pools = chat::SessionPools::new(
         processor, replication_session.remote_sender.clone());
     let disk_pools = DiskPools::new(&meter);
@@ -114,7 +114,7 @@ pub fn populate_loop(handle: &Handle, cfg: &ConfigCell, verbose: bool)
         session_pools: session_pools.clone(),
         disk_pools: disk_pools.clone(),
         meter: meter,
-        runtime_id: runtime_id,
+        server_id: server_id,
     });
     let root = cfg.get();
 

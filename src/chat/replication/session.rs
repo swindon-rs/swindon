@@ -12,7 +12,7 @@ use serde_json::to_string as json_encode;
 use abstract_ns::{Router};
 
 use intern::SessionPoolName;
-use runtime::{Runtime, RuntimeId};
+use runtime::{Runtime, ServerId};
 use config::{ListenSocket, Replication};
 use chat::processor::Processor;
 
@@ -30,10 +30,10 @@ pub struct ReplicationSession {
 
 pub struct Watcher {
     peers: HashMap<String, State>,
-    links: HashMap<RuntimeId, OutgoingChannel>,
-    pub tx: IncomingChannel,
+    links: HashMap<ServerId, OutgoingChannel>,
+    tx: IncomingChannel,
     processor: Processor,
-    runtime_id: RuntimeId,
+    server_id: ServerId,
     resolver: Router,
     handle: Handle,
 }
@@ -41,12 +41,12 @@ pub struct Watcher {
 #[derive(Debug)]
 enum State {
     /// Connect started for outbound connection.
-    /// RuntimeId is still unknown.
+    /// ServerId is still unknown.
     Connecting(Instant),
     /// Either outbound or inbound live connection.
-    /// RuntimeId is known.
+    /// ServerId is known.
     /// Also for outbound connection peer name is known.
-    Connected(RuntimeId),
+    Connected(ServerId),
 }
 
 #[derive(Clone)]
@@ -61,7 +61,7 @@ pub struct RemotePool {
 
 impl ReplicationSession {
     pub fn new(processor: Processor, resolver: &Router, handle: &Handle,
-        runtime_id: &RuntimeId)
+        server_id: &ServerId)
         -> ReplicationSession
     {
         let (tx, rx) = unbounded();
@@ -70,7 +70,7 @@ impl ReplicationSession {
             peers: HashMap::new(),
             links: HashMap::new(),
             tx: tx.clone(),
-            runtime_id: runtime_id.clone(),
+            server_id: server_id.clone(),
             handle: handle.clone(),
             resolver: resolver.clone(),
         };
@@ -107,7 +107,7 @@ impl ReplicationSession {
                 ListenSocket::Tcp(addr) => {
                     let (tx, rx) = oneshot();
                     match listen(addr, self.tx.clone(),
-                        &runtime.runtime_id, &cfg, handle, rx)
+                        &runtime.server_id, &cfg, handle, rx)
                     {
                         Ok(()) => {
                             self.shutters.insert(addr, tx);
@@ -152,9 +152,9 @@ impl Watcher {
 
     fn process(&mut self, action: ReplAction) {
         match action {
-            ReplAction::Attach { tx, runtime_id, peer } => {
-                debug!("Got connection from: {:?}:{}", peer, runtime_id);
-                self.attach(tx, runtime_id, peer);
+            ReplAction::Attach { tx, server_id, peer } => {
+                debug!("Got connection from: {:?}:{}", peer, server_id);
+                self.attach(tx, server_id, peer);
             }
             ReplAction::Incoming(msg) => {
                 debug!("Received incoming message: {:?}", msg);
@@ -171,22 +171,22 @@ impl Watcher {
     }
 
     fn attach(&mut self, tx: OutgoingChannel,
-        runtime_id: RuntimeId, peer: Option<String>)
+        server_id: ServerId, peer: Option<String>)
     {
         if let Some(peer) = peer {
-            self.peers.insert(peer, State::Connected(runtime_id));
+            self.peers.insert(peer, State::Connected(server_id));
         }
-        self.links.insert(runtime_id, tx);
+        self.links.insert(server_id, tx);
     }
 
     fn local_send(&self, msg: Message) {
         use super::RemoteAction::*;
         let Message(pool, action) = msg;
         match action {
-            Subscribe { remote_id, .. } |
-            Unsubscribe { remote_id, .. } |
-            Attach { remote_id, .. } |
-            Detach { remote_id, .. } if self.runtime_id != remote_id =>
+            Subscribe { server_id, .. } |
+            Unsubscribe { server_id, .. } |
+            Attach { server_id, .. } |
+            Detach { server_id, .. } if self.server_id != server_id =>
             {
                 debug!("Skipping remote action with non-local cid");
                 return;
@@ -224,8 +224,8 @@ impl Watcher {
             .map(|p| p.clone()).collect::<Vec<_>>();  // XXX
         for peer in to_delete {
             match self.peers.remove(&peer) {
-                Some(Connected(runtime_id)) => {
-                    self.links.remove(&runtime_id);
+                Some(Connected(server_id)) => {
+                    self.links.remove(&server_id);
                 }
                 _ => continue,
             }
@@ -233,8 +233,8 @@ impl Watcher {
 
         for peer in &settings.peers {
             match self.peers.get(peer) {
-                Some(&Connected(ref runtime_id)) => {
-                    if let Some(_) = self.links.get(runtime_id) {
+                Some(&Connected(ref server_id)) => {
+                    if let Some(_) = self.links.get(server_id) {
                         continue
                     }
                 }
@@ -246,7 +246,7 @@ impl Watcher {
                 _ => {}
             };
             self.peers.insert(peer.clone(), Connecting(timeout));
-            connect(peer, self.tx.clone(), &self.runtime_id,
+            connect(peer, self.tx.clone(), &self.server_id,
                 timeout, &self.handle, &self.resolver);
         }
     }
