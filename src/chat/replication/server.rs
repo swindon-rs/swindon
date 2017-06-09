@@ -114,7 +114,7 @@ impl<S: AsyncRead + AsyncWrite + 'static> Codec<S> for WebsocketCodec {
         let rx = rx.map_err(|e| format!("receive error: {:?}", e));
         self.sender.send(ReplAction::Attach {
             tx: tx,
-            server_id: self.server_id,
+            server_id: self.remote_id,
             peer: None,
         }).ok();
 
