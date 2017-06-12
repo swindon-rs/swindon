@@ -63,6 +63,12 @@ impl<S: Transport> Dispatcher<S> for Incoming {
             if let Ok(Some(ws)) = headers.get_websocket_upgrade() {
                 if let Some(remote_id) = self.parse_remote_id(headers)
                 {
+                    if remote_id == self.server_id {
+                        error!(concat!("Configuration error:",
+                            " got connection from ourself: {:?}"),
+                            self.server_id);
+                        return Ok(error_reply(Status::BadRequest));
+                    }
                     Ok(Box::new(WebsocketCodec {
                         sender: self.sender.clone(),
                         accept: ws.accept,
