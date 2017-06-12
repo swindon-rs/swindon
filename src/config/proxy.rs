@@ -13,6 +13,7 @@ pub enum Mode {
 pub struct Proxy {
     pub mode: Mode,
     pub ip_header: Option<String>,
+    // NOTE: option is deprecated.
     pub request_id_header: Option<String>,
     pub destination: http::Destination,
     // TODO(tailhook) this might needs to be u64

@@ -164,7 +164,6 @@ handlers:
     ip-header: X-Some-Header
   proxy_w_request_id: !Proxy
     destination: proxy_dest
-    request-id-header: X-Request-Id
   proxy_w_host: !Proxy
     destination: proxy_host
   swindon_proxy: !Proxy
@@ -218,6 +217,7 @@ http-destinations:
   proxy_dest:
     addresses:
     - *PROXY_ADDRESS
+    request-id-header: X-Request-Id
 
   proxy_host:
     override-host-header: swindon.proxy.example.org

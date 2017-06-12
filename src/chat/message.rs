@@ -132,7 +132,6 @@ mod test {
     use serde_json::to_string as json_encode;
 
     use request_id;
-    use chat::cid::Cid;
     use chat::message::{self, Call, Meta, Args, Kwargs, Auth, AuthData};
 
     #[test]

@@ -21,6 +21,7 @@ pub struct Destination {
     pub max_request_timeout: De<Duration>,
     pub safe_pipeline_timeout: De<Duration>,
     pub override_host_header: Option<String>,
+    pub request_id_header: Option<String>,
 }
 
 pub fn validator<'x>() -> Structure<'x> {
@@ -40,4 +41,5 @@ pub fn validator<'x>() -> Structure<'x> {
     .member("max_request_timeout", Scalar::new().default("30 secs"))
     .member("safe_pipeline_timeout", Scalar::new().default("300 ms"))
     .member("override_host_header", Scalar::new().optional())
+    .member("request_id_header", Scalar::new().optional())
 }

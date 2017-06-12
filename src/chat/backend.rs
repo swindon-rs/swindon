@@ -6,7 +6,7 @@ use futures::future::{FutureResult, ok};
 use tk_http::{Status, Version};
 use tk_http::client as http;
 use serde::ser::Serialize;
-use serde_json;
+use serde_json::{self, Value as Json};
 
 use chat::authorize::{parse_userinfo, good_status};
 use chat::{Cid, ConnectionSender, ConnectionMessage, TangleAuth};
@@ -19,6 +19,7 @@ use config::http_destinations::Destination;
 use runtime::ServerId;
 use intern::SessionId;
 use proxy::{Response};
+use request_id;
 
 
 const INACTIVITY_PAYLOAD: &'static [u8] = b"[{}, [], {}]";
@@ -81,6 +82,13 @@ impl AuthCodec {
             sender: tx,
         }
     }
+
+    fn add_request_id<S>(&self, e: &mut http::Encoder<S>) {
+        if let Some(ref header) = self.destination.request_id_header {
+            let cid = format!("{}-{}-auth", self.server_id, self.conn_id);
+            e.add_header(header, cid).unwrap();
+        }
+    }
 }
 
 impl CallCodec {
@@ -105,6 +113,32 @@ impl CallCodec {
             sender: sender,
         }
     }
+
+    fn add_request_id<S>(&self, e: &mut http::Encoder<S>) {
+        if let Some(ref header) = self.destination.request_id_header {
+            let rid = match self.meta.get("request_id") {
+                Some(&Json::String(ref rid)) if rid.len() <= 36 => {
+                    if rid.chars().all(|c| {
+                        c.is_digit(36) || c == '-' || c == '_' })
+                    {
+                        format!("{}-{}-{}", self.server_id, self.conn_id, rid)
+                    } else {
+                        format!("{}-{}-{}", self.server_id, self.conn_id,
+                            request_id::new())
+                    }
+                }
+                Some(&Json::Number(ref n)) if n.is_u64() => {
+                    format!("{}-{}-{}", self.server_id, self.conn_id,
+                        n.as_u64().unwrap())
+                }
+                _ => {
+                    format!("{}-{}-{}", self.server_id, self.conn_id,
+                        request_id::new())
+                }
+            };
+            e.add_header(header, rid).unwrap();
+        }
+    }
 }
 
 impl InactivityCodec {
@@ -116,6 +150,12 @@ impl InactivityCodec {
             path: path.clone(),
             destination: destination.clone(),
             session_id: sid.clone(),
+        }
+    }
+
+    fn add_request_id<S>(&self, e: &mut http::Encoder<S>) {
+        if let Some(ref header) = self.destination.request_id_header {
+            e.format_header(header, request_id::new()).unwrap();
         }
     }
 }
@@ -159,6 +199,7 @@ impl<S> http::Codec<S> for AuthCodec {
             if let Some(ref header) = self.destination.override_host_header {
                 e.add_header("Host", header).unwrap();
             }
+            self.add_request_id(&mut e);
             ok(write_json_request(e,
                 &Auth(&self.conn_id, &self.server_id, &i)))
         } else {
@@ -236,6 +277,7 @@ impl<S> http::Codec<S> for CallCodec {
             }
             // TODO(tailhook) implement authrization
             e.add_header("Authorization", &*auth).unwrap();
+            self.add_request_id(&mut e);
             let done = write_json_request(e, &Call(
                 &*self.meta, &self.conn_id, &self.server_id, &args, &kw));
             self.state = Wait;
@@ -298,6 +340,7 @@ impl<S> http::Codec<S> for InactivityCodec {
         e.format_header("Authorization",
                         TangleAuth(&self.session_id)).unwrap();
         e.add_header("Content-Type", "application/json").unwrap();
+        self.add_request_id(&mut e);
         e.add_length(INACTIVITY_PAYLOAD.len() as u64).unwrap();
         e.done_headers().unwrap();
         e.write_body(INACTIVITY_PAYLOAD);

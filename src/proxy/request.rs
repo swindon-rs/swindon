@@ -95,7 +95,7 @@ impl RepReq {
             // NOTE: this can duplicate header value.
             e.format_header(h, r.addr.ip()).unwrap();
         }
-        if let Some(ref h) = r.settings.request_id_header {
+        if let Some(ref h) = dest.request_id_header {
             // NOTE: this can duplicate header value.
             e.format_header(h, r.request_id).unwrap();
         }

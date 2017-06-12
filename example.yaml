@@ -39,6 +39,7 @@ handlers:
     mode: forward
     ip-header: X-Remote-Ip
     destination: superman/
+    request-id-header: X-R-Id
 
   empty-gif: !EmptyGif
     extra-headers: &cool-headers

@@ -166,6 +166,12 @@ pub fn read_config<P: AsRef<Path>>(filename: P)
                 if !cfg.http_destinations.contains_key(u) {
                     err!("{:?}: unknown http destination {:?}", name, u)
                 }
+                if proxy.request_id_header.is_some() {
+                    warn!(concat!(
+                        "{:?}: request_id_header is deprecated",
+                        " in !Proxy setting, it must be specified",
+                        " in http destination"), name);
+                }
             }
             &Handler::Static(ref config) => {
                 if config.strip_host_suffix.is_some() &&
