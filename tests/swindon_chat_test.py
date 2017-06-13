@@ -536,3 +536,72 @@ async def test_invalid_api_method_publish(
     async with aiohttp.ClientSession(loop=loop) as s:
         async with s.request(method, swindon.api / path, data='{}') as resp:
             assert resp.status == 404
+
+
+@pytest.mark.parametrize('request_id', [
+    1, "2", "abc_def_xyz", "abc-def-xyz",
+])
+async def test_request_id_routes__ok(proxy_server, swindon, request_id):
+    url = swindon.url / 'swindon-chat'
+    async with proxy_server.swindon_chat(url, timeout=1) as call:
+        req, fut = await call.request()
+        assert req.path == '/tangle/authorize_connection'
+        assert req.headers["Host"] == "swindon.internal"
+        fut.set_result(json_response({
+            "user_id": "user:2", "username": "Jack"}))
+        ws = await call.websocket
+        hello = await ws.receive_json()
+        assert hello == [
+            'hello', {}, {'user_id': 'user:2', 'username': 'Jack'}]
+
+        ws.send_json(['rxid.echo_message', {'request_id': request_id}, [], {}])
+        req, fut = await call.request()
+        assert req.path == '/rxid/echo_message'
+        assert req.headers["Host"] == "swindon.internal"
+        assert "X-Request-Id" in req.headers
+        msg = await req.json()
+        assert msg == [
+            {'request_id': request_id, 'connection_id': mock.ANY}, [], {},
+        ]
+        conn_id = msg[0]['connection_id']
+        rxid = "{}-{}".format(conn_id, request_id)
+        assert req.headers["X-Request-Id"] == rxid
+        fut.set_result(json_response({}))
+
+        echo = await ws.receive_json()
+        assert echo == ['result', {'request_id': request_id}, {}, ]
+
+
+@pytest.mark.parametrize('request_id', [
+    1.1, -1, "invalid rxid", "!@#$", "a" * 37,
+])
+async def test_request_id_routes__bad(proxy_server, swindon, request_id):
+    url = swindon.url / 'swindon-chat'
+    async with proxy_server.swindon_chat(url, timeout=1) as call:
+        req, fut = await call.request()
+        assert req.path == '/tangle/authorize_connection'
+        assert req.headers["Host"] == "swindon.internal"
+        fut.set_result(json_response({
+            "user_id": "user:2", "username": "Jack"}))
+        ws = await call.websocket
+        hello = await ws.receive_json()
+        assert hello == [
+            'hello', {}, {'user_id': 'user:2', 'username': 'Jack'}]
+
+        ws.send_json(['rxid.echo_message', {'request_id': request_id}, [], {}])
+        req, fut = await call.request()
+        assert req.path == '/rxid/echo_message'
+        assert req.headers["Host"] == "swindon.internal"
+        assert "X-Request-Id" in req.headers
+        msg = await req.json()
+        assert msg == [
+            {'request_id': request_id, 'connection_id': mock.ANY}, [], {},
+        ]
+        conn_id = msg[0]['connection_id']
+        rxid = "{}-{}".format(conn_id, request_id)
+        assert req.headers["X-Request-Id"] != rxid
+        assert req.headers["X-Request-Id"].startswith(conn_id)
+
+        fut.set_result(json_response({}))
+        echo = await ws.receive_json()
+        assert echo == ['result', {'request_id': request_id}, {}, ]

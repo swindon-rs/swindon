@@ -176,6 +176,7 @@ handlers:
     message_handlers:
       "*": swindon_chat_dest/
       prefixed.*: swindon_chat_dest/with-prefix
+      rxid.*: swindon_chat_w_rxid/
   swindon_chat_w_timeouts: !SwindonChat
     session_pool: pool_w_timeouts
     message_handlers:
@@ -230,6 +231,11 @@ http-destinations:
     - *PROXY_ADDRESS
   swindon_chat_dest:
     override-host-header: swindon.internal
+    addresses:
+    - *PROXY_ADDRESS
+  swindon_chat_w_rxid:
+    override-host-header: swindon.internal
+    request-id-header: X-Request-Id
     addresses:
     - *PROXY_ADDRESS
 
