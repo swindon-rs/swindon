@@ -1,5 +1,6 @@
 use std::sync::Arc;
 use std::mem;
+use std::fmt;
 
 use futures::Async;
 use futures::future::{FutureResult, ok};
@@ -346,5 +347,59 @@ impl<S> http::Codec<S> for InactivityCodec {
     {
         assert!(end);
         Ok((Async::Ready(data.len())))
+    }
+}
+
+impl fmt::Debug for AuthState {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            &AuthState::Init(_, _) => write!(f, "AuthState::Init"),
+            &AuthState::Wait => write!(f, "AuthState::Wait"),
+            &AuthState::Headers(_) => write!(f, "AuthState::Headers"),
+            &AuthState::Done(_) => write!(f, "AuthState::Done"),
+            &AuthState::Void => write!(f, "AuthState::Void"),
+        }
+    }
+}
+
+impl fmt::Debug for CallState {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            &CallState::Init { .. } => write!(f, "CallState::Init"),
+            &CallState::Wait => write!(f, "CallState::Wait"),
+            &CallState::Headers(_) => write!(f, "CallState::Headers"),
+            &CallState::Void => write!(f, "CallState::Void"),
+        }
+    }
+}
+
+impl Drop for AuthCodec {
+    fn drop(&mut self) {
+        match self.state {
+            AuthState::Void => {},  // all ok; just drop.
+            ref state => {
+                // connection has been dropped in a middle of something.
+                // this can be a timeout or network error;
+                debug!("Connection was dropped with state: {:?}", state);
+                self.sender.send(StopSocket(
+                    AuthHttp(Status::InternalServerError)))
+            }
+        }
+    }
+}
+
+impl Drop for CallCodec {
+    fn drop(&mut self) {
+        match self.state {
+            CallState::Void => {},
+            ref state => {
+                // connection has been dropped in a middle of something.
+                // this can be a timeout or network error;
+                debug!("Connection was dropped with state: {:?}", state);
+                self.sender.send(ConnectionMessage::Error(self.meta.clone(),
+                    MessageError::HttpError(
+                        Status::InternalServerError, None)))
+            }
+        }
     }
 }

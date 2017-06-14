@@ -597,3 +597,47 @@ async def test_request_id_routes__bad(proxy_server, swindon, request_id):
             'error',
             {'request_id': request_id, 'error_kind': 'validation_error'},
             'invalid request id']
+
+
+async def test_client_auth_timeout(proxy_server, swindon):
+    url = swindon.url / 'swindon-chat-w-client-timeout'
+    async with proxy_server.swindon_chat(url, timeout=1) as call:
+        req, fut = await call.request()
+        assert req.path == '/tangle/authorize_connection'
+        await asyncio.sleep(2)
+        assert fut.done()
+        assert fut.cancelled()
+
+        ws = await call.websocket
+        msg = await ws.receive()
+        assert msg.type == WSMsgType.CLOSE
+        assert msg.data == 4500
+        assert ws.closed
+        assert ws.close_code == 4500
+
+
+async def test_client_call_timeout(proxy_server, swindon):
+    url = swindon.url / 'swindon-chat-w-client-timeout'
+    async with proxy_server.swindon_chat(url, timeout=1) as call:
+        req, fut = await call.request()
+        assert req.path == '/tangle/authorize_connection'
+        expected = {'user_id': 'u:123'}
+        fut.set_result(json_response(expected))
+
+        ws = await call.websocket
+        msg = await ws.receive_json()
+        assert msg == ['hello', {}, expected]
+
+        await ws.send_json(['timeout', {'request_id': 1}, [], {}])
+        req, fut = await call.request()
+        assert req.path == '/timeout'
+        await asyncio.sleep(2)
+        assert fut.done()
+        assert fut.cancelled()
+
+        msg = await ws.receive_json()
+        assert msg == [
+            "error",
+            {'request_id': 1, "error_kind": "http_error", 'http_error': 500},
+            None]
+        assert not ws.closed
