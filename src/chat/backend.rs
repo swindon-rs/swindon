@@ -116,25 +116,14 @@ impl CallCodec {
 
     fn add_request_id<S>(&self, e: &mut http::Encoder<S>) {
         if let Some(ref header) = self.destination.request_id_header {
-            let rid = match self.meta.get("request_id") {
-                Some(&Json::String(ref rid)) if rid.len() <= 36 => {
-                    if rid.chars().all(|c| {
-                        c.is_digit(36) || c == '-' || c == '_' })
-                    {
-                        format!("{}-{}-{}", self.server_id, self.conn_id, rid)
-                    } else {
-                        format!("{}-{}-{}", self.server_id, self.conn_id,
-                            request_id::new())
-                    }
-                }
-                Some(&Json::Number(ref n)) if n.is_u64() => {
-                    format!("{}-{}-{}", self.server_id, self.conn_id,
-                        n.as_u64().unwrap())
-                }
-                _ => {
-                    format!("{}-{}-{}", self.server_id, self.conn_id,
-                        request_id::new())
-                }
+            let rid = self.meta.get("request_id")
+                .expect("request_id is present");
+            let rid = if let Some(s) = rid.as_str() {
+                format!("{}-{}-{}", self.server_id, self.conn_id, s)
+            } else if let Some(n) = rid.as_u64() {
+                format!("{}-{}-{}", self.server_id, self.conn_id, n)
+            } else {
+                unreachable!();
             };
             e.add_header(header, rid).unwrap();
         }

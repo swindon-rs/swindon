@@ -73,7 +73,7 @@ async def test_backend_errors(proxy_server, swindon, resp, meta, data):
         msg = await ws.receive_json()
         assert msg == ['hello', {}, {'user_id': 'user:1', 'username': 'John'}]
 
-        ws.send_json(['test.bad_call', {'request_id': '1'}, [], {}])
+        await ws.send_json(['test.bad_call', {'request_id': '1'}, [], {}])
         req, fut = await call.request()
         assert req.path == '/test/bad_call'
         assert req.headers["Host"] == "swindon.internal"
@@ -290,8 +290,8 @@ async def test_echo_messages(proxy_server, swindon):
         assert hello == [
             'hello', {}, {'user_id': 'user:2', 'username': 'Jack'}]
 
-        ws.send_json(['chat.echo_message', {'request_id': '1'},
-                      ['some message'], {}])
+        await ws.send_json(['chat.echo_message', {'request_id': '1'},
+                            ['some message'], {}])
         req, fut = await call.request()
         assert req.path == '/chat/echo_message'
         assert req.headers["Host"] == "swindon.internal"
@@ -327,8 +327,8 @@ async def test_prefix_routes(proxy_server, swindon):
         assert hello == [
             'hello', {}, {'user_id': 'user:2', 'username': 'Jack'}]
 
-        ws.send_json(['prefixed.echo_message', {'request_id': '1'},
-                      ['some message'], {}])
+        await ws.send_json(['prefixed.echo_message', {'request_id': '1'},
+                            ['some message'], {}])
         req, fut = await call.request()
         assert req.path == '/with-prefix/prefixed/echo_message'
         assert req.headers["Host"] == "swindon.internal"
@@ -460,7 +460,7 @@ async def test_inactivity(proxy_server, swindon, loop):
         assert await req.json() == [{}, [], {}]
         fut.set_result(web.Response(status=200))
 
-        ws.send_json([
+        await ws.send_json([
             'whatever', {'request_id': '1', 'active': 2}, [], {}])
         req, fut = await call.request()
         assert req.path == '/whatever'
@@ -554,7 +554,8 @@ async def test_request_id_routes__ok(proxy_server, swindon, request_id):
         assert hello == [
             'hello', {}, {'user_id': 'user:2', 'username': 'Jack'}]
 
-        ws.send_json(['rxid.echo_message', {'request_id': request_id}, [], {}])
+        await ws.send_json(
+            ['rxid.echo_message', {'request_id': request_id}, [], {}])
         req, fut = await call.request()
         assert req.path == '/rxid/echo_message'
         assert req.headers["Host"] == "swindon.internal"
@@ -574,7 +575,8 @@ async def test_request_id_routes__ok(proxy_server, swindon, request_id):
 
 @pytest.mark.parametrize('request_id', [
     1.1, -1, "invalid rxid", "!@#$", "a" * 37,
-])
+    {}, None, [],
+], ids=str)
 async def test_request_id_routes__bad(proxy_server, swindon, request_id):
     url = swindon.url / 'swindon-chat'
     async with proxy_server.swindon_chat(url, timeout=1) as call:
@@ -588,20 +590,10 @@ async def test_request_id_routes__bad(proxy_server, swindon, request_id):
         assert hello == [
             'hello', {}, {'user_id': 'user:2', 'username': 'Jack'}]
 
-        ws.send_json(['rxid.echo_message', {'request_id': request_id}, [], {}])
-        req, fut = await call.request()
-        assert req.path == '/rxid/echo_message'
-        assert req.headers["Host"] == "swindon.internal"
-        assert "X-Request-Id" in req.headers
-        msg = await req.json()
+        await ws.send_json(
+            ['rxid.echo_message', {'request_id': request_id}, [], {}])
+        msg = await ws.receive_json()
         assert msg == [
-            {'request_id': request_id, 'connection_id': mock.ANY}, [], {},
-        ]
-        conn_id = msg[0]['connection_id']
-        rxid = "{}-{}".format(conn_id, request_id)
-        assert req.headers["X-Request-Id"] != rxid
-        assert req.headers["X-Request-Id"].startswith(conn_id)
-
-        fut.set_result(json_response({}))
-        echo = await ws.receive_json()
-        assert echo == ['result', {'request_id': request_id}, {}, ]
+            'error',
+            {'request_id': request_id, 'error_kind': 'validation_error'},
+            'invalid request id']
