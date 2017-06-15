@@ -599,12 +599,12 @@ async def test_request_id_routes__bad(proxy_server, swindon, request_id):
             'invalid request id']
 
 
-async def test_client_auth_timeout(proxy_server, swindon):
+async def test_client_auth_timeout(proxy_server, swindon, loop):
     url = swindon.url / 'swindon-chat-w-client-timeout'
     async with proxy_server.swindon_chat(url, timeout=1) as call:
         req, fut = await call.request()
         assert req.path == '/tangle/authorize_connection'
-        await asyncio.sleep(2)
+        await asyncio.sleep(2, loop=loop)
         assert fut.done()
         assert fut.cancelled()
 
@@ -616,7 +616,7 @@ async def test_client_auth_timeout(proxy_server, swindon):
         assert ws.close_code == 4500
 
 
-async def test_client_call_timeout(proxy_server, swindon):
+async def test_client_call_timeout(proxy_server, swindon, loop):
     url = swindon.url / 'swindon-chat-w-client-timeout'
     async with proxy_server.swindon_chat(url, timeout=1) as call:
         req, fut = await call.request()
@@ -631,7 +631,7 @@ async def test_client_call_timeout(proxy_server, swindon):
         await ws.send_json(['timeout', {'request_id': 1}, [], {}])
         req, fut = await call.request()
         assert req.path == '/timeout'
-        await asyncio.sleep(2)
+        await asyncio.sleep(2, loop=loop)
         assert fut.done()
         assert fut.cancelled()
 

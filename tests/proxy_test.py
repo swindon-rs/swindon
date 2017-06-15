@@ -1,3 +1,4 @@
+import asyncio
 from aiohttp import web, HttpVersion11
 
 
@@ -24,8 +25,9 @@ async def test_simple_request(proxy_server, swindon,
             assert 'X-Swindon-Route' not in client_resp.headers
         assert await client_resp.read() == b'OK'
 
+
 async def test_host_override(proxy_server, swindon,
-                              http_version, debug_routing):
+                             http_version, debug_routing):
     url = swindon.url / 'proxy-w-host/hello'
     async with proxy_server.send('get', url, version=http_version) as inflight:
         assert not inflight.has_client_response, await inflight.client_resp
@@ -117,3 +119,16 @@ async def test_post_form(proxy_server, swindon):
         assert not inflight.has_client_response, await inflight.client_resp
         req = inflight.req
         assert dict(await req.post()) == {'field': 'value'}
+
+
+async def test_request_timeout(proxy_server, swindon, loop):
+    url = swindon.url / 'proxy-w-timeout'
+    async with proxy_server.send('GET', url) as inflight:
+        assert not inflight.has_client_response, await inflight.client_resp
+        req = inflight.req
+        assert req.path == '/proxy-w-timeout'
+        await asyncio.sleep(2, loop=loop)
+
+        assert inflight.has_client_response
+        resp = await inflight.client_resp
+        assert resp.status == 502
