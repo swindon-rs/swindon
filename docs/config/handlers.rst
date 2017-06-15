@@ -34,6 +34,9 @@ Settings:
 
 .. opt:: request-id-header
 
+   **Deprecated**, use ``request-id-header`` option in
+   :ref:`http-destination <http_destinations>`.
+
    (default is null) Creates a request id
 
 .. opt:: max-payload-size

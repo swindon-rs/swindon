@@ -116,3 +116,12 @@ Options
       :opt:`message-handlers` for ``SwindonChat`` protocol. We're seeking for
       a way to provide sane default `Host` header for such handlers.
 
+.. opt:: request-id-header
+
+   (default is null) Creates a request id. Request id value depends on
+   handler type:
+
+   * for ``!Proxy`` -- see :doc:`/internals/request_id`;
+
+   * for ``!SwindonChat`` handler -- a combination of server id, connection id
+     and request id is used.

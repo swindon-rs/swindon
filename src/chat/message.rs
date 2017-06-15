@@ -23,7 +23,6 @@ pub fn decode_message(s: &str)
 {
 
     let res = serde_json::from_str::<Request>(s)?;
-    res.validate()?;
     let Request(method, meta, args, kwargs) = res;
     Ok((method, meta, args, kwargs))
 }
@@ -36,6 +35,34 @@ pub fn get_active(meta: &Meta) -> Option<u64>
     meta.get(&"active".to_string()).and_then(|v| v.as_u64())
 }
 
+/// Returns true if method is valid.
+pub fn valid_method(method: &str) -> bool {
+    if method.len() == 0 {
+        false
+    } else if method.starts_with("tangle.") {
+        false
+    } else {
+        method.chars().all(|c| c.is_ascii() &&
+            (c.is_alphanumeric() || c == '-' || c == '_' || c == '.'))
+    }
+}
+
+/// Returns true if request_id is either `u64`
+/// or `String` up to 36 characters matching regex [a-z0-9_-]
+pub fn valid_request_id(meta: &Meta) -> bool {
+     match meta.get("request_id") {
+        Some(&Json::String(ref s)) => {
+            if s.len() == 0 || s.len() > 36 {
+                return false
+            }
+            s.chars().all(|c| c.is_digit(36) || c == '-' || c == '_')
+        }
+        Some(&Json::Number(ref n)) => {
+            n.is_u64()
+        }
+        _ => false,
+     }
+}
 
 #[derive(Serialize)]
 pub struct AuthData {
@@ -100,30 +127,22 @@ impl<'a> Serialize for MetaWithExtra<'a> {
 }
 
 #[derive(Deserialize)]
-struct Request(String, Meta, Args, Kwargs);
+pub struct Request(pub String, pub Meta, pub Args, pub Kwargs);
 
-impl Request {
-    fn validate(&self) -> Result<(), JsonError> {
-        let method = self.0.as_str();
-        if method.len() == 0 {
-            return Err(JsonError::custom("invalid method"))
-        }
-        if method.starts_with("tangle.") {
-            return Err(JsonError::custom("invalid method"))
-        }
-        if !method.chars().all(|c| c.is_ascii() &&
-            (c.is_alphanumeric() || c == '-' || c == '_' || c == '.'))
-        {
-            return Err(JsonError::custom("invalid method"))
-        }
-        match self.1.get("request_id") {
-            Some(&Json::Number(_)) => {},
-            Some(&Json::String(ref s)) if s.len() > 0 => {}
-            _ => return Err(JsonError::custom("invalid request_id"))
-        }
-        Ok(())
-    }
-}
+// impl Request {
+//     fn validate(&self) -> Result<(), JsonError> {
+//         let method = self.0.as_str();
+//         if !valid_method(method) {
+//             return Err(JsonError::custom("invalid method"))
+//         }
+//         match self.1.get("request_id") {
+//             Some(&Json::Number(_)) => {},
+//             Some(&Json::String(ref s)) if s.len() > 0 => {}
+//             _ => return Err(JsonError::custom("invalid request_id"))
+//         }
+//         Ok(())
+//     }
+// }
 
 
 #[cfg(test)]
@@ -132,7 +151,6 @@ mod test {
     use serde_json::to_string as json_encode;
 
     use request_id;
-    use chat::cid::Cid;
     use chat::message::{self, Call, Meta, Args, Kwargs, Auth, AuthData};
 
     #[test]
@@ -192,50 +210,6 @@ mod test {
         error_starts!(
             "[\"1\", {}, [], 4]",
                 "invalid type: integer `4`, expected a map"
-        );
-        error_starts!(
-            "[\"1\", {}, [], {}]",
-                "invalid request_id"
-        );
-        error_starts!(
-            "[\"1\", {\"request_id\": null}, [], {}]",
-                "invalid request_id"
-        );
-        error_starts!(
-            "[\"foo\", {\"request_id\": []}, [], {}]",
-                "invalid request_id"
-        );
-        error_starts!(
-            "[\"foo\", {\"request_id\": {}}, [], {}]",
-                "invalid request_id"
-        );
-        error_starts!(
-            "[\"foo\", {\"request_id\": \"\"}, [], {}]",
-                "invalid request_id"
-        );
-        error_starts!(
-            "[\"\", {\"request_id\": 123}, [], {}]",
-                "invalid method"
-        );
-        error_starts!(
-            "[\"bad/method\", {\"request_id\": 123}, [], {}]",
-                "invalid method"
-        );
-        error_starts!(
-            "[\"very bad method\", {\"request_id\": 123}, [], {}]",
-                "invalid method"
-        );
-        error_starts!(
-            "[\"tangle.auth\", {\"request_id\": 123}, [], {}]",
-                "invalid method"
-        );
-        error_starts!(
-            "[\"   tangle.auth\", {\"request_id\": 123}, [], {}]",
-                "invalid method"
-        );
-        error_starts!(
-            "[\"   bad.method   \", {\"request_id\": 123}, [], {}]",
-                "invalid method"
         );
     }
 
@@ -342,5 +316,50 @@ mod test {
 
         meta.insert("active".into(), json!(123));
         assert_eq!(message::get_active(&meta).unwrap(), 123u64);
+    }
+
+    #[test]
+    fn valid_method() {
+        assert!(message::valid_method("some-method"));
+        assert!(message::valid_method("123.456.789"));
+
+        assert!(!message::valid_method(""));
+        assert!(!message::valid_method("bad/method"));
+        assert!(!message::valid_method("another bad method"));
+        assert!(!message::valid_method("tangle.auth"));
+        assert!(!message::valid_method("   tangle.auth"));
+        assert!(!message::valid_method("   bad.method   "));
+    }
+
+    #[test]
+    fn valid_request_id() {
+        let mut meta = Meta::new();
+        meta.insert("request_id".into(), json!("abc"));
+        assert!(message::valid_request_id(&meta));
+        meta.insert("request_id".into(),
+            json!("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"));
+        assert!(message::valid_request_id(&meta));
+        meta.insert("request_id".into(), json!("abc-123_def"));
+        assert!(message::valid_request_id(&meta));
+
+        meta.clear();
+        assert!(!message::valid_request_id(&meta));
+        meta.insert("request_id".into(), Json::Null);
+        assert!(!message::valid_request_id(&meta));
+        meta.insert("request_id".into(), json!([]));
+        assert!(!message::valid_request_id(&meta));
+        meta.insert("request_id".into(), json!({}));
+        assert!(!message::valid_request_id(&meta));
+        meta.insert("request_id".into(), Json::String("".into()));
+        assert!(!message::valid_request_id(&meta));
+        meta.insert("request_id".into(), Json::String("i n v a l i d".into()));
+        assert!(!message::valid_request_id(&meta));
+        meta.insert("request_id".into(),
+            json!("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaA"));
+        assert!(!message::valid_request_id(&meta));
+        meta.insert("request_id".into(), json!(-1));
+        assert!(!message::valid_request_id(&meta));
+        meta.insert("request_id".into(), json!(1.1));
+        assert!(!message::valid_request_id(&meta));
     }
 }

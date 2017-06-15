@@ -15,7 +15,7 @@ use runtime::Runtime;
 use config::chat::Chat;
 use config::SessionPool;
 use chat::{Cid, ConnectionSender, CloseReason};
-use chat::message::{decode_message, get_active, Meta, Args, Kwargs};
+use chat::message::{self, Meta, Args, Kwargs};
 use chat::processor::{Action, ProcessorPool, ConnectionMessage};
 use chat::backend::CallCodec;
 use chat::error::MessageError;
@@ -50,11 +50,8 @@ impl websocket::Dispatcher for Dispatcher {
     type Future = FutureResult<(), WsError>;
     fn frame(&mut self, frame: &Frame) -> FutureResult<(), WsError> {
         match *frame {
-            Text(data) => match decode_message(data) {
+            Text(data) => match message::decode_message(data) {
                 Ok((method, meta, args, kwargs)) => {
-                    if let Some(duration) = get_active(&meta) {
-                        self.update_activity(duration);
-                    }
                     self.method_call(method, meta, args, kwargs);
                     ok(()) // no backpressure, yet
                 }
@@ -81,6 +78,22 @@ impl websocket::Dispatcher for Dispatcher {
 
 impl Dispatcher {
     fn method_call(&self, name: String, meta: Meta, args: Args, kw: Kwargs) {
+        let meta = Arc::new(meta);
+        if !message::valid_method(&name) {
+            self.channel.send(ConnectionMessage::Error(meta,
+                MessageError::ValidationError(
+                    "invalid metod".to_string())));
+            return;
+        }
+        if !message::valid_request_id(&meta) {
+            self.channel.send(ConnectionMessage::Error(meta,
+                MessageError::ValidationError(
+                    "invalid request id".to_string())));
+            return;
+        }
+        if let Some(duration) = message::get_active(&meta) {
+            self.update_activity(duration);
+        }
         let dest = self.settings.message_handlers.resolve(&name);
         let mut path = name.replace(".", "/");
         if dest.path == "/" {
@@ -89,7 +102,6 @@ impl Dispatcher {
             path = dest.path.clone() + "/" + &path;
         };
         let mut up = self.runtime.http_pools.upstream(&dest.upstream);
-        let meta = Arc::new(meta);
         let cfg = self.runtime.config.get();
         let dest_settings = match cfg.http_destinations.get(&dest.upstream) {
             Some(h) => h,

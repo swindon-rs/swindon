@@ -164,7 +164,6 @@ handlers:
     ip-header: X-Some-Header
   proxy_w_request_id: !Proxy
     destination: proxy_dest
-    request-id-header: X-Request-Id
   proxy_w_host: !Proxy
     destination: proxy_host
   swindon_proxy: !Proxy
@@ -177,6 +176,7 @@ handlers:
     message_handlers:
       "*": swindon_chat_dest/
       prefixed.*: swindon_chat_dest/with-prefix
+      rxid.*: swindon_chat_w_rxid/
   swindon_chat_w_timeouts: !SwindonChat
     session_pool: pool_w_timeouts
     message_handlers:
@@ -218,6 +218,7 @@ http-destinations:
   proxy_dest:
     addresses:
     - *PROXY_ADDRESS
+    request-id-header: X-Request-Id
 
   proxy_host:
     override-host-header: swindon.proxy.example.org
@@ -230,6 +231,11 @@ http-destinations:
     - *PROXY_ADDRESS
   swindon_chat_dest:
     override-host-header: swindon.internal
+    addresses:
+    - *PROXY_ADDRESS
+  swindon_chat_w_rxid:
+    override-host-header: swindon.internal
+    request-id-header: X-Request-Id
     addresses:
     - *PROXY_ADDRESS
 

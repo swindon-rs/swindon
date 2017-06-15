@@ -82,7 +82,7 @@ impl Serialize for MessageError {
                 serializer.serialize_str(format!("{}", err).as_str())
             }
             ValidationError(ref err) => {
-                serializer.serialize_str(format!("{:?}", err).as_str())
+                serializer.serialize_str(&err)
             }
             IoError(ref err) => {
                 serializer.serialize_str(format!("{:?}", err).as_str())

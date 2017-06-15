@@ -193,6 +193,9 @@ impl Serialize for ConnectionMessage {
                     &MessageError::JsonError(_) => {
                         json!({"error_kind": "data_error"})
                     }
+                    &MessageError::ValidationError(_) => {
+                        json!({"error_kind": "validation_error"})
+                    }
                     _ => {
                         json!({"error_kind": "internal_error"})
                     }
