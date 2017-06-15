@@ -54,10 +54,12 @@ routing:
   localhost/proxy-w-ip-header: proxy_w_ip_header
   localhost/proxy-w-request-id: proxy_w_request_id
   localhost/proxy-w-host: proxy_w_host
+  localhost/proxy-w-timeout: proxy_w_timeout
 
   ### !SwindonChat routes ###
   localhost/swindon-chat: swindon_chat
   localhost/swindon-chat-w-timeouts: swindon_chat_w_timeouts
+  localhost/swindon-chat-w-client-timeout: swindon_chat_w_client_timeout
 
   ### !WebsocketEcho routes ###
   localhost/websocket-echo: websocket_echo
@@ -166,6 +168,8 @@ handlers:
     destination: proxy_dest
   proxy_w_host: !Proxy
     destination: proxy_host
+  proxy_w_timeout: !Proxy
+    destination: proxy_timeout
   swindon_proxy: !Proxy
     destination: swindon_http_dest
 
@@ -181,6 +185,11 @@ handlers:
     session_pool: pool_w_timeouts
     message_handlers:
       "*": swindon_chat_dest/
+  swindon_chat_w_client_timeout: !SwindonChat
+    session_pool: swindon_pool
+    http_route: swindon_proxy
+    message_handlers:
+      "*": swindon_chat_w_timeout/
 
   ### WebsocketEcho handlers ###
   websocket_echo: !WebsocketEcho
@@ -199,6 +208,7 @@ session-pools:
     - *SPOOL_ADDRESS1
     inactivity_handlers:
     - swindon_chat_dest/
+    - swindon_chat_w_timeout/
     ### defaults: ###
     # pipeline_depth: 2
     # max_connections: 1000
@@ -224,6 +234,10 @@ http-destinations:
     override-host-header: swindon.proxy.example.org
     addresses:
     - *PROXY_ADDRESS
+  proxy_timeout:
+    addresses:
+    - *PROXY_ADDRESS
+    max-request-timeout: 1s
 
   ### SwindonChat destinations ###
   swindon_http_dest:
@@ -236,6 +250,11 @@ http-destinations:
   swindon_chat_w_rxid:
     override-host-header: swindon.internal
     request-id-header: X-Request-Id
+    addresses:
+    - *PROXY_ADDRESS
+  swindon_chat_w_timeout:
+    override-host-header: swindon.internal
+    max-request-timeout: 1s
     addresses:
     - *PROXY_ADDRESS
 
