@@ -22,6 +22,8 @@ Request Format
    Names starting with ``tangle.*`` are reserved and cannot be called from
    client.
 
+.. _request-meta:
+
 ``request_meta``
    A dictionary (technically a Javascript/JSON object) that contains metadata
    of the request. All fields that are passed in this object are returned
@@ -32,18 +34,19 @@ Request Format
       ``request_id``
          This field contains request identified. Swindon itself uses the
          field barely for logging purposes. But it's inteded to be used to
-         match responses on the frontend. It should be either string or
-         a non-negative integer.
+         match responses on the frontend. It should be either non-negative
+         integer or ascii string up to 36 chars long
+         (with valid characters ``a-z``, ``A-Z``, ``0-9``, ``-``, ``_``).
       ``active``
-         Time for which session should be considered active. This should
-         be positive integer.
+         Time (in seconds) for which session should be considered active.
+         This should be positive integer.
 
 ``args_array``
    Positional arguments for the remote method. They are passed to the backend
-   as is (must be a valid JSON though).
+   as is (must be a valid JSON array though).
 
 ``kwargs_object``
-   Named arguments for the remote method.
+   Named arguments for the remote method (must be valid JSON object).
 
 .. note:: All four arguments are **required** even if some of them are empty.
 
@@ -82,7 +85,7 @@ Response Format
    [event_type, response_meta, data]
 
 ``event_type``
-   Event type (see :ref:`Event Types`)
+   Event type (see `Event Types`_)
 
 ``response_meta``
    A dictionary (a object in terms of Javascript/JSON) that contains
@@ -96,9 +99,11 @@ Response Format
 Event Types
 -----------
 
-.. contents:: Local
+.. contents::
    :local:
 
+
+.. _call-result:
 
 Method Call Result (``result``/``error``)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -122,9 +127,9 @@ Method Call Result (``result``/``error``)
 
    ["error",
     {"request_id": 123, "error_kind": "validation_error"},
-    json_body_object]
+    "invalid method"]
 
-In case of error ``request_meta`` always has ``error_kind`` field.
+In case of error ``response_meta`` always has ``error_kind`` field.
 Other fields may contain error details depending on the type of error.
 
 Possible ``error_kind`` values:
@@ -133,22 +138,34 @@ Possible ``error_kind`` values:
       HTTP error from backend server. This error contains additional field
       ``http_error`` which contains *HTTP status code*. The ``data`` field
       may contain error data if response has
-      ``Content-Type: application/json``.
+      ``Content-Type: application/json`` and valid JSON body.
 
    ``validation_error``
       Error validating request. ``data`` contains addition information.
 
-   ``invalid_content_type``
-      Wrong (i.e. unsupported) ``Content-Type`` in response from a backend.
+   ``data_error``
+      Error related to decoding response from a backend.
+      ``data`` field contains string describing an error.
+      Possible causes:
+
+      * wrong (unsupported) ``Content-Type`` header;
+
+      * not a JSON or malformed JSON response;
 
    ``internal_error``
       Swindon encountered internal error while processing the request.
+      ``data`` field contains string describing an error.
 
+.. :: NOTE: These two were never used, thus dropped;
+   ``invalid_content_type``
+      Wrong (i.e. unsupported) ``Content-Type`` in response from a backend.
    ``forbidden``
       This call is forbidden to call from frontend. This is used when you
       are trying to call ``tangle.*`` methods. These names are reserved
       for calls initiated by swindon.
 
+
+.. _hello-message:
 
 User Information (``hello``)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -166,6 +183,8 @@ User Information (``hello``)
    by a backend (i.e. it's JSON data sent from a backend).
    See :ref:`backend-auth` for more info.
 
+.. _front-message:
+
 Message (``message``)
 ~~~~~~~~~~~~~~~~~~~~~
 
@@ -181,7 +200,7 @@ Message (``message``)
         }]
 
    This message type is used to propagate published messages to frontend.
-   See :ref:`topic-publish` for more info.
+   See :ref:`Pub/Sub subscriptions <topic-publish>` for more info.
 
 
 Lattice Update (``lattice``)

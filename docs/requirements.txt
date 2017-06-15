@@ -1,3 +1,4 @@
 sphinxcontrib-domaintools==0.1
+sphinxcontrib-httpdomain
 sphinx_rtd_theme
 setuptools
