@@ -126,7 +126,7 @@ impl Dispatcher {
                             MessageError::PoolOverflow));
                     }
                     Ok(AsyncSink::Ready) => {
-                        debug!("Sent /tangle/authorize_connection to proxy");
+                        debug!("Sent {} to proxy", name);
                     }
                     Err(e) => {
                         error!("Error sending to pool {:?}: {}",

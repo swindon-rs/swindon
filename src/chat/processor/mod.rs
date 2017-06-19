@@ -190,6 +190,9 @@ impl Serialize for ConnectionMessage {
                             "http_error": status.code(),
                         })
                     }
+                    &MessageError::Utf8Error(_) => {
+                        json!({"error_kind": "data_error"})
+                    }
                     &MessageError::JsonError(_) => {
                         json!({"error_kind": "data_error"})
                     }
