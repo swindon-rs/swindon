@@ -52,3 +52,79 @@ This works on **key by key basis**.
 This kind of structures and how to summarize them correctly are called
 CRDT: Commutative Replicated Data Structures, and are described in
 theri own section.
+
+
+What Does Backend Send?
+=======================
+
+Backend has a little bit more complex representation of lattices. Data consists
+of "private" and "shared".
+
+1. Shared data is the set of keys visible for many (potentially all)
+   users. But not all users have access to all the keys.
+2. Private keys are only visible to specific user.
+
+Example
+-------
+
+`Example chat <lattice-chat-example>`_ from the backend point of view looks
+like:
+
+.. code-block:: json
+
+    {"shared": {
+        "room1": {"last_message_counter": 123},
+        "room2": {"last_message_counter": 245}},
+     "private": {
+       "7777": {
+        "room1": {"last_seen_counter": 120},
+        "room2": {"last_seen_counter": 245}},
+       "8734": {
+        "room1": {"last_seen_counter": 123},
+        "room2": {"last_seen_counter": 24}}
+    }}
+
+As you might see every user in the "private" section has it's own key. In the
+example above you have seen how these dicts are merged for a specific user
+"7777".
+
+You can send only changed keys from the backend. For example if user "7777"
+sent a message to a "room2", a backend can send the following message:
+
+.. code-block:: json
+
+    {"shared": {
+        "room2": {"last_message_counter": 246}},
+     "private": {
+       "7777": {
+        "room2": {"last_seen_counter": 246}},
+    }}
+
+Note the following:
+
+1. The message text and metadata is delivered in other way. Usually pub-sub
+   topic is used. But client can also request the message on demand.
+2. We marked message as read in the same transaction
+
+In this case javascript received the following JSON for user "7777":
+
+.. code-block:: json
+
+    ["lattice", {"namespace": "chat.public"},
+     {
+        "room2": {"last_message_counter": 246,
+                  "last_seen_counter": 246}
+     }]
+
+And devices working on behalf of "8734" receive something like this:
+
+.. code-block:: json
+
+    ["lattice", {"namespace": "chat.public"},
+     {"room2": {"last_message_counter": 246}}]
+
+
+Why is it so Complex?
+=====================
+
+
