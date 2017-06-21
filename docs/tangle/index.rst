@@ -3,6 +3,7 @@ Tangle/Chat protocol
 
 .. toctree::
 
+    lattices
     frontend
     upstream
     backend
