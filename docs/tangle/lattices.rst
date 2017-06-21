@@ -127,4 +127,17 @@ And devices working on behalf of "8734" receive something like this:
 Why is it so Complex?
 =====================
 
+We aim to provide reliable information for users despite that something might
+fail during user's session. Here is the list of some issues that we try to
+avoid with lattices:
 
+1. Messages from backend can be delayed for arbitrary time, so the order
+   backend messages reach swindon (and client) is not guaranteed
+2. Websocket can be disconnected at any time. Any single message can be
+   lost on disconnect.
+3. Messages to or from backend can be lost (backend is down, connection between
+   datacenters is lost, ...)
+4. And swindon itself (which is an edge/gateway server for users) can die
+   so all client will reconnect again.
+
+Lattices try to avoid all these issues and always provide reliable data.
