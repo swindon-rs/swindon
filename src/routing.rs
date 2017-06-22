@@ -232,6 +232,39 @@ mod route_test {
     }
 
     #[test]
+    fn route_star() {
+        // Routing table
+        //   example.com: 1
+        //   *: 2
+        //   */path: 3
+        let table = RoutingTable(vec![
+            ("example.com".parse().unwrap(), vec![
+                (None, 1),
+                ].into_iter().collect()),
+            ("*".parse().unwrap(), vec![
+                (None, 2),
+                (Some("/path".into()), 3),
+                ].into_iter().collect()),
+            ].into_iter().collect());
+
+
+        assert_eq!(route("test.example.com", "/hello", &table),
+                   None);
+        assert_eq!(route("example.com", "/hello", &table),
+                   Some((&1, "", "/hello")));
+        assert_eq!(route("example.com", "/path", &table),
+                   Some((&1, "", "/path")));
+        assert_eq!(route("example.com", "/path/hello", &table),
+                   Some((&1, "", "/path/hello")));
+        assert_eq!(route("localhost", "/hello", &table),
+                   Some((&2, "", "/hello")));
+        assert_eq!(route("localhost", "/path/hello", &table),
+                   Some((&3, "/path", "/hello")));
+        assert_eq!(route("localhost", "/path", &table),
+                   Some((&3, "/path", "")));
+    }
+
+    #[test]
     fn route_path() {
         let table = RoutingTable(vec![
             ("ex.com".parse().unwrap(), vec![
