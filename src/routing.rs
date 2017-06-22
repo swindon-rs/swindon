@@ -76,8 +76,10 @@ impl PartialOrd for Host {
 impl Host {
     pub fn matches(&self, host: &str) -> bool {
         let h = self.0.as_str();
-        if h.starts_with("*.") {
-            host.ends_with(&h[1..])
+        if h == "*" {
+            return true;
+        } else if h.starts_with("*.") {
+            host.ends_with(&h[1..]) || host == &h[2..]
         } else {
             host == h
         }
@@ -248,8 +250,6 @@ mod route_test {
             ].into_iter().collect());
 
 
-        assert_eq!(route("test.example.com", "/hello", &table),
-                   None);
         assert_eq!(route("example.com", "/hello", &table),
                    Some((&1, "", "/hello")));
         assert_eq!(route("example.com", "/path", &table),
@@ -262,6 +262,8 @@ mod route_test {
                    Some((&3, "/path", "/hello")));
         assert_eq!(route("localhost", "/path", &table),
                    Some((&3, "/path", "")));
+        assert_eq!(route("test.example.com", "/hello", &table),
+                   None);
     }
 
     #[test]
@@ -349,7 +351,7 @@ mod parse_test {
         assert!(!h.matches("www.example.com"));
 
         let h = Host("*.example.com".into());
-        assert!(!h.matches("example.com"));
+        assert!(h.matches("example.com"));
         assert!(h.matches("xxx.example.com"));
         assert!(h.matches("www.example.com"));
     }
