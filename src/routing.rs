@@ -225,6 +225,8 @@ mod route_test {
                    Some((&1, "", "/hello")));
         assert_eq!(route("xxx.aaa.example.com", "/hello", &table),
                    Some((&6, "", "/hello")));
+        assert_eq!(route("aaa.example.com", "/hello", &table),
+                   Some((&6, "", "/hello")));
         assert_eq!(route("city.example.com", "/static", &table),
                    Some((&3, "/static", "")));
     }
