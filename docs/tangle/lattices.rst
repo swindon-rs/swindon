@@ -50,8 +50,8 @@ that was just received contains smaller value we drop it and use old value.
 This works on **key by key basis**.
 
 This kind of structures and how to summarize them correctly are called
-CRDT: Commutative Replicated Data Structures, and are described in
-theri own section.
+CRDT: Commutative Replicated Data Types, and are described in
+`their own section <crdt-types>`_.
 
 
 What Does Backend Send?
