@@ -228,32 +228,33 @@ mod route_test {
         assert_eq!(route("city.example.com", "/static", &table),
                    Some((&3, "/static", "")));
     }
-    /*
+
     #[test]
     fn route_path() {
-        let table = vec![
-            (Route { host: "ex.com".into(), path: Some("/one".into()) }, 1),
-            (Route { host: "ex.com".into(), path: None }, 0),
-            (Route { host: "ex.com".into(), path: Some("/two".into()) }, 2),
-            ].into_iter().collect();
+        let table = RoutingTable(vec![
+            ("ex.com".parse().unwrap(), vec![
+                (None , 0),
+                (Some("/one".into()), 1),
+                (Some("/two".into()) , 2),
+                ].into_iter().collect()),
+            ].into_iter().collect());
         assert_eq!(route("ex.com", "/one", &table),
-                   Some((&1, "")));
+                   Some((&1, "/one", "")));
         assert_eq!(route("ex.com", "/one/end", &table),
-                   Some((&1, "/end")));
+                   Some((&1, "/one", "/end")));
         assert_eq!(route("ex.com", "/two", &table),
-                   Some((&2, "")));
+                   Some((&2, "/two", "")));
         assert_eq!(route("ex.com","/two/some", &table),
-                   Some((&2, "/some")));
+                   Some((&2, "/two", "/some")));
         assert_eq!(route("ex.com", "/three", &table),
-                   Some((&0, "/three")));
+                   Some((&0, "", "/three")));
         assert_eq!(route("ex.com", "/", &table),
-                   Some((&0, "/")));
+                   Some((&0, "", "/")));
         assert_eq!(route("ex.org", "/one", &table), None);
         assert_eq!(route("subdomain.ex.org", "/two", &table), None);
         assert_eq!(route("example.org", "/", &table), None);
         assert_eq!(route("example.org", "/two", &table), None);
     }
-    */
 
 }
 
