@@ -406,7 +406,8 @@ class _BaseServer:
             self.queue.get(),
             loop=self.loop)
         client_resp.add_done_callback(lambda x: req_fut.cancel())
-        return _HandlerTuple((_Handler(req_fut), client_resp))
+        return _HandlerTuple((
+            _Handler(req_fut, loop=self.loop), client_resp))
 
     def start_ws(self, url, **kwargs):
         ws_fut = asyncio.ensure_future(
@@ -416,19 +417,21 @@ class _BaseServer:
             self.queue.get(),
             loop=self.loop)
         ws_fut.add_done_callback(lambda x: req_fut.cancel())
-        return _HandlerTuple((_Handler(req_fut, self.queue), ws_fut))
+        return _HandlerTuple((
+            _Handler(req_fut, self.queue, self.loop), ws_fut))
 
 
 class _Handler:
 
-    def __init__(self, request_fut, queue=None):
+    def __init__(self, request_fut, queue=None, loop=None):
         self.req = request_fut
         self.queue = queue
         self.resp = None
+        self.loop = loop
 
     async def request(self, *, timeout=15):
         assert self.resp is None
-        with async_timeout.timeout(timeout):
+        with async_timeout.timeout(timeout, loop=self.loop):
             if self.req is None and self.queue:
                 self.req = self.queue.get()
             req, self.resp = await self.req
