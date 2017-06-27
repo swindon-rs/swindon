@@ -484,6 +484,11 @@ class AiohttpServer(_BaseServer):
 
     def __init__(self, loop, **kwargs):
         super().__init__(loop, **kwargs)
+        self._server = None
+
+    async def start_server(self, port, **kwargs):
+        await super().start_server(**kwargs)
+        assert self._server is None
 
         async def handler(request):
             args, kwargs = await self._handle(request)
@@ -494,12 +499,7 @@ class AiohttpServer(_BaseServer):
                 kw['body'] = kw.pop('text')
             return web.Response(**kw, **kwargs)
 
-        self._factory = web.Server(handler, loop=loop)
-        self._server = None
-
-    async def start_server(self, port, **kwargs):
-        await super().start_server(**kwargs)
-        assert self._server is None
+        self._factory = web.Server(handler, loop=self.loop)
         self._server = await self.loop.create_server(
             self._factory, '127.0.0.1', port,
             reuse_address=True,
@@ -545,7 +545,6 @@ class WsgiServer(_BaseServer):
         await super().start_server(**kwargs)
         self.server = BaseWSGIServer('localhost', port, self.wsgi_app)
         self.server.timeout = self.timeout
-        self.server.allow_reuse_address = True
         return self
 
     async def stop_server(self):
@@ -553,6 +552,7 @@ class WsgiServer(_BaseServer):
         self.server.server_close()
         while self._requests:
             self._requests.pop().cancel()
+        await asyncio.sleep(0, loop=self.loop)
 
     async def wait_request(self):
         fut = self.loop.run_in_executor(None, self.server.handle_request)
@@ -621,7 +621,7 @@ def async_server(loop):
 ], ids=[
     'upstream[async]',
     'upstream[wsgi]',
-])
+], scope='module')
 def proxy_server(request, swindon, loop):
     server = request.param(loop)
 
@@ -641,3 +641,12 @@ def proxy_server(request, swindon, loop):
         swindon_chat = server.start_ws
 
     return _ServerWrapper
+
+
+@pytest.fixture(scope='module')
+def loop():
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(None)
+    yield loop
+    loop.stop()
+    loop.run_forever()

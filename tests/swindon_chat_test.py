@@ -277,7 +277,7 @@ async def test_auth_request__all(proxy_server, swindon, user_id):
         assert msg == ['hello', {}, {'user_id': user_id, 'username': 'John'}]
 
 
-async def test_echo_messages(proxy_server, swindon, user_id):
+async def test_echo_messages(proxy_server, swindon):
     url = swindon.url / 'swindon-chat'
     async with proxy_server() as proxy:
         handler = proxy.swindon_chat(url, timeout=1)
@@ -285,10 +285,10 @@ async def test_echo_messages(proxy_server, swindon, user_id):
         assert req.path == '/tangle/authorize_connection'
         assert req.headers["Host"] == "swindon.internal"
         ws = await handler.json_response(
-            {"user_id": user_id, "username": "Jack"})
+            {"user_id": 'user:2', "username": "Jack"})
         hello = await ws.receive_json()
         assert hello == [
-            'hello', {}, {'user_id': user_id, 'username': 'Jack'}]
+            'hello', {}, {'user_id': 'user:2', 'username': 'Jack'}]
 
         await ws.send_json(['chat.echo_message', {'request_id': '1'},
                             ['some message'], {}])
@@ -434,7 +434,7 @@ async def test_lattice_subscribe_update(proxy_server, swindon, loop, user_id):
         ]
 
 
-async def test_inactivity(proxy_server, swindon, loop, user_id):
+async def test_inactivity(proxy_server, swindon, loop):
     chat_url = swindon.url / 'swindon-chat-w-timeouts'
     async with proxy_server() as proxy:
         handler = proxy.swindon_chat(chat_url, timeout=1)
@@ -442,11 +442,11 @@ async def test_inactivity(proxy_server, swindon, loop, user_id):
         assert req.path == '/tangle/authorize_connection'
         assert req.headers["Host"] == "swindon.internal"
         ws = await handler.json_response({
-            "user_id": user_id, "username": "Jim"})
+            "user_id": 'user:1', "username": "Jim"})
 
         hello = await ws.receive_json()
         assert hello == [
-            'hello', {}, {'user_id': user_id, 'username': 'Jim'}]
+            'hello', {}, {'user_id': 'user:1', 'username': 'Jim'}]
 
         req = await handler.request(timeout=1.2)
         assert req.path == '/tangle/session_inactive'
