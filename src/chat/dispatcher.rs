@@ -14,12 +14,17 @@ use serde_json::{Error as JsonError};
 use runtime::Runtime;
 use config::chat::Chat;
 use config::SessionPool;
-use chat::{Cid, ConnectionSender, CloseReason};
+use chat::{Cid, ConnectionSender, CloseReason, CONNECTIONS};
 use chat::message::{self, Meta, Args, Kwargs};
 use chat::processor::{Action, ProcessorPool, ConnectionMessage};
 use chat::backend::CallCodec;
 use chat::error::MessageError;
 
+use metrics::{Counter};
+
+lazy_static! {
+    pub static ref FRAMES_RECEIVED: Counter = Counter::new();
+}
 
 pub struct Dispatcher {
     pub cid: Cid,
@@ -49,6 +54,7 @@ quick_error! {
 impl websocket::Dispatcher for Dispatcher {
     type Future = FutureResult<(), WsError>;
     fn frame(&mut self, frame: &Frame) -> FutureResult<(), WsError> {
+        FRAMES_RECEIVED.incr(1);
         match *frame {
             Text(data) => match message::decode_message(data) {
                 Ok((method, meta, args, kwargs)) => {
@@ -154,5 +160,11 @@ impl Dispatcher {
             conn_id: self.cid,
             timestamp: timestamp,
         });
+    }
+}
+
+impl Drop for Dispatcher {
+    fn drop(&mut self) {
+        CONNECTIONS.decr(1)
     }
 }

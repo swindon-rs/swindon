@@ -110,6 +110,8 @@ impl<S: AsyncRead + AsyncWrite + 'static> Codec<S> for WebsockReply {
                                 error!("outbound channel unexpectedly closed");
                                 "outbound channel unexpectedly closed"
                             });
+                            chat::CONNECTS.incr(1);
+                            chat::CONNECTIONS.incr(1);
                             websocket::Loop::server(out, inp, rx,
                                 chat::Dispatcher {
                                     cid: cid,
