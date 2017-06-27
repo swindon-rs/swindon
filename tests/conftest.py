@@ -139,7 +139,7 @@ def unused_port():
     return find
 
 
-@pytest.fixture  # (scope='module')
+@pytest.fixture(scope='module')
 def swindon_ports(unused_port, debug_routing, swindon_bin):
     class Dict(dict):
         def __missing__(self, key):
@@ -159,7 +159,7 @@ def swindon_bin(request):
     return request.param
 
 
-@pytest.fixture  # (scope='module')
+@pytest.fixture(scope='module')
 def swindon(_proc, request, debug_routing,
             swindon_bin, swindon_ports, TESTS_DIR):
     default = swindon_ports['default']
@@ -187,7 +187,7 @@ def swindon(_proc, request, debug_routing,
         yield inst_info
 
 
-@pytest.fixture  # (scope='module')
+@pytest.fixture(scope='module')
 def swindon_two(_proc, request, debug_routing,
                 swindon_bin, swindon_ports, TESTS_DIR):
     """Swindon instance with enabled chat replication."""
@@ -315,7 +315,7 @@ def _check_config(cfg='', returncode=1, *, __swindon_bin):
 # helpers
 
 
-@pytest.fixture  # (scope='module')
+@pytest.fixture(scope='module')
 def _proc(request):
     # Process runner
     processes = []
@@ -545,6 +545,7 @@ class WsgiServer(_BaseServer):
         await super().start_server(**kwargs)
         self.server = BaseWSGIServer('localhost', port, self.wsgi_app)
         self.server.timeout = self.timeout
+        self.server.allow_reuse_address = True
         return self
 
     async def stop_server(self):
@@ -601,7 +602,7 @@ class _WSGIRequest:
         return self._form
 
     async def json(self):
-        return json.loads(self._data)
+        return json.loads(self._data.decode('utf-8'))
 
 
 @pytest.fixture
