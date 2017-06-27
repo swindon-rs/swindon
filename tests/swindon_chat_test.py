@@ -93,9 +93,9 @@ async def test_backend_errors(proxy_server, swindon, user_id,
 
 
 @pytest.mark.xfail(reason="shutdown is not implemented yet")
-async def test_ws_close_timeout(proxy_server, swindon, user_id):
+async def test_ws_close_timeout(proxy_server, swindon, user_id, loop):
     url = swindon.url / 'swindon-chat'
-    with timeout(1):
+    with timeout(1, loop=loop):
         async with proxy_server() as proxy:
             handler = proxy.swindon_chat(url)
             req = await handler.request()

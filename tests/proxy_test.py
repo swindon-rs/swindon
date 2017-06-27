@@ -146,6 +146,6 @@ async def test_request_timeout(proxy_server, swindon, loop):
         await asyncio.sleep(2, loop=loop)
 
         assert client_resp.done()
-        with async_timeout.timeout(5):
+        with async_timeout.timeout(5, loop=loop):
             resp = await client_resp
         assert resp.status == 502
