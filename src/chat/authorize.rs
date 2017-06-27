@@ -9,6 +9,7 @@ use tk_http::Status;
 use tk_http::server::Head;
 use serde_json::{self, Value as Json};
 
+use http_pools::{REQUESTS, FAILED_503};
 use intern::SessionId;
 use config::chat::Chat;
 use incoming::{Input};
@@ -100,10 +101,12 @@ pub fn start_authorize(inp: &Input, conn_id: Cid, settings: &Arc<Chat>,
         Some(pool) => {
             match pool.start_send(codec) {
                 Ok(AsyncSink::NotReady(_codec)) => {
+                    FAILED_503.incr(1);
                     messages.send(StopSocket(CloseReason::AuthHttp(
                         Status::ServiceUnavailable)));
                 }
                 Ok(AsyncSink::Ready) => {
+                    REQUESTS.incr(1);
                     debug!("Sent /tangle/authorize_connection to proxy");
                 }
                 Err(e) => {

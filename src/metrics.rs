@@ -24,5 +24,6 @@ pub fn all() -> Vec<Box<Collection>> {
     vec![
         Box::new(::incoming::metrics()),
         Box::new(::chat::metrics()),
+        Box::new(::http_pools::metrics()),
     ]
 }

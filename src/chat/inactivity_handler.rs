@@ -7,6 +7,7 @@ use futures::sync::oneshot::{channel as oneshot, Sender};
 use futures::sync::mpsc::{UnboundedReceiver as Receiver};
 use tokio_core::reactor::Handle;
 
+use http_pools::{REQUESTS, FAILED_503};
 use runtime::Runtime;
 use config::SessionPool;
 use chat::Shutdown;
@@ -54,10 +55,12 @@ pub fn run(runtime: &Arc<Runtime>, settings: &Arc<SessionPool>,
                             Some(pool) => {
                                 match pool.start_send(codec) {
                                     Ok(AsyncSink::NotReady(_)) => {
+                                        FAILED_503.incr(1);
                                         // TODO(tailhook) retry later
                                         warn!("Coudn't send inactivity");
                                     }
                                     Ok(AsyncSink::Ready) => {
+                                        REQUESTS.incr(1);
                                         debug!("Sent /tangle/session_inactive");
                                     }
                                     Err(e) => {

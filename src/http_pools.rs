@@ -12,6 +12,12 @@ use futures::future::FutureResult;
 
 use intern::Upstream;
 use config::http_destinations::Destination;
+use metrics::{Counter, List, Metric};
+
+lazy_static! {
+    pub static ref REQUESTS: Counter = Counter::new();
+    pub static ref FAILED_503: Counter = Counter::new();
+}
 
 /// Future that is used for sending a client request
 ///
@@ -105,4 +111,12 @@ impl<'a> UpstreamGuard<'a> {
     pub fn get_mut(&mut self) -> Option<&mut HttpPool> {
         self.guard.get_mut(self.upstream)
     }
+}
+
+pub fn metrics() -> List {
+    vec![
+        // obeys cantal-py.RequestTracker
+        (Metric("http.outgoing", "requests"), &*REQUESTS),
+        (Metric("http.outgoing", "backpressure_failures"), &*FAILED_503),
+    ]
 }

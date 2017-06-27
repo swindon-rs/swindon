@@ -11,6 +11,7 @@ use tk_http::websocket::Frame::{self, Text, Binary, Ping, Pong, Close};
 use tokio_core::reactor::Handle;
 use serde_json::{Error as JsonError};
 
+use http_pools::{REQUESTS, FAILED_503};
 use runtime::Runtime;
 use config::chat::Chat;
 use config::SessionPool;
@@ -128,11 +129,13 @@ impl Dispatcher {
             Some(pool) => {
                 match pool.start_send(codec) {
                     Ok(AsyncSink::NotReady(_codec)) => {
+                        FAILED_503.incr(1);
                         self.channel.send(ConnectionMessage::Error(meta,
                             MessageError::PoolOverflow));
                     }
                     Ok(AsyncSink::Ready) => {
-                        debug!("Sent {} to proxy", name);
+                        REQUESTS.incr(1);
+                        debug!("Sent {} to chat backend", name);
                     }
                     Err(e) => {
                         error!("Error sending to pool {:?}: {}",

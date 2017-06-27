@@ -12,7 +12,7 @@ use tk_http::server as http;
 use config::proxy::Proxy;
 use incoming::{Input, Reply, Encoder, Context, IntoContext};
 use default_error_page::error_page;
-use http_pools::HttpPools;
+use http_pools::{HttpPools, REQUESTS, FAILED_503};
 use proxy:: {RepReq, HalfReq, Response, backend};
 
 
@@ -67,10 +67,12 @@ impl<S: 'static> http::Codec<S> for Codec {
                         Some(pool) => {
                             match pool.start_send(codec) {
                                 Ok(AsyncSink::NotReady(_)) => {
+                                    FAILED_503.incr(1);
                                     State::Error(Status::ServiceUnavailable)
                                 }
                                 Ok(AsyncSink::Ready) => {
                                     debug!("Sent request {:?} to proxy", r);
+                                    REQUESTS.incr(1);
                                     State::Sent {
                                         request: r,
                                         response: rx,
