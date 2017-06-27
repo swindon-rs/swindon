@@ -139,7 +139,7 @@ def unused_port():
     return find
 
 
-@pytest.fixture(scope='module')
+@pytest.fixture  # (scope='module')
 def swindon_ports(unused_port, debug_routing, swindon_bin):
     class Dict(dict):
         def __missing__(self, key):
@@ -159,7 +159,7 @@ def swindon_bin(request):
     return request.param
 
 
-@pytest.fixture(scope='module')
+@pytest.fixture  # (scope='module')
 def swindon(_proc, request, debug_routing,
             swindon_bin, swindon_ports, TESTS_DIR):
     default = swindon_ports['default']
@@ -187,7 +187,7 @@ def swindon(_proc, request, debug_routing,
         yield inst_info
 
 
-@pytest.fixture(scope='module')
+@pytest.fixture  # (scope='module')
 def swindon_two(_proc, request, debug_routing,
                 swindon_bin, swindon_ports, TESTS_DIR):
     """Swindon instance with enabled chat replication."""
@@ -315,7 +315,7 @@ def _check_config(cfg='', returncode=1, *, __swindon_bin):
 # helpers
 
 
-@pytest.fixture(scope='module')
+@pytest.fixture  # (scope='module')
 def _proc(request):
     # Process runner
     processes = []
@@ -365,12 +365,12 @@ class _BaseServer:
     async def _handle(self, request):
         fut = self.loop.create_future()
         self.futures.append(fut)
-        await self.queue.put((request, fut))
+        await self.queue.put(request)
         return await fut
 
     async def __aenter__(self):
-        sess = await aiohttp.ClientSession(loop=self.loop).__aenter__()
-        self._session = sess
+        assert self._session
+        await self._session.__aenter__()
 
     async def __aexit__(self, *error):
         while self.futures:
@@ -381,8 +381,9 @@ class _BaseServer:
         sess, self._session = self._session, None
         await sess.__aexit__(*error)
 
-    async def start_server(self, port):
-        pass
+    async def start_server(self, **client_session_kwargs):
+        self._session = aiohttp.ClientSession(
+            loop=self.loop, **client_session_kwargs)
 
     async def stop_server(self):
         pass
@@ -398,54 +399,63 @@ class _BaseServer:
         self.websockets.append(ws)
         return ws
 
+    async def wait_request(self):
+        return await self.queue.get()
+
+    async def set_response(self, args, kwargs):
+        assert self.futures
+        fut = self.futures.pop(0)
+        if not fut.done():
+            fut.set_result((args, kwargs))
+
     def send(self, method, url, **kwargs):
         client_resp = asyncio.ensure_future(
             self.request(method, url, **kwargs),
             loop=self.loop)
         req_fut = asyncio.ensure_future(
-            self.queue.get(),
+            self.wait_request(),
             loop=self.loop)
         client_resp.add_done_callback(lambda x: req_fut.cancel())
-        return _HandlerTuple((
-            _Handler(req_fut, loop=self.loop), client_resp))
+        handler = _Handler(req_fut, self.set_response, loop=self.loop)
+        return _HandlerTuple((handler, client_resp))
 
     def start_ws(self, url, **kwargs):
         ws_fut = asyncio.ensure_future(
             self.ws_connect(url, **kwargs),
             loop=self.loop)
         req_fut = asyncio.ensure_future(
-            self.queue.get(),
+            self.wait_request(),
             loop=self.loop)
         ws_fut.add_done_callback(lambda x: req_fut.cancel())
-        return _HandlerTuple((
-            _Handler(req_fut, self.queue, self.loop), ws_fut))
+        handler = _Handler(req_fut, self.set_response,
+                           self.wait_request, self.loop)
+        return _HandlerTuple((handler, ws_fut))
 
 
 class _Handler:
 
-    def __init__(self, request_fut, queue=None, loop=None):
+    def __init__(self, request_fut, response_setter,
+                 request_waiter=None, loop=None):
         self.req = request_fut
-        self.queue = queue
-        self.resp = None
+        self.req_waiter = request_waiter
+        self.response_setter = response_setter
         self.loop = loop
 
-    async def request(self, *, timeout=15):
-        assert self.resp is None
+    async def request(self, *, timeout=5):
         with async_timeout.timeout(timeout, loop=self.loop):
-            if self.req is None and self.queue:
-                self.req = self.queue.get()
-            req, self.resp = await self.req
+            if self.req is None and self.req_waiter:
+                self.req = self.req_waiter()
+            req = await self.req
             self.req = None
             return req
 
     async def response(self, *args, **kwargs):
-        assert self.resp is not None
-        if not self.resp.done():
-            self.resp.set_result((args, kwargs))
-        self.resp = None
+        await self.response_setter(args, kwargs)
 
     async def json_response(self, data):
-        await self.response(json.dumps(data), content_type='application/json')
+        await self.response(json.dumps(data),
+                            status=200,
+                            content_type='application/json')
 
 
 class _HandlerTuple(tuple):
@@ -472,8 +482,8 @@ class _HandlerTuple(tuple):
 
 class AiohttpServer(_BaseServer):
 
-    def __init__(self, loop):
-        super().__init__(loop)
+    def __init__(self, loop, **kwargs):
+        super().__init__(loop, **kwargs)
 
         async def handler(request):
             args, kwargs = await self._handle(request)
@@ -487,7 +497,8 @@ class AiohttpServer(_BaseServer):
         self._factory = web.Server(handler, loop=loop)
         self._server = None
 
-    async def start_server(self, port):
+    async def start_server(self, port, **kwargs):
+        await super().start_server(**kwargs)
         assert self._server is None
         self._server = await self.loop.create_server(
             self._factory, '127.0.0.1', port,
@@ -495,6 +506,7 @@ class AiohttpServer(_BaseServer):
             reuse_port=hasattr(socket, 'SO_REUSEPORT'))
 
     async def stop_server(self):
+        await super().stop_server()
         assert self._server is not None
         server, self._server = self._server, None
         await self._factory.shutdown(1)
@@ -503,19 +515,20 @@ class AiohttpServer(_BaseServer):
 
 
 class WsgiServer(_BaseServer):
-    def __init__(self, loop, timeout=15):
-        super().__init__(loop)
+    def __init__(self, loop, timeout=15, **kwargs):
+        super().__init__(loop, **kwargs)
         self.loop = loop
+        self.timeout = timeout
 
         @Request.application
         def app(request):
             fut = asyncio.run_coroutine_threadsafe(
-                self._handle(_WSGIRequest(request)), loop)
+                self._handle(_WSGIRequest(request)), self.loop)
             fields = ('response', 'status', 'headers',
                       'mimetype', 'content_type',
                       'direct_passthrough')
             try:
-                args, kwargs = fut.result(timeout)
+                args, kwargs = fut.result()
                 kw = dict(zip(fields, args))
                 if kwargs.get('text'):
                     kwargs['response'] = kwargs.pop('text')
@@ -524,54 +537,71 @@ class WsgiServer(_BaseServer):
                 return Response(status=502)
             except Exception:
                 return Response(status=500)
+        self.wsgi_app = app
+        self.server = None
+        self._requests = []
 
-        self.app = app
-        self._tsk = None
-
-    async def start_server(self, port):
-        self.server = srv = BaseWSGIServer('localhost', port, self.app)
-        self._tsk = self.loop.run_in_executor(None, srv.serve_forever)
+    async def start_server(self, port, **kwargs):
+        await super().start_server(**kwargs)
+        self.server = BaseWSGIServer('localhost', port, self.wsgi_app)
+        self.server.timeout = self.timeout
         return self
 
     async def stop_server(self):
-        self.server.shutdown()
-        task, self._tsk = self._tsk, None
-        await task
+        await super().stop_server()
+        self.server.server_close()
+        while self._requests:
+            self._requests.pop().cancel()
+
+    async def wait_request(self):
+        fut = self.loop.run_in_executor(None, self.server.handle_request)
+        self._requests.append(fut)
+        return await super().wait_request()
+
+    async def set_response(self, args, kwargs):
+        await super().set_response(args, kwargs)
+        fut = self._requests.pop(0)
+        await fut
 
 
 class _WSGIRequest:
 
     def __init__(self, request):
         self._request = request
-        self._headers = None
+        self._path = request.path
+        self._method = request.method
+        v = request.environ['SERVER_PROTOCOL']
+        self._version = HttpVersion(*map(int, v.split('/')[1].split('.')))
+        self._headers = CIMultiDictProxy(CIMultiDict(list(request.headers)))
+        self._data = request.get_data()
+        # XXX: werkzeug's form data returns dict of lists
+        self._form = {k: v[0] if len(v) == 1 else v
+                      for k, v in request.form.items()}
 
     @property
     def path(self):
-        return self._request.path
+        return self._path
 
     @property
     def method(self):
-        return self._request.method
+        return self._method
 
     @property
     def version(self):
-        v = self._request.environ['SERVER_PROTOCOL']
-        return HttpVersion(*map(int, v.split('/')[1].split('.')))
+        return self._version
 
     @property
     def headers(self):
-        return CIMultiDictProxy(CIMultiDict(list(self._request.headers)))
+        return self._headers
 
     async def read(self):
-        return self._request.get_data()
+        return self._data
 
     async def post(self):
-        # XXX: werkzeug's form data returns dict of lists
-        return {k: v[0] if len(v) == 1 else v
-                for k, v in self._request.form.items()}
+        return self._form
 
     async def json(self):
-        return json.loads(self._request.get_data())
+        return json.loads(self._data)
 
 
 @pytest.fixture
@@ -585,8 +615,8 @@ def async_server(loop):
 
 
 @pytest.fixture(params=[
-    pytest.mark.async_upstream(async_server),
-    pytest.mark.wsgi_upstream(wsgi_server),
+    pytest.param(AiohttpServer, marks=pytest.mark.async),
+    pytest.param(WsgiServer, marks=pytest.mark.wsgi),
 ], ids=[
     'upstream[async]',
     'upstream[wsgi]',
@@ -595,11 +625,13 @@ def proxy_server(request, swindon, loop):
     server = request.param(loop)
 
     class _ServerWrapper:
-        def __init__(self, port=swindon.proxy.port):
+        def __init__(self, port=swindon.proxy.port, **client_session_kwargs):
             self.port = port
+            self.client_session_kwargs = client_session_kwargs
 
         async def __aenter__(self):
-            await server.start_server(port=self.port)
+            await server.start_server(
+                port=self.port, **self.client_session_kwargs)
             await server.__aenter__()
             return self
 

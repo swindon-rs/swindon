@@ -1,12 +1,14 @@
 import asyncio
+import async_timeout
+
 from aiohttp import HttpVersion11
 
 
 async def test_simple_request(proxy_server, swindon,
                               http_version, debug_routing):
     url = swindon.url / 'proxy/hello'
-    async with proxy_server() as proxy:
-        handler = proxy.send('GET', url, version=http_version)
+    async with proxy_server(version=http_version) as proxy:
+        handler = proxy.send('GET', url, timeout=5)
         req = await handler.request()
         assert req.path == '/proxy/hello'
         assert req.version == HttpVersion11
@@ -27,8 +29,8 @@ async def test_simple_request(proxy_server, swindon,
 async def test_host_override(proxy_server, swindon,
                              http_version, debug_routing):
     url = swindon.url / 'proxy-w-host/hello'
-    async with proxy_server() as proxy:
-        handler = proxy.send('get', url, version=http_version)
+    async with proxy_server(version=http_version) as proxy:
+        handler = proxy.send('get', url, timeout=5)
 
         req = await handler.request()
         assert req.method == 'GET'
@@ -50,7 +52,7 @@ async def test_host_override(proxy_server, swindon,
 async def test_method(proxy_server, swindon, request_method):
     url = swindon.url / 'proxy/hello'
     async with proxy_server() as proxy:
-        handler = proxy.send(request_method, url)
+        handler = proxy.send(request_method, url, timeout=5)
 
         req = await handler.request()
         assert req.method == request_method
@@ -64,7 +66,7 @@ async def test_method(proxy_server, swindon, request_method):
 async def test_prefix(proxy_server, swindon):
     url = swindon.url / 'proxy-w-prefix/tail'
     async with proxy_server() as proxy:
-        handler = proxy.send('GET', url)
+        handler = proxy.send('GET', url, timeout=5)
 
         req = await handler.request()
         assert req.method == 'GET'
@@ -75,10 +77,11 @@ async def test_prefix(proxy_server, swindon):
         assert resp.status == 200
 
 
-async def test_ip_header(proxy_server, swindon):
+async def test_ip_header(proxy_server, swindon, request):
+    is_wsgi = request.node.keywords.get('wsgi') is not None
     url = swindon.url / 'proxy-w-ip-header'
     async with proxy_server() as proxy:
-        handler = proxy.send("GET", url)
+        handler = proxy.send("GET", url, timeout=5)
 
         req = await handler.request()
         assert req.headers.getall('X-Some-Header') == ['127.0.0.1']
@@ -87,11 +90,15 @@ async def test_ip_header(proxy_server, swindon):
         assert resp.status == 200
 
         h = {"X-Some-Header": "1.2.3.4"}
-        handler = proxy.send("GET", url, headers=h)
+        handler = proxy.send("GET", url, headers=h, timeout=5)
 
         req = await handler.request()
-        assert set(req.headers.getall('X-Some-Header')) == {
-            '1.2.3.4', '127.0.0.1'}
+        if is_wsgi:
+            # last header wins
+            assert set(req.headers.getall('X-Some-Header')) == {'1.2.3.4'}
+        else:
+            assert set(req.headers.getall('X-Some-Header')) == {
+                '1.2.3.4', '127.0.0.1'}
 
         resp = await handler.response('OK')
         assert resp.status == 200
@@ -100,7 +107,7 @@ async def test_ip_header(proxy_server, swindon):
 async def test_request_id(proxy_server, swindon):
     url = swindon.url / 'proxy-w-request-id'
     async with proxy_server() as proxy:
-        handler = proxy.send("GET", url)
+        handler = proxy.send("GET", url, timeout=5)
 
         req = await handler.request()
         assert len(req.headers['X-Request-Id']) == 32
@@ -112,7 +119,7 @@ async def test_request_id(proxy_server, swindon):
 async def test_post_form(proxy_server, swindon):
     url = swindon.url / 'proxy/post'
     async with proxy_server() as proxy:
-        handler = proxy.send('POST', url, data=b'Some body')
+        handler = proxy.send('POST', url, data=b'Some body', timeout=5)
 
         req = await handler.request()
         assert await req.read() == b'Some body'
@@ -120,7 +127,7 @@ async def test_post_form(proxy_server, swindon):
         assert resp.status == 200
 
         data = {'field': 'value'}
-        handler = proxy.send('POST', url, data=data)
+        handler = proxy.send('POST', url, data=data, timeout=5)
 
         req = await handler.request()
         assert dict(await req.post()) == {'field': 'value'}
@@ -131,26 +138,14 @@ async def test_post_form(proxy_server, swindon):
 async def test_request_timeout(proxy_server, swindon, loop):
     url = swindon.url / 'proxy-w-timeout'
     async with proxy_server() as proxy:
-        handler, client_resp = proxy.send('GET', url)
+        handler, client_resp = proxy.send('GET', url, timeout=5)
         assert not client_resp.done(), await client_resp
 
-        req = await handler.request()
+        req = await handler.request(timeout=5)
         assert req.path == '/proxy-w-timeout'
         await asyncio.sleep(2, loop=loop)
 
         assert client_resp.done()
-        resp = await client_resp
+        with async_timeout.timeout(5):
+            resp = await client_resp
         assert resp.status == 502
-
-
-async def test_combo_request(
-        proxy_server, swindon, http_version, debug_routing):
-    url = swindon.url / 'proxy/hello'
-    async with proxy_server() as proxy:
-        handler = proxy.send('get', url)
-        req = await handler.request()
-        assert req.method == 'GET'
-        assert req.path == '/proxy/hello'
-        resp = await handler.response("Hello")
-        assert resp.status == 200
-        assert await resp.text() == 'Hello'
