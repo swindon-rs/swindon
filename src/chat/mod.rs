@@ -36,7 +36,7 @@ pub struct Shutdown;
 pub fn metrics() -> List {
     vec![
         (Metric("websockets.swindon_chat", "connects"), &*CONNECTS),
-        (Metric("websockets.swindon_chat", "connections"), &*CONNECTS),
+        (Metric("websockets.swindon_chat", "connections"), &*CONNECTIONS),
         (Metric("websockets.swindon_chat", "frames_received"),
             &*dispatcher::FRAMES_RECEIVED),
     ]
