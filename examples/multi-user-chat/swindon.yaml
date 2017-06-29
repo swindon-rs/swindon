@@ -9,6 +9,7 @@ routing:
   localhost/favicon.ico: public
   localhost: chat
   localhost/sockjs-node: socksjs
+  localhost/~~swindon-status: status
 
 
 handlers:
@@ -22,6 +23,7 @@ handlers:
       "*": chat
 
   empty-gif: !EmptyGif
+  status: !SelfStatus
 
   public: !Static
     mode: relative_to_domain_root

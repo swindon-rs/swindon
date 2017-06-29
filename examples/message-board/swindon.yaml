@@ -9,6 +9,7 @@ routing:
   localhost/js: public
   localhost/css: public
   localhost: chat
+  localhost/~~swindon-status: status
 
 handlers:
 
@@ -21,6 +22,7 @@ handlers:
       "*": chat
 
   empty-gif: !EmptyGif
+  status: !SelfStatus
 
   public: !Static
     mode: relative_to_domain_root
