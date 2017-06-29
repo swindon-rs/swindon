@@ -168,6 +168,7 @@ impl Dispatcher {
 
 impl Drop for Dispatcher {
     fn drop(&mut self) {
+        self.processor.send(Action::Disconnect { conn_id: self.cid });
         CONNECTIONS.decr(1)
     }
 }

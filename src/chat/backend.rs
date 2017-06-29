@@ -7,7 +7,7 @@ use futures::future::{FutureResult, ok};
 use tk_http::{Status, Version};
 use tk_http::client as http;
 use serde::ser::Serialize;
-use serde_json::{self, Value as Json};
+use serde_json;
 
 use chat::authorize::{parse_userinfo, good_status};
 use chat::{Cid, ConnectionSender, ConnectionMessage, TangleAuth};
