@@ -15,13 +15,13 @@ use tokio_core::reactor::Handle;
 use tokio_io::{AsyncRead, AsyncWrite};
 use serde_json::to_string as json_encode;
 
-use chat::{self, Cid, ConnectionMessage, ConnectionSender, TangleAuth};
 use chat::ConnectionMessage::{Hello, StopSocket};
-use runtime::Runtime;
+use chat::{self, Cid, ConnectionMessage, ConnectionSender, TangleAuth};
 use config::chat::Chat;
-use incoming::{Request, Input, Reply, Encoder, Transport};
-use incoming::{Context, IntoContext};
 use default_error_page::serve_error_page;
+use incoming::{Context, IntoContext};
+use incoming::{Request, Input, Reply, Encoder, Transport};
+use runtime::Runtime;
 
 struct WebsockReply {
     cid: Cid,
@@ -100,6 +100,7 @@ impl<S: AsyncRead + AsyncWrite + 'static> Codec<S> for WebsockReply {
                         .map_err(|e| info!("error sending userinfo: {:?}", e))
                         .and_then(move |out| {
                             let rx = rx.map(|x| {
+                                chat::FRAMES_SENT.incr(1);
                                 Packet::Text(json_encode(&x)
                                     .expect("any data can be serialized"))
                             }).map_err(|_| -> &str {

@@ -29,6 +29,7 @@ use metrics::{Counter, Integer, List, Metric};
 lazy_static! {
     pub static ref CONNECTS: Counter = Counter::new();
     pub static ref CONNECTIONS: Integer = Integer::new();
+    pub static ref FRAMES_SENT: Counter = Counter::new();
 }
 
 pub struct Shutdown;
@@ -39,5 +40,6 @@ pub fn metrics() -> List {
         (Metric("websockets.swindon_chat", "connections"), &*CONNECTIONS),
         (Metric("websockets.swindon_chat", "frames_received"),
             &*dispatcher::FRAMES_RECEIVED),
+        (Metric("websockets.swindon_chat", "frames_sent"), &*FRAMES_SENT),
     ]
 }
