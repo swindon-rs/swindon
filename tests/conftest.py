@@ -9,6 +9,7 @@ import textwrap
 import hashlib
 import time
 import json
+import re
 
 import yarl
 import aiohttp
@@ -252,7 +253,13 @@ def run_swindon(_proc, bin, config, log, *wait_ports, **options):
         tpl = string.Template(f.read())
 
     config = tpl.substitute(**options)
-    assert _check_config(config, returncode=0, __swindon_bin=bin) == ''
+    assert _check_config(config, returncode=0, __swindon_bin=bin) in ('',
+        # TODO(tailhook) maybe elimitate this warning?
+        #                or make explicit tests for it?
+        '[swindon::config::read] WARN: '
+        'handler"proxy_w_request_id": request_id_header is deprecated '
+        'in !Proxy setting, '
+        'it must be specified in http destination\n')
 
     os.write(fd, config.encode('utf-8'))
 
@@ -309,7 +316,10 @@ def _check_config(cfg='', returncode=1, *, __swindon_bin):
             )
         assert not res.stdout, res
         assert res.returncode == returncode, res
-        return res.stderr.decode('utf-8').replace(f.name, 'TEMP_FILE_NAME')
+        # removes log timestamps
+        return re.sub(r"(?m)^[\d-]{10}T[\d:]{8}Z ", "",
+            res.stderr.decode('utf-8')
+            .replace(f.name, 'TEMP_FILE_NAME'))
 
 
 # helpers
