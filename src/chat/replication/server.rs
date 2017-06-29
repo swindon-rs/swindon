@@ -125,7 +125,8 @@ impl<S: AsyncRead + AsyncWrite + 'static> Codec<S> for WebsocketCodec {
         }).ok();
 
         self.handle.spawn(
-            Loop::server(out, inp, rx, Handler(self.sender.clone()), &wcfg)
+            Loop::server(out, inp, rx, Handler(self.sender.clone()), &wcfg,
+                         &self.handle)
             .map_err(|e| error!("Websocket loop error: {:?}", e))
         );
     }

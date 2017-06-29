@@ -78,6 +78,7 @@ impl<S: AsyncRead + AsyncWrite + 'static> Codec<S> for WebsockReply {
             // TODO(tailhook) this doesn't check that pool is created
             .pool(&self.settings.session_pool);
         let h1 = self.handle.clone();
+        let h2 = self.handle.clone();
         let r1 = self.runtime.clone();
         let s1 = self.settings.clone();
         let cid = self.cid;
@@ -122,7 +123,7 @@ impl<S: AsyncRead + AsyncWrite + 'static> Codec<S> for WebsockReply {
                                     runtime: r1,
                                     settings: s1,
                                     channel: tx,
-                                }, &cfg)
+                                }, &cfg, &h2)
                             .map_err(|e| debug!("websocket closed: {}", e))
                         }))
                 }
@@ -130,7 +131,7 @@ impl<S: AsyncRead + AsyncWrite + 'static> Codec<S> for WebsockReply {
                     Either::B(websocket::Loop::<_, _, _>::closing(out, inp,
                             close_reason.code(),
                             close_reason.reason(),
-                            &cfg)
+                            &cfg, &h1)
                         .map_err(log_err_err))
                 }
                 Ok((msg, _)) => {
@@ -140,7 +141,7 @@ impl<S: AsyncRead + AsyncWrite + 'static> Codec<S> for WebsockReply {
                     error!("Aborted handshake because pool closed");
                     Either::B(websocket::Loop::<_, _, _>::closing(out, inp,
                             1011, "", //
-                            &cfg)
+                            &cfg, &h2)
                         .map_err(log_err_err))
                 }
             }));

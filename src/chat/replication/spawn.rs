@@ -56,6 +56,7 @@ pub fn connect(peer: &str, sender: IncomingChannel,
     let wcfg = WsConfig::new().done();
     let server_id = server_id.clone();
     let h1 = handle.clone();
+    let h2 = handle.clone();
     let p1 = peer.to_string();
     let p2 = p1.clone();
 
@@ -94,7 +95,7 @@ pub fn connect(peer: &str, sender: IncomingChannel,
             server_id: remote_srv_id,
             peer: Some(p2),
         }).ok();
-        Loop::client(out, inp, rx, Handler(sender), &wcfg)
+        Loop::client(out, inp, rx, Handler(sender), &wcfg, &h2)
         .map_err(|e| format!("WS loop error: {}", e))
     })
     .map_err(|e| error!("{}", e)));
