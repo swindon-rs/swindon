@@ -51,5 +51,7 @@ pub fn metrics() -> List {
             &*processor::PUBSUB_INPUT),
         (Metric("websockets.swindon_chat.pubsub", "output_messages"),
             &*processor::PUBSUB_OUTPUT),
+        (Metric("websockets.swindon_chat.pubsub", "topics"),
+            &*processor::TOPICS),
     ]
 }

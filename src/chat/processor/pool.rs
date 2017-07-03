@@ -19,8 +19,10 @@ use metrics::{Integer, Counter};
 lazy_static! {
     pub static ref ACTIVE_SESSIONS: Integer = Integer::new();
     pub static ref INACTIVE_SESSIONS: Integer = Integer::new();
+
     pub static ref PUBSUB_INPUT: Counter = Counter::new();
     pub static ref PUBSUB_OUTPUT: Counter = Counter::new();
+    pub static ref TOPICS: Integer = Integer::new();
 }
 
 
@@ -237,11 +239,19 @@ impl Pool {
     pub fn subscribe(&mut self, cid: Cid, topic: Topic) {
         if let Some(conn) = self.connections.get_mut(&cid) {
             conn.topics.insert(topic.clone());
-            self.topics.entry(topic).or_insert_with(HashMap::new)
+            self.topics.entry(topic)
+                .or_insert_with(|| {
+                    TOPICS.incr(1);
+                    HashMap::new()
+                })
                 .insert(cid, Subscription::Session);
         } else if let Some(conn) = self.pending_connections.get_mut(&cid) {
             conn.topics.insert(topic.clone());
-            self.topics.entry(topic).or_insert_with(HashMap::new)
+            self.topics.entry(topic)
+                .or_insert_with(|| {
+                    TOPICS.incr(1);
+                    HashMap::new()
+                })
                 .insert(cid, Subscription::Pending);
         } else {
             debug!("Connection {:?} does not exist any more", cid);
@@ -453,6 +463,7 @@ fn unsubscribe(topics: &mut HashMap<Topic, HashMap<Cid, Subscription>>,
     left.and_then(|(sub, len)| {
         if len == 0 {
             topics.remove(topic);
+            TOPICS.decr(1);
         }
         return sub;
     })
