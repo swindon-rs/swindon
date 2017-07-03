@@ -8,6 +8,18 @@ use serde::ser::{Serialize, Serializer, SerializeMap};
 use serde::de::{self, Deserialize, Deserializer, Visitor, MapAccess};
 
 use intern::{LatticeKey as Key, LatticeVar as Var, SessionId};
+use metrics::{Integer};
+
+lazy_static! {
+    pub static ref SHARED_KEYS: Integer = Integer::new();
+    pub static ref SHARED_COUNTERS: Integer = Integer::new();
+    pub static ref SHARED_SETS: Integer = Integer::new();
+    pub static ref PRIVATE_KEYS: Integer = Integer::new();
+    pub static ref PRIVATE_COUNTERS: Integer = Integer::new();
+    pub static ref PRIVATE_SETS: Integer = Integer::new();
+    pub static ref SET_ITEMS: Integer = Integer::new();
+}
+
 
 #[derive(Debug, Clone)]
 pub struct Counter(u64);
@@ -91,16 +103,22 @@ impl Lattice {
         let mut del = Vec::new();
         for (room, values) in &mut delta.shared {
             let mine = self.shared.entry(room.clone())
-                        .or_insert_with(Values::new);
+                        .or_insert_with(|| {
+                            SHARED_KEYS.incr(1);
+                            Values::new()
+                        });
 
-            crdt_update(&mut mine.counters, &mut values.counters);
-            crdt_update(&mut mine.sets, &mut values.sets);
+            crdt_update(&mut mine.counters, &mut values.counters,
+                &*SHARED_COUNTERS);
+            crdt_update(&mut mine.sets, &mut values.sets,
+                &*SHARED_SETS);
 
             if values.is_empty() {
                 del.push(room.clone());
             }
         }
         for key in &del {
+            SHARED_KEYS.decr(1);
             delta.shared.remove(key);
         }
 
@@ -110,16 +128,22 @@ impl Lattice {
             let mut del_rooms = Vec::new();
             for (room, values) in rooms.iter_mut() {
                 let mine = mysess.entry(room.clone())
-                    .or_insert_with(Values::new);
+                    .or_insert_with(|| {
+                        PRIVATE_KEYS.incr(1);
+                        Values::new()
+                    });
 
-                crdt_update(&mut mine.counters, &mut values.counters);
-                crdt_update(&mut mine.sets, &mut values.sets);
+                crdt_update(&mut mine.counters, &mut values.counters,
+                    &*PRIVATE_COUNTERS);
+                crdt_update(&mut mine.sets, &mut values.sets,
+                    &*PRIVATE_SETS);
 
                 if values.is_empty() {
                     del_rooms.push(room.clone());
                 }
             }
             for key in &del_rooms {
+                PRIVATE_KEYS.decr(1);
                 rooms.remove(key);
             }
         }
@@ -145,9 +169,13 @@ impl Crdt for Set {
         while let Some(key) = iter.next() {
             if !arc.contains(key) {
                 let nset = Arc::make_mut(arc);
-                nset.insert(key.clone());
+                if nset.insert(key.clone()) {
+                    SET_ITEMS.incr(1);
+                }
                 for item in iter {
-                    nset.insert(item.clone());
+                    if nset.insert(item.clone()) {
+                        SET_ITEMS.incr(1);
+                    }
                 }
                 return true;
             }
@@ -156,7 +184,8 @@ impl Crdt for Set {
     }
 }
 
-fn crdt_update<K, V>(original: &mut HashMap<K, V>, delta: &mut HashMap<K, V>)
+fn crdt_update<K, V>(original: &mut HashMap<K, V>, delta: &mut HashMap<K, V>,
+    number: &Integer)
     where K: Clone + Hash + Eq + ::std::fmt::Debug, V: Crdt
 {
     let mut del = Vec::new();
@@ -168,11 +197,13 @@ fn crdt_update<K, V>(original: &mut HashMap<K, V>, delta: &mut HashMap<K, V>)
                 }
             }
             Vacant(entry) => {
+                number.incr(1);
                 entry.insert(crdt.clone());
             }
         }
     }
     for key in &del {
+        number.decr(1);
         original.remove(key);
     }
 }

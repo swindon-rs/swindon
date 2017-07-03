@@ -23,6 +23,8 @@ lazy_static! {
     pub static ref PUBSUB_INPUT: Counter = Counter::new();
     pub static ref PUBSUB_OUTPUT: Counter = Counter::new();
     pub static ref TOPICS: Integer = Integer::new();
+
+    pub static ref LATTICES: Integer = Integer::new();
 }
 
 
@@ -372,7 +374,10 @@ impl Pool {
     {
         let delta = {
             let lat = self.lattices.entry(namespace.clone())
-                .or_insert_with(Lattice::new);
+                .or_insert_with(|| {
+                    LATTICES.incr(1);
+                    Lattice::new()
+                });
 
             // Update subscriptions on **original delta**
             for (session_id, rooms) in delta.private.iter() {
