@@ -237,16 +237,16 @@ impl<S> http::Codec<S> for Request {
             State::Query(Unsubscribe(PubCid(cid, srv_id), topic)) => {
                 if data.len() == 0 {
                     if srv_id == my_srv_id {
-                        self.wdata.remote.send(RemoteAction::Unsubscribe {
+                        self.wdata.processor.send(Action::Unsubscribe {
                             conn_id: cid,
-                            server_id: srv_id,
                             topic: topic.clone(),
                         });
                     } else {
                         debug!("Skipping action with non-local cid");
                     }
-                    self.wdata.processor.send(Action::Unsubscribe {
+                    self.wdata.remote.send(RemoteAction::Unsubscribe {
                         conn_id: cid,
+                        server_id: srv_id,
                         topic: topic,
                     });
                     State::Done
