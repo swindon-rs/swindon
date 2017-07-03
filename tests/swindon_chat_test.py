@@ -6,12 +6,6 @@ import asyncio
 from unittest import mock
 from async_timeout import timeout
 from aiohttp import WSMsgType
-from itertools import count
-
-
-@pytest.fixture
-def user_id(_c=count(1)):
-    return 'u:{}'.format(next(_c))
 
 
 async def test_simple_userinfo(proxy_server, swindon, user_id):

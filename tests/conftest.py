@@ -16,6 +16,7 @@ import aiohttp
 import asyncio
 import async_timeout
 
+from itertools import count
 from collections import namedtuple
 from contextlib import contextmanager
 from functools import partial
@@ -64,6 +65,11 @@ def pytest_configure(config):
         SWINDON_BIN.append(str(p))
 
 # Fixtures
+
+
+@pytest.fixture
+def user_id(_c=count(1)):
+    return 'u:{}'.format(next(_c))
 
 
 @pytest.fixture(params=[

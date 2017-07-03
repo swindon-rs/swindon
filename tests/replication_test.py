@@ -22,6 +22,12 @@ async def put(url, loop):
             assert resp.status == 204
 
 
+async def delete(url, loop):
+    async with ClientSession(loop=loop) as s:
+        async with s.delete(url) as resp:
+            assert resp.status == 204
+
+
 async def post(url, data, loop):
     async with ClientSession(loop=loop) as s:
         async with s.post(url, data=data) as resp:
@@ -105,3 +111,49 @@ async def test_non_local_connections(swindon_two, proxy_server, loop, through):
         with pytest.raises(asyncio.TimeoutError):
             with timeout(1, loop=loop):
                 assert await ws2.receive_json() is None
+
+
+@pytest.mark.parametrize("through", ["peerA", "peerB"])
+async def test_topic_unsubscribe(swindon_two, proxy_server, loop,
+                                 user_id, through):
+    peerA, peerB = swindon_two
+    if through == 'peerA':
+        control = peerA
+    else:
+        control = peerB
+    urlA = peerA.url / 'swindon-chat'
+    # urlB = peerB.url / 'swindon-chat'
+    async with proxy_server(port=peerA.proxy.port) as proxy:
+        handlerA = proxy.swindon_chat(urlA, timeout=1)
+        cid, ws = await auth(handlerA, {"user_id": user_id})
+
+        topic_url = control.api / 'v1/connection'
+        topic_url = topic_url / cid / 'subscriptions/xxxx'
+        await put(topic_url, loop)
+
+        # publish some data
+        data = b'["hello", "from", "peerA"]'
+        await post(peerA.api / 'v1/publish/xxxx', data, loop)
+        msg = await ws.receive_json()
+        assert msg == [
+            "message", {"topic": "xxxx"}, ["hello", "from", "peerA"]]
+
+        data = b'["hello", "from", "peerB"]'
+        await post(peerB.api / 'v1/publish/xxxx', data, loop)
+        msg = await ws.receive_json()
+        assert msg == [
+            "message", {"topic": "xxxx"}, ["hello", "from", "peerB"]]
+
+        topic_url = control.api / 'v1/connection'
+        topic_url = topic_url / cid / 'subscriptions/xxxx'
+        await delete(topic_url, loop)
+        # XXX: publish can be received earlier than unsubscribe "replicated"
+        await asyncio.sleep(.05, loop)
+
+        # publish some data
+        data = b'["hello", "world"]'
+        await post(peerA.api / 'v1/publish/xxxx', data, loop)
+        await post(peerB.api / 'v1/publish/xxxx', data, loop)
+        with pytest.raises(asyncio.TimeoutError):
+            with timeout(1, loop=loop):
+                assert await ws.receive_json() is None
