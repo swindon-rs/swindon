@@ -35,6 +35,9 @@ mod lattice;
 
 pub use self::public::{Processor, ProcessorPool};
 pub use self::lattice::Delta;
+pub use self::main::{SESSION_POOLS};
+pub use self::pool::{ACTIVE_SESSIONS, INACTIVE_SESSIONS};
+pub use self::pool::{PUBSUB_INPUT, PUBSUB_OUTPUT};
 
 
 #[derive(Debug)]

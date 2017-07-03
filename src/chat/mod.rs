@@ -41,5 +41,15 @@ pub fn metrics() -> List {
         (Metric("websockets.swindon_chat", "frames_received"),
             &*dispatcher::FRAMES_RECEIVED),
         (Metric("websockets.swindon_chat", "frames_sent"), &*FRAMES_SENT),
+        (Metric("websockets.swindon_chat", "session_pools"),
+            &*processor::SESSION_POOLS),
+        (Metric("websockets.swindon_chat", "active_sessions"),
+            &*processor::ACTIVE_SESSIONS),
+        (Metric("websockets.swindon_chat", "inactive_sessions"),
+            &*processor::INACTIVE_SESSIONS),
+        (Metric("websockets.swindon_chat.pubsub", "input_messages"),
+            &*processor::PUBSUB_INPUT),
+        (Metric("websockets.swindon_chat.pubsub", "output_messages"),
+            &*processor::PUBSUB_OUTPUT),
     ]
 }

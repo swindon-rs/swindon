@@ -5,6 +5,11 @@ use std::collections::HashMap;
 use super::{Event, Action};
 use super::pool::Pool;
 use super::try_iter::try_iter;
+use metrics::Integer;
+
+lazy_static! {
+    pub static ref SESSION_POOLS: Integer = Integer::new();
+}
 
 fn pool_action(pool: &mut Pool, ts: Instant, action: Action) {
     use super::Action::*;
@@ -79,10 +84,12 @@ pub fn run(rx: Receiver<Event>) {
                 NewSessionPool { config, channel } => {
                     pools.insert(pool.clone(),
                         Pool::new(pool, config, channel));
+                    SESSION_POOLS.set(pools.len() as i64);
                 }
                 StopSessionPool => {
                     if let Some(pool) = pools.remove(&pool) {
                         pool.stop();
+                        SESSION_POOLS.set(pools.len() as i64);
                     }
                 }
                 _ => {

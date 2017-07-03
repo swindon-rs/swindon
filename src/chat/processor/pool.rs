@@ -14,6 +14,14 @@ use super::session::Session;
 use super::connection::{NewConnection, Connection};
 use super::heap::HeapMap;
 use super::lattice::{Lattice, Delta};
+use metrics::{Integer, Counter};
+
+lazy_static! {
+    pub static ref ACTIVE_SESSIONS: Integer = Integer::new();
+    pub static ref INACTIVE_SESSIONS: Integer = Integer::new();
+    pub static ref PUBSUB_INPUT: Counter = Counter::new();
+    pub static ref PUBSUB_OUTPUT: Counter = Counter::new();
+}
 
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
@@ -135,6 +143,8 @@ impl Pool {
             let val = self.sessions.active.insert(session_id.clone(),
                 timestamp, session);
             debug_assert!(val.is_none());
+            INACTIVE_SESSIONS.decr(1);
+            ACTIVE_SESSIONS.incr(1);
         } else if self.sessions.active.contains_key(&session_id) {
             self.sessions.active.update(&session_id, expire);
             let mut session = self.sessions.active.get_mut(&session_id).unwrap();
@@ -147,6 +157,7 @@ impl Pool {
             session.metadata = metadata;
             copy_attachments(&mut session, &conn.lattices, conn_id);
             self.sessions.active.insert(session_id.clone(), expire, session);
+            ACTIVE_SESSIONS.incr(1);
         }
 
         let ins = self.connections.insert(conn_id, conn);
@@ -176,6 +187,7 @@ impl Pool {
             };
             if conns == 0 {
                 self.sessions.inactive.remove(&session_id);
+                INACTIVE_SESSIONS.decr(1);
             }
         } if let Some(mut session) = self.sessions.active.get_mut(&session_id)
         {
@@ -192,6 +204,8 @@ impl Pool {
             return;
         };
         if let Some(session) = self.sessions.inactive.remove(sess_id) {
+            INACTIVE_SESSIONS.decr(1);
+            ACTIVE_SESSIONS.incr(1);
             self.sessions.active.insert(sess_id.clone(), activity_ts, session);
         } else {
             self.sessions.active.update_if_smaller(sess_id, activity_ts)
@@ -203,6 +217,7 @@ impl Pool {
             .map(|(_, &x, _)| x < timestamp).unwrap_or(false)
         {
             let (sess_id, _, session) = self.sessions.active.pop().unwrap();
+            ACTIVE_SESSIONS.decr(1);
             self.channel.send(PoolMessage::InactiveSession {
                 session_id: sess_id.clone(),
                 connections_active: session.connections.len(),
@@ -212,6 +227,7 @@ impl Pool {
                 // TODO(tailhook) Maybe do session cleanup ?
             } else {
                 let val = self.sessions.inactive.insert(sess_id, session);
+                INACTIVE_SESSIONS.incr(1);
                 debug_assert!(val.is_none());
             }
         }
@@ -251,8 +267,10 @@ impl Pool {
     }
 
     pub fn publish(&mut self, topic: Topic, data: Arc<Json>) {
+        PUBSUB_INPUT.incr(1);
         if let Some(cids) = self.topics.get(&topic) {
             for (cid, typ) in cids {
+                PUBSUB_OUTPUT.incr(1);
                 match *typ {
                     Subscription::Pending => {
                         self.pending_connections.get_mut(cid)
