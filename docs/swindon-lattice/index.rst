@@ -1,5 +1,5 @@
-Tangle/Chat protocol
-====================
+Swindon-lattice Protocol
+========================
 
 The protocol is higher level-protocol on top of websockets that allows routing
 messages between backends, push from any backend to any user, publish-subscribe

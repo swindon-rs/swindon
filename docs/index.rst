@@ -18,7 +18,7 @@ Contents:
 
    config/index
    internals/index
-   tangle/index
+   swindon-lattice/index
 
 
 Indices and tables
