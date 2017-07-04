@@ -225,7 +225,7 @@ mod test {
             _ => unreachable!(),
         }
         assert_eq!(args.len(), 1);
-        match kwargs.get("world!".into()).unwrap() {
+        match kwargs.get("world!").unwrap() {
             &Json::String(ref s) => assert_eq!(s, &"!".to_string()),
             _ => unreachable!(),
         }

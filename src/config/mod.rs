@@ -133,7 +133,7 @@ impl Configurator {
 pub mod test {
     use std::sync::Arc;
     use quire::{parse_string, Options};
-    use config::root::{Config, config_validator};
+    use config::root::{ConfigData as Config, config_validator};
 
     pub fn make_config() -> Arc<Config> {
         let raw = r#"
@@ -243,7 +243,7 @@ pub mod test {
         use std::time::Duration;
         let cfg = make_config();
 
-        let p = cfg.session_pools.get("example-session".into()).unwrap();
+        let p = cfg.session_pools.get("example-session").unwrap();
         assert_eq!(*p.new_connection_idle_timeout, Duration::from_secs(60));
         assert_eq!(*p.client_min_idle_timeout, Duration::from_secs(1));
         assert_eq!(*p.client_max_idle_timeout, Duration::from_secs(7200));
