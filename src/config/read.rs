@@ -8,7 +8,7 @@ use quire::{self, Pos, Include, ErrorCollector, Options, parse_config};
 use quire::{raw_parse as parse_yaml};
 use quire::ast::{Ast, process as process_ast};
 
-use super::Config;
+use super::ConfigData;
 use super::root::config_validator;
 use super::Handler;
 use config::static_files::Mode;
@@ -90,12 +90,12 @@ pub fn include_file(files: &RefCell<&mut Vec<(PathBuf, Metadata)>>,
 }
 
 pub fn read_config<P: AsRef<Path>>(filename: P)
-    -> Result<(Config, Vec<(PathBuf, Metadata)>), Error>
+    -> Result<(ConfigData, Vec<(PathBuf, Metadata)>), Error>
 {
     let filename = filename.as_ref();
     let mut files = Vec::new();
     files.push((filename.to_path_buf(), metadata(filename)?));
-    let cfg: Config = {
+    let cfg: ConfigData = {
         let cell = RefCell::new(&mut files);
         let mut opt = Options::default();
         opt.allow_include(

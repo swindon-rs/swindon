@@ -21,7 +21,7 @@ use config::disk::{self, Disk};
 use super::replication::{self, Replication};
 
 #[derive(RustcDecodable, PartialEq, Eq, Debug)]
-pub struct Config {
+pub struct ConfigData {
     pub listen: Vec<ListenSocket>,
     pub max_connections: usize,
     pub pipeline_depth: usize,

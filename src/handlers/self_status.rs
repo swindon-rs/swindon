@@ -17,6 +17,7 @@ pub fn serve<S: 'static>(settings: &Arc<SelfStatus>, inp: Input)
 {
     let settings = settings.clone();
     let meter = inp.runtime.meter.clone();
+    let fingerprint = inp.runtime.config.fingerprint();
     reply(inp, move |mut e| {
 
         #[derive(Serialize)]
@@ -24,6 +25,7 @@ pub fn serve<S: 'static>(settings: &Arc<SelfStatus>, inp: Input)
             process: ProcessReport<'a>,
             threads: ThreadReport<'a>,
             metrics: Json<'a, Vec<Box<Collection>>>,
+            config_fingerprint: String,
         }
 
         e.status(Status::Ok);
@@ -37,6 +39,7 @@ pub fn serve<S: 'static>(settings: &Arc<SelfStatus>, inp: Input)
                 process: meter.process_report(),
                 threads: meter.thread_report(),
                 metrics: Json(&metrics::all()),
+                config_fingerprint: fingerprint,
             }).expect("report is serializable");
         }
         Box::new(ok(e.done()))

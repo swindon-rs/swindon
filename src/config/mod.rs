@@ -2,9 +2,10 @@ use std::fs::{metadata, Metadata};
 use std::sync::{Arc, RwLock};
 use std::path::{PathBuf, Path};
 
+mod fingerprint;
+mod http;
 mod read;
 mod root;
-mod http;
 // sections
 mod listen;
 mod routing;
@@ -26,7 +27,7 @@ pub mod redirect;
 pub mod self_status;
 
 pub use self::read::Error;
-pub use self::root::Config;
+pub use self::root::ConfigData;
 pub use self::listen::ListenSocket;
 pub use self::handlers::Handler;
 pub use self::authorizers::Authorizer;
@@ -45,9 +46,21 @@ pub struct Configurator {
     cell: ConfigCell,
 }
 
+pub struct Config {
+    data: ConfigData,
+    fingerprint: fingerprint::Fingerprint,
+}
 
 #[derive(Clone)]
+// TODO(tailhook) replace into ArcCell
 pub struct ConfigCell(Arc<RwLock<Arc<Config>>>);
+
+impl ::std::ops::Deref for Config {
+    type Target = ConfigData;
+    fn deref(&self) -> &ConfigData {
+        &self.data
+    }
+}
 
 impl ConfigCell {
     fn new(cfg: Config) -> ConfigCell {
@@ -57,26 +70,21 @@ impl ConfigCell {
     pub fn from_string(data: &str, name: &str) -> Result<ConfigCell, Error> {
         let v = root::config_validator();
         let o = Options::default();
-        Ok(ConfigCell::new(parse_string(name, data, &v, &o)?))
+        Ok(ConfigCell::new(Config {
+            data: parse_string(name, data, &v, &o)?,
+            fingerprint: fingerprint::calc(&Vec::new())?,
+        }))
     }
     pub fn get(&self) -> Arc<Config> {
         self.0.read()
             .expect("config exists")
             .clone()
     }
-}
-
-#[cfg(unix)]
-fn compare_metadata(meta: &Metadata, old_meta: &Metadata) -> bool {
-    use std::os::unix::fs::MetadataExt;
-    meta.modified().ok() != old_meta.modified().ok() ||
-        meta.ino() != old_meta.ino() ||
-        meta.dev() != old_meta.dev()
-}
-
-#[cfg(not(unix))]
-fn compare_metadata(meta: &Metadata, old_meta: &Metadata) -> bool {
-    meta.modified().ok() != old_meta.modified().ok()
+    pub fn fingerprint(&self) -> String {
+        format!("{:x}", self.0.read()
+            .expect("config cell is valid")
+            .fingerprint)
+    }
 }
 
 #[allow(dead_code)] // not used in main-dev
@@ -86,8 +94,11 @@ impl Configurator {
         let (cfg, meta) = read::read_config(path)?;
         Ok(Configurator {
             path: path.to_path_buf(),
+            cell: ConfigCell::new(Config {
+                data: cfg,
+                fingerprint: fingerprint::calc(&meta)?,
+            }),
             file_metadata: meta,
-            cell: ConfigCell::new(cfg),
         })
     }
     pub fn config(&self) -> ConfigCell {
@@ -104,7 +115,7 @@ impl Configurator {
         let changed = self.file_metadata.iter()
             .any(|&(ref fname, ref old_meta)| {
                 if let Ok(ref meta) = metadata(fname) {
-                    compare_metadata(meta, old_meta)
+                    fingerprint::compare_metadata(meta, old_meta)
                 } else {
                     // We reread config on error for the case there is absent
                     // file that was previously present. And we want to account
@@ -116,12 +127,16 @@ impl Configurator {
             return Ok(false);
         }
         let (new_cfg, new_meta) = read::read_config(&self.path)?;
-        if *self.config().get() != new_cfg {
+        if **self.config().get() != new_cfg {
+            let print = fingerprint::calc(&new_meta)?;
             self.file_metadata = new_meta;
             *self.cell.0.write()
                 // we overwrite it so poisoned config is fine
                 .unwrap_or_else(|p| p.into_inner())
-                = Arc::new(new_cfg);
+                = Arc::new(Config {
+                    data: new_cfg,
+                    fingerprint: print,
+                });
             Ok(true)
         } else {
             Ok(false)

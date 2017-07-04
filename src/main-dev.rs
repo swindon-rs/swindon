@@ -7,10 +7,14 @@
 #[macro_use] extern crate serde_json;
 extern crate abstract_ns;
 extern crate argparse;
+extern crate blake2;
 extern crate byteorder;
+extern crate digest;
+extern crate digest_writer;
 extern crate env_logger;
 extern crate futures;
 extern crate futures_cpupool;
+extern crate generic_array;
 extern crate httparse;
 extern crate httpbin;
 extern crate libcantal;
@@ -34,6 +38,7 @@ extern crate tk_pool;
 extern crate tk_sendfile;
 extern crate tokio_core;
 extern crate tokio_io;
+extern crate typenum;
 
 mod authorizers;
 mod base64;

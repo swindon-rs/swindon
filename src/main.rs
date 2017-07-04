@@ -7,10 +7,14 @@
 #[macro_use] extern crate serde_json;
 extern crate abstract_ns;
 extern crate argparse;
+extern crate blake2;
 extern crate byteorder;
+extern crate digest;
+extern crate digest_writer;
 extern crate env_logger;
 extern crate futures;
 extern crate futures_cpupool;
+extern crate generic_array;
 extern crate httparse;
 extern crate httpbin;
 extern crate libc;
@@ -35,6 +39,7 @@ extern crate tk_pool;
 extern crate tk_sendfile;
 extern crate tokio_core;
 extern crate tokio_io;
+extern crate typenum;
 
 mod authorizers;
 mod base64;
@@ -101,7 +106,8 @@ pub fn main() {
             "Show version");
         ap.refer(&mut verbose)
             .add_option(&["--verbose"], StoreTrue,
-            "Print some user-friendly startup messages");
+            "Print some user-friendly startup messages. \
+             With --check-config prints config fingerprint.");
         ap.parse_args_or_exit();
     }
 
@@ -114,6 +120,9 @@ pub fn main() {
     };
     let cfg = configurator.config();
 
+    if verbose {
+        println!("Config fingerprint: {}", cfg.fingerprint());
+    }
     if check {
         exit(0);
     }
