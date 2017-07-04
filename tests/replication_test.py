@@ -148,7 +148,7 @@ async def test_topic_unsubscribe(swindon_two, proxy_server, loop,
         topic_url = topic_url / cid / 'subscriptions/xxxx'
         await delete(topic_url, loop)
         # XXX: publish can be received earlier than unsubscribe "replicated"
-        await asyncio.sleep(.05, loop)
+        await asyncio.sleep(.05, loop=loop)
 
         # publish some data
         data = b'["hello", "world"]'
