@@ -42,7 +42,7 @@ use quire::{parse_string, Options};
 
 pub struct Configurator {
     path: PathBuf,
-    file_metadata: Vec<(PathBuf, Metadata)>,
+    file_metadata: Vec<(PathBuf, String, Metadata)>,
     cell: ConfigCell,
 }
 
@@ -113,7 +113,7 @@ impl Configurator {
     #[allow(dead_code)]
     pub fn try_update(&mut self) -> Result<bool, Error> {
         let changed = self.file_metadata.iter()
-            .any(|&(ref fname, ref old_meta)| {
+            .any(|&(ref fname, _, ref old_meta)| {
                 if let Ok(ref meta) = metadata(fname) {
                     fingerprint::compare_metadata(meta, old_meta)
                 } else {

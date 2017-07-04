@@ -44,7 +44,7 @@ macro_rules! err {
 
 
 #[allow(dead_code)]
-pub fn include_file(files: &RefCell<&mut Vec<(PathBuf, Metadata)>>,
+pub fn include_file(files: &RefCell<&mut Vec<(PathBuf, String, Metadata)>>,
     pos: &Pos, include: &Include,
     err: &ErrorCollector, options: &Options)
     -> Ast
@@ -79,7 +79,11 @@ pub fn include_file(files: &RefCell<&mut Vec<(PathBuf, Metadata)>>,
                 err.add_error(quire::Error::OpenError(path.clone(), e))
             }).ok()
             .and_then(|metadata| {
-                files.borrow_mut().push((path.to_path_buf(), metadata));
+                files.borrow_mut().push((
+                    path.to_path_buf(),
+                    String::from(filename),
+                    metadata,
+                ));
                 parse_yaml(Rc::new(path.display().to_string()), &body,
                     |doc| { process_ast(&options, doc, err) },
                 ).map_err(|e| err.add_error(e)).ok()
@@ -90,11 +94,15 @@ pub fn include_file(files: &RefCell<&mut Vec<(PathBuf, Metadata)>>,
 }
 
 pub fn read_config<P: AsRef<Path>>(filename: P)
-    -> Result<(ConfigData, Vec<(PathBuf, Metadata)>), Error>
+    -> Result<(ConfigData, Vec<(PathBuf, String, Metadata)>), Error>
 {
     let filename = filename.as_ref();
     let mut files = Vec::new();
-    files.push((filename.to_path_buf(), metadata(filename)?));
+    files.push((
+        filename.to_path_buf(),
+        String::from("<main>"),
+        metadata(filename)?,
+    ));
     let cfg: ConfigData = {
         let cell = RefCell::new(&mut files);
         let mut opt = Options::default();

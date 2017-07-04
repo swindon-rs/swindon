@@ -25,17 +25,16 @@ pub fn compare_metadata(meta: &Metadata, old_meta: &Metadata) -> bool {
     meta.modified().ok() != old_meta.modified().ok()
 }
 
-pub fn calc(meta: &Vec<(PathBuf, Metadata)>) -> Result<Fingerprint, io::Error>
+pub fn calc(meta: &Vec<(PathBuf, String, Metadata)>)
+    -> Result<Fingerprint, io::Error>
 {
     let mut digest = Writer::new(Blake2b::default());
-    for &(ref filename, ref meta) in meta {
+    for &(ref filename, ref name, ref meta) in meta {
         let mut file = File::open(filename)?;
         if compare_metadata(&file.metadata()?, meta) {
             return Err(io::ErrorKind::Interrupted.into());
         }
-        digest.write(filename.to_str()
-            .expect("any config filename is a valid string")
-            .as_bytes())?;
+        digest.write(name.as_bytes())?;
         digest.write(&[0])?;
         io::copy(&mut file, &mut digest)?;
     }
