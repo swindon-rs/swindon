@@ -14,6 +14,7 @@ use incoming::{Request, Reply, Transport};
 use runtime::ServerId;
 use super::spawn::Handler;
 use super::{IncomingChannel, ReplAction};
+use chat::replication::{CONNECTIONS, FRAMES_SENT};
 
 
 /// Incoming requests dispatcher.
@@ -117,13 +118,19 @@ impl<S: AsyncRead + AsyncWrite + 'static> Codec<S> for WebsocketCodec {
         let wcfg = WsConfig::new().done();
 
         let (tx, rx) = unbounded();
-        let rx = rx.map_err(|e| format!("receive error: {:?}", e));
+        let rx = rx
+            .map_err(|e| format!("receive error: {:?}", e))
+            .map(|x| {
+                FRAMES_SENT.incr(1);
+                x
+            });
         self.sender.send(ReplAction::Attach {
             tx: tx,
             server_id: self.remote_id,
             peer: None,
         }).ok();
 
+        CONNECTIONS.incr(1);
         self.handle.spawn(
             Loop::server(out, inp, rx, Handler(self.sender.clone()), &wcfg,
                          &self.handle)

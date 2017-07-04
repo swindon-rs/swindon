@@ -21,6 +21,7 @@ use runtime::ServerId;
 use super::server::Incoming;
 use super::client::Authorizer;
 use super::{IncomingChannel, ReplAction};
+use chat::replication::{CONNECTIONS, FRAMES_SENT, FRAMES_RECEIVED};
 
 
 pub fn listen(addr: SocketAddr, sender: IncomingChannel,
@@ -89,12 +90,18 @@ pub fn connect(peer: &str, sender: IncomingChannel,
     })
     .and_then(move |(out, inp, remote_srv_id)| {
         let (tx, rx) = unbounded();
-        let rx = rx.map_err(|_| format!("receiver error"));
+        let rx = rx
+            .map_err(|_| format!("receiver error"))
+            .map(|x| {
+                FRAMES_SENT.incr(1);
+                x
+            });
         sender.send(ReplAction::Attach {
             tx: tx,
             server_id: remote_srv_id,
             peer: Some(p2),
         }).ok();
+        CONNECTIONS.incr(1);
         Loop::client(out, inp, rx, Handler(sender), &wcfg, &h2)
         .map_err(|e| format!("WS loop error: {}", e))
     })
@@ -109,6 +116,7 @@ impl Dispatcher for Handler {
 
     fn frame (&mut self, frame: &Frame) -> Self::Future {
         if let &Frame::Text(data) = frame {
+            FRAMES_RECEIVED.incr(1);
             match serde_json::from_str(data) {
                 Ok(msg) => {
                     // TODO: make proper result handling
@@ -121,5 +129,11 @@ impl Dispatcher for Handler {
             };
         }
         ok(())
+    }
+}
+
+impl Drop for Handler {
+    fn drop(&mut self) {
+        CONNECTIONS.decr(1);
     }
 }

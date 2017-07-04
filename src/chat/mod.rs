@@ -69,5 +69,11 @@ pub fn metrics() -> List {
             &*processor::PRIVATE_SETS),
         (Metric("websockets.swindon_chat.lattice", "set_items"),
             &*processor::SET_ITEMS),
+        (Metric("replication", "connections"),
+            &*replication::CONNECTIONS),
+        (Metric("replication", "frames_sent"),
+            &*replication::FRAMES_SENT),
+        (Metric("replication", "frames_received"),
+            &*replication::FRAMES_RECEIVED),
     ]
 }
