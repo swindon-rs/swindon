@@ -13,6 +13,7 @@ use super::static_files;
 #[derive(RustcDecodable, Debug, PartialEq, Eq)]
 pub enum Handler {
     SwindonChat(Arc<chat::Chat>),
+    SwindonLattice(Arc<chat::Chat>),
     Static(Arc<static_files::Static>),
     SingleFile(Arc<static_files::SingleFile>),
     VersionedStatic(Arc<static_files::VersionedStatic>),
@@ -31,7 +32,8 @@ pub enum Handler {
 
 pub fn validator<'x>() -> Enum<'x> {
     Enum::new()
-    .option("SwindonChat", chat::validator())
+    .option("SwindonChat", chat::old_validator())
+    .option("SwindonLattice", chat::validator())
     .option("Static", static_files::validator())
     .option("SingleFile", static_files::single_file())
     .option("VersionedStatic", static_files::versioned_validator())

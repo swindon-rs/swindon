@@ -35,6 +35,7 @@ struct WebsockReply {
 struct ReplyData {
     context: Context,
     accept: Accept,
+    proto: Option<&'static str>,
 }
 
 
@@ -49,7 +50,7 @@ impl<S: AsyncRead + AsyncWrite + 'static> Codec<S> for WebsockReply {
         unreachable!();
     }
     fn start_response(&mut self, e: http::Encoder<S>) -> Reply<S> {
-        let ReplyData { context, accept } = self.reply_data.take()
+        let ReplyData { context, accept, proto } = self.reply_data.take()
             .expect("start response called only once");
         let mut e = Encoder::new(e, context);
         // We always allow websocket, and send error as shutdown message
@@ -58,6 +59,9 @@ impl<S: AsyncRead + AsyncWrite + 'static> Codec<S> for WebsockReply {
         e.add_header("Connection", "upgrade");
         e.add_header("Upgrade", "websocket");
         e.format_header("Sec-Websocket-Accept", &accept);
+        if let Some(proto) = proto {
+            e.add_header("Sec-Websocket-Protocol", proto);
+        }
         e.done_headers();
         Box::new(ok(e.done()))
     }
@@ -149,25 +153,46 @@ impl<S: AsyncRead + AsyncWrite + 'static> Codec<S> for WebsockReply {
     }
 }
 
+fn choose_proto(h: &http::WebsocketHandshake, settings: &Arc<Chat>)
+    -> Result<Option<&'static str>, ()>
+{
+    if h.protocols.len() == 0 {
+        if settings.allow_empty_subprotocol {
+            Ok(None)
+        } else {
+            Err(())
+        }
+    } else if h.protocols.iter().any(|x| &x[..] == "v1.swindon-lattice+json") {
+        return Ok(Some("v1.swindon-lattice+json"));
+    } else {
+        return Ok(None);
+    }
+}
+
 pub fn serve<S: Transport>(settings: &Arc<Chat>, inp: Input)
     -> Result<Request<S>, Error>
 {
     match inp.headers.get_websocket_upgrade() {
         Ok(Some(ws)) => {
-            let (tx, rx) = ConnectionSender::new();
-            let cid = Cid::new();
-            chat::start_authorize(&inp, cid, settings, tx.clone());
-            Ok(Box::new(WebsockReply {
-                cid: cid,
-                handle: inp.handle.clone(),
-                settings: settings.clone(),
-                runtime: inp.runtime.clone(),
-                reply_data: Some(ReplyData {
-                    context: inp.into_context(),
-                    accept: ws.accept,
-                }),
-                channel: Some((tx, rx)),
-            }))
+            if let Ok(proto) = choose_proto(&ws, settings) {
+                let (tx, rx) = ConnectionSender::new();
+                let cid = Cid::new();
+                chat::start_authorize(&inp, cid, settings, tx.clone());
+                Ok(Box::new(WebsockReply {
+                    cid: cid,
+                    handle: inp.handle.clone(),
+                    settings: settings.clone(),
+                    runtime: inp.runtime.clone(),
+                    reply_data: Some(ReplyData {
+                        context: inp.into_context(),
+                        accept: ws.accept,
+                        proto: proto,
+                    }),
+                    channel: Some((tx, rx)),
+                }))
+            } else {
+                Ok(serve_error_page(Status::BadRequest, inp))
+            }
         }
         Ok(None) => {
             if let Some(ref hname) = settings.http_route {

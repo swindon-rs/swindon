@@ -41,6 +41,9 @@ impl Handler {
             Handler::SwindonChat(ref settings) => {
                 handlers::swindon_chat::serve(settings, input)
             }
+            Handler::SwindonLattice(ref settings) => {
+                handlers::swindon_chat::serve(settings, input)
+            }
             Handler::BaseRedirect(ref settings) => {
                 Ok(handlers::redirect::base_redirect(settings, input))
             }

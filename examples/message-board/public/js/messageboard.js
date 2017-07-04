@@ -1,6 +1,7 @@
 +function() {
 
-    var ws = new WebSocket("ws://" + location.host + "/")
+    var ws = new WebSocket("ws://" + location.host + "/",
+        ["v1.swindon-lattice+json"])
     var mb = document.getElementById('mb');
     var input = document.getElementById('input');
     var my_user_id = null;

@@ -10,6 +10,7 @@ use intern::{HandlerName, SessionPoolName};
 
 #[derive(RustcDecodable, Debug, PartialEq, Eq)]
 pub struct Chat {
+    pub allow_empty_subprotocol: bool,
     pub session_pool: SessionPoolName,
     pub http_route: Option<HandlerName>,
     pub message_handlers: RoutingTable,
@@ -28,8 +29,20 @@ pub struct RoutingTable {
     pub map: BTreeMap<Pattern, http::Destination>,
 }
 
+pub fn old_validator<'x>() -> Structure<'x> {
+    Structure::new()
+    .member("allow_empty_subprotocol", Scalar::new().default(true))
+    .member("session_pool", Scalar::new())
+    .member("session_pool", Scalar::new())
+    .member("http_route", http::destination_validator().optional())
+    .member("message_handlers",
+        Mapping::new(Scalar::new(), http::destination_validator()))
+}
+
 pub fn validator<'x>() -> Structure<'x> {
     Structure::new()
+    .member("allow_empty_subprotocol", Scalar::new().default(false))
+    .member("session_pool", Scalar::new())
     .member("session_pool", Scalar::new())
     .member("http_route", http::destination_validator().optional())
     .member("message_handlers",

@@ -227,19 +227,24 @@ Common Settings
 
 
 
-Swindon chat handler
---------------------
+Swindon Lattice Handler
+-----------------------
+
+.. index::
+   pair: !SwindonLattice; Handlers
 
 .. index::
    pair: !SwindonChat; Handlers
 
-Swindon chat handler::
+Swindon lattice handler::
 
-   example-chat: !SwindonChat
+   example-chat: !SwindonLattice
       session-pool: example-chat-session
       http-route: backend/fallback
       message-handlers:
         "*": backend/path
+
+Old name of the handler type is ``SwindonChat`` which is deprecated.
 
 The ``backend/path`` here, i.e. the message handler, should have
 :opt:`override-host-header` setting set, so that swindon knows what ``Host``
@@ -282,6 +287,20 @@ Settings:
    ``"exact.pattern"`` -- "exact" pattern, matches whole method name.
 
    Patterns match order is: "exact" then "glob" otherwise "default".
+
+.. opt:: allow-empty-subprotocol
+
+   (default ``false``) This is backwards compatibility option. If set to true
+   it allows connecting without `Sec-WebSocket-Protocol` header.
+
+   **Deprecated** Do not set to ``true`` for new applications.
+
+   .. note::
+
+      By default set to ``true`` in ``SwindonChat``
+      (``false`` in ``SwindonLattice``)
+
+   .. versionadded:: v0.5.5
 
 
 Redirect handlers
