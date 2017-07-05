@@ -2,10 +2,25 @@ import pytest
 import aiohttp
 import json
 import asyncio
+import re
 
 from unittest import mock
 from async_timeout import timeout
 from aiohttp import WSMsgType
+
+
+def assert_auth(req):
+    assert req.path == '/tangle/authorize_connection'
+    assert req.headers["Host"] == "swindon.internal"
+    assert req.headers['Content-Type'] == 'application/json'
+    assert re.match('^swindon/(\d+\.){2}\d+$', req.headers['User-Agent'])
+    assert 'Authorization' not in req.headers
+
+
+def assert_headers(req):
+    assert req.headers["Host"] == "swindon.internal"
+    assert req.headers['Content-Type'] == 'application/json'
+    assert re.match('^swindon/(\d+\.){2}\d+$', req.headers['User-Agent'])
 
 
 async def test_simple_userinfo(proxy_server, swindon, user_id):
@@ -13,9 +28,7 @@ async def test_simple_userinfo(proxy_server, swindon, user_id):
     async with proxy_server() as proxy:
         handler = proxy.swindon_chat(url, timeout=1)
         req = await handler.request()
-        assert req.path == '/tangle/authorize_connection'
-        assert req.headers['Content-Type'] == 'application/json'
-        assert 'Authorization' not in req.headers
+        assert_auth(req)
         expected = [
             {'connection_id': mock.ANY},
             [],
@@ -55,9 +68,7 @@ async def test_backend_errors(proxy_server, swindon, user_id,
     async with proxy_server() as proxy:
         handler = proxy.swindon_chat(url, timeout=1)
         req = await handler.request()
-        assert req.path == '/tangle/authorize_connection'
-        assert req.headers['Content-Type'] == 'application/json'
-        assert 'Authorization' not in req.headers
+        assert_auth(req)
         expected = [
             {'connection_id': mock.ANY},
             [],
@@ -75,7 +86,7 @@ async def test_backend_errors(proxy_server, swindon, user_id,
         await ws.send_json(['test.bad_call', {'request_id': '1'}, [], {}])
         req = await handler.request()
         assert req.path == '/test/bad_call'
-        assert req.headers["Host"] == "swindon.internal"
+        assert_headers(req)
         assert await req.json() == [
             {'request_id': '1', 'connection_id': mock.ANY}, [], {},
         ]
@@ -93,8 +104,7 @@ async def test_ws_close_timeout(proxy_server, swindon, user_id, loop):
         async with proxy_server() as proxy:
             handler = proxy.swindon_chat(url)
             req = await handler.request()
-            assert req.path == '/tangle/authorize_connection'
-            assert req.headers["Host"] == "swindon.internal"
+            assert_auth(req)
             ws = await handler.json_response({"user_id": user_id})
             msg = await ws.receive_json()
             assert msg == ['hello', {}, {'user_id': user_id}]
@@ -108,8 +118,7 @@ async def test_error_codes(proxy_server, swindon, loop, status_code):
     async with proxy_server() as proxy:
         handler = proxy.swindon_chat(url, timeout=1)
         req = await handler.request()
-        assert req.path == '/tangle/authorize_connection'
-        assert req.headers["Host"] == "swindon.internal"
+        assert_auth(req)
         ws = await handler.response(b'Custom Error', status=status_code)
         msg = await ws.receive()
         assert msg.type == WSMsgType.CLOSE
@@ -133,8 +142,7 @@ async def test_unexpected_responses(
     async with proxy_server() as proxy:
         handler = proxy.swindon_chat(url, timeout=1)
         req = await handler.request()
-        assert req.path == '/tangle/authorize_connection'
-        assert req.headers["Host"] == "swindon.internal"
+        assert_auth(req)
         ws = await handler.response(body, status=status_code)
         msg = await ws.receive()
         assert msg.type == WSMsgType.CLOSE
@@ -158,8 +166,7 @@ async def test_invalid_auth_response(proxy_server, swindon, auth_resp):
     async with proxy_server() as proxy:
         handler = proxy.swindon_chat(url, timeout=1)
         req = await handler.request()
-        assert req.path == '/tangle/authorize_connection'
-        assert req.headers["Host"] == "swindon.internal"
+        assert_auth(req)
 
         ws = await handler.response(auth_resp, content_type='application/json')
         msg = await ws.receive()
@@ -176,10 +183,7 @@ async def test_auth_request__cookies(proxy_server, swindon, user_id):
     async with proxy_server() as proxy:
         handler = proxy.swindon_chat(url, headers=h, timeout=1)
         req = await handler.request()
-        assert req.path == '/tangle/authorize_connection'
-        assert req.headers['Content-Type'] == 'application/json'
-        assert req.headers["Host"] == "swindon.internal"
-        assert 'Authorization' not in req.headers
+        assert_auth(req)
         expected = [
             {'connection_id': mock.ANY},
             [],
@@ -201,10 +205,7 @@ async def test_auth_request__querystring(proxy_server, swindon, user_id):
     async with proxy_server() as proxy:
         handler = proxy.swindon_chat(url, timeout=1)
         req = await handler.request()
-        assert req.path == '/tangle/authorize_connection'
-        assert req.headers['Content-Type'] == 'application/json'
-        assert req.headers["Host"] == "swindon.internal"
-        assert 'Authorization' not in req.headers
+        assert_auth(req)
         expected = [
             {'connection_id': mock.ANY},
             [],
@@ -226,10 +227,7 @@ async def test_auth_request__authorization(proxy_server, swindon, user_id):
     async with proxy_server() as proxy:
         handler = proxy.swindon_chat(url, headers=h, timeout=1)
         req = await handler.request()
-        assert req.path == '/tangle/authorize_connection'
-        assert req.headers['Content-Type'] == 'application/json'
-        assert req.headers["Host"] == "swindon.internal"
-        assert 'Authorization' not in req.headers
+        assert_auth(req)
         expected = [
             {'connection_id': mock.ANY},
             [],
@@ -252,10 +250,7 @@ async def test_auth_request__all(proxy_server, swindon, user_id):
     async with proxy_server() as proxy:
         handler = proxy.swindon_chat(url, headers=h, timeout=1)
         req = await handler.request()
-        assert req.path == '/tangle/authorize_connection'
-        assert req.headers['Content-Type'] == 'application/json'
-        assert req.headers["Host"] == "swindon.internal"
-        assert 'Authorization' not in req.headers
+        assert_auth(req)
         expected = [
             {'connection_id': mock.ANY},
             [],
@@ -276,8 +271,7 @@ async def test_echo_messages(proxy_server, swindon):
     async with proxy_server() as proxy:
         handler = proxy.swindon_chat(url, timeout=1)
         req = await handler.request()
-        assert req.path == '/tangle/authorize_connection'
-        assert req.headers["Host"] == "swindon.internal"
+        assert_auth(req)
         ws = await handler.json_response(
             {"user_id": 'user:2', "username": "Jack"})
         hello = await ws.receive_json()
@@ -288,7 +282,7 @@ async def test_echo_messages(proxy_server, swindon):
                             ['some message'], {}])
         req = await handler.request()
         assert req.path == '/chat/echo_message'
-        assert req.headers["Host"] == "swindon.internal"
+        assert_headers(req)
         assert await req.json() == [
             {'request_id': '1', 'connection_id': mock.ANY},
             ['some message'],
@@ -311,8 +305,7 @@ async def test_prefix_routes(proxy_server, swindon, user_id):
     async with proxy_server() as proxy:
         handler = proxy.swindon_chat(url, timeout=1)
         req = await handler.request()
-        assert req.path == '/tangle/authorize_connection'
-        assert req.headers["Host"] == "swindon.internal"
+        assert_auth(req)
         ws = await handler.json_response(
             {"user_id": user_id, "username": "Jack"})
         hello = await ws.receive_json()
@@ -323,7 +316,7 @@ async def test_prefix_routes(proxy_server, swindon, user_id):
                             ['some message'], {}])
         req = await handler.request()
         assert req.path == '/with-prefix/prefixed/echo_message'
-        assert req.headers["Host"] == "swindon.internal"
+        assert_headers(req)
         assert await req.json() == [
             {'request_id': '1', 'connection_id': mock.ANY},
             ['some message'],
@@ -345,8 +338,7 @@ async def test_topic_subscribe_publish(proxy_server, swindon, loop, user_id):
     async with proxy_server() as proxy:
         handler = proxy.swindon_chat(url, timeout=1)
         req = await handler.request()
-        assert req.path == '/tangle/authorize_connection'
-        assert req.headers["Host"] == "swindon.internal"
+        assert_auth(req)
         meta, args, kwargs = await req.json()
         assert 'connection_id' in meta
         assert not args
@@ -387,8 +379,7 @@ async def test_lattice_subscribe_update(proxy_server, swindon, loop, user_id):
     async with proxy_server() as proxy:
         handler = proxy.swindon_chat(url, timeout=1)
         req = await handler.request()
-        assert req.path == '/tangle/authorize_connection'
-        assert req.headers["Host"] == "swindon.internal"
+        assert_auth(req)
         meta, args, kwargs = await req.json()
         assert 'connection_id' in meta
         assert not args
@@ -433,8 +424,7 @@ async def test_inactivity(proxy_server, swindon, loop):
     async with proxy_server() as proxy:
         handler = proxy.swindon_chat(chat_url, timeout=1)
         req = await handler.request()
-        assert req.path == '/tangle/authorize_connection'
-        assert req.headers["Host"] == "swindon.internal"
+        assert_auth(req)
         ws = await handler.json_response({
             "user_id": 'user:1', "username": "Jim"})
 
@@ -444,7 +434,7 @@ async def test_inactivity(proxy_server, swindon, loop):
 
         req = await handler.request(timeout=1.2)
         assert req.path == '/tangle/session_inactive'
-        assert req.headers["Host"] == "swindon.internal"
+        assert_headers(req)
         assert req.headers.getall('Authorization') == [
             'Tangle eyJ1c2VyX2lkIjoidXNlcjoxIn0='
             ]
@@ -455,6 +445,7 @@ async def test_inactivity(proxy_server, swindon, loop):
             'whatever', {'request_id': '1', 'active': 2}, [], {}])
         req = await handler.request(timeout=5)
         assert req.path == '/whatever'
+        assert_headers(req)
         assert await req.json() == [
             {'request_id': '1', 'active': 2, 'connection_id': mock.ANY},
             [], {}]
@@ -462,7 +453,7 @@ async def test_inactivity(proxy_server, swindon, loop):
 
         req = await handler.request(timeout=3.2)
         assert req.path == '/tangle/session_inactive'
-        assert req.headers["Host"] == "swindon.internal"
+        assert_headers(req)
         assert req.headers.getall('Authorization') == [
             'Tangle eyJ1c2VyX2lkIjoidXNlcjoxIn0='
             ]
@@ -536,8 +527,7 @@ async def test_request_id_routes__ok(
     async with proxy_server() as proxy:
         handler = proxy.swindon_chat(url, timeout=1)
         req = await handler.request()
-        assert req.path == '/tangle/authorize_connection'
-        assert req.headers["Host"] == "swindon.internal"
+        assert_auth(req)
         ws = await handler.json_response({
             "user_id": user_id, "username": "Jack"})
         hello = await ws.receive_json()
@@ -548,7 +538,7 @@ async def test_request_id_routes__ok(
             ['rxid.echo_message', {'request_id': request_id}, [], {}])
         req = await handler.request()
         assert req.path == '/rxid/echo_message'
-        assert req.headers["Host"] == "swindon.internal"
+        assert_headers(req)
         assert "X-Request-Id" in req.headers
         msg = await req.json()
         assert msg == [
@@ -573,8 +563,7 @@ async def test_request_id_routes__bad(
     async with proxy_server() as proxy:
         handler = proxy.swindon_chat(url, timeout=1)
         req = await handler.request()
-        assert req.path == '/tangle/authorize_connection'
-        assert req.headers["Host"] == "swindon.internal"
+        assert_auth(req)
         ws = await handler.json_response({
             "user_id": user_id, "username": "Jack"})
         hello = await ws.receive_json()
@@ -595,7 +584,7 @@ async def test_client_auth_timeout(proxy_server, swindon, loop):
     async with proxy_server() as proxy:
         handler, ws_fut = proxy.swindon_chat(url, timeout=1)
         req = await handler.request()
-        assert req.path == '/tangle/authorize_connection'
+        assert_auth(req)
         await asyncio.sleep(2, loop=loop)
         assert ws_fut.done()
         # assert handler.resp.done()
@@ -614,7 +603,7 @@ async def test_client_call_timeout(proxy_server, swindon, loop, user_id):
     async with proxy_server() as proxy:
         handler = proxy.swindon_chat(url, timeout=1)
         req = await handler.request()
-        assert req.path == '/tangle/authorize_connection'
+        assert_auth(req)
         ws = await handler.json_response({'user_id': user_id})
 
         msg = await ws.receive_json()
@@ -623,6 +612,7 @@ async def test_client_call_timeout(proxy_server, swindon, loop, user_id):
         await ws.send_json(['timeout', {'request_id': 1}, [], {}])
         req = await handler.request()
         assert req.path == '/timeout'
+        assert_headers(req)
         await asyncio.sleep(2, loop=loop)
         # ws_fut = handler[1]
         # assert ws_fut.done()

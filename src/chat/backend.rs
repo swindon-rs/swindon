@@ -190,6 +190,8 @@ impl<S> http::Codec<S> for AuthCodec {
                 e.add_header("Host", header).unwrap();
             }
             self.add_request_id(&mut e);
+            e.add_header("User-Agent", format!(
+                "swindon/{}", env!("CARGO_PKG_VERSION"))).unwrap();
             ok(write_json_request(e,
                 &Auth(&self.conn_id, &self.server_id, &i)))
         } else {
@@ -268,6 +270,8 @@ impl<S> http::Codec<S> for CallCodec {
             // TODO(tailhook) implement authrization
             e.add_header("Authorization", &*auth).unwrap();
             self.add_request_id(&mut e);
+            e.add_header("User-Agent", format!(
+                "swindon/{}", env!("CARGO_PKG_VERSION"))).unwrap();
             let done = write_json_request(e, &Call(
                 &*self.meta, &self.conn_id, &self.server_id, &args, &kw));
             self.state = Wait;
@@ -331,6 +335,8 @@ impl<S> http::Codec<S> for InactivityCodec {
                         TangleAuth(&self.session_id)).unwrap();
         e.add_header("Content-Type", "application/json").unwrap();
         self.add_request_id(&mut e);
+        e.add_header("User-Agent", format!(
+            "swindon/{}", env!("CARGO_PKG_VERSION"))).unwrap();
         e.add_length(INACTIVITY_PAYLOAD.len() as u64).unwrap();
         e.done_headers().unwrap();
         e.write_body(INACTIVITY_PAYLOAD);
