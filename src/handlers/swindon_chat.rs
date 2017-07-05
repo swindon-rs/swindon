@@ -81,6 +81,8 @@ impl<S: AsyncRead + AsyncWrite + 'static> Codec<S> for WebsockReply {
         let processor = self.runtime.session_pools.processor
             // TODO(tailhook) this doesn't check that pool is created
             .pool(&self.settings.session_pool);
+        let remote = self.runtime.session_pools.remote_sender
+            .pool(&self.settings.session_pool);
         let h1 = self.handle.clone();
         let h2 = self.handle.clone();
         let r1 = self.runtime.clone();
@@ -99,7 +101,7 @@ impl<S: AsyncRead + AsyncWrite + 'static> Codec<S> for WebsockReply {
                         format!("{}", TangleAuth(&session_id)));
                     Either::A(
                         out.send(Packet::Text(
-                            json_encode(&Hello(session_id, data))
+                            json_encode(&Hello(session_id.clone(), data))
                             .expect("every message can be encoded")))
                         .map_err(|e| info!("error sending userinfo: {:?}", e))
                         .and_then(move |out| {
@@ -121,10 +123,12 @@ impl<S: AsyncRead + AsyncWrite + 'static> Codec<S> for WebsockReply {
                             websocket::Loop::server(out, inp, rx,
                                 chat::Dispatcher {
                                     cid: cid,
+                                    session_id: session_id,
                                     auth: auth,
                                     handle: h1,
                                     pool_settings: pool_settings.clone(),
                                     processor: processor,
+                                    remote: remote,
                                     runtime: r1,
                                     settings: s1,
                                     channel: tx,

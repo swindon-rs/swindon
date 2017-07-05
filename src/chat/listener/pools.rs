@@ -20,7 +20,7 @@ use config::{SessionPool, ListenSocket};
 pub struct SessionPools {
     pools: Arc<RwLock<HashMap<SessionPoolName, Worker>>>,
     pub processor: Processor,
-    remote_sender: RemoteSender,
+    pub remote_sender: RemoteSender,
 }
 
 struct Worker {

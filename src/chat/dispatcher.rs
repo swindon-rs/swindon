@@ -13,6 +13,7 @@ use serde_json::{Error as JsonError};
 
 use http_pools::{REQUESTS, FAILED_503};
 use runtime::Runtime;
+use intern::SessionId;
 use config::chat::Chat;
 use config::SessionPool;
 use chat::{Cid, ConnectionSender, CloseReason, CONNECTIONS};
@@ -20,6 +21,7 @@ use chat::message::{self, Meta, Args, Kwargs};
 use chat::processor::{Action, ProcessorPool, ConnectionMessage};
 use chat::backend::CallCodec;
 use chat::error::MessageError;
+use chat::replication::{RemotePool, RemoteAction};
 
 use metrics::{Counter};
 
@@ -29,11 +31,13 @@ lazy_static! {
 
 pub struct Dispatcher {
     pub cid: Cid,
+    pub session_id: SessionId,
     pub auth: Arc<String>,
     pub runtime: Arc<Runtime>,
     pub settings: Arc<Chat>,
     pub pool_settings: Arc<SessionPool>,
     pub processor: ProcessorPool,
+    pub remote: RemotePool,
     pub handle: Handle, // Does it belong here?
     pub channel: ConnectionSender,
 }
@@ -159,10 +163,14 @@ impl Dispatcher {
         let seconds = Duration::from_secs(seconds);
         let seconds = cmp::max(cmp::min(seconds, max), min);
         let timestamp = Instant::now() + seconds;
-        self.processor.send(Action::UpdateActivity{
-            conn_id: self.cid,
+        self.processor.send(Action::UpdateActivity {
+            session_id: self.session_id.clone(),
             timestamp: timestamp,
         });
+        self.remote.send(RemoteAction::UpdateActivity {
+            session_id: self.session_id.clone(),
+            duration: seconds,
+        })
     }
 }
 

@@ -24,8 +24,8 @@ fn pool_action(pool: &mut Pool, ts: Instant, action: Action) {
         Associate { session_id, conn_id, metadata } => {
             pool.associate(conn_id, session_id, ts, metadata);
         }
-        UpdateActivity { conn_id, timestamp } => {
-            pool.update_activity(conn_id, timestamp);
+        UpdateActivity { session_id, timestamp } => {
+            pool.update_activity(session_id, timestamp);
         }
         Disconnect { conn_id } => {
             pool.del_connection(conn_id);

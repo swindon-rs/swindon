@@ -103,7 +103,7 @@ pub enum Action {
         metadata: Arc<Json>
     },
     UpdateActivity {
-        conn_id: Cid,
+        session_id: SessionId,
         // We receive duration from client, but we expect request handling
         // code to validate and normalize it for us
         timestamp: Instant,
@@ -244,8 +244,8 @@ impl fmt::Debug for Action {
             &Associate { ref conn_id, ref session_id, .. } => {
                 write!(f, "Action::Associate({:?}, {:?})", conn_id, session_id)
             }
-            &UpdateActivity { ref conn_id, .. } => {
-                write!(f, "Action::UpdateActivity({:?})", conn_id)
+            &UpdateActivity { ref session_id, .. } => {
+                write!(f, "Action::UpdateActivity({:?})", session_id)
             }
             &Disconnect { ref conn_id } => {
                 write!(f, "Action::Disconnect({:?})", conn_id)

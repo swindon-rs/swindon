@@ -1,8 +1,9 @@
 use std::sync::Arc;
+use std::time::{Instant, Duration};
 use serde_json::Value as Json;
 
 use runtime::ServerId;
-use intern::{SessionPoolName, Topic, Lattice as Namespace};
+use intern::{SessionId, SessionPoolName, Topic, Lattice as Namespace};
 use config::Replication;
 use chat::Cid;
 use chat::processor::{Action, Delta};
@@ -66,6 +67,12 @@ pub enum RemoteAction {
         // TODO: probably use String here
         delta: Delta,
     },
+
+    // NOTE: In remote action we send original duration, not timestamp;
+    UpdateActivity {
+        session_id: SessionId,
+        duration: Duration,
+    },
 }
 
 impl Into<Action> for RemoteAction {
@@ -106,6 +113,12 @@ impl Into<Action> for RemoteAction {
                 Action::Lattice {
                     namespace: namespace,
                     delta: delta,
+                }
+            }
+            UpdateActivity { session_id, duration } => {
+                Action::UpdateActivity {
+                    session_id: session_id,
+                    timestamp: Instant::now() + duration,
                 }
             }
         }

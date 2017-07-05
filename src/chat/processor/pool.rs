@@ -200,19 +200,14 @@ impl Pool {
         }
     }
 
-    pub fn update_activity(&mut self, conn_id: Cid, activity_ts: Instant)
+    pub fn update_activity(&mut self, sess_id: SessionId, activity_ts: Instant)
     {
-        let sess_id = if let Some(conn) = self.connections.get(&conn_id) {
-            &conn.session_id
-        } else {
-            return;
-        };
-        if let Some(session) = self.sessions.inactive.remove(sess_id) {
+        if let Some(session) = self.sessions.inactive.remove(&sess_id) {
             INACTIVE_SESSIONS.decr(1);
             ACTIVE_SESSIONS.incr(1);
             self.sessions.active.insert(sess_id.clone(), activity_ts, session);
         } else {
-            self.sessions.active.update_if_smaller(sess_id, activity_ts)
+            self.sessions.active.update_if_smaller(&sess_id, activity_ts)
         }
     }
 
