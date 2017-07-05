@@ -118,8 +118,9 @@ impl Lattice {
             }
         }
         for key in &del {
-            SHARED_KEYS.decr(1);
-            delta.shared.remove(key);
+            if delta.shared.remove(key).is_some() {
+              SHARED_KEYS.decr(1);
+            }
         }
 
         for (session_id, rooms) in &mut delta.private {
