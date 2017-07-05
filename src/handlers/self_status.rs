@@ -26,6 +26,7 @@ pub fn serve<S: 'static>(settings: &Arc<SelfStatus>, inp: Input)
             threads: ThreadReport<'a>,
             metrics: Json<'a, Vec<Box<Collection>>>,
             config_fingerprint: String,
+            version: &'a str,
         }
 
         e.status(Status::Ok);
@@ -40,6 +41,7 @@ pub fn serve<S: 'static>(settings: &Arc<SelfStatus>, inp: Input)
                 threads: meter.thread_report(),
                 metrics: Json(&metrics::all()),
                 config_fingerprint: fingerprint,
+                version: env!("CARGO_PKG_VERSION"),
             }).expect("report is serializable");
         }
         Box::new(ok(e.done()))
