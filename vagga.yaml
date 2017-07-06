@@ -347,7 +347,7 @@ commands:
       version=$(git describe --dirty)
       codename=$(lsb_release --codename --short)
       rm -rf pkg
-      rm -rf target/release/lithos_*
+      rm -rf target/release/swindon*
       bulk with-version "${version}" cargo install --root=/work/pkg --path=.
       bulk pack --package-version="${version}+${codename}1"
 
