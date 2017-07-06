@@ -144,8 +144,9 @@ impl Lattice {
                 }
             }
             for key in &del_rooms {
-                PRIVATE_KEYS.decr(1);
-                rooms.remove(key);
+                if rooms.remove(key).is_some() {
+                    PRIVATE_KEYS.decr(1);
+                }
             }
         }
         return delta
@@ -204,8 +205,9 @@ fn crdt_update<K, V>(original: &mut HashMap<K, V>, delta: &mut HashMap<K, V>,
         }
     }
     for key in &del {
-        number.decr(1);
-        original.remove(key);
+        if original.remove(key).is_some() {
+            number.decr(1);
+        }
     }
 }
 

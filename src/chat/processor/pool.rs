@@ -190,8 +190,9 @@ impl Pool {
                 session.connections.len()
             };
             if conns == 0 {
-                self.sessions.inactive.remove(&session_id);
-                INACTIVE_SESSIONS.decr(1);
+                if self.sessions.inactive.remove(&session_id).is_some() {
+                    INACTIVE_SESSIONS.decr(1);
+                }
             }
         } if let Some(mut session) = self.sessions.active.get_mut(&session_id)
         {
@@ -462,8 +463,9 @@ fn unsubscribe(topics: &mut HashMap<Topic, HashMap<Cid, Subscription>>,
         });
     left.and_then(|(sub, len)| {
         if len == 0 {
-            topics.remove(topic);
-            TOPICS.decr(1);
+            if topics.remove(topic).is_some() {
+                TOPICS.decr(1);
+            }
         }
         return sub;
     })
