@@ -187,6 +187,10 @@ impl Pool {
                 let mut session = self.sessions.inactive.get_mut(&session_id)
                                   .unwrap();
                 session.connections.remove(&conn_id);
+                for lat in &conn.lattices {
+                    remove_lattice(session, &session_id,
+                                   conn_id, &mut self.lattices, lat, false);
+                }
                 session.connections.len()
             };
             if conns == 0 {
@@ -351,14 +355,8 @@ impl Pool {
                 return
             };
 
-        if let Occupied(mut e) = sess.lattices.entry(namespace.clone()) {
-            e.get_mut().remove(&cid);
-            if e.get().len() == 0 {
-                e.remove_entry();
-            }
-        } else {
-            info!("Never subscribed {:?} to {:?}", cid, conn.session_id);
-        }
+        remove_lattice(sess, &conn.session_id,
+                       cid, &mut self.lattices, &namespace, true);
 
         conn.lattices.remove(&namespace);
 
@@ -451,6 +449,36 @@ impl Pool {
             conn.stop(CloseReason::PoolStopped);
         }
     }
+
+}
+
+fn remove_lattice(session: &mut Session, session_id: &SessionId,
+                  cid: Cid, lattices: &mut HashMap<Namespace, Lattice>,
+                  namespace: &Namespace, absent_is_ok: bool)
+{
+    if let Occupied(mut e) = session.lattices.entry(namespace.clone()) {
+        e.get_mut().remove(&cid);
+        if e.get().len() == 0 {
+            e.remove_entry();
+            // TODO(tailhook) cleanup keys from lattice
+            if let Occupied(mut lat) = lattices.entry(namespace.clone()) {
+                lat.get_mut().remove_session(session_id);
+                if lat.get().is_empty() {
+                    lat.remove_entry();
+                    LATTICES.decr(1);
+                }
+            }
+        }
+    } else {
+        if absent_is_ok {
+            info!("Never subscribed {:?} in {:?} to {:?}",
+                  cid, session_id, namespace);
+        } else {
+            // should we crash here?
+            error!("Never subscribed {:?} in {:?} to {:?}",
+                  cid, session_id, namespace);
+        }
+    }
 }
 
 fn unsubscribe(topics: &mut HashMap<Topic, HashMap<Cid, Subscription>>,
@@ -493,6 +521,7 @@ fn copy_attachments(sess: &mut Session, list: &HashSet<Namespace>, cid: Cid) {
             .insert(cid);
     }
 }
+
 
 #[cfg(test)]
 mod test {

@@ -118,9 +118,7 @@ impl Lattice {
             }
         }
         for key in &del {
-            if delta.shared.remove(key).is_some() {
-              SHARED_KEYS.decr(1);
-            }
+            delta.shared.remove(key);
         }
 
         for (session_id, rooms) in &mut delta.private {
@@ -150,6 +148,30 @@ impl Lattice {
             }
         }
         return delta
+    }
+
+    pub fn remove_session(&mut self, sid: &SessionId) {
+        if let Some(skeys) = self.private.remove(sid) {
+            for (key, value) in skeys {
+                if let Occupied(mut subs) = self.subscriptions.entry(key.clone()) {
+                    subs.get_mut().remove(sid);
+                    if subs.get().is_empty() {
+                        subs.remove_entry();
+                        if self.shared.remove(&key).is_some() {
+                            SHARED_KEYS.decr(1);
+                        }
+                    }
+                } else {
+                    error!("Subscription inconsistency {:?} {:?}", sid, key);
+                }
+            }
+        }
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.shared.is_empty()
+        && self.private.is_empty()
+        && self.subscriptions.is_empty()
     }
 }
 
