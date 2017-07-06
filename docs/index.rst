@@ -16,6 +16,7 @@ Contents:
 .. toctree::
    :maxdepth: 2
 
+   installation
    config/index
    internals/index
    swindon-lattice/index

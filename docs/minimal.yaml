@@ -1,0 +1,14 @@
+listen:
+- 127.0.0.1:8080
+
+routing:
+  localhost/js: public
+  localhost/css: public
+  localhost/img: public
+
+handlers:
+  public: !Static
+    mode: relative_to_domain_root
+    index-files: [index.html]
+    path: public
+    text-charset: utf-8
