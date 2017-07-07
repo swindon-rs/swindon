@@ -90,4 +90,4 @@ versions:
   block-end: ^\[.*\]
 
 - file: docs/installation.rst
-  regex: \bswindon@([\d\.]+)\b
+  regex: \bswindon@([\d\.a-z-]+)\b
