@@ -83,6 +83,18 @@ containers:
     - !PipConfig { dependencies: true }
     - !Py3Requirements "examples/message-board/requirements.txt"
 
+  message-board2:  # example
+    setup:
+    - !Alpine v3.6
+    - !Install [ca-certificates]
+    - !Install [nodejs, nodejs-npm]
+    - !PipConfig { dependencies: true }
+    - !Py3Requirements "examples/message-board2/requirements.txt"
+    - !NpmDependencies
+      file: "examples/message-board2/package.json"
+    environ:
+      NODE_PATH: /usr/lib/node_modules
+
   multi-user-chat:  # example
     setup:
     - !Alpine v3.4
@@ -300,6 +312,35 @@ commands:
       board: !Command
         container: message-board
         work-dir: examples/message-board
+        environ:
+          LISTEN_FDS: 1
+        pass-tcp-socket: 127.0.0.1:8082
+        run:
+        - python3
+        - -m
+        - messageboard
+
+  example-message-board2: !Supervise
+    description: Run swindon and message board 2 example
+    prerequisites: [make]
+    children:
+      swindon: !Command
+        container: xenial
+        work-dir: examples/message-board2
+        environ: { RUST_BACKTRACE: 1, RUST_LOG: "debug,tokio_core=warn" }
+        run:
+        - ../../target/debug/swindon
+        - --verbose
+        - --config=swindon.yaml
+      webpack: !Command
+        container: message-board2
+        work-dir: examples/message-board2
+        run:
+        - webpack
+        - --watch
+      board: !Command
+        container: message-board2
+        work-dir: examples/message-board2
         environ:
           LISTEN_FDS: 1
         pass-tcp-socket: 127.0.0.1:8082
