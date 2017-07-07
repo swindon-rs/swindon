@@ -142,9 +142,7 @@ impl Lattice {
                 }
             }
             for key in &del_rooms {
-                if rooms.remove(key).is_some() {
-                    PRIVATE_KEYS.decr(1);
-                }
+                rooms.remove(key);
             }
         }
         return delta
@@ -152,6 +150,7 @@ impl Lattice {
 
     pub fn remove_session(&mut self, sid: &SessionId) {
         if let Some(skeys) = self.private.remove(sid) {
+            PRIVATE_KEYS.decr(skeys.len() as i64);
             for (key, value) in skeys {
                 if let Occupied(mut subs) = self.subscriptions.entry(key.clone()) {
                     subs.get_mut().remove(sid);
