@@ -231,7 +231,7 @@ pub mod test {
         let cfg = make_config();
 
         assert_eq!(cfg.listen.len(), 1);
-        assert_eq!(cfg.routing.num_hosts(), 3);
+        assert_eq!(cfg.routing.num_hosts(), 3+3);
         assert_eq!(cfg.handlers.len(), 7);
         assert_eq!(cfg.session_pools.len(), 1);
         assert_eq!(cfg.http_destinations.len(), 1);
