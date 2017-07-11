@@ -25,6 +25,7 @@ extern crate netbuf;
 extern crate ns_std_threaded;
 extern crate quire;
 extern crate rand;
+extern crate regex;
 extern crate rustc_serialize;
 extern crate self_meter_http;
 extern crate serde;
