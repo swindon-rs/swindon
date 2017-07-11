@@ -89,5 +89,5 @@ versions:
   regex: ^version\s*=\s*"(\S+)"
   block-end: ^\[.*\]
 
-- file: docs/installation.rst
-  regex: \bswindon@([\d\.a-z-]+)\b
+- file: docs/example/vagga.yaml
+  regex: \bswindon=([\d\.a-z-]+)\b

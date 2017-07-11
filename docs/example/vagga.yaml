@@ -1,0 +1,18 @@
+containers:
+  swindon:
+    setup:
+    - !Ubuntu xenial
+    - !UbuntuRepo
+      url: https://repo.mglawica.org/ubuntu/
+      suite: xenial
+      components: [swindon]
+      trusted: true
+    - !Install [swindon=0.5.6+xenial1]
+
+commands:
+  swindon: !Command
+    container: swindon
+    run:
+    - swindon
+    - --verbose
+    - --config=swindon.yaml
