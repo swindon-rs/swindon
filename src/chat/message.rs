@@ -41,6 +41,8 @@ pub fn valid_method(method: &str) -> bool {
         false
     } else if method.starts_with("tangle.") {
         false
+    } else if method.starts_with("swindon.") {
+        false
     } else {
         method.chars().all(|c| c.is_ascii() &&
             (c.is_alphanumeric() || c == '-' || c == '_' || c == '.'))
@@ -327,6 +329,7 @@ mod test {
         assert!(!message::valid_method("bad/method"));
         assert!(!message::valid_method("another bad method"));
         assert!(!message::valid_method("tangle.auth"));
+        assert!(!message::valid_method("swindon.auth"));
         assert!(!message::valid_method("   tangle.auth"));
         assert!(!message::valid_method("   bad.method   "));
     }

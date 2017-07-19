@@ -19,8 +19,8 @@ Request Format
 
 ``method``
    Name of the remote method to call (example: ``"chat.send_message"``).
-   Names starting with ``tangle.*`` are reserved and cannot be called from
-   client.
+   Names starting with ``tangle.*`` and ``swindon.*`` are reserved and cannot
+   be called from client.
 
 .. _request-meta:
 
@@ -161,8 +161,8 @@ Possible ``error_kind`` values:
       Wrong (i.e. unsupported) ``Content-Type`` in response from a backend.
    ``forbidden``
       This call is forbidden to call from frontend. This is used when you
-      are trying to call ``tangle.*`` methods. These names are reserved
-      for calls initiated by swindon.
+      are trying to call ``tangle.*`` or ``swindon.*`` methods. These names
+      are reserved for calls initiated by swindon.
 
 
 .. _hello-message:
