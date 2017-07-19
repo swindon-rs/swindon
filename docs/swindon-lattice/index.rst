@@ -8,6 +8,10 @@ and few other useful things.
 The protocol is designed to cover large number of cases including different
 applications covered by single websocket connection for efficiency.
 
+The protocol is `registered by IANA <iana_ws>`_ as ``v1.swindon-lattice+json``
+and this value needs to be passed in ``Sec-WebSocket-Protocol`` field in
+handshake.
+
 .. toctree::
 
     lattices
@@ -17,3 +21,4 @@ applications covered by single websocket connection for efficiency.
     backend
     websocket_shutdown_codes
 
+.. _iana_ws: https://www.iana.org/assignments/websocket/websocket.xhtml
