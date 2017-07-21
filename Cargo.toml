@@ -59,6 +59,9 @@ generic-array = "0.8.2"
 typenum = "1.9.0"
 regex = "0.2.2"
 
+[profile.release]
+debug = true
+
 [[bin]]
 name = "swindon"
 path = "src/main.rs"
