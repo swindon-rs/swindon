@@ -67,7 +67,7 @@ jobs:
     - bash <(curl -s https://codecov.io/bash)
 
   # deploy
-  - stage: publish docs
+  - stage: Publish
     env:
       secure: "nMdJpTAF6TAIKY3+Aev8CLKBs39BcqPmXuJJj2Sww2wSoM2F4In/YQ2roWXBU6BEUfyP88ShpRXRpaFg7J6y1yqL5xCBrqfRHI/2V4pL4cRBsqe6Ehv5J65Kvo+aJ/dpI+LwD7rnSIAwQ2rG3yCnwOaTFdsQERK8wxyKcu41Sk3j4n9yAmd3Pd/DG3E0QAuAATRqHopzyDHK7NSS8zGSw1XD1nZn6TjuUJ645xJxKn7msxawmEKfXBZ/AD/fHhDCDlKh5jSQMu8SFBrSgzC5FUIO8ttGRTDEjcGwtwLOQK6rovbUaeu4WlrGMCCdWCQSxeDVqlwCu4lPTRJlDfg9MieugLNtWc+EYhcciIpvjM7cO39lCq8e7GpKb4rKtwj7Z2iVhBTuz/M4DlkUGNiqV66jMnqlgzhsWwXCVvVD1djFmKBlO1I5xOWJxsgaxM5IRXNbNzeaveJxjQcsRttTJ4FFFsxa/3CXrr2NipbhzOp3WRTByFMUqKJF5v0VKeApA35sSuAu7+jgmszhlk+v3ufFz/MBgB3we0N7aNvz/jAfUGjbLWWDPNvvIRf34hGVOpy6oOV3OIYq1sry3G8oIp5Zk5WfK2cAaKrhpYvwQFHrLzcsw/I1l0+2hN75FgWr1cPJB9PKI1GrBpq9wV1yP+T4dSWO0IXcmfKHLABBmyI="
     install: true
@@ -76,19 +76,19 @@ jobs:
         .travis/publish-docs.sh;
       fi
 
-before_deploy: |
-  mkdir -p dist
-  cargo build --target=x86_64-unknown-linux-musl --release
-  fakeroot sh -ecx '
-    install -D target/x86_64-unknown-linux-musl/release/swindon pkg/usr/bin/swindon
-    install -D target/x86_64-unknown-linux-musl/release/swindon-dev pkg/usr/bin/swindon-dev
-    tar -C pkg -czf dist/swindon-static-$TRAVIS_TAG.tar.gz usr
-  '
-deploy:
-  provider: releases
-  api_key:
-    secure: "mYZ+nwYRqW2FWxWS5pwvZLpQIrNdzh2FXwSsECQtDMXsulqO52oMZgldH42l6fcYq8cEDqrwRifo8G3Z4xYXIFdCPzrDej/Uqt8ri976fbnAuWg965KMA6CnzVANCiYlVekp/R1su/vPx8b1hjO/RpXfb76cv4oHMH63ZKFArb9aqPHz7AUthMpuWqKCYvNb8/pSWwxLDB9rIeED/uLJe6F3ysJYw0uQWQpmbep6363b/m9/9K1wcbMfyrL418WoaatVyCNXLibK8g9+12vhidR631VOX4iVzYCRmTmK6wvXrHWY+k9cGvmttTtMFjBJJfGTNElbQ22HjEAxIxRn+1tO7X8E70qRRchmzvbs9srpEO1L1qsl+F2PZJOhCW5DYopt8B50dFsWzT+fnsToJzy/U5RosMPcqdSb79uIHN8dbJtSf5oQFJw8qEF6PxlnW5gTK28+74v2Re8ebv1l+vGueswdsJq9WCXCkgXW0w19TwrXDqZnL0X1mFXPYbk9SK4x2WCI8QV9Twd/ykrLm+aPHbrHAqQbICdeH3XHvlfMhQ+DR039Of0ayRvb2Ty/713ontJ2a54fWOW9bG62NnJyDe8dTgVmVki7LkAkxIe3nbkkCZ4XNQIVLgbP7lEJfi3QSOEnezDTRUQH/GLX/QeNHy6S1qaa671Vhu37nYY="
-  file: "dist/swindon-static-$TRAVIS_TAG.tar.gz"
-  skip_cleanup: true
-  on:
-    tags: true
+    before_deploy: |
+      mkdir -p dist
+      cargo build --target=x86_64-unknown-linux-musl --release
+      fakeroot sh -ecx '
+        install -D target/x86_64-unknown-linux-musl/release/swindon pkg/usr/bin/swindon
+        install -D target/x86_64-unknown-linux-musl/release/swindon-dev pkg/usr/bin/swindon-dev
+        tar -C pkg -czf dist/swindon-static-$TRAVIS_TAG.tar.gz usr
+      '
+    deploy:
+      provider: releases
+      api_key:
+        secure: "mYZ+nwYRqW2FWxWS5pwvZLpQIrNdzh2FXwSsECQtDMXsulqO52oMZgldH42l6fcYq8cEDqrwRifo8G3Z4xYXIFdCPzrDej/Uqt8ri976fbnAuWg965KMA6CnzVANCiYlVekp/R1su/vPx8b1hjO/RpXfb76cv4oHMH63ZKFArb9aqPHz7AUthMpuWqKCYvNb8/pSWwxLDB9rIeED/uLJe6F3ysJYw0uQWQpmbep6363b/m9/9K1wcbMfyrL418WoaatVyCNXLibK8g9+12vhidR631VOX4iVzYCRmTmK6wvXrHWY+k9cGvmttTtMFjBJJfGTNElbQ22HjEAxIxRn+1tO7X8E70qRRchmzvbs9srpEO1L1qsl+F2PZJOhCW5DYopt8B50dFsWzT+fnsToJzy/U5RosMPcqdSb79uIHN8dbJtSf5oQFJw8qEF6PxlnW5gTK28+74v2Re8ebv1l+vGueswdsJq9WCXCkgXW0w19TwrXDqZnL0X1mFXPYbk9SK4x2WCI8QV9Twd/ykrLm+aPHbrHAqQbICdeH3XHvlfMhQ+DR039Of0ayRvb2Ty/713ontJ2a54fWOW9bG62NnJyDe8dTgVmVki7LkAkxIe3nbkkCZ4XNQIVLgbP7lEJfi3QSOEnezDTRUQH/GLX/QeNHy6S1qaa671Vhu37nYY="
+      file: "dist/swindon-static-$TRAVIS_TAG.tar.gz"
+      skip_cleanup: true
+      on:
+        tags: true
