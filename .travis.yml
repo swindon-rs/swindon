@@ -33,7 +33,7 @@ before_cache:
 
 install:
 - source .travis/coverage.sh && build_kcov
-- [[ -z "$NO_MUSL" ]] && rustup target add x86_64-unknown-linux-musl
+- '[[ -z "$NO_MUSL" ]] && rustup target add x86_64-unknown-linux-musl'
 
 script:
 - cargo build $CARGO_ARGS
