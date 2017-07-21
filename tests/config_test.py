@@ -275,3 +275,24 @@ def test_route_path_suffix(check_config):
         "Path must not end with /: Host(false, \"localhost\")"
         " Some(\"/some/path/\") handler\"handler\""
         ) in err
+
+
+def test_no_inactivity(check_config):
+    cfg = """
+        routing:
+            localhost:/abc: chat
+        handlers:
+            chat: !SwindonChat
+                session-pool: chat
+                message-handlers:
+                    "*": dummy/
+        session-pools:
+            chat:
+        http-destinations:
+            dummy:
+                override-host-header: myhost
+                addresses:
+                - 1.2.3.4:5
+    """
+    err = check_config(cfg, returncode=0)
+    assert err == ''

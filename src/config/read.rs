@@ -140,7 +140,8 @@ pub fn read_config<P: AsRef<Path>>(filename: P)
                     Some(ref pool) => {
                         let dest = chat.message_handlers.resolve(
                             "tangle.session_inactive");
-                        if !pool.inactivity_handlers.contains(dest) {
+                        if !pool.inactivity_handlers.contains(dest) &&
+                            pool.inactivity_handlers.len() != 0 {
                             err!(concat!(
                                 "Inactivity destinations mismatch for",
                                  "{:?}: {:?}"), name, dest)
