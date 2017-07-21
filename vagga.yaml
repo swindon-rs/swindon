@@ -14,6 +14,7 @@ containers:
       - pkg-config
       - git  # to build package
       - lsb-release  # to build package
+      - vim  # to edit release notes
     - &rust !TarInstall
       url: https://static.rust-lang.org/dist/rust-1.18.0-x86_64-unknown-linux-gnu.tar.gz
       script: "./install.sh --prefix=/usr \
