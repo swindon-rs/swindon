@@ -390,7 +390,7 @@ commands:
       codename=$(lsb_release --codename --short)
       rm -rf pkg
       rm -rf target/release/swindon*
-      bulk with-version "${version}" cargo install --root=/work/pkg --path=.
+      bulk with-version "${version}" cargo install --root=/work/pkg/usr --path=.
       bulk pack --package-version="${version}+${codename}1"
 
   _package-precise: !Command
