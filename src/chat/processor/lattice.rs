@@ -151,13 +151,19 @@ impl Lattice {
     pub fn remove_session(&mut self, sid: &SessionId) {
         if let Some(skeys) = self.private.remove(sid) {
             PRIVATE_KEYS.decr(skeys.len() as i64);
+            PRIVATE_COUNTERS.decr(skeys.values()
+                .map(|v| v.counters.len() as i64).sum());
+            PRIVATE_SETS.decr(skeys.values()
+                .map(|v| v.sets.len() as i64).sum());
             for (key, value) in skeys {
                 if let Occupied(mut subs) = self.subscriptions.entry(key.clone()) {
                     subs.get_mut().remove(sid);
                     if subs.get().is_empty() {
                         subs.remove_entry();
-                        if self.shared.remove(&key).is_some() {
+                        if let Some(vals) = self.shared.remove(&key) {
                             SHARED_KEYS.decr(1);
+                            SHARED_COUNTERS.decr(vals.counters.len() as i64);
+                            SHARED_SETS.decr(vals.sets.len() as i64);
                         }
                     }
                 } else {
@@ -212,7 +218,7 @@ fn crdt_update<K, V>(original: &mut HashMap<K, V>, delta: &mut HashMap<K, V>,
     where K: Clone + Hash + Eq + ::std::fmt::Debug, V: Crdt
 {
     let mut del = Vec::new();
-    for (key, crdt) in delta {
+    for (key, crdt) in delta.iter() {
         match original.entry(key.clone()) {
             Occupied(mut entry) => {
                 if !entry.get_mut().update(crdt) {
@@ -226,9 +232,7 @@ fn crdt_update<K, V>(original: &mut HashMap<K, V>, delta: &mut HashMap<K, V>,
         }
     }
     for key in &del {
-        if original.remove(key).is_some() {
-            number.decr(1);
-        }
+        delta.remove(key);
     }
 }
 
