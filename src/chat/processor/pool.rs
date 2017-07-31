@@ -13,7 +13,7 @@ use super::{ConnectionMessage, PoolMessage};
 use super::session::Session;
 use super::connection::{NewConnection, Connection};
 use super::heap::HeapMap;
-use super::lattice::{Lattice, Delta};
+use super::lattice::{Lattice, Delta, Values};
 use metrics::{Integer, Counter};
 
 lazy_static! {
@@ -366,6 +366,7 @@ impl Pool {
     pub fn lattice_update(&mut self,
         namespace: Namespace, delta: Delta)
     {
+        let mut new_keys = HashMap::new();
         let delta = {
             let lat = self.lattices.entry(namespace.clone())
                 .or_insert_with(|| {
@@ -376,9 +377,14 @@ impl Pool {
             // Update subscriptions on **original delta**
             for (session_id, rooms) in delta.private.iter() {
                 for key in rooms.keys() {
-                    lat.subscriptions.entry(key.clone())
+                    let new_sub = lat.subscriptions.entry(key.clone())
                         .or_insert_with(HashSet::new)
                         .insert(session_id.clone());
+                    if new_sub {
+                        new_keys.entry(session_id.clone())
+                            .or_insert_with(Vec::new)
+                            .push(key.clone());
+                    }
                 }
             }
 
@@ -425,6 +431,15 @@ impl Pool {
                 pubdata.get(room).map(|pubval| {
                     values.update(pubval);
                 });
+            }
+            if let Some(new_rooms) = new_keys.remove(&session_id) {
+                for room in new_rooms {
+                    lat.shared.get(&room).map(|pubval| {
+                        rooms.entry(room)
+                            .or_insert_with(Values::new)
+                            .update(pubval);
+                    });
+                }
             }
             // Can't easily abstract all this away because of borrow checker
             let sess = if let Some(sess) = self.sessions.get(&session_id) {
