@@ -1,0 +1,65 @@
+
+listen:
+- 127.0.0.1:8080
+
+debug-routing: true
+
+routing:
+  localhost/empty.gif: empty-gif
+  localhost/favicon.ico: public
+  localhost: chat
+  localhost/sockjs-node: socksjs
+  localhost/~~swindon-status: status
+
+
+handlers:
+
+  chat: !SwindonChat
+
+    session-pool: chat
+    http-route: html
+
+    message-handlers:
+      "*": chat
+
+  empty-gif: !EmptyGif
+  status: !SelfStatus
+
+  public: !Static
+    mode: relative_to_domain_root
+    path: ./public
+    text-charset: utf-8
+
+  html: !Proxy
+    destination: webpack
+
+  # The way socksjs does websocket emulation: it creates a response with
+  # chunked encoding. While we might be able to process it well, it occupies
+  # connection and the request that is pipelined after this one hangs
+  # indefinitely. So we need separate connection pool for such connections
+  socksjs: !Proxy
+    destination: socksjs-emu
+
+
+session-pools:
+  chat:
+    listen: [127.0.0.1:8081]
+    inactivity-handlers: [chat]
+
+
+http-destinations:
+  chat:
+    override-host-header: swindon.internal
+    addresses:
+    - 127.0.0.1:8082
+
+  webpack:
+    addresses:
+    - 127.0.0.1:3000
+
+  socksjs-emu:
+    addresses:
+    - 127.0.0.1:3000
+    backend-connections-per-ip-port: 100
+    in-flight-requests-per-backend-connection: 1
+    queue-size-for-503: 1

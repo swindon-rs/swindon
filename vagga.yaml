@@ -107,6 +107,17 @@ containers:
     environ:
       NODE_PATH: /usr/lib/node_modules
 
+  multi-user-chat2:  # example
+    setup:
+    - !Alpine v3.6
+    - !Install [ca-certificates]
+    - !PipConfig { dependencies: true }
+    - !Py3Requirements "examples/multi-user-chat2/requirements.txt"
+    - !NpmDependencies
+      file: "examples/multi-user-chat2/package.json"
+    environ:
+      NODE_PATH: /usr/lib/node_modules
+
   pytest:
     setup:
     - !Ubuntu xenial
@@ -372,6 +383,32 @@ commands:
       react-app: !Command
         container: multi-user-chat
         work-dir: examples/multi-user-chat
+        run:
+        - npm
+        - start
+
+  example-multi-user-chat2: !Supervise
+    description: Run swindon and multi-user-chat 2 example
+    prerequisites: [make]
+    children:
+      swindon: !Command
+        container: xenial
+        work-dir: examples/multi-user-chat2
+        environ: { RUST_BACKTRACE: 1 }
+        run:
+        - ../../target/debug/swindon
+        - --verbose
+        - --config=swindon.yaml
+      chat: !Command
+        container: multi-user-chat2
+        work-dir: examples/multi-user-chat2
+        run:
+        - python3
+        - -m
+        - muc
+      react-app: !Command
+        container: multi-user-chat2
+        work-dir: examples/multi-user-chat2
         run:
         - npm
         - start

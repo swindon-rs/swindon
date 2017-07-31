@@ -1,0 +1,83 @@
+.Chat {
+    display: flex;
+    flex-direction: row;
+    position: absolute;
+    width: 100%;
+    height: 100%;
+}
+.title-block {
+    border-bottom: solid gray 1px;
+    padding-bottom: 8px;
+    display: flex;
+    flex-direction: row;
+    min-height: 4em;
+}
+.title-block > h1 {
+    flex-grow: 1;
+    margin-left: 32px;
+}
+.room-title:before {
+    content: "«";
+}
+.room-title:after {
+    content: "»";
+}
+.chat-body {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+}
+.connection-status {
+    padding: 12px;
+}
+
+.room-list {
+    width: 18%;
+    min-width: 250px;
+    border-right: dashed gray 1px;
+    margin-right: 8px
+}
+.big-arrow {
+    display: inline-block;
+    font-size: 500%;
+    width: 1em;
+    text-align: center;
+}
+
+.select-room-input-block {
+    display: inline-flex;
+    width: 15em;
+    flex-wrap: wrap;
+}
+.select-room-input-box {
+    width: 100%;
+}
+.select-room-input-block > a {
+    padding: 3px
+}
+.room-list--room {
+    display: flex;
+}
+.room-list--room-name {
+    flex-grow: 1;
+}
+.room-list--unread {
+    padding: 2px 8px;
+}
+
+.message-field {
+    flex-grow: 1;
+    display: flex;
+}
+.Room {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+}
+.message-box {
+    flex-grow: 1;
+    overflow-y: auto;
+    width: 100%;
+}
+.messages {
+}

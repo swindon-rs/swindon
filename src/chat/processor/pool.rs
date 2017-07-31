@@ -338,7 +338,7 @@ impl Pool {
         let conn = if let Some(conn) = self.connections.get_mut(&cid) {
             conn
         } else if let Some(conn) = self.pending_connections.get_mut(&cid) {
-            conn.lattices.insert(namespace);
+            conn.lattices.remove(&namespace);
             return
         } else {
             info!("Detach of {:?} for non-existing connection {:?}",
@@ -400,7 +400,8 @@ impl Pool {
                     {
                         continue;
                     }
-                    // Can't easily abstract all this away because of borrow checker
+                    // Can't easily abstract all this away because of
+                    // the borrow checker
                     let sess = if let Some(sess) = self.sessions.get(sid) {
                         sess
                     } else {
