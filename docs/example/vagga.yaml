@@ -5,7 +5,7 @@ containers:
     - !UbuntuRepo
       url: https://repo.mglawica.org/ubuntu/
       suite: xenial
-      components: [swindon]
+      components: [swindon-stable]
       trusted: true
     - !Install [swindon=0.6.2+xenial1]
 
