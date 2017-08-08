@@ -8,6 +8,7 @@ use quire::De;
 
 use intern::{HandlerName, Upstream, SessionPoolName, DiskPoolName};
 use intern::{LdapUpstream, Network, Authorizer as AuthorizerName};
+use intern::{LogFormatName};
 use config::listen::{self, ListenSocket};
 use config::routing::{self, Routing};
 use config::authorization::{self, Authorization};
@@ -16,6 +17,7 @@ use config::authorizers::{self, Authorizer};
 use config::session_pools::{self, SessionPool};
 use config::http_destinations::{self, Destination};
 use config::ldap;
+use config::log;
 use config::networks;
 use config::disk::{self, Disk};
 use super::replication::{self, Replication};
@@ -43,9 +45,11 @@ pub struct ConfigData {
     pub http_destinations: HashMap<Upstream, Arc<Destination>>,
     pub ldap_destinations: HashMap<LdapUpstream, ldap::Destination>,
     pub networks: HashMap<Network, networks::NetworkList>,
+    pub log_formats: HashMap<LogFormatName, log::Format>,
 
     pub replication: Arc<Replication>,
     pub debug_routing: bool,
+    pub debug_logging: bool,
     pub server_name: Option<String>,
 
     pub set_user: Option<String>,
@@ -87,9 +91,12 @@ pub fn config_validator<'a>() -> Structure<'a> {
     .member("ldap_destinations",
         Mapping::new(Scalar::new(), ldap::destination_validator()))
     .member("networks", Mapping::new(Scalar::new(), networks::validator()))
+    .member("log_formats", Mapping::new(Scalar::new(),
+        log::format_validator()))
 
     .member("replication", replication::validator())
     .member("debug_routing", Scalar::new().default(false))
+    .member("debug_logging", Scalar::new().default(false))
     .member("server_name", Scalar::new().optional()
         .default(concat!("swindon/", env!("CARGO_PKG_VERSION"))))
     .member("set_user", Scalar::new().optional())

@@ -7,16 +7,17 @@ mod http;
 mod read;
 mod root;
 // sections
-mod listen;
-mod routing;
-mod handlers;
-mod session_pools;
-mod authorizers;
 mod authorization;
+mod authorizers;
+mod handlers;
+mod listen;
 mod replication;
-pub mod networks;
+mod routing;
+mod session_pools;
 pub mod http_destinations;
 pub mod ldap;
+pub mod log;
+pub mod networks;
 // handlers
 pub mod chat;
 pub mod static_files;

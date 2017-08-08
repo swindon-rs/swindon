@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use tokio_core::reactor::Handle;
 use tk_http::Status;
-use tk_http::server::{Dispatcher, Error, Head};
+use tk_http::server::{Dispatcher, Error as ServerError, Head};
 
 use runtime::Runtime;
 use incoming::{Request, Debug, AuthInput, Input, Transport};
@@ -12,15 +12,24 @@ use default_error_page::serve_error_page;
 use request_id;
 
 use metrics::{Counter};
+use logging;
+use request_id::RequestId;
+
 
 lazy_static! {
     pub static ref REQUESTS: Counter = Counter::new();
 }
 
+
 pub struct Router {
     addr: SocketAddr,
     runtime: Arc<Runtime>,
     handle: Handle,
+}
+
+pub enum Error {
+    Page(Status, Debug),
+    Fallback(ServerError),
 }
 
 impl Router {
@@ -35,15 +44,17 @@ impl Router {
     }
 }
 
-impl<S: Transport> Dispatcher<S> for Router {
-    type Codec = Request<S>;
-    fn headers_received(&mut self, headers: &Head)
-        -> Result<Self::Codec, Error>
+impl Router {
+
+    fn start_request<S: Transport>(&mut self, headers: &Head,
+        request_id: RequestId)
+        -> Result<Request<S>, Error>
     {
+        use self::Error::*;
+
         REQUESTS.incr(1);
         // Keep config same while processing a single request
         let cfg = self.runtime.config.get();
-        let request_id = request_id::new();
         let mut debug = Debug::new(headers, request_id, &cfg);
 
         // No path means either CONNECT host, or OPTIONS *
@@ -74,14 +85,14 @@ impl<S: Transport> Dispatcher<S> for Router {
                 match authorizer.check(&mut inp) {
                     Ok(true) => {}
                     Ok(false) => {
-                        return Ok(serve_error_page(Status::Forbidden, inp));
+                        return Err(Page(Status::Forbidden, inp.debug));
                     }
-                    Err(e) => return Err(e),
+                    Err(e) => return Err(Fallback(e)),
                 }
             } else {
                 error!("Can't find authorizer {}. Forbiddng request.", auth);
                 inp.debug.set_deny("authorizer-not-found");
-                return Ok(serve_error_page(Status::Forbidden, inp));
+                return Err(Page(Status::Forbidden, inp.debug));
             }
             debug = inp.debug;
         };
@@ -107,9 +118,51 @@ impl<S: Transport> Dispatcher<S> for Router {
             request_id: request_id,
         };
         if let Some(handler) = handler {
-            handler.serve(inp)
+            handler.serve(inp).map_err(Fallback)
         } else {
-            Ok(serve_error_page(Status::NotFound, inp))
+            Err(Page(Status::NotFound, inp.debug))
+        }
+    }
+}
+
+impl<S: Transport> Dispatcher<S> for Router {
+    type Codec = Request<S>;
+    fn headers_received(&mut self, headers: &Head)
+        -> Result<Self::Codec, ServerError>
+    {
+        let request_id = request_id::new();
+        match self.start_request(headers, request_id) {
+            Ok(x) => {
+                // TODO(tailhook) request is not done yet, just a fake
+                logging::log(&self.runtime,
+                    logging::http::FakePage {
+                        request: logging::http::EarlyRequest {
+                            addr: self.addr,
+                            head: headers,
+                            request_id: request_id,
+                        },
+                        response: logging::http::FakeResponse {
+                        },
+                    });
+                Ok(x)
+            }
+            Err(Error::Page(status, debug)) => {
+                logging::log(&self.runtime,
+                    logging::http::EarlyError {
+                        request: logging::http::EarlyRequest {
+                            addr: self.addr,
+                            head: headers,
+                            request_id: request_id,
+                        },
+                        response: logging::http::EarlyResponse {
+                            status: status.into(),
+                        }
+                    });
+                Ok(serve_error_page(status,
+                    (self.runtime.config.get(), debug)))
+            }
+            // Maybe return bad request?
+            Err(Error::Fallback(e)) => Err(e),
         }
     }
 }

@@ -1,3 +1,4 @@
+import os.path
 import pytest
 import aiohttp
 
@@ -56,10 +57,7 @@ async def test_url_decoding(swindon, http_request, debug_routing, TESTS_DIR):
 
 
 async def test_permission(swindon, http_request, debug_routing, TESTS_DIR):
-    msg = (b'<!DOCTYPE html><html><head>'
-           b'<title>404 Not Found</title></head>'
-           b'<body><h1>404 Not Found</h1><hr>'
-           b'<p>Yours faithfully,<br>swindon web server</p></body></html>')
+    msg = open(os.path.dirname(__file__) + '/404.html', 'rb').read()
     url = swindon.url / 'static' / 'no-permission'
     resp, data = await http_request(url)
     assert resp.status == 404

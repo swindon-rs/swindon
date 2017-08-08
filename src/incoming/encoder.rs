@@ -27,6 +27,12 @@ pub trait IntoContext: Sized {
     fn into_context(self) -> Context;
 }
 
+impl IntoContext for (Arc<Config>, Debug) {
+    fn into_context(self) -> Context {
+        self
+    }
+}
+
 impl<S> Encoder<S> {
     pub fn new(enc: http::Encoder<S>, context: Context)
         -> Encoder<S>

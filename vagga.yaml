@@ -161,6 +161,7 @@ commands:
 
   cargo: !Command
     container: xenial
+    symlink-name: cargo
     description: Run Cargo command
     run: [cargo]
 

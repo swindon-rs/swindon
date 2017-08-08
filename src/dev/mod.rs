@@ -72,6 +72,8 @@ fn _generate_config(buf: &mut String, port: u16, routes: &[Route],
     -> Result<(), fmt::Error>
 {
     writeln!(buf, "listen: [127.0.0.1:{}]", port)?;
+    writeln!(buf, "debug-routing: true")?;
+    writeln!(buf, "debug-logging: true")?;
     writeln!(buf, "")?;
     writeln!(buf, "routing:")?;
 

@@ -12,6 +12,8 @@ use super::ConfigData;
 use super::root::config_validator;
 use super::Handler;
 use config::static_files::Mode;
+use config::log;
+use intern::LogFormatName;
 
 
 quick_error! {
@@ -103,13 +105,26 @@ pub fn read_config<P: AsRef<Path>>(filename: P)
         String::from("<main>"),
         metadata(filename)?,
     ));
-    let cfg: ConfigData = {
+    let mut cfg: ConfigData = {
         let cell = RefCell::new(&mut files);
         let mut opt = Options::default();
         opt.allow_include(
             |a, b, c, d| include_file(&cell, a, b, c, d));
         parse_config(filename, &config_validator(), &opt)?
     };
+
+    // Set some defaults
+    if !cfg.log_formats.contains_key("debug-log") {
+        cfg.log_formats.insert(LogFormatName::from("debug-log"),
+            log::Format::from_string(r#"
+                {{ request.client_ip }}
+                {{ request.host }}
+                "{{ request.method }}
+                {{ request.path }}
+                {{ request.version }}"
+                {{ response.status_code }}
+            "#.into()).expect("can always compile debug log"));
+    }
 
     // Extra config validations
 

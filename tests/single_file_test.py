@@ -1,3 +1,4 @@
+import os.path
 
 
 async def test_ok(swindon, http_request, debug_routing, TESTS_DIR):
@@ -41,10 +42,7 @@ async def test_request_method(swindon, http_request):
 
 
 async def test_missing_file(swindon, http_request, debug_routing, TESTS_DIR):
-    msg = (b'<!DOCTYPE html><html><head>'
-           b'<title>404 Not Found</title></head>'
-           b'<body><h1>404 Not Found</h1><hr>'
-           b'<p>Yours faithfully,<br>swindon web server</p></body></html>')
+    msg = open(os.path.dirname(__file__) + '/404.html', 'rb').read()
     resp, data = await http_request(swindon.url / 'missing-file')
     assert resp.status == 404
     assert data == msg
@@ -57,10 +55,7 @@ async def test_missing_file(swindon, http_request, debug_routing, TESTS_DIR):
 
 async def test_permission(swindon, http_request):
     # XXX: PermissionDenied error is not exposed and returned as 500
-    msg = (b'<!DOCTYPE html><html><head>'
-           b'<title>500 Internal Server Error</title></head>'
-           b'<body><h1>500 Internal Server Error</h1><hr>'
-           b'<p>Yours faithfully,<br>swindon web server</p></body></html>')
+    msg = open(os.path.dirname(__file__) + '/500.html', 'rb').read()
     resp, data = await http_request(swindon.url / 'no-permission')
     assert resp.status == 500
     assert data == msg
@@ -91,10 +86,7 @@ async def test_symlink(swindon, http_request, debug_routing, TESTS_DIR):
 
 
 async def test_non_file(swindon, http_request, debug_routing):
-    msg = (b'<!DOCTYPE html><html><head>'
-           b'<title>500 Internal Server Error</title></head>'
-           b'<body><h1>500 Internal Server Error</h1><hr>'
-           b'<p>Yours faithfully,<br>swindon web server</p></body></html>')
+    msg = open(os.path.dirname(__file__) + '/500.html', 'rb').read()
     resp, data = await http_request(swindon.url / 'dev-null')
     assert resp.status == 500
     assert resp.headers['Content-Type'] == 'text/html'

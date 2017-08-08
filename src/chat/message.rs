@@ -7,7 +7,6 @@ use std::str;
 use std::ascii::AsciiExt;
 use serde_json::{self, Value as Json, Map, Error as JsonError};
 use serde::ser::{Serialize, Serializer, SerializeTuple};
-use serde::de::Error;
 
 use super::cid::Cid;
 use runtime::ServerId;

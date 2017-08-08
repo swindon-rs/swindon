@@ -164,6 +164,13 @@ Options
 
    Note that headers are subject to change at any time.
 
+.. opt:: debug-logging
+
+   Enables logging of requests into stderr. This is usually useful for local
+   debugging. Better logging functionality will be available in next release.
+
+   .. versionadded:: v0.6.3
+
 .. opt:: server-name
 
    Server name that will be sent in ``Server`` header. By default it's

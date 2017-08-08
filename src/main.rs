@@ -40,6 +40,7 @@ extern crate tk_pool;
 extern crate tk_sendfile;
 extern crate tokio_core;
 extern crate tokio_io;
+extern crate trimmer;
 extern crate typenum;
 
 mod authorizers;
@@ -51,6 +52,7 @@ mod handlers;
 mod http_pools;  // TODO(tailhook) move to proxy?
 mod incoming;
 mod intern;
+mod logging;
 mod metrics;
 mod privileges;
 mod proxy;
@@ -58,6 +60,7 @@ mod request_id;
 mod routing;
 mod runtime;
 mod startup;
+mod template;
 
 use std::io::{self, Write};
 use std::time::Duration;

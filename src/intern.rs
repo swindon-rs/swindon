@@ -16,6 +16,7 @@ mod private {
     pub struct LdapValidator;
     pub struct AuthorizerValidator;
     pub struct NetworkValidator;
+    pub struct LogFormatValidator;
 }
 use self::private::*;
 
@@ -35,6 +36,7 @@ pub type LatticeVar = Symbol<LatticeVarValidator>;
 pub type LdapUpstream = Symbol<LdapValidator>;
 pub type Authorizer = Symbol<AuthorizerValidator>;
 pub type Network = Symbol<NetworkValidator>;
+pub type LogFormatName = Symbol<LogFormatValidator>;
 
 quick_error! {
     #[derive(Debug)]
@@ -90,6 +92,19 @@ impl Validator for UpstreamValidator {
     }
     fn display(value: &Symbol<Self>, fmt: &mut fmt::Formatter) -> fmt::Result {
         write!(fmt, "upstream{:?}", value.as_ref())
+    }
+}
+
+impl Validator for LogFormatValidator {
+    type Err = BadIdent;
+    fn validate_symbol(val: &str) -> Result<(), Self::Err> {
+        if !valid_ident(val) {
+            return Err(BadIdent::InvalidChar);
+        }
+        Ok(())
+    }
+    fn display(value: &Symbol<Self>, fmt: &mut fmt::Formatter) -> fmt::Result {
+        write!(fmt, "lf{:?}", value.as_ref())
     }
 }
 
