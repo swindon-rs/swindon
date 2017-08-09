@@ -45,7 +45,7 @@ dependencies = [
  "tk-sendfile 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio-core 0.1.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio-io 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "trimmer 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "trimmer 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "typenum 1.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -887,7 +887,7 @@ dependencies = [
 
 [[package]]
 name = "trimmer"
-version = "0.2.0"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "argparse 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1087,7 +1087,7 @@ dependencies = [
 "checksum tk-sendfile 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)" = "00b079c7619cdecc8028c0466d1aa595d391a46448c35dd3afbd4a45709ade21"
 "checksum tokio-core 0.1.8 (registry+https://github.com/rust-lang/crates.io-index)" = "6a20ba4738d283cac7495ca36e045c80c2a8df3e05dd0909b17a06646af5a7ed"
 "checksum tokio-io 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)" = "c2c3ce9739f7387a0fa65b5421e81feae92e04d603f008898f4257790ce8c2db"
-"checksum trimmer 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "32bbc861adef26479033b5b2af8964d9b4e9b54c00997a08fa0583eef3461358"
+"checksum trimmer 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)" = "bd2e3a95329a594132dbd81f7689013f2ff68ce2179c648fc5a1d47859907927"
 "checksum typenum 1.9.0 (registry+https://github.com/rust-lang/crates.io-index)" = "13a99dc6780ef33c78780b826cf9d2a78840b72cae9474de4bcaf9051e60ebbd"
 "checksum unicase 1.4.2 (registry+https://github.com/rust-lang/crates.io-index)" = "7f4765f83163b74f957c797ad9253caf97f103fb064d3999aea9568d09fc8a33"
 "checksum unicode-bidi 0.3.4 (registry+https://github.com/rust-lang/crates.io-index)" = "49f2bd0c6468a8230e1db229cff8029217cf623c767ea5d60bfbd42729ea54d5"
