@@ -29,7 +29,7 @@ pub fn error_page<S: 'static>(status: Status, mut e: Encoder<S>)
     if status.response_has_body() {
         let status_var = StatusVar(status);
         let mut ctx = Context::new();
-        ctx.set("status".into(), &status_var);
+        ctx.set("status", &status_var);
         let body = match TEMPLATE.render(&ctx) {
             Ok(body) => body,
             Err(e) => {

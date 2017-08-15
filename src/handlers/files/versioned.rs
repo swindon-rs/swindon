@@ -12,7 +12,7 @@ use incoming::{Input, Request, Transport, reply};
 use handlers::files::decode::decode_component;
 use handlers::files::normal;
 use handlers::files::pools::get_pool;
-use handlers::files::common::reply_file;
+use handlers::files::common::{reply_file, NotFile};
 
 quick_error! {
     #[derive(Debug, Copy, Clone)]
@@ -135,19 +135,16 @@ pub fn serve_versioned<S: Transport>(settings: &Arc<VersionedStatic>,
         };
         return res.map_err(|e| {
             if e.kind() == io::ErrorKind::PermissionDenied {
-                Status::Forbidden
+                NotFile::Status(Status::Forbidden)
             } else {
                 error!("Error reading file {:?} / {:?}: {}", path, npath, e);
-                Status::InternalServerError
+                NotFile::Status(Status::InternalServerError)
             }
         });
     });
 
     reply_file(inp, pool, fut, move |e| {
         e.add_extra_headers(&settings2.extra_headers);
-    }, |e| {
-        // TODO(tailhook) autoindex
-        error_page(Status::Forbidden, e)
     })
 }
 

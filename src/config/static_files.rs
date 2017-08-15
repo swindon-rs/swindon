@@ -3,9 +3,10 @@ use std::ascii::AsciiExt;
 use std::path::PathBuf;
 use std::collections::HashMap;
 
-use quire::validate::{Nothing, Enum, Structure, Scalar, Mapping, Sequence};
-use serde::de::{Deserializer, Deserialize, Error};
 use http_file_headers::{Config as HeadersConfig};
+use quire::validate::{Nothing, Enum, Structure, Scalar, Mapping, Sequence};
+use quire::validate::{Numeric};
+use serde::de::{Deserializer, Deserialize, Error};
 
 use intern::DiskPoolName;
 
@@ -43,6 +44,8 @@ pub struct Static {
     pub extra_headers: HashMap<String, String>,
     pub strip_host_suffix: Option<String>,
     pub index_files: Vec<String>,
+    pub generate_index: bool,
+    pub generated_index_max_files: usize,
     // Computed values
     pub headers_config: Arc<HeadersConfig>,
 }
@@ -93,6 +96,9 @@ pub fn validator<'x>() -> Structure<'x> {
     .member("extra_headers", Mapping::new(Scalar::new(), Scalar::new()))
     .member("strip_host_suffix", Scalar::new().optional())
     .member("index_files", Sequence::new(Scalar::new()))
+    .member("generate_index", Scalar::new().default(false))
+    .member("generated_index_max_files",
+        Numeric::new().min(0).default(100000))
 }
 
 pub fn single_file<'x>() -> Structure<'x> {
@@ -137,6 +143,8 @@ impl<'a> Deserialize<'a> for Static {
             pub pool: DiskPoolName,
             pub extra_headers: HashMap<String, String>,
             pub index_files: Vec<String>,
+            pub generate_index: bool,
+            pub generated_index_max_files: usize,
             pub strip_host_suffix: Option<String>,
         }
         let int = Internal::deserialize(d)?;
@@ -158,6 +166,8 @@ impl<'a> Deserialize<'a> for Static {
             pool: int.pool,
             extra_headers: int.extra_headers,
             index_files: int.index_files,
+            generate_index: int.generate_index,
+            generated_index_max_files: int.generated_index_max_files,
             strip_host_suffix: int.strip_host_suffix,
             headers_config: config.done(),
         })
@@ -228,6 +238,8 @@ impl<'a> Deserialize<'a> for VersionedStatic {
                 pool: int.pool.clone(),
                 extra_headers: int.extra_headers.clone(),
                 index_files: Vec::new(),
+                generate_index: false,
+                generated_index_max_files: 0,
                 strip_host_suffix: None,
                 headers_config: config.clone(),
             }),
@@ -260,6 +272,8 @@ impl PartialEq for Static {
             extra_headers: ref a_extra_headers,
             strip_host_suffix: ref a_strip_host_suffix,
             index_files: ref a_index_files,
+            generate_index: ref a_generate_index,
+            generated_index_max_files: ref a_generated_index_max_files,
             headers_config: _,
         } = *self;
         let Static {
@@ -270,6 +284,8 @@ impl PartialEq for Static {
             extra_headers: ref b_extra_headers,
             strip_host_suffix: ref b_strip_host_suffix,
             index_files: ref b_index_files,
+            generate_index: ref b_generate_index,
+            generated_index_max_files: ref b_generated_index_max_files,
             headers_config: _,
         } = *other;
         return a_mode == b_mode &&
@@ -278,7 +294,9 @@ impl PartialEq for Static {
                a_pool == b_pool &&
                a_extra_headers == b_extra_headers &&
                a_strip_host_suffix == b_strip_host_suffix &&
-               a_index_files == b_index_files;
+               a_index_files == b_index_files &&
+               a_generate_index == b_generate_index &&
+               a_generated_index_max_files == b_generated_index_max_files;
 
     }
 }

@@ -4,14 +4,15 @@ use std::sync::{Arc};
 use std::str::from_utf8;
 
 use tk_http::Status;
-use http_file_headers::{Input as HeadersInput};
+use http_file_headers::{Input as HeadersInput, Output};
 
 use config::static_files::{Static, Mode};
-use default_error_page::{serve_error_page, error_page};
+use default_error_page::{serve_error_page};
 use incoming::{Input, Request, Transport};
 use handlers::files::decode::decode_component;
 use handlers::files::pools::get_pool;
-use handlers::files::common::reply_file;
+use handlers::files::common::{reply_file, NotFile};
+use handlers::files::index::generate_index;
 
 
 pub fn serve_dir<S: Transport>(settings: &Arc<Static>, mut inp: Input)
@@ -24,29 +25,47 @@ pub fn serve_dir<S: Transport>(settings: &Arc<Static>, mut inp: Input)
             return serve_error_page(Status::Forbidden, inp);
         }
     };
+    let virtual_path = strip_query(inp.headers.path().unwrap_or("/"))
+        .to_string();
     inp.debug.set_fs_path(&path);
     let pool = get_pool(&inp.runtime, &settings.pool);
     let settings = settings.clone();
+    let settings2 = settings.clone();
 
     let hinp = HeadersInput::from_headers(&settings.headers_config,
         inp.headers.method(), inp.headers.headers());
     let fut = pool.spawn_fn(move || {
-        hinp.probe_file(&path).map_err(|e| {
-            if e.kind() == io::ErrorKind::PermissionDenied {
-                Status::Forbidden
-            } else {
-                error!("Error reading file {:?}: {}", path, e);
-                Status::InternalServerError
+        match hinp.probe_file(&path) {
+            Ok(Output::Directory) if settings2.generate_index => {
+                generate_index(&path, &virtual_path, &settings2)
+                .map(|x| Err(NotFile::Directory(x)))
+                .unwrap_or_else(|s| Err(NotFile::Status(s)))
             }
-        })
+            Ok(Output::Directory) => {
+                Err(NotFile::Status(Status::Forbidden))
+            }
+            Ok(x) => Ok(x),
+            Err(e) => {
+                if e.kind() == io::ErrorKind::PermissionDenied {
+                    Err(NotFile::Status(Status::Forbidden))
+                } else {
+                    error!("Error reading file {:?}: {}", path, e);
+                    Err(NotFile::Status(Status::InternalServerError))
+                }
+            }
+        }
     });
 
     reply_file(inp, pool, fut, move |e| {
         e.add_extra_headers(&settings.extra_headers);
-    }, |e| {
-        // TODO(tailhook) autoindex
-        error_page(Status::Forbidden, e)
     })
+}
+
+fn strip_query(path: &str) -> &str {
+    match path.find(|c| c == '?' || c == '#') {
+        Some(idx) => &path[..idx],
+        None => path
+    }
 }
 
 pub fn path(settings: &Static, inp: &Input) -> Result<PathBuf, ()> {
@@ -56,10 +75,7 @@ pub fn path(settings: &Static, inp: &Input) -> Result<PathBuf, ()> {
         }
         Mode::relative_to_route => inp.suffix,
     };
-    let path = match path.find(|c| c == '?' || c == '#') {
-        Some(idx) => &path[..idx],
-        None => path
-    };
+    let path = strip_query(path);
     let mut buf = Vec::with_capacity(path.len());
     if settings.mode == Mode::with_hostname {
         match inp.headers.host()  {

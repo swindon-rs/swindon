@@ -1,6 +1,7 @@
-mod pools;
-mod decode;
 mod common;
+mod decode;
+mod index;
+mod pools;
 
 mod normal;
 mod single;

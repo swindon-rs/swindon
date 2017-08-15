@@ -15,6 +15,21 @@ async def test_no_index(swindon, get_request, debug_routing):
     assert resp.status == 403
     assert resp.headers['Content-Type'] == 'text/html'
 
+async def test_autoindex(swindon, get_request,
+        static_request_method, debug_routing):
+    # XXX: on resp.read() connection gets closed
+    resp, data = await get_request(swindon.url / 'static-autoindex')
+    assert resp.status == 200
+    assert resp.headers['Content-Type'] == 'text/html; charset=utf-8'
+    if static_request_method == 'HEAD':
+        assert data == b''
+    else:
+        assert b'static_file.txt' in data
+        assert b'index/' in data
+        assert b'localhost/' in data
+        assert b'</a>' in data
+        assert b'href=' in data
+
 
 async def test_index(swindon, get_request, static_request_method,
         debug_routing):

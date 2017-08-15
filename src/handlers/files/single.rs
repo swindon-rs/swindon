@@ -5,10 +5,10 @@ use tk_http::Status;
 use http_file_headers::{Input as HeadersInput};
 
 use config::static_files::{SingleFile};
-use default_error_page::{serve_error_page, error_page};
+use default_error_page::{serve_error_page};
 use incoming::{Input, Request, Transport};
 use handlers::files::pools::get_pool;
-use handlers::files::common::reply_file;
+use handlers::files::common::{reply_file, NotFile};
 
 
 pub fn serve_file<S: Transport>(settings: &Arc<SingleFile>, mut inp: Input)
@@ -28,10 +28,10 @@ pub fn serve_file<S: Transport>(settings: &Arc<SingleFile>, mut inp: Input)
     let fut = pool.spawn_fn(move || {
         hinp.probe_file(&settings2.path).map_err(|e| {
             if e.kind() == io::ErrorKind::PermissionDenied {
-                Status::Forbidden
+                NotFile::Status(Status::Forbidden)
             } else {
                 error!("Error reading file {:?}: {}", settings2.path, e);
-                Status::InternalServerError
+                NotFile::Status(Status::InternalServerError)
             }
         })
     });
@@ -41,7 +41,5 @@ pub fn serve_file<S: Transport>(settings: &Arc<SingleFile>, mut inp: Input)
             e.add_header("Content-Type", val);
         }
         e.add_extra_headers(&settings.extra_headers);
-    }, |e| {
-        error_page(Status::Forbidden, e)
     })
 }

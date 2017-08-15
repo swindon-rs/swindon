@@ -9,13 +9,17 @@ use default_error_page::{error_page};
 use incoming::{self, Input, Request, Transport, Encoder, EncoderDone};
 
 
-pub fn reply_file<S, A, B>(inp: Input, pool: CpuPool,
-    fut: CpuFuture<Output, Status>, fn_ok: A, fn_dir: B)
+pub enum NotFile {
+    Status(Status),
+    Directory(Vec<u8>),
+}
+
+
+pub fn reply_file<S, A>(inp: Input, pool: CpuPool,
+    fut: CpuFuture<Output, NotFile>, fn_ok: A)
     -> Request<S>
     where S: Transport,
           A: FnOnce(&mut Encoder<S>) + Send + 'static,
-          B: FnOnce(Encoder<S>) -> FutureResult<EncoderDone<S>, Error>,
-          B: Send + 'static,
 {
     incoming::reply(inp, move |mut e| {
         Box::new(fut.then(move |result| {
@@ -78,12 +82,21 @@ pub fn reply_file<S, A, B>(inp: Input, pool: CpuPool,
                 Ok(Output::NotFound)  => {
                     Either::A(error_page(Status::NotFound, e))
                 }
-                // TODO(tailhook) implement directory index
                 Ok(Output::Directory) => {
-                    Either::A(fn_dir(e))
+                    Either::A(error_page(Status::Forbidden, e))
                 }
-                Err(status) => {
+                Err(NotFile::Status(status)) => {
                     Either::A(error_page(status, e))
+                }
+                Err(NotFile::Directory(data)) => {
+                    e.status(Status::Ok);
+                    e.add_length(data.len() as u64);
+                    e.add_header("Content-Type", "text/html; charset=utf-8");
+                    fn_ok(&mut e);
+                    if e.done_headers() {
+                        e.write_body(data)
+                    }
+                    Either::A(ok(e.done()))
                 }
             }
         }))

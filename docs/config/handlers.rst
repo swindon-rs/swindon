@@ -157,6 +157,20 @@ Common Settings
 
         index-files: ["index.html", "index.htm"]
 
+.. opt:: generate-index
+
+   (default ``false``) Generate HTML file with list of files if no
+   ``index-files`` are present.
+
+   .. note:: We don't guarantee format of that HTML file just yet, it may
+      change in future.
+
+.. opt:: generated-index-max-files
+
+   (default ``100000``) Maximum number of files to show in generated index.
+   This is required to prevent DoS attacks on listing large directories.
+
+
 !VersionedStatic Settings
 `````````````````````````
 

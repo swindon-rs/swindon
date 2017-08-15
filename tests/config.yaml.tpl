@@ -40,6 +40,7 @@ routing:
   localhost/static-w-hostname: static_w_hostname
   localhost/static-w-index: static_w_index
   localhost/static-wo-index: static_wo_index
+  localhost/static-autoindex: static_autoindex
   localhost/static-no-permission: static_no_permission
 
   ### !VersionedStatic routes ###
@@ -139,6 +140,9 @@ handlers:
     - index.html
   static_wo_index: !Static
     path: ${TESTS_DIR}/assets/index
+  static_autoindex: !Static
+    path: ${TESTS_DIR}/assets
+    generate-index: true
   static_no_permission: !Static
     path: /tmp
 
