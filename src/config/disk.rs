@@ -1,6 +1,6 @@
 use quire::validate::{Structure, Numeric};
 
-#[derive(RustcDecodable, Debug, PartialEq, Eq, Hash)]
+#[derive(Deserialize, Debug, PartialEq, Eq, Hash)]
 pub struct Disk {
     pub num_threads: usize,
 }

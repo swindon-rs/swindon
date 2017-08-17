@@ -1,7 +1,7 @@
 use quire::validate::{Structure, Scalar};
 
 
-#[derive(RustcDecodable, Debug, PartialEq, Eq)]
+#[derive(Deserialize, Debug, PartialEq, Eq)]
 pub struct BaseRedirect {
     pub redirect_to_domain: String,
 }

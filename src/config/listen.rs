@@ -1,6 +1,7 @@
+use std::fmt;
 use std::net::SocketAddr;
 
-use rustc_serialize::{Decoder, Decodable};
+use serde::de::{self, Deserialize, Deserializer};
 use quire::validate::{Enum, Scalar};
 
 
@@ -18,11 +19,22 @@ pub fn validator<'x>() -> Enum<'x> {
     .default_tag("Tcp")
 }
 
-impl Decodable for ListenSocket {
-    fn decode<D: Decoder>(d: &mut D) -> Result<Self, D::Error> {
-        d.read_str()?
-        .parse()
+struct Visitor;
+
+impl<'a> de::Visitor<'a> for Visitor {
+    type Value = ListenSocket;
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_str("ip_address:port")
+    }
+    fn visit_str<E: de::Error>(self, s: &str) -> Result<Self::Value, E> {
+        s.parse()
         .map(ListenSocket::Tcp)
-        .map_err(|_| d.error("Can't parse socket address"))
+        .map_err(|_| E::custom("Can't parse socket address"))
+    }
+}
+
+impl<'a> Deserialize<'a> for ListenSocket {
+    fn deserialize<D: Deserializer<'a>>(d: D) -> Result<Self, D::Error> {
+        d.deserialize_str(Visitor)
     }
 }

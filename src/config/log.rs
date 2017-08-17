@@ -1,5 +1,5 @@
 use trimmer::{Template, Options, ParseError};
-use rustc_serialize::{Decoder, Decodable};
+use serde::de::{Deserialize, Deserializer, Error};
 use quire::validate::{Structure, Scalar};
 
 use template;
@@ -17,15 +17,15 @@ pub struct Format {
     pub template: Template,
 }
 
-impl Decodable for Format {
-    fn decode<D: Decoder>(d: &mut D) -> Result<Self, D::Error> {
-        #[derive(RustcDecodable)]
+impl<'a> Deserialize<'a> for Format {
+    fn deserialize<D: Deserializer<'a>>(d: D) -> Result<Self, D::Error> {
+        #[derive(Deserialize)]
         struct FormatRaw {
             template: String,
         }
-        let raw = FormatRaw::decode(d)?;
+        let raw = FormatRaw::deserialize(d)?;
         Format::from_string(raw.template)
-            .map_err(|e| d.error(&format!("{}", e)))
+            .map_err(|e| D::Error::custom(&format!("{}", e)))
     }
 }
 

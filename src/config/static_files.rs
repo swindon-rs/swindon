@@ -4,12 +4,12 @@ use std::path::PathBuf;
 use std::collections::HashMap;
 
 use quire::validate::{Nothing, Enum, Structure, Scalar, Mapping, Sequence};
-use rustc_serialize::{Decoder, Decodable};
+use serde::de::{Deserializer, Deserialize, Error};
 
 use intern::DiskPoolName;
 
 
-#[derive(RustcDecodable, Debug, PartialEq, Eq, Clone, Copy)]
+#[derive(Deserialize, Debug, PartialEq, Eq, Clone, Copy)]
 #[allow(non_camel_case_types)]
 pub enum Mode {
     relative_to_domain_root,
@@ -17,13 +17,13 @@ pub enum Mode {
     with_hostname,
 }
 
-#[derive(RustcDecodable, Debug, PartialEq, Eq)]
+#[derive(Deserialize, Debug, PartialEq, Eq)]
 #[allow(non_camel_case_types)]
 pub enum VersionChars {
     lowercase_hex,
 }
 
-#[derive(RustcDecodable, Debug, PartialEq, Eq, Clone, Copy)]
+#[derive(Deserialize, Debug, PartialEq, Eq, Clone, Copy)]
 #[allow(non_camel_case_types)]
 pub enum FallbackMode {
     always,
@@ -124,9 +124,9 @@ pub fn versioned_validator<'x>() -> Structure<'x> {
     .member("strip_host_suffix", Scalar::new().optional())
 }
 
-impl Decodable for Static {
-    fn decode<D: Decoder>(d: &mut D) -> Result<Self, D::Error> {
-        #[derive(RustcDecodable)]
+impl<'a> Deserialize<'a> for Static {
+    fn deserialize<D: Deserializer<'a>>(d: D) -> Result<Self, D::Error> {
+        #[derive(Deserialize)]
         pub struct Internal {
             pub mode: Mode,
             pub path: PathBuf,
@@ -136,7 +136,7 @@ impl Decodable for Static {
             pub index_files: Vec<String>,
             pub strip_host_suffix: Option<String>,
         }
-        let int = Internal::decode(d)?;
+        let int = Internal::deserialize(d)?;
         return Ok(Static {
             overrides_content_type:
                 header_contains(&int.extra_headers, "Content-Type"),
@@ -151,18 +151,18 @@ impl Decodable for Static {
     }
 }
 
-impl Decodable for SingleFile {
-    fn decode<D: Decoder>(d: &mut D) -> Result<Self, D::Error> {
-        #[derive(RustcDecodable)]
+impl<'a> Deserialize<'a> for SingleFile {
+    fn deserialize<D: Deserializer<'a>>(d: D) -> Result<Self, D::Error> {
+        #[derive(Deserialize)]
         pub struct Internal {
             pub path: PathBuf,
             pub content_type: String,
             pub pool: DiskPoolName,
             pub extra_headers: HashMap<String, String>,
         }
-        let int = Internal::decode(d)?;
+        let int = Internal::deserialize(d)?;
         if header_contains(&int.extra_headers, "Content-Type") {
-            return Err(d.error("Content-Type must be specified as \
+            return Err(D::Error::custom("Content-Type must be specified as \
                 `content-type` parameter rather than in `extra-headers` \
                 in `!SingleFile` handler."));
         }
@@ -175,9 +175,9 @@ impl Decodable for SingleFile {
     }
 }
 
-impl Decodable for VersionedStatic {
-    fn decode<D: Decoder>(d: &mut D) -> Result<Self, D::Error> {
-        #[derive(RustcDecodable)]
+impl<'a> Deserialize<'a> for VersionedStatic {
+    fn deserialize<D: Deserializer<'a>>(d: D) -> Result<Self, D::Error> {
+        #[derive(Deserialize)]
         pub struct Internal {
             pub versioned_root: PathBuf,
             pub plain_root: PathBuf,
@@ -190,7 +190,7 @@ impl Decodable for VersionedStatic {
             pub pool: DiskPoolName,
             pub extra_headers: HashMap<String, String>,
         }
-        let int = Internal::decode(d)?;
+        let int = Internal::deserialize(d)?;
         return Ok(VersionedStatic {
             version_len: int.version_split.iter().map(|&x| x as usize).sum(),
             overrides_content_type:

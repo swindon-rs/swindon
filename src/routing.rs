@@ -2,8 +2,9 @@ use std::collections::{HashMap, BTreeMap};
 use std::str::FromStr;
 
 use regex::{self, RegexSet};
-use rustc_serialize::{Decoder, Decodable};
+use serde::de::{Deserializer, Deserialize, Error};
 
+use config::visitors::FromStrVisitor;
 
 pub type Path = Option<String>;
 
@@ -15,6 +16,9 @@ pub struct RoutingTable<H> {
 
 #[derive(Debug, PartialEq, Eq, Hash)]
 pub struct Host(bool, String);
+
+#[derive(Debug, PartialEq, Eq, Hash)]
+pub struct HostPath(Host, Path);
 
 impl Host {
     pub fn matches_www(&self) -> bool {
@@ -30,22 +34,24 @@ impl<H: PartialEq> PartialEq for RoutingTable<H> {
 
 impl<H: Eq> Eq for RoutingTable<H> {}
 
-impl<T: Decodable> Decodable for RoutingTable<T> {
-    fn decode<D: Decoder>(d: &mut D) -> Result<Self, D::Error> {
-        d.read_map(|mut d, n| {
-            let mut rv = HashMap::new();
-            for idx in 0..n {
-                let (host, path) = d.read_map_elt_key(idx, |mut d| {
-                    d.read_str().map(parse_host_path)
-                })?;
-                let val = d.read_map_elt_val(idx, T::decode)?;
-                rv.entry(host)
-                .or_insert_with(|| BTreeMap::new())
-                .insert(path, val);
-            }
-            RoutingTable::new(rv).map_err(|e| d.error(
-                &format!("Can't compile routing table: {}", e)))
-        })
+impl<'a> Deserialize<'a> for HostPath {
+    fn deserialize<D: Deserializer<'a>>(d: D) -> Result<Self, D::Error> {
+        d.deserialize_str(FromStrVisitor::new(
+            "hostname or hostname/path"))
+    }
+}
+
+impl<'a, T: Deserialize<'a>> Deserialize<'a> for RoutingTable<T> {
+    fn deserialize<D: Deserializer<'a>>(d: D) -> Result<Self, D::Error> {
+        let tmp: HashMap<HostPath, T> = Deserialize::deserialize(d)?;
+        let mut rv = HashMap::new();
+        for (HostPath(host, path), dest) in tmp {
+            rv.entry(host)
+            .or_insert_with(|| BTreeMap::new())
+            .insert(path, dest);
+        }
+       Ok(RoutingTable::new(rv).map_err(|e| D::Error::custom(
+                &format!("Can't compile routing table: {}", e)))?)
     }
 }
 
@@ -95,9 +101,9 @@ impl<T> RoutingTable<T> {
 }
 
 impl FromStr for Host {
-    type Err = ();
+    type Err = String;
 
-    fn from_str(val: &str) -> Result<Host, ()> {
+    fn from_str(val: &str) -> Result<Host, String> {
         if val == "*" {
             Ok(Host(true, String::from("")))
         } else if val.starts_with("*.") {
@@ -108,17 +114,21 @@ impl FromStr for Host {
     }
 }
 
-fn parse_host_path(val: String) -> (Host, Path) {
-    let (host, path) = if let Some(i) = val.find('/') {
-        if &val[i..] == "/" {
-            (&val[..i], None)
+
+impl FromStr for HostPath {
+    type Err = String;
+    fn from_str(val: &str) -> Result<HostPath, String> {
+        let (host, path) = if let Some(i) = val.find('/') {
+            if &val[i..] == "/" {
+                (&val[..i], None)
+            } else {
+                (&val[..i], Some(val[i..].to_string()))
+            }
         } else {
-            (&val[..i], Some(val[i..].to_string()))
-        }
-    } else {
-        (val.as_str(), None)
-    };
-    (host.parse().unwrap(), path)
+            (val, None)
+        };
+        Ok(HostPath(host.parse().unwrap(), path))
+    }
 }
 
 /// Map host port to a route of arbitrary type
@@ -301,8 +311,12 @@ mod route_test {
 
 #[cfg(test)]
 mod parse_test {
-    use super::Host;
-    use super::parse_host_path;
+    use super::{HostPath, Host, Path};
+
+    fn parse_host_path(s: String) -> (Host, Path) {
+        let HostPath(host, path) = s.parse().unwrap();
+        return (host, path);
+    }
 
     #[test]
     fn simple() {

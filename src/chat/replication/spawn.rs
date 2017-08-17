@@ -36,7 +36,7 @@ pub fn listen(addr: SocketAddr, sender: IncomingChannel,
 
     let listener = TcpListener::bind(&addr, &handle)?;
     handle.spawn(listener.incoming()
-        .sleep_on_error(*settings.listen_error_timeout, &handle)
+        .sleep_on_error(settings.listen_error_timeout, &handle)
         .map(move |(socket, _)| {
             let disp = Incoming::new(sender.clone(), srv_id, &h1);
             Proto::new(socket, &hcfg, disp, &h1)

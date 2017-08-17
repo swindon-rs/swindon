@@ -18,6 +18,7 @@ pub mod http_destinations;
 pub mod ldap;
 pub mod log;
 pub mod networks;
+pub mod visitors;
 // handlers
 pub mod chat;
 pub mod static_files;
@@ -260,9 +261,9 @@ pub mod test {
         let cfg = make_config();
 
         let p = cfg.session_pools.get("example-session").unwrap();
-        assert_eq!(*p.new_connection_idle_timeout, Duration::from_secs(60));
-        assert_eq!(*p.client_min_idle_timeout, Duration::from_secs(1));
-        assert_eq!(*p.client_max_idle_timeout, Duration::from_secs(7200));
-        assert_eq!(*p.client_default_idle_timeout, Duration::from_secs(1));
+        assert_eq!(p.new_connection_idle_timeout, Duration::from_secs(60));
+        assert_eq!(p.client_min_idle_timeout, Duration::from_secs(1));
+        assert_eq!(p.client_max_idle_timeout, Duration::from_secs(7200));
+        assert_eq!(p.client_default_idle_timeout, Duration::from_secs(1));
     }
 }

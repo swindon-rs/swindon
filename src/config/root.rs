@@ -4,7 +4,6 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use quire::validate::{Structure, Sequence, Mapping, Scalar, Numeric};
-use quire::De;
 
 use intern::{HandlerName, Upstream, SessionPoolName, DiskPoolName};
 use intern::{LdapUpstream, Network, Authorizer as AuthorizerName};
@@ -22,19 +21,27 @@ use config::networks;
 use config::disk::{self, Disk};
 use super::replication::{self, Replication};
 
-#[derive(RustcDecodable, PartialEq, Eq, Debug)]
+#[derive(Deserialize, PartialEq, Eq, Debug)]
 pub struct ConfigData {
     pub listen: Vec<ListenSocket>,
     pub max_connections: usize,
     pub pipeline_depth: usize,
-    pub listen_error_timeout: De<Duration>,
-    pub first_byte_timeout: De<Duration>,
-    pub keep_alive_timeout: De<Duration>,
-    pub headers_timeout: De<Duration>,
-    pub input_body_byte_timeout: De<Duration>,
-    pub input_body_whole_timeout: De<Duration>,
-    pub output_body_byte_timeout: De<Duration>,
-    pub output_body_whole_timeout: De<Duration>,
+    #[serde(with="::quire::duration")]
+    pub listen_error_timeout: Duration,
+    #[serde(with="::quire::duration")]
+    pub first_byte_timeout: Duration,
+    #[serde(with="::quire::duration")]
+    pub keep_alive_timeout: Duration,
+    #[serde(with="::quire::duration")]
+    pub headers_timeout: Duration,
+    #[serde(with="::quire::duration")]
+    pub input_body_byte_timeout: Duration,
+    #[serde(with="::quire::duration")]
+    pub input_body_whole_timeout: Duration,
+    #[serde(with="::quire::duration")]
+    pub output_body_byte_timeout: Duration,
+    #[serde(with="::quire::duration")]
+    pub output_body_whole_timeout: Duration,
 
     pub routing: Routing,
     pub authorization: Authorization,

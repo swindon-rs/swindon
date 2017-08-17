@@ -78,7 +78,7 @@ pub fn include_file(files: &RefCell<&mut Vec<(PathBuf, String, Metadata)>>,
                 m
             })
             .map_err(|e| {
-                err.add_error(quire::Error::OpenError(path.clone(), e))
+                err.add_error(quire::Error::open_error(&path, e))
             }).ok()
             .and_then(|metadata| {
                 files.borrow_mut().push((

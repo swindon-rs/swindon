@@ -5,12 +5,12 @@ use quire::validate::{Structure, Sequence, Mapping, Scalar};
 use intern::LdapUpstream;
 
 
-#[derive(RustcDecodable, PartialEq, Eq, Debug)]
+#[derive(Deserialize, PartialEq, Eq, Debug)]
 pub struct Destination {
     pub addresses: Vec<String>,
 }
 
-#[derive(RustcDecodable, Debug, PartialEq, Eq)]
+#[derive(Deserialize, Debug, PartialEq, Eq)]
 pub struct Query {
     pub search_base: String,
     pub fetch_attribute: String,
@@ -18,7 +18,7 @@ pub struct Query {
     pub dn_attribute_strip_base: Option<String>,
 }
 
-#[derive(RustcDecodable, Debug, PartialEq, Eq)]
+#[derive(Deserialize, Debug, PartialEq, Eq)]
 pub struct Ldap {
     pub destination: LdapUpstream,
     pub search_base: String,

@@ -158,8 +158,8 @@ impl Dispatcher {
     }
 
     fn update_activity(&self, seconds: u64) {
-        let min = *self.pool_settings.client_min_idle_timeout;
-        let max = *self.pool_settings.client_max_idle_timeout;
+        let min = self.pool_settings.client_min_idle_timeout;
+        let max = self.pool_settings.client_max_idle_timeout;
         let seconds = Duration::from_secs(seconds);
         let seconds = cmp::max(cmp::min(seconds, max), min);
         let timestamp = Instant::now() + seconds;

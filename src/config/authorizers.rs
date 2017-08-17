@@ -6,7 +6,7 @@ use config::ldap;
 use config::networks;
 
 
-#[derive(RustcDecodable, Debug, PartialEq, Eq)]
+#[derive(Deserialize, Debug, PartialEq, Eq)]
 pub enum Authorizer {
     SourceIp(Arc<networks::SourceIpAuthorizer>),
     Ldap(Arc<ldap::Ldap>),

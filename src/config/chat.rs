@@ -1,14 +1,16 @@
 use std::collections::BTreeMap;
 use std::ops::Deref;
+use std::str::FromStr;
 
-use rustc_serialize::{Encodable, Encoder, Decodable, Decoder};
+use serde::de::{Deserialize, Deserializer, Error};
 use quire::validate::{Structure, Scalar, Mapping};
 
 use super::http;
 use intern::{HandlerName, SessionPoolName};
+use config::visitors::FromStrVisitor;
 
 
-#[derive(RustcDecodable, Debug, PartialEq, Eq)]
+#[derive(Deserialize, Debug, PartialEq, Eq)]
 pub struct Chat {
     pub allow_empty_subprotocol: bool,
     pub session_pool: SessionPoolName,
@@ -49,6 +51,7 @@ pub fn validator<'x>() -> Structure<'x> {
         Mapping::new(Scalar::new(), http::destination_validator()))
 }
 
+/*
 impl Encodable for Pattern {
     fn encode<S: Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
         match *self {
@@ -59,18 +62,26 @@ impl Encodable for Pattern {
         Ok(())
     }
 }
+*/
 
-impl Decodable for Pattern {
-    fn decode<D: Decoder>(d: &mut D) -> Result<Self, D::Error> {
-        let s = d.read_str()?;
-        if s.as_str() == "*" {
+impl FromStr for Pattern {
+    type Err = String;
+    fn from_str(s: &str) -> Result<Pattern, String> {
+        if s == "*" {
             Ok(Pattern::Default)
-        } else if s.as_str().ends_with(".*") {
+        } else if s.ends_with(".*") {
             let (p, _) = s.split_at(s.len()-1);
             Ok(Pattern::Glob(p.to_string()))
         } else {
-            Ok(Pattern::Exact(s))
+            Ok(Pattern::Exact(s.to_string()))
         }
+    }
+}
+
+impl<'a> Deserialize<'a> for Pattern {
+    fn deserialize<D: Deserializer<'a>>(d: D) -> Result<Self, D::Error> {
+        d.deserialize_str(FromStrVisitor::new(
+            "exact string, or asterisk, or pattern that ends with `.*`"))
     }
 }
 
@@ -91,11 +102,11 @@ impl Pattern {
     }
 }
 
-impl Decodable for RoutingTable {
-    fn decode<D: Decoder>(d: &mut D) -> Result<Self, D::Error> {
-        let mut tmp = BTreeMap::<Pattern, http::Destination>::decode(d)?;
+impl<'a> Deserialize<'a> for RoutingTable {
+    fn deserialize<D: Deserializer<'a>>(d: D) -> Result<Self, D::Error> {
+        let mut tmp = BTreeMap::<Pattern, http::Destination>::deserialize(d)?;
         let default = tmp.remove(&Pattern::Default)
-            .ok_or(d.error("No default route"))?;
+            .ok_or(D::Error::custom("No default route"))?;
         Ok(RoutingTable {
             default: default,
             map: tmp,
@@ -122,21 +133,21 @@ impl RoutingTable {
 
 #[cfg(test)]
 mod test {
-    use rustc_serialize::json;
+    use serde_json::from_str;
     use super::Pattern;
 
     #[test]
     fn decode_pattern() {
-        let p: Pattern = json::decode(r#""*""#).unwrap();
+        let p: Pattern = from_str(r#""*""#).unwrap();
         assert_eq!(p, Pattern::Default);
 
-        let p: Pattern = json::decode(r#""hello.world""#).unwrap();
+        let p: Pattern = from_str(r#""hello.world""#).unwrap();
         assert_eq!(p, Pattern::Exact("hello.world".to_string()));
 
-        let p: Pattern = json::decode(r#""hello.world*""#).unwrap();
+        let p: Pattern = from_str(r#""hello.world*""#).unwrap();
         assert_eq!(p, Pattern::Exact("hello.world*".to_string()));
 
-        let p: Pattern = json::decode(r#""hello.*""#).unwrap();
+        let p: Pattern = from_str(r#""hello.*""#).unwrap();
         assert_eq!(p, Pattern::Glob("hello.".to_string()));
     }
 }

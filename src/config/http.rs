@@ -1,9 +1,10 @@
 use std::str::FromStr;
 
-use rustc_serialize::{Decoder, Decodable};
+use serde::de::{Deserializer, Deserialize};
 use quire::validate::{Scalar};
 
 use intern::Upstream;
+use config::visitors::FromStrVisitor;
 
 
 pub fn destination_validator() -> Scalar {
@@ -16,11 +17,9 @@ pub struct Destination {
     pub path: String,
 }
 
-impl Decodable for Destination {
-    fn decode<D: Decoder>(d: &mut D) -> Result<Self, D::Error> {
-        d.read_str()?
-        .parse()
-        .map_err(|e: String| d.error(&e))
+impl<'a> Deserialize<'a> for Destination {
+    fn deserialize<D: Deserializer<'a>>(d: D) -> Result<Self, D::Error> {
+        d.deserialize_str(FromStrVisitor::new("upstream/path"))
     }
 }
 

@@ -48,7 +48,7 @@ pub fn listen(addr: SocketAddr, worker_data: &Arc<WorkerData>,
 
     worker_data.handle.spawn(
         listener.incoming()
-        .sleep_on_error(*w1.settings.listen_error_timeout, &runtime.handle)
+        .sleep_on_error(w1.settings.listen_error_timeout, &runtime.handle)
         .map(move |(socket, saddr)| {
              Proto::new(socket, &hcfg, Handler::new(saddr, w2.clone()), &h1)
              .map_err(|e| debug!("Chat backend protocol error: {}", e))

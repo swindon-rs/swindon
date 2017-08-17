@@ -76,9 +76,9 @@ impl HttpPools {
                 let conn_config = HConfig::new()
                     .inflight_request_limit(
                         dest.in_flight_requests_per_backend_connection)
-                    .keep_alive_timeout(*dest.keep_alive_timeout)
-                    .safe_pipeline_timeout(*dest.safe_pipeline_timeout)
-                    .max_request_timeout(*dest.max_request_timeout)
+                    .keep_alive_timeout(dest.keep_alive_timeout)
+                    .safe_pipeline_timeout(dest.safe_pipeline_timeout)
+                    .max_request_timeout(dest.max_request_timeout)
                     .done();
                 let pool_config = PConfig::new()
                     .connections_per_address(

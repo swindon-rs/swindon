@@ -1,17 +1,18 @@
 use std::time::Duration;
 use quire::validate::{Structure, Sequence, Scalar, Numeric};
-use quire::De;
 
 use super::listen::{self, ListenSocket};
 
 
-#[derive(Debug, RustcDecodable, PartialEq, Eq)]
+#[derive(Debug, Deserialize, PartialEq, Eq)]
 pub struct Replication {
     pub listen: Vec<ListenSocket>,
     pub peers: Vec<String>,
     pub max_connections: usize,
-    pub listen_error_timeout: De<Duration>,
-    pub reconnect_timeout: De<Duration>,
+    #[serde(with="::quire::duration")]
+    pub listen_error_timeout: Duration,
+    #[serde(with="::quire::duration")]
+    pub reconnect_timeout: Duration,
 }
 
 pub fn validator<'x>() -> Structure<'x> {

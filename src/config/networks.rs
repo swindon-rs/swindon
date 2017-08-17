@@ -1,9 +1,11 @@
 use std::fmt;
+use std::str::FromStr;
 use std::net::IpAddr;
 
 use quire::validate::{Structure, Sequence, Scalar};
-use rustc_serialize::{Decodable, Decoder};
+use serde::de::{Deserializer, Deserialize};
 
+use config::visitors::FromStrVisitor;
 use intern::Network;
 
 #[derive(Debug, PartialEq, Eq)]
@@ -14,7 +16,7 @@ pub struct NetworkList {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Subnet(IpAddr, u32);
 
-#[derive(RustcDecodable, Debug, PartialEq, Eq)]
+#[derive(Deserialize, Debug, PartialEq, Eq)]
 pub struct SourceIpAuthorizer {
     pub allowed_network: Network,
     pub forwarded_ip_header: Option<String>,
@@ -32,51 +34,54 @@ pub fn validator<'x>() -> Sequence<'x> {
     Sequence::new(Scalar::new())
 }
 
-impl Decodable for NetworkList {
-    fn decode<D: Decoder>(d: &mut D) -> Result<Self, D::Error> {
-        d.read_seq(|d, num| {
-            let mut result = Vec::new();
-            for i in 0..num {
-                result.push(d.read_seq_elt(i, |d| {
-                    let item = d.read_str()?;
-                    if let Some(pos) = item.find('/') {
-                        let ip = item[..pos].parse::<IpAddr>()
-                            .map_err(|e| d.error(&e.to_string()))?;
-                        let mask = item[pos+1..].parse::<u32>()
-                            .map_err(|e| d.error(&e.to_string()))?;
-                        let max_mask = match ip {
-                            IpAddr::V4(_) => 24,
-                            IpAddr::V6(_) => 128,
-                        };
-                        if mask % 8 != 0 {
-                            return Err(d.error("Subnet mask must \
-                                be multiple of eight"));
-                        }
-                        if mask > max_mask {
-                            return Err(d.error(
-                                &format!("Mask must be {} at max", max_mask)));
-                        }
-                        Ok(Subnet(ip, mask))
-                    } else {
-                        let ip = item.parse::<IpAddr>()
-                            .map_err(|e| d.error(&e.to_string()))?;
-                        match ip {
-                            IpAddr::V4(_) => Ok(Subnet(ip, 24)),
-                            IpAddr::V6(_) => Ok(Subnet(ip, 128)),
-                        }
-                    }
-                })?);
-            }
-            Ok(NetworkList {
-                list: result,
-            })
-        })
+impl<'a> Deserialize<'a> for NetworkList {
+    fn deserialize<D: Deserializer<'a>>(d: D) -> Result<Self, D::Error> {
+        let networks: Vec<Subnet> = Deserialize::deserialize(d)?;
+        Ok(NetworkList { list: networks })
+    }
+}
+
+impl<'a> Deserialize<'a> for Subnet {
+    fn deserialize<D: Deserializer<'a>>(d: D) -> Result<Self, D::Error> {
+        d.deserialize_str(FromStrVisitor::new(
+            "ip_address or ip_address/network"))
     }
 }
 
 impl fmt::Display for Subnet {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}/{}", self.0, self.1)
+    }
+}
+
+
+impl FromStr for Subnet {
+    type Err = String;
+    fn from_str(item: &str) -> Result<Subnet, String> {
+        if let Some(pos) = item.find('/') {
+            let ip = item[..pos].parse::<IpAddr>()
+                .map_err(|e| e.to_string())?;
+            let mask = item[pos+1..].parse::<u32>()
+                .map_err(|e| e.to_string())?;
+            let max_mask = match ip {
+                IpAddr::V4(_) => 24,
+                IpAddr::V6(_) => 128,
+            };
+            if mask % 8 != 0 {
+                return Err("Subnet mask must be multiple of eight".into());
+            }
+            if mask > max_mask {
+                return Err(format!("Mask must be {} at max", max_mask));
+            }
+            Ok(Subnet(ip, mask))
+        } else {
+            let ip = item.parse::<IpAddr>()
+                .map_err(|e| e.to_string())?;
+            match ip {
+                IpAddr::V4(_) => Ok(Subnet(ip, 24)),
+                IpAddr::V6(_) => Ok(Subnet(ip, 128)),
+            }
+        }
     }
 }
 

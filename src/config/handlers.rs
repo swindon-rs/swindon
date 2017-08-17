@@ -10,7 +10,7 @@ use super::self_status;
 use super::static_files;
 
 
-#[derive(RustcDecodable, Debug, PartialEq, Eq)]
+#[derive(Deserialize, Debug, PartialEq, Eq)]
 pub enum Handler {
     SwindonChat(Arc<chat::Chat>),
     SwindonLattice(Arc<chat::Chat>),

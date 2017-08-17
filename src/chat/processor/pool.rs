@@ -96,7 +96,7 @@ impl Pool {
             connections: HashMap::new(),
             topics: HashMap::new(),
             lattices: HashMap::new(),
-            new_connection_timeout: (*cfg.new_connection_idle_timeout).clone(),
+            new_connection_timeout: (cfg.new_connection_idle_timeout).clone(),
         }
     }
 
@@ -549,7 +549,6 @@ mod test {
     use futures::sync::mpsc::{unbounded as channel};
     use futures::sync::mpsc::{UnboundedReceiver as Receiver};
     use intern::{SessionId, SessionPoolName, Lattice as Ns};
-    use quire::De;
 
     use string_intern::{Symbol, Validator};
     use config;
@@ -568,10 +567,10 @@ mod test {
                     config::ListenSocket::Tcp(
                     "127.0.0.1:65535".parse().unwrap())],
                 inactivity_handlers: Vec::new(),
-                new_connection_idle_timeout: De::new(Duration::from_secs(60)),
-                client_min_idle_timeout: De::new(Duration::from_secs(60)),
-                client_max_idle_timeout: De::new(Duration::from_secs(60)),
-                client_default_idle_timeout: De::new(Duration::from_secs(60)),
+                new_connection_idle_timeout: Duration::from_secs(60),
+                client_min_idle_timeout: Duration::from_secs(60),
+                client_max_idle_timeout: Duration::from_secs(60),
+                client_default_idle_timeout: Duration::from_secs(60),
                 max_connections: 100,
                 listen_error_timeout: Duration::from_secs(1).into(),
                 pipeline_depth: 2,

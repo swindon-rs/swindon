@@ -192,7 +192,7 @@ impl Watcher {
         use self::State::*;
 
         let now = Instant::now();
-        let timeout = now + *settings.reconnect_timeout;
+        let timeout = now + settings.reconnect_timeout;
 
         // TODO: use HashMap::retain() when in stable
         let to_delete = self.peers.keys()

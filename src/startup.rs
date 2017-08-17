@@ -48,19 +48,19 @@ pub fn spawn_listener(addr: SocketAddr, handle: &Handle,
         .inflight_request_limit(root.pipeline_depth)
         // TODO(tailhook) make it configurable?
         .inflight_request_prealoc(0)
-        .first_byte_timeout(*root.first_byte_timeout)
-        .keep_alive_timeout(*root.keep_alive_timeout)
-        .headers_timeout(*root.headers_timeout)
-        .input_body_byte_timeout(*root.input_body_byte_timeout)
-        .input_body_whole_timeout(*root.input_body_whole_timeout)
-        .output_body_byte_timeout(*root.output_body_byte_timeout)
-        .output_body_whole_timeout(*root.output_body_whole_timeout)
+        .first_byte_timeout(root.first_byte_timeout)
+        .keep_alive_timeout(root.keep_alive_timeout)
+        .headers_timeout(root.headers_timeout)
+        .input_body_byte_timeout(root.input_body_byte_timeout)
+        .input_body_whole_timeout(root.input_body_whole_timeout)
+        .output_body_byte_timeout(root.output_body_byte_timeout)
+        .output_body_whole_timeout(root.output_body_whole_timeout)
         .done();
     let h1 = handle.clone();
 
     handle.spawn(
         listener.incoming()
-        .sleep_on_error(*r1.config.get().listen_error_timeout, &r1.handle)
+        .sleep_on_error(r1.config.get().listen_error_timeout, &r1.handle)
         .map(move |(socket, saddr)| {
              Proto::new(socket, &hcfg,
                 Router::new(saddr, r2.clone(), h1.clone()), &h1)

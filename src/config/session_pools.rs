@@ -1,23 +1,27 @@
 use std::time::Duration;
-use quire::De;
 use quire::validate::{Structure, Sequence, Scalar, Numeric};
 
 use super::listen::{self, ListenSocket};
 use super::http;
 
-#[derive(RustcDecodable, Debug, PartialEq, Eq)]
+#[derive(Deserialize, Debug, PartialEq, Eq)]
 pub struct SessionPool {
     pub listen: Vec<ListenSocket>,
     pub max_connections: usize,
     pub pipeline_depth: usize,
-    pub listen_error_timeout: De<Duration>,
+    #[serde(with="::quire::duration")]
+    pub listen_error_timeout: Duration,
     pub max_payload_size: usize,
     pub inactivity_handlers: Vec<http::Destination>,
-    pub new_connection_idle_timeout: De<Duration>,
-    pub client_min_idle_timeout: De<Duration>,
-    pub client_max_idle_timeout: De<Duration>,
+    #[serde(with="::quire::duration")]
+    pub new_connection_idle_timeout: Duration,
+    #[serde(with="::quire::duration")]
+    pub client_min_idle_timeout: Duration,
+    #[serde(with="::quire::duration")]
+    pub client_max_idle_timeout: Duration,
     // XXX: never used
-    pub client_default_idle_timeout: De<Duration>,
+    #[serde(with="::quire::duration")]
+    pub client_default_idle_timeout: Duration,
 }
 
 

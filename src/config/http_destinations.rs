@@ -2,24 +2,26 @@ use std::time::Duration;
 
 use quire::validate::{Structure, Scalar, Enum, Numeric, Nothing};
 use quire::validate::{Sequence};
-use quire::De;
 
-#[derive(RustcDecodable, Debug, PartialEq, Eq)]
+#[derive(Deserialize, Debug, PartialEq, Eq)]
 #[allow(non_camel_case_types)]
 pub enum LoadBalancing {
     queue,
 }
 
-#[derive(RustcDecodable, Debug, PartialEq, Eq)]
+#[derive(Deserialize, Debug, PartialEq, Eq)]
 pub struct Destination {
     pub load_balancing: LoadBalancing,
     pub queue_size_for_503: usize,
     pub backend_connections_per_ip_port: usize,
     pub in_flight_requests_per_backend_connection: usize,
     pub addresses: Vec<String>,
-    pub keep_alive_timeout: De<Duration>,
-    pub max_request_timeout: De<Duration>,
-    pub safe_pipeline_timeout: De<Duration>,
+    #[serde(with="::quire::duration")]
+    pub keep_alive_timeout: Duration,
+    #[serde(with="::quire::duration")]
+    pub max_request_timeout: Duration,
+    #[serde(with="::quire::duration")]
+    pub safe_pipeline_timeout: Duration,
     pub override_host_header: Option<String>,
     pub request_id_header: Option<String>,
 }
