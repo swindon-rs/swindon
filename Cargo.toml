@@ -38,7 +38,7 @@ httpbin = "0.3.1"
 slab = "0.3.0"
 matches = "0.1.4"
 assert_matches = "1.0.1"
-string-intern = "0.1.5"
+string-intern = {version="0.1.7", features=["serde"], default-features=false}
 rand = "0.3.14"
 tk-pool = "0.3.1"
 tk-listen = "0.1.0"

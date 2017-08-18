@@ -628,11 +628,6 @@ version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
-name = "rustc-serialize"
-version = "0.3.24"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-
-[[package]]
 name = "scoped-tls"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -724,7 +719,6 @@ version = "0.1.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "lazy_static 0.2.8 (registry+https://github.com/rust-lang/crates.io-index)",
- "rustc-serialize 0.3.24 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.11 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -1052,7 +1046,6 @@ dependencies = [
 "checksum regex 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)" = "1731164734096285ec2a5ec7fea5248ae2f5485b3feeb0115af4fda2183b2d1b"
 "checksum regex-syntax 0.3.9 (registry+https://github.com/rust-lang/crates.io-index)" = "f9ec002c35e86791825ed294b50008eea9ddfc8def4420124fbc6b08db834957"
 "checksum regex-syntax 0.4.1 (registry+https://github.com/rust-lang/crates.io-index)" = "ad890a5eef7953f55427c50575c680c42841653abd2b028b68cd223d157f62db"
-"checksum rustc-serialize 0.3.24 (registry+https://github.com/rust-lang/crates.io-index)" = "dcf128d1287d2ea9d80910b5f1120d0b8eede3fbf1abe91c40d39ea7d51e6fda"
 "checksum scoped-tls 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "f417c22df063e9450888a7561788e9bd46d3bb3c1466435b4eccb903807f147d"
 "checksum self-meter 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)" = "7f5db5de2ab21bed9d4cde060886b4fdbee58a9d8a95c8becc7ea549a7ba8bc8"
 "checksum self-meter-http 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)" = "4bed4b596fb6c5cbf72e1a0417390c96cad60d8b8768f5e97662c43a860af663"
