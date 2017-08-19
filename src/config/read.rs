@@ -1,19 +1,20 @@
-use std::io::{self, Read};
-use std::rc::Rc;
-use std::fs::{File, Metadata, metadata};
 use std::cell::RefCell;
+use std::collections::HashMap;
+use std::fmt;
+use std::fs::{File, Metadata, metadata};
+use std::io::{self, Read};
 use std::path::{PathBuf, Path, Component};
+use std::rc::Rc;
 
 use quire::{self, Pos, Include, ErrorCollector, Options, parse_config};
 use quire::{raw_parse as parse_yaml};
 use quire::ast::{Ast, process as process_ast};
 
-use super::ConfigData;
-use super::root::config_validator;
+use config::root::{ConfigData, Mixin, config_validator, mixin_validator};
 use super::Handler;
 use config::static_files::Mode;
 use config::log;
-use intern::LogFormatName;
+use intern::{LogFormatName};
 
 
 quick_error! {
@@ -34,6 +35,23 @@ quick_error! {
             description("validation error")
             from()
         }
+        BadMixinPath(filename: PathBuf) {
+            display("bad mixin path: {:?}, \
+                only relative paths are allowed", filename)
+            description("bad mixin path")
+        }
+        InvalidPrefixInMixin(prefix: String, filename: PathBuf,
+                             typ: &'static str, name: String)
+        {
+            display("mixin {:?} has {} named {:?} without prefix {:?}",
+                filename, typ, name, prefix)
+            description("item in mixin file has invalid prefix")
+        }
+        MixinConflict(filename: PathBuf, typ: &'static str, name: String) {
+            display("mixin {:?} has overlapping {} {:?}",
+                filename, typ, name)
+            description("mixin has overlapping item")
+        }
     }
 }
 
@@ -44,6 +62,19 @@ macro_rules! err {
     )
 }
 
+fn join_filename(base: &Path, relative: &Path) -> Result<PathBuf, ()> {
+    let mut path = PathBuf::from(&*base);
+    path.pop(); // pop original filename
+    for component in relative.components() {
+        match component {
+            Component::Normal(x) => path.push(x),
+            _ => {
+                return Err(());
+            }
+        }
+    }
+    Ok(path)
+}
 
 #[allow(dead_code)]
 pub fn include_file(files: &RefCell<&mut Vec<(PathBuf, String, Metadata)>>,
@@ -53,20 +84,18 @@ pub fn include_file(files: &RefCell<&mut Vec<(PathBuf, String, Metadata)>>,
 {
     match *include {
         Include::File { filename } => {
-            let mut path = PathBuf::from(&*pos.filename);
-            path.pop(); // pop original filename
-            for component in Path::new(filename).components() {
-                match component {
-                    Component::Normal(x) => path.push(x),
-                    _ => {
-                        // TODO(tailhook) should this error exist?
-                        err.add_error(quire::Error::preprocess_error(pos,
-                            format!("Only relative paths without parent \
-                                     directories can be included")));
-                        return Ast::void(pos);
-                    }
+            let path = match join_filename(&Path::new(&**pos.filename),
+                                           &Path::new(filename))
+            {
+                Ok(path) => path,
+                Err(()) => {
+                    // TODO(tailhook) should this error exist?
+                    err.add_error(quire::Error::preprocess_error(pos,
+                        format!("Only relative paths without parent \
+                                 directories can be included")));
+                    return Ast::void(pos);
                 }
-            }
+            };
 
             debug!("{} Including {:?}", pos, path);
 
@@ -95,6 +124,40 @@ pub fn include_file(files: &RefCell<&mut Vec<(PathBuf, String, Metadata)>>,
     }
 }
 
+fn prefix_error<N: fmt::Display>(prefix: &str, filename: &Path,
+    typ: &'static str, name: &N)
+    -> Error
+{
+    Error::InvalidPrefixInMixin(prefix.to_string(), filename.to_path_buf(),
+        typ, name.to_string())
+}
+
+fn conflict<N: fmt::Display>(filename: &Path, typ: &'static str, name: N)
+    -> Error
+{
+    Error::MixinConflict(filename.to_path_buf(), typ, name.to_string())
+}
+
+fn mix_in<K, V>(
+    filename: &Path, prefix: &str,
+    dest: &mut HashMap<K, V>, src: HashMap<K, V>,
+    typ: &'static str)
+    -> Result<(), Error>
+    where K: ::std::hash::Hash + ::std::ops::Deref<Target=str>,
+          K: ::std::fmt::Display + Eq,
+{
+    for (h, handler) in src {
+        if !(&*h).starts_with(prefix) {
+            return Err(prefix_error(prefix, filename, typ, &h));
+        }
+        if dest.contains_key(&h) {
+            return Err(conflict(filename, typ, &h));
+        }
+        dest.insert(h, handler);
+    }
+    Ok(())
+}
+
 pub fn read_config<P: AsRef<Path>>(filename: P)
     -> Result<(ConfigData, Vec<(PathBuf, String, Metadata)>), Error>
 {
@@ -112,6 +175,40 @@ pub fn read_config<P: AsRef<Path>>(filename: P)
             |a, b, c, d| include_file(&cell, a, b, c, d));
         parse_config(filename, &config_validator(), &opt)?
     };
+
+    for (prefix, ref incl) in &cfg.mixins {
+        let incl_path = join_filename(filename, &Path::new(incl))
+            .map_err(|()| Error::BadMixinPath(filename.to_path_buf()))?;
+        files.push((
+            incl_path.clone(),
+            incl.display().to_string(),
+            metadata(&incl_path)?,
+        ));
+
+        let mixin: Mixin = {
+            let cell = RefCell::new(&mut files);
+            let mut opt = Options::default();
+            opt.allow_include(
+                |a, b, c, d| include_file(&cell, a, b, c, d));
+            parse_config(&incl_path, &mixin_validator(), &opt)?
+        };
+        mix_in(&incl_path, prefix,
+               &mut cfg.handlers, mixin.handlers, "handler")?;
+        mix_in(&incl_path, prefix,
+               &mut cfg.authorizers, mixin.authorizers, "authorizer")?;
+        mix_in(&incl_path, prefix,
+               &mut cfg.session_pools, mixin.session_pools, "session-pool")?;
+        mix_in(&incl_path, prefix, &mut cfg.http_destinations,
+            mixin.http_destinations, "http-destination")?;
+        mix_in(&incl_path, prefix, &mut cfg.ldap_destinations,
+            mixin.ldap_destinations, "ldap-destination")?;
+        mix_in(&incl_path, prefix,
+            &mut cfg.networks, mixin.networks, "network")?;
+        mix_in(&incl_path, prefix,
+            &mut cfg.log_formats, mixin.log_formats, "log-format")?;
+        mix_in(&incl_path, prefix,
+            &mut cfg.disk_pools, mixin.disk_pools, "disk-pools")?;
+    }
 
     // Set some defaults
     if !cfg.log_formats.contains_key("debug-log") {

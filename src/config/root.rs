@@ -2,6 +2,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
+use std::path::PathBuf;
 
 use quire::validate::{Structure, Sequence, Mapping, Scalar, Numeric};
 
@@ -20,6 +21,22 @@ use config::log;
 use config::networks;
 use config::disk::{self, Disk};
 use super::replication::{self, Replication};
+
+
+#[derive(Deserialize, PartialEq, Eq, Debug)]
+pub struct Mixin {
+    pub handlers: HashMap<HandlerName, Handler>,
+    pub authorizers: HashMap<AuthorizerName, Authorizer>,
+    pub session_pools: HashMap<SessionPoolName, Arc<SessionPool>>,
+    pub http_destinations: HashMap<Upstream, Arc<Destination>>,
+    pub ldap_destinations: HashMap<LdapUpstream, ldap::Destination>,
+    pub networks: HashMap<Network, networks::NetworkList>,
+    pub log_formats: HashMap<LogFormatName, log::Format>,
+    /// Note: "default" disk pool is always created, the only thing you can
+    /// do is to update it's pool size, It's pool size can't be less than
+    /// one, however.
+    pub disk_pools: HashMap<DiskPoolName, Disk>,
+}
 
 #[derive(Deserialize, PartialEq, Eq, Debug)]
 pub struct ConfigData {
@@ -53,6 +70,10 @@ pub struct ConfigData {
     pub ldap_destinations: HashMap<LdapUpstream, ldap::Destination>,
     pub networks: HashMap<Network, networks::NetworkList>,
     pub log_formats: HashMap<LogFormatName, log::Format>,
+    /// Note: "default" disk pool is always created, the only thing you can
+    /// do is to update it's pool size, It's pool size can't be less than
+    /// one, however.
+    pub disk_pools: HashMap<DiskPoolName, Disk>,
 
     pub replication: Arc<Replication>,
     pub debug_routing: bool,
@@ -62,10 +83,35 @@ pub struct ConfigData {
     pub set_user: Option<String>,
     pub set_group: Option<String>,
 
-    /// Note: "default" disk pool is always created, the only thing you can
-    /// do is to update it's pool size, It's pool size can't be less than
-    /// one, however.
-    pub disk_pools: HashMap<DiskPoolName, Disk>,
+    pub mixins: HashMap<String, PathBuf>,
+}
+
+trait MixinSections {
+    fn add_sections(self) -> Self;
+}
+
+impl<'a> MixinSections for Structure<'a> {
+    fn add_sections(self) -> Self {
+        self
+        .member("handlers", Mapping::new(Scalar::new(), handlers::validator()))
+        .member("authorizers",
+            Mapping::new(Scalar::new(), authorizers::validator()))
+        .member("session_pools",
+            Mapping::new(Scalar::new(), session_pools::validator()))
+        .member("http_destinations",
+            Mapping::new(Scalar::new(), http_destinations::validator()))
+        .member("ldap_destinations",
+            Mapping::new(Scalar::new(), ldap::destination_validator()))
+        .member("networks", Mapping::new(Scalar::new(), networks::validator()))
+        .member("log_formats", Mapping::new(Scalar::new(),
+            log::format_validator()))
+        .member("disk_pools", Mapping::new(Scalar::new(), disk::validator()))
+    }
+}
+
+pub fn mixin_validator<'a>() -> Structure<'a> {
+    Structure::new()
+    .add_sections()
 }
 
 pub fn config_validator<'a>() -> Structure<'a> {
@@ -88,19 +134,6 @@ pub fn config_validator<'a>() -> Structure<'a> {
     .member("routing", routing::validator())
     .member("authorization", authorization::validator())
 
-    .member("handlers", Mapping::new(Scalar::new(), handlers::validator()))
-    .member("authorizers",
-        Mapping::new(Scalar::new(), authorizers::validator()))
-    .member("session_pools",
-        Mapping::new(Scalar::new(), session_pools::validator()))
-    .member("http_destinations",
-        Mapping::new(Scalar::new(), http_destinations::validator()))
-    .member("ldap_destinations",
-        Mapping::new(Scalar::new(), ldap::destination_validator()))
-    .member("networks", Mapping::new(Scalar::new(), networks::validator()))
-    .member("log_formats", Mapping::new(Scalar::new(),
-        log::format_validator()))
-
     .member("replication", replication::validator())
     .member("debug_routing", Scalar::new().default(false))
     .member("debug_logging", Scalar::new().default(false))
@@ -108,5 +141,7 @@ pub fn config_validator<'a>() -> Structure<'a> {
         .default(concat!("swindon/", env!("CARGO_PKG_VERSION"))))
     .member("set_user", Scalar::new().optional())
     .member("set_group", Scalar::new().optional())
-    .member("disk_pools", Mapping::new(Scalar::new(), disk::validator()))
+
+    .member("mixins", Mapping::new(Scalar::new(), Scalar::new()))
+    .add_sections()
 }

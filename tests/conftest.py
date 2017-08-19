@@ -1,15 +1,16 @@
-import pytest
+import hashlib
+import json
+import os
 import pathlib
+import pytest
+import re
+import shutil
+import socket
+import string
 import subprocess
 import tempfile
-import os
-import string
-import socket
 import textwrap
-import hashlib
 import time
-import json
-import re
 
 import yarl
 import aiohttp
@@ -303,29 +304,43 @@ def check_config(request):
     return partial(_check_config, __swindon_bin=request.param)
 
 
-def _check_config(cfg='', returncode=1, *, __swindon_bin):
+def _check_config(cfg='', returncode=1, files={}, *, __swindon_bin):
     cfg = textwrap.dedent(cfg)
-    with tempfile.NamedTemporaryFile('wt') as f:
-        f.write(cfg)
-        f.flush()
+    if files:
+        dir = tempfile.mkdtemp()
+        try:
+            main = os.path.join(dir, 'main.yaml')
+            with open(os.path.join(dir, 'main.yaml'), 'wt') as f:
+                f.write(cfg)
+            for (name, text) in files.items():
+                with open(os.path.join(dir, name + '.yaml'), 'wt') as f:
+                    f.write(text)
+            return _run_check(__swindon_bin, main, returncode)
+        finally:
+            shutil.rmtree(dir)
+    else:
+        with tempfile.NamedTemporaryFile('wt') as f:
+            f.write(cfg)
+            f.flush()
+            return _run_check(__swindon_bin, f.name, returncode)
 
-        res = subprocess.run([
-            __swindon_bin,
-            '--check-config',
-            '--config',
-            f.name,
-            ],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            # encoding='utf-8',
-            timeout=15,
-            )
-        assert not res.stdout, res
-        assert res.returncode == returncode, res
-        # removes log timestamps
-        return re.sub(r"(?m)^[\d-]{10}T[\d:]{8}Z ", "",
-            res.stderr.decode('utf-8')
-            .replace(f.name, 'TEMP_FILE_NAME'))
+
+def _run_check(bin, file, returncode):
+    res = subprocess.run([
+        bin,
+        '--check-config',
+        '--config',
+        file,
+        ],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        # encoding='utf-8',
+        timeout=15,
+        )
+    assert not res.stdout, res
+    assert res.returncode == returncode, res
+    # removes log timestamps
+    return re.sub(r"(?m)^[\d-]{10}T[\d:]{8}Z ", "", res.stderr.decode('utf-8'))
 
 
 # helpers

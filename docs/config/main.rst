@@ -10,6 +10,11 @@ Main Configuration
 Sections
 --------
 
+All sections except routing can be put into a separate files using
+:ref:`mixins`.
+
+There are following sections:
+
 .. sect:: routing
 
    Describes routing table for all input requests. See :ref:`routing`

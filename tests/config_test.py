@@ -293,3 +293,41 @@ def test_no_inactivity(check_config):
     """
     err = check_config(cfg, returncode=0)
     assert err == ''
+
+def test_mixins(check_config):
+    err = check_config("""
+        routing:
+            localhost/some/path: app1-handler
+            localhost/other/path: app2-handler
+        mixins:
+            app1-: app1.yaml
+            app2-: app2.yaml
+    """, files=dict(
+        app1='''
+            handlers:
+                app1-handler: !EmptyGif
+        ''', app2='''
+            handlers:
+                app2-handler: !EmptyGif
+        '''),
+        returncode=0)
+    assert err == ''
+
+def test_bad_mixins(check_config):
+    err = check_config("""
+        routing:
+            localhost/some/path: handler
+            localhost/other/path: app2-handler
+        mixins:
+            app1-: app1.yaml
+            app2-: app2.yaml
+    """, files=dict(
+        app1='''
+            handlers:
+                handler: !EmptyGif
+        ''', app2='''
+            handlers:
+                app2-handler: !EmptyGif
+        '''))
+    assert ('app1.yaml" has handler named "handler" without prefix "app1-"'
+        ) in err

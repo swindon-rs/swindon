@@ -18,3 +18,4 @@ Configuration sections:
    auth
    ldap
    replication
+   mixins
