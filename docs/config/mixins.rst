@@ -44,7 +44,7 @@ Note the following things:
 1. Swindon ensures that all handlers, http-destinations, and other things
    are prefixed in a file, to avoid mistakes
 2. ``routing`` section is not mixed in. You can split it via
-    includes_ and merge-tags_ if you want.
+   includes_ and merge-tags_ if you want.
 3. You can mix and match different handlers in ``routing`` table as well
    as refer to the items accross files. There is no limitation on referencing,
    only on definition of items.
