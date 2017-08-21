@@ -25,6 +25,11 @@ def setup(app):
                 indextemplate="pair: %s; Request Handler",
                 domain_object_class=GenericObject,
             ),
+            crdt=dict(
+                objname="CRDT Type",
+                indextemplate="pair: %s; CRDT Type",
+                domain_object_class=GenericObject,
+            ),
         )))
 
 
