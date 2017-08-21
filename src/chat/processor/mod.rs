@@ -39,8 +39,10 @@ pub use self::main::{SESSION_POOLS};
 pub use self::pool::{ACTIVE_SESSIONS, INACTIVE_SESSIONS};
 pub use self::pool::{PUBSUB_INPUT, PUBSUB_OUTPUT, TOPICS};
 pub use self::pool::{LATTICES};
-pub use self::lattice::{SHARED_KEYS, SHARED_COUNTERS, SHARED_SETS};
-pub use self::lattice::{PRIVATE_KEYS, PRIVATE_COUNTERS, PRIVATE_SETS};
+pub use self::lattice::{SHARED_KEYS, PRIVATE_KEYS};
+pub use self::lattice::{SHARED_COUNTERS, PRIVATE_COUNTERS};
+pub use self::lattice::{SHARED_SETS, PRIVATE_SETS};
+pub use self::lattice::{SHARED_REGISTERS, PRIVATE_REGISTERS};
 pub use self::lattice::{SET_ITEMS};
 
 

@@ -6,6 +6,7 @@ use std::collections::hash_map::Entry::{Occupied, Vacant};
 
 use serde::ser::{Serialize, Serializer, SerializeMap};
 use serde::de::{self, Deserialize, Deserializer, Visitor, MapAccess};
+use serde_json::Value;
 
 use intern::{LatticeKey as Key, LatticeVar as Var, SessionId};
 use metrics::{Integer};
@@ -14,15 +15,21 @@ lazy_static! {
     pub static ref SHARED_KEYS: Integer = Integer::new();
     pub static ref SHARED_COUNTERS: Integer = Integer::new();
     pub static ref SHARED_SETS: Integer = Integer::new();
+    pub static ref SHARED_REGISTERS: Integer = Integer::new();
     pub static ref PRIVATE_KEYS: Integer = Integer::new();
     pub static ref PRIVATE_COUNTERS: Integer = Integer::new();
     pub static ref PRIVATE_SETS: Integer = Integer::new();
+    pub static ref PRIVATE_REGISTERS: Integer = Integer::new();
     pub static ref SET_ITEMS: Integer = Integer::new();
 }
 
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Register(f64, Arc<Value>);
+
 #[derive(Debug, Clone)]
 pub struct Counter(u64);
+
 // TODO(tailhook) implement some persistent hash set
 // TODO(tailhook) optimize set of only int-like values
 #[derive(Debug, Clone)]
@@ -37,6 +44,7 @@ trait Crdt: Clone + Sized {
 pub struct Values {
     counters: HashMap<Var, Counter>,
     sets: HashMap<Var, Set>,
+    registers: HashMap<Var, Register>,
 }
 
 pub struct Lattice {
@@ -56,6 +64,7 @@ impl Values {
         Values {
             counters: HashMap::new(),
             sets: HashMap::new(),
+            registers: HashMap::new(),
         }
     }
     pub fn update(&mut self, other: &Values) {
@@ -65,9 +74,14 @@ impl Values {
         for (key, value) in &other.sets {
             self.sets.insert(key.clone(), value.clone());
         }
+        for (key, value) in &other.registers {
+            self.registers.insert(key.clone(), value.clone());
+        }
     }
     pub fn is_empty(&self) -> bool {
-        self.counters.len() == 0 && self.sets.len() == 0
+        self.counters.len() == 0 &&
+        self.sets.len() == 0 &&
+        self.registers.len() == 0
     }
 }
 
@@ -76,7 +90,9 @@ impl Serialize for Values {
         -> Result<S::Ok, S::Error>
     {
         let mut map = serialize.serialize_map(
-            Some(self.counters.len() + self.sets.len()))?;
+            Some(self.counters.len() +
+                 self.sets.len() +
+                 self.registers.len()))?;
         for (k, counter) in &self.counters {
             map.serialize_key(&format!("{}_counter", k))?;
             map.serialize_value(&counter.0)?;
@@ -84,6 +100,10 @@ impl Serialize for Values {
         for (k, set) in &self.sets {
             map.serialize_key(&format!("{}_set", k))?;
             map.serialize_value(&set.0)?;
+        }
+        for (k, reg) in &self.registers {
+            map.serialize_key(&format!("{}_register", k))?;
+            map.serialize_value(&reg)?;
         }
         map.end()
     }
@@ -112,6 +132,8 @@ impl Lattice {
                 &*SHARED_COUNTERS);
             crdt_update(&mut mine.sets, &mut values.sets,
                 &*SHARED_SETS);
+            crdt_update(&mut mine.registers, &mut values.registers,
+                &*SHARED_REGISTERS);
 
             if values.is_empty() {
                 del.push(room.clone());
@@ -136,6 +158,8 @@ impl Lattice {
                     &*PRIVATE_COUNTERS);
                 crdt_update(&mut mine.sets, &mut values.sets,
                     &*PRIVATE_SETS);
+                crdt_update(&mut mine.registers, &mut values.registers,
+                    &*PRIVATE_REGISTERS);
 
                 if values.is_empty() {
                     del_rooms.push(room.clone());
@@ -155,6 +179,8 @@ impl Lattice {
                 .map(|v| v.counters.len() as i64).sum());
             PRIVATE_SETS.decr(skeys.values()
                 .map(|v| v.sets.len() as i64).sum());
+            PRIVATE_REGISTERS.decr(skeys.values()
+                .map(|v| v.registers.len() as i64).sum());
             for (key, value) in skeys {
                 if let Occupied(mut subs) = self.subscriptions.entry(key.clone()) {
                     subs.get_mut().remove(sid);
@@ -164,6 +190,8 @@ impl Lattice {
                             SHARED_KEYS.decr(1);
                             SHARED_COUNTERS.decr(vals.counters.len() as i64);
                             SHARED_SETS.decr(vals.sets.len() as i64);
+                            SHARED_REGISTERS.decr(
+                                vals.registers.len() as i64);
                         }
                     }
                 } else {
@@ -210,6 +238,18 @@ impl Crdt for Set {
             }
         }
         return false;
+    }
+}
+
+impl Crdt for Register {
+    fn update(&mut self, other: &Self) -> bool {
+        if self.0 < other.0 {
+            self.0 = other.0;
+            self.1 = other.1.clone();
+            true
+        } else {
+            false
+        }
     }
 }
 
@@ -269,6 +309,7 @@ impl<'de> Visitor<'de> for ValuesVisitor {
         let mut values = Values {
             counters: HashMap::new(),
             sets: HashMap::new(),
+            registers: HashMap::new(),
         };
         while let Some(key) = access.next_key::<&str>()? {
             if key.ends_with("_counter") {
@@ -281,6 +322,11 @@ impl<'de> Visitor<'de> for ValuesVisitor {
                 let key = key[..key.len() - "_set".len()].parse()
                     .map_err(de::Error::custom)?;
                 values.sets.insert(key, val);
+            } else if key.ends_with("_register") {
+                let val: Register = access.next_value()?;
+                let key = key[..key.len() - "_register".len()].parse()
+                    .map_err(de::Error::custom)?;
+                values.registers.insert(key, val);
             } else {
                 return Err(de::Error::custom(format!(
                     "Unsupported key {:?}", key)))
@@ -309,22 +355,25 @@ impl<'de> Deserialize<'de> for Set {
 #[cfg(test)]
 mod test {
     use std::str::FromStr;
-    use serde_json::from_str as json_decode;
+    use serde_json::{from_str as json_decode, Value};
+    use serde_json::ser::to_string;
 
-    use super::{Delta, Values, Set};
+    use super::*;
     use intern::{LatticeKey as Key, LatticeVar as Var};
 
     #[test]
     fn decode_delta() {
         let val = r#"{"shared": {"room_1": {"last_message_counter": 125}},
             "private": {"user:1": {"room_1": {
-                "last_seen_set": ["123", "124"]
+                "last_seen_set": ["123", "124"],
+                "status_register": [1234, {"icon": "ready_for_chat"}]
             }}}}"#;
 
         let delta: Delta = json_decode(val).unwrap();
         assert_eq!(delta.shared.len(), 1);
         assert_eq!(delta.private.len(), 1);
-        assert!(delta.shared.contains_key(&Key::from_str("room_1").unwrap()));
+        assert!(delta.shared.contains_key(
+            &Key::from_str("room_1").unwrap()));
     }
 
     #[test]
@@ -343,5 +392,21 @@ mod test {
     fn decode_set() {
         let set: Set = json_decode(r#"["123", "123", "abc"]"#).unwrap();
         assert_eq!(set.0.len(), 2);
+    }
+
+    #[test]
+    fn decode_register() {
+        let reg: Register = json_decode(r#"[123.5, "abc"]"#).unwrap();
+        assert_eq!(reg.0, 123.5);
+        assert_eq!(reg.1, Arc::new(Value::String("abc".into())));
+    }
+
+    #[test]
+    fn serde_register() {
+        let val = r#"{"status_register": [123, {"icon": "test"}]}"#;
+        let val: Values = json_decode(val).unwrap();
+        assert_eq!(val.registers.len(), 1);
+        assert_eq!(to_string(&val).unwrap(),
+            String::from(r#"{"status_register":[123.0,{"icon":"test"}]}"#));
     }
 }

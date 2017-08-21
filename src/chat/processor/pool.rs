@@ -427,10 +427,14 @@ impl Pool {
 
         // Send shared *and* private
         for (session_id, mut rooms) in delta.private.into_iter() {
-            for (room, values) in rooms.iter_mut() {
-                pubdata.get(room).map(|pubval| {
-                    values.update(pubval);
-                });
+            if let Some(ref allowed) = lat.private.get(&session_id) {
+                for (room, pubval) in pubdata.iter() {
+                    if allowed.contains_key(room) {
+                        rooms.entry(room.clone())
+                            .or_insert_with(Values::new)
+                            .update(pubval);
+                    }
+                }
             }
             if let Some(new_rooms) = new_keys.remove(&session_id) {
                 for room in new_rooms {
