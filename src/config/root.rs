@@ -1,5 +1,5 @@
 //! Root config validator
-use std::collections::HashMap;
+use std::collections::{HashMap, BTreeMap};
 use std::sync::Arc;
 use std::time::Duration;
 use std::path::PathBuf;
@@ -83,7 +83,9 @@ pub struct ConfigData {
     pub set_user: Option<String>,
     pub set_group: Option<String>,
 
-    pub mixins: HashMap<String, PathBuf>,
+    /// We need to keep order of mixins stable for the purpose
+    /// of fingerprinting
+    pub mixins: BTreeMap<String, PathBuf>,
 }
 
 trait MixinSections {

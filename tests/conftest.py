@@ -304,7 +304,13 @@ def check_config(request):
     return partial(_check_config, __swindon_bin=request.param)
 
 
-def _check_config(cfg='', returncode=1, files={}, *, __swindon_bin):
+@pytest.fixture(params=SWINDON_BIN)
+def check_fingerprint(request):
+    return partial(_check_fingerprint, __swindon_bin=request.param)
+
+
+@contextmanager
+def _write_configs(cfg, files={}):
     cfg = textwrap.dedent(cfg)
     if files:
         dir = tempfile.mkdtemp()
@@ -315,14 +321,36 @@ def _check_config(cfg='', returncode=1, files={}, *, __swindon_bin):
             for (name, text) in files.items():
                 with open(os.path.join(dir, name + '.yaml'), 'wt') as f:
                     f.write(text)
-            return _run_check(__swindon_bin, main, returncode)
+            yield main
         finally:
             shutil.rmtree(dir)
     else:
         with tempfile.NamedTemporaryFile('wt') as f:
             f.write(cfg)
             f.flush()
-            return _run_check(__swindon_bin, f.name, returncode)
+            yield f.name
+
+
+def _check_config(cfg='', returncode=1, files={}, *, __swindon_bin):
+    with _write_configs(cfg, files) as main:
+        return _run_check(__swindon_bin, main, returncode)
+
+def _check_fingerprint(cfg='', files={}, *, __swindon_bin):
+    with _write_configs(cfg, files) as main:
+        res = subprocess.run([
+            __swindon_bin,
+            '--check-config',
+            '--verbose',
+            '--config',
+            main,
+            ],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            # encoding='utf-8',
+            timeout=15,
+            )
+        assert res.returncode == 0, res
+        return res.stdout
 
 
 def _run_check(bin, file, returncode):

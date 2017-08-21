@@ -313,6 +313,24 @@ def test_mixins(check_config):
         returncode=0)
     assert err == ''
 
+def test_mixins_fingerprint(check_fingerprint):
+    fp = check_fingerprint("""
+        routing:
+            localhost/some/path: app1-handler
+            localhost/other/path: app2-handler
+        mixins:
+            app1-: app1.yaml
+            app2-: app2.yaml
+    """, files=dict(
+        app1='''
+            handlers:
+                app1-handler: !EmptyGif
+        ''', app2='''
+            handlers:
+                app2-handler: !EmptyGif
+        '''))
+    assert fp[:39] == b'Config fingerprint: bbcd0ce03fb0d058ecd', repr(fp)
+
 def test_bad_mixins(check_config):
     err = check_config("""
         routing:
