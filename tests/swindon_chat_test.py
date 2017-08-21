@@ -418,47 +418,166 @@ async def test_lattice_subscribe_update(proxy_server, swindon, loop, user_id):
                 }},
         ]
 
-
-async def test_inactivity(proxy_server, swindon, loop):
-    chat_url = swindon.url / 'swindon-chat-w-timeouts'
+@pytest.mark.parametrize('pub_update, priv_update, result', [
+    (101, 102, {'pub_counter': 101, 'priv_counter': 102}),
+    (99, 107, {'priv_counter': 107}),
+    (115, 55, {'pub_counter': 115}),
+], ids=[
+    'all-updated',
+    'private-updated',
+    'public-updated',
+])
+async def test_lattice_counter(proxy_server, swindon, loop, user_id,
+        pub_update, priv_update, result):
+    url = swindon.url / 'swindon-chat'
     async with proxy_server() as proxy:
-        handler = proxy.swindon_chat(chat_url, timeout=1)
+        handler = proxy.swindon_chat(url, timeout=1)
         req = await handler.request()
         assert_auth(req)
-        ws = await handler.json_response({
-            "user_id": 'user:1', "username": "Jim"})
+        meta, args, kwargs = await req.json()
+        assert 'connection_id' in meta
+        assert not args
+        assert kwargs
+        cid = meta['connection_id']
 
+        async with aiohttp.ClientSession(loop=loop) as s:
+            u = swindon.api / 'v1/connection' / cid / 'lattices'
+            u = u / 'lattice/namespace'
+            room_id = 'room:{}'.format(user_id)
+            data = json.dumps({
+                'shared': {
+                    room_id: {'pub_counter': 100},
+                },
+                'private': {
+                    user_id: { room_id: { 'priv_counter': 100 }},
+                },
+            })
+            async with s.put(u, data=data) as resp:
+                assert resp.status == 204
+
+        ws = await handler.json_response({
+            "user_id": user_id, "username": "Jim"})
         hello = await ws.receive_json()
         assert hello == [
-            'hello', {}, {'user_id': 'user:1', 'username': 'Jim'}]
+            'hello', {}, {'user_id': user_id, 'username': 'Jim'}]
+        up = await ws.receive_json()
+        assert up == [
+            'lattice',
+            {'namespace': 'lattice.namespace'},
+            {room_id: {
+                'pub_counter': 100.0,
+                'priv_counter': 100.0,
+                }},
+        ]
 
-        req = await handler.request(timeout=1.2)
-        assert req.path == '/tangle/session_inactive'
-        assert_headers(req)
-        assert req.headers.getall('Authorization') == [
-            'Tangle eyJ1c2VyX2lkIjoidXNlcjoxIn0='
-            ]
-        assert await req.json() == [{}, [], {}]
-        await handler.response(status=204)
+        async with aiohttp.ClientSession(loop=loop) as s:
+            u = swindon.api / 'v1/connection' / cid / 'lattices'
+            u = u / 'lattice/namespace'
+            room_id = 'room:{}'.format(user_id)
+            data = json.dumps({
+                'shared': {
+                    room_id: {'pub_counter': pub_update},
+                },
+                'private': {
+                    user_id: {
+                        room_id: {'priv_counter': priv_update},
+                    }
+                },
+            })
+            async with s.put(u, data=data) as resp:
+                assert resp.status == 204
 
-        await ws.send_json([
-            'whatever', {'request_id': '1', 'active': 2}, [], {}])
-        req = await handler.request(timeout=5)
-        assert req.path == '/whatever'
-        assert_headers(req)
-        assert await req.json() == [
-            {'request_id': '1', 'active': 2, 'connection_id': mock.ANY},
-            [], {}]
-        await handler.response(status=200)
+        up = await ws.receive_json()
+        assert up == [
+            'lattice',
+            {'namespace': 'lattice.namespace'},
+            {room_id: result},
+        ]
 
-        req = await handler.request(timeout=3.2)
-        assert req.path == '/tangle/session_inactive'
-        assert_headers(req)
-        assert req.headers.getall('Authorization') == [
-            'Tangle eyJ1c2VyX2lkIjoidXNlcjoxIn0='
-            ]
-        assert await req.json() == [{}, [], {}]
-        await handler.response(status=200)
+
+@pytest.mark.parametrize('pub_update, priv_update, result', [
+    ([101, 'hello world'], [1503328587.024564, {'icon': 'busy'}],
+     {'topic_register': [101, 'hello world'],
+      'status_register': [1503328587.024564, {'icon': 'busy'}]}),
+    ([ 95, 'hello world'], [1503328587.024564, {'icon': 'busy'}],
+     {'status_register': [1503328587.024564, {'icon': 'busy'}]}),
+    ([107, 'hello world'], [1503328500.024564, {'icon': 'busy'}],
+     {'topic_register': [107, 'hello world']}),
+], ids=[
+    'all-updated',
+    'private-updated',
+    'public-updated',
+])
+async def test_lattice_register(proxy_server, swindon, loop, user_id,
+        pub_update, priv_update, result):
+    url = swindon.url / 'swindon-chat'
+    async with proxy_server() as proxy:
+        handler = proxy.swindon_chat(url, timeout=1)
+        req = await handler.request()
+        assert_auth(req)
+        meta, args, kwargs = await req.json()
+        assert 'connection_id' in meta
+        assert not args
+        assert kwargs
+        cid = meta['connection_id']
+
+        async with aiohttp.ClientSession(loop=loop) as s:
+            u = swindon.api / 'v1/connection' / cid / 'lattices'
+            u = u / 'lattice/namespace'
+            room_id = 'room:{}'.format(user_id)
+            data = json.dumps({
+                'shared': {
+                    room_id: {'topic_register': [100, "hello"]},
+                },
+                'private': {
+                    user_id: {
+                        room_id: {'status_register':
+                            [1503328586.024564, {"icon": "free_for_chat"}]},
+                    }
+                },
+            })
+            async with s.put(u, data=data) as resp:
+                assert resp.status == 204
+
+        ws = await handler.json_response({
+            "user_id": user_id, "username": "Jim"})
+        hello = await ws.receive_json()
+        assert hello == [
+            'hello', {}, {'user_id': user_id, 'username': 'Jim'}]
+        up = await ws.receive_json()
+        assert up == [
+            'lattice',
+            {'namespace': 'lattice.namespace'},
+            {room_id: {
+                'topic_register': [100.0, "hello"],
+                'status_register': [1503328586.024564,
+                                    {"icon": "free_for_chat"}],
+                }},
+        ]
+
+        async with aiohttp.ClientSession(loop=loop) as s:
+            u = swindon.api / 'v1/connection' / cid / 'lattices'
+            u = u / 'lattice/namespace'
+            room_id = 'room:{}'.format(user_id)
+            data = json.dumps({
+                'shared': {
+                    room_id: {'topic_register': pub_update},
+                },
+                'private': {
+                    user_id: {
+                        room_id: {'status_register': priv_update},
+                    }
+                },
+            })
+            async with s.put(u, data=data) as resp:
+                assert resp.status == 204
+
+        up = await ws.receive_json()
+        assert up == [
+            'lattice',
+            {'namespace': 'lattice.namespace'},
+            {room_id: result},
+        ]
 
 
 @pytest.mark.parametrize('path', [
