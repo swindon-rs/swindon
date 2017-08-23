@@ -96,6 +96,18 @@ containers:
     environ:
       NODE_PATH: /usr/lib/node_modules
 
+  presence:  # example
+    setup:
+    - !Alpine v3.6
+    - !Install [ca-certificates]
+    - !Install [nodejs, nodejs-npm]
+    - !PipConfig { dependencies: true }
+    - !Py3Requirements "examples/presence/requirements.txt"
+    - !NpmDependencies
+      file: "examples/presence/package.json"
+    environ:
+      NODE_PATH: /usr/lib/node_modules
+
   multi-user-chat:  # example
     setup:
     - !Alpine v3.4
@@ -361,6 +373,35 @@ commands:
         - python3
         - -m
         - messageboard
+
+  example-presence: !Supervise
+    description: Run swindon and presence example
+    prerequisites: [make]
+    children:
+      swindon: !Command
+        container: xenial
+        work-dir: examples/presence
+        environ: { RUST_BACKTRACE: 1, RUST_LOG: "debug,tokio_core=warn" }
+        run:
+        - ../../target/debug/swindon
+        - --verbose
+        - --config=swindon.yaml
+      webpack: !Command
+        container: presence
+        work-dir: examples/presence
+        run:
+        - webpack
+        - --watch
+      board: !Command
+        container: presence
+        work-dir: examples/presence
+        environ:
+          LISTEN_FDS: 1
+        pass-tcp-socket: 127.0.0.1:8082
+        run:
+        - python3
+        - -m
+        - presence
 
   example-multi-user-chat: !Supervise
     description: Run swindon and multi-user-chat example
