@@ -46,7 +46,7 @@ ns-std-threaded = "0.2.0"
 libc = "0.2.21"
 scoped-tls = "0.1.0"
 self-meter-http = "0.4.0"
-libcantal = { rev="4689e10", git="https://github.com/tailhook/cantal-rs" }
+libcantal = "0.3.1"
 serde = { version = "1.0.0", features = ["rc"] }
 serde_derive = "1.0.8"
 serde_json = "1.0.0"
