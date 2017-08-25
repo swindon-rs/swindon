@@ -6,7 +6,6 @@ use std::str::from_utf8;
 
 use futures::{Future};
 use futures::future::{ok, Either, loop_fn, Loop};
-use mime_guess::guess_mime_type;
 use mime::{TopLevel, Mime};
 use tk_http::server::Error;
 use tk_http::Status;
@@ -38,8 +37,12 @@ pub fn serve_dir<S: Transport>(settings: &Arc<Static>, mut inp: Input)
         inp.headers.method(), inp.headers.headers());
     let fut = pool.spawn_fn(move || {
         hinp.probe_file(&path).map_err(|e| {
-            error!("Error reading file {:?}: {}", path, e);
-            Status::InternalServerError
+            if e.kind() == io::ErrorKind::PermissionDenied {
+                Status::Forbidden
+            } else {
+                error!("Error reading file {:?}: {}", path, e);
+                Status::InternalServerError
+            }
         })
     });
 
@@ -102,7 +105,11 @@ pub fn serve_dir<S: Transport>(settings: &Arc<Static>, mut inp: Input)
                     Either::A(error_page(
                         Status::MethodNotAllowed, e))
                 }
-                Ok(Output::NotFound) | Ok(Output::Directory) => {
+                Ok(Output::NotFound)  => {
+                    Either::A(error_page(Status::NotFound, e))
+                }
+                // TODO(tailhook) implement directory index
+                Ok(Output::Directory) => {
                     Either::A(error_page(Status::Forbidden, e))
                 }
                 Err(status) => {

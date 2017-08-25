@@ -13,7 +13,7 @@ dependencies = [
  "futures 0.1.15 (registry+https://github.com/rust-lang/crates.io-index)",
  "futures-cpupool 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "generic-array 0.8.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "http-file-headers 0.1.1 (git+https://github.com/swindon-rs/http-file-headers?rev=0b3e78d)",
+ "http-file-headers 0.1.1 (git+https://github.com/swindon-rs/http-file-headers?rev=6d761c7)",
  "httpbin 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "lazy_static 0.2.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "libc 0.2.29 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -292,7 +292,7 @@ dependencies = [
 [[package]]
 name = "http-file-headers"
 version = "0.1.1"
-source = "git+https://github.com/swindon-rs/http-file-headers?rev=0b3e78d#0b3e78d522a106e8f24634423a0c751307b2be3a"
+source = "git+https://github.com/swindon-rs/http-file-headers?rev=6d761c7#6d761c74b4135a75755e01761db2af719d12ecda"
 dependencies = [
  "blake2 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "byteorder 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1054,7 +1054,7 @@ dependencies = [
 "checksum gcc 0.3.53 (registry+https://github.com/rust-lang/crates.io-index)" = "e8310f7e9c890398b0e80e301c4f474e9918d2b27fca8f48486ca775fa9ffc5a"
 "checksum generic-array 0.5.1 (registry+https://github.com/rust-lang/crates.io-index)" = "5a3fb8dffe3fbf0fc95cd4f0b441cbf3ca81adfc988566bc28ee80291335ac5e"
 "checksum generic-array 0.8.2 (registry+https://github.com/rust-lang/crates.io-index)" = "6181b378c58e5aacf4d3e17836737465cb2857750b53f6b46672a3509f2a8d9d"
-"checksum http-file-headers 0.1.1 (git+https://github.com/swindon-rs/http-file-headers?rev=0b3e78d)" = "<none>"
+"checksum http-file-headers 0.1.1 (git+https://github.com/swindon-rs/http-file-headers?rev=6d761c7)" = "<none>"
 "checksum httparse 1.2.3 (registry+https://github.com/rust-lang/crates.io-index)" = "af2f2dd97457e8fb1ae7c5a420db346af389926e36f43768b96f101546b04a07"
 "checksum httpbin 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)" = "80511230d45188c609b7088381830f07e588acfe7742356ad10a1b5b9279aa27"
 "checksum httpdate 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)" = "5dc7e2460c0537001a109094493ab5ce38e929248d36d07b77ab16f87e81b46e"
