@@ -11,7 +11,7 @@ use config::static_files::{SingleFile};
 use default_error_page::{serve_error_page, error_page};
 use incoming::{Input, Request, Reply, Transport};
 use handlers::files::pools::get_pool;
-use handlers::files::common::reply;
+use handlers::files::common::reply_file;
 
 
 pub fn serve_file<S: Transport>(settings: &Arc<SingleFile>, mut inp: Input)
@@ -39,7 +39,7 @@ pub fn serve_file<S: Transport>(settings: &Arc<SingleFile>, mut inp: Input)
         })
     });
 
-    reply(inp, pool, fut, move |e| {
+    reply_file(inp, pool, fut, move |e| {
         if let Some(ref val) = settings.content_type {
             e.add_header("Content-Type", val);
         }

@@ -19,7 +19,7 @@ use handlers::files::decode::decode_component;
 use handlers::files::pools::get_pool;
 
 
-pub fn reply<S, A, B>(inp: Input, pool: CpuPool,
+pub fn reply_file<S, A, B>(inp: Input, pool: CpuPool,
     fut: CpuFuture<Output, Status>, fn_ok: A, fn_dir: B)
     -> Request<S>
     where S: Transport,

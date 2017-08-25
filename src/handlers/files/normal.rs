@@ -16,7 +16,7 @@ use default_error_page::{serve_error_page, error_page};
 use incoming::{Input, Request, Reply, Transport};
 use handlers::files::decode::decode_component;
 use handlers::files::pools::get_pool;
-use handlers::files::common::reply;
+use handlers::files::common::reply_file;
 
 
 pub fn serve_dir<S: Transport>(settings: &Arc<Static>, mut inp: Input)
@@ -46,7 +46,7 @@ pub fn serve_dir<S: Transport>(settings: &Arc<Static>, mut inp: Input)
         })
     });
 
-    reply(inp, pool, fut, move |e| {
+    reply_file(inp, pool, fut, move |e| {
         e.add_extra_headers(&settings.extra_headers);
     }, |e| {
         // TODO(tailhook) autoindex
