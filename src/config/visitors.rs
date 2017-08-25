@@ -2,7 +2,7 @@ use std::fmt;
 use std::marker::PhantomData;
 use std::str::FromStr;
 
-use serde::de::{self, Deserialize, Deserializer};
+use serde::de;
 
 
 pub struct FromStrVisitor<T>(&'static str, PhantomData<T>)

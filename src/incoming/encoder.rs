@@ -7,7 +7,7 @@ use futures::{Future, Async};
 use time;
 use tk_http::Status;
 use tk_http::server as http;
-use tk_http::server::{EncoderDone, FutureRawBody};
+use tk_http::server::{EncoderDone};
 use tokio_io::AsyncWrite;
 
 
@@ -146,9 +146,6 @@ impl<S> Encoder<S> {
     }
     pub fn done(self) -> EncoderDone<S> {
         self.enc.done()
-    }
-    pub fn raw_body(self) -> FutureRawBody<S> {
-        self.enc.raw_body()
     }
     pub fn wait_flush(self, n: usize) -> WaitFlush<S> {
         WaitFlush {

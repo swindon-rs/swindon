@@ -222,7 +222,7 @@ impl Pool {
         {
             let (sess_id, _, session) = self.sessions.active.pop().unwrap();
             ACTIVE_SESSIONS.decr(1);
-            self.channel.send(PoolMessage::InactiveSession {
+            self.channel.unbounded_send(PoolMessage::InactiveSession {
                 session_id: sess_id.clone(),
                 connections_active: session.connections.len(),
                 metadata: session.metadata.clone(),

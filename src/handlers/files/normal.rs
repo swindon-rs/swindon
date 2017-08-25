@@ -1,19 +1,14 @@
-use std::fs::{File, metadata};
 use std::io;
-use std::path::{Path, PathBuf};
+use std::path::{PathBuf};
 use std::sync::{Arc};
 use std::str::from_utf8;
 
-use futures::{Future};
-use futures::future::{ok, Either, loop_fn, Loop};
-use mime::{TopLevel, Mime};
-use tk_http::server::Error;
 use tk_http::Status;
-use http_file_headers::{Input as HeadersInput, Output};
+use http_file_headers::{Input as HeadersInput};
 
 use config::static_files::{Static, Mode};
 use default_error_page::{serve_error_page, error_page};
-use incoming::{Input, Request, Reply, Transport};
+use incoming::{Input, Request, Transport};
 use handlers::files::decode::decode_component;
 use handlers::files::pools::get_pool;
 use handlers::files::common::reply_file;

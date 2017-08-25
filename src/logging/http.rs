@@ -5,7 +5,6 @@ use tk_http::Status;
 use tk_http::server::Head;
 use trimmer::{Variable, Var, DataError, Output};
 
-use incoming::Debug;
 use request_id::RequestId;
 use logging::context::{Context, AsContext};
 

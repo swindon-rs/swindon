@@ -96,7 +96,7 @@ pub fn connect(peer: &str, sender: IncomingChannel,
                 FRAMES_SENT.incr(1);
                 x
             });
-        sender.send(ReplAction::Attach {
+        sender.unbounded_send(ReplAction::Attach {
             tx: tx,
             server_id: remote_srv_id,
             peer: Some(p2),
@@ -120,7 +120,7 @@ impl Dispatcher for Handler {
             match serde_json::from_str(data) {
                 Ok(msg) => {
                     // TODO: make proper result handling
-                    self.0.send(ReplAction::Incoming(msg)).ok();
+                    self.0.unbounded_send(ReplAction::Incoming(msg)).ok();
                 }
                 Err(e) => {
                     return err(Error::custom(

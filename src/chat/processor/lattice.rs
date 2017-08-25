@@ -181,7 +181,7 @@ impl Lattice {
                 .map(|v| v.sets.len() as i64).sum());
             PRIVATE_REGISTERS.decr(skeys.values()
                 .map(|v| v.registers.len() as i64).sum());
-            for (key, value) in skeys {
+            for (key, _) in skeys {
                 if let Occupied(mut subs) = self.subscriptions.entry(key.clone()) {
                     subs.get_mut().remove(sid);
                     if subs.get().is_empty() {

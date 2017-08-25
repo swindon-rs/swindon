@@ -1,20 +1,14 @@
-use std::fs::{File};
 use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc};
 use std::str::from_utf8;
 
-use futures::{Future};
-use futures::future::{ok};
-use mime_guess::guess_mime_type;
-use mime::{TopLevel, Mime};
-use tk_http::server::Error;
 use tk_http::Status;
 use http_file_headers::{Input as HeadersInput, Output};
 
 use config::static_files::{VersionChars, VersionedStatic};
 use default_error_page::{error_page};
-use incoming::{Input, Request, Reply, Transport, reply};
+use incoming::{Input, Request, Transport, reply};
 use handlers::files::decode::decode_component;
 use handlers::files::normal;
 use handlers::files::pools::get_pool;
@@ -28,33 +22,6 @@ quick_error! {
         InvalidPath
         NoFile
     }
-}
-
-
-#[cfg(unix)]
-struct PathOpen {
-    version_path: Result<PathBuf, VersionError>,
-    plain_path: Option<PathBuf>,
-    settings: Arc<VersionedStatic>,
-    file: Option<(File, u64, Mime)>,
-}
-
-#[cfg(windows)]
-struct PathOpen {
-    version_path: Option<PathBuf>,
-    plain_path: Option<PathBuf>,
-    settings: Arc<VersionedStatic>,
-    file: Option<(Mutex<File>, u64, Mime)>,
-}
-
-#[cfg(unix)]
-fn wrap_file(file: File) -> File {
-    file
-}
-
-#[cfg(windows)]
-fn wrap_file(file: File) -> Mutex<File> {
-    Mutex::new(file)
 }
 
 fn find_param<'x>(query: &'x str, arg: &str) -> Option<&'x str> {
@@ -160,8 +127,7 @@ pub fn serve_versioned<S: Transport>(settings: &Arc<VersionedStatic>,
             | (Err(NoVersion), &Some(ref pp), bad_version)
             | (Err(NoVersion), &Some(ref pp), no_version)
             => {
-                hinp.probe_file(npath.as_ref()
-                    .expect("always Some in code above"))
+                hinp.probe_file(pp)
             }
             (Err(_), _, _) => {
                 return Ok(Output::NotFound);
@@ -183,25 +149,6 @@ pub fn serve_versioned<S: Transport>(settings: &Arc<VersionedStatic>,
         // TODO(tailhook) autoindex
         error_page(Status::Forbidden, e)
     })
-}
-
-impl PathOpen {
-    fn new(vpath: Result<PathBuf, VersionError>, npath: Option<PathBuf>,
-        settings: &Arc<VersionedStatic>)
-        -> PathOpen
-    {
-        PathOpen {
-            version_path: vpath,
-            plain_path: npath,
-            settings: settings.clone(),
-            file: None,
-        }
-    }
-    fn get_mime(&self) -> &Mime {
-        self.file.as_ref()
-            .map(|&(_, _, ref m)| m)
-            .unwrap()
-    }
 }
 
 impl VersionError {

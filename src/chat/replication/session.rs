@@ -176,7 +176,7 @@ impl Watcher {
         if let Ok(data) = json_encode(&msg) {
             // TODO: use HashMap::retain() when in stable
             let to_delete = self.links.iter().filter_map(|(remote, tx)| {
-                tx.send(Packet::Text(data.clone())).err()
+                tx.unbounded_send(Packet::Text(data.clone())).err()
                 .map(|_| remote.clone())    // XXX
             }).collect::<Vec<_>>();         // XXX
             for remote in to_delete {
@@ -241,7 +241,7 @@ impl RemotePool {
 
     pub fn send(&self, action: RemoteAction) {
         let msg = Message(self.pool.clone(), action);
-        self.queue.send(ReplAction::Outgoing(msg))
+        self.queue.unbounded_send(ReplAction::Outgoing(msg))
             .map_err(|e| error!("Error sending event: {}", e)).ok();
     }
 }

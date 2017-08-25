@@ -17,7 +17,7 @@ impl ConnectionSender {
         }, rx)
     }
     pub fn send(&self, msg: ConnectionMessage) {
-        self.sender.send(msg)
+        self.sender.unbounded_send(msg)
         .map_err(|e| debug!("Error sending connection message: {}. \
             usually these means connection has been closed to soon", e)).ok();
     }

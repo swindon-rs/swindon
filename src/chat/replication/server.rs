@@ -124,7 +124,7 @@ impl<S: AsyncRead + AsyncWrite + 'static> Codec<S> for WebsocketCodec {
                 FRAMES_SENT.incr(1);
                 x
             });
-        self.sender.send(ReplAction::Attach {
+        self.sender.unbounded_send(ReplAction::Attach {
             tx: tx,
             server_id: self.remote_id,
             peer: None,

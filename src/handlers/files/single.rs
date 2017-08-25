@@ -1,15 +1,12 @@
 use std::io;
 use std::sync::{Arc};
 
-use futures::{Future};
-use futures::future::{ok, Either, loop_fn, Loop};
-use tk_http::server::Error;
 use tk_http::Status;
-use http_file_headers::{Input as HeadersInput, Output};
+use http_file_headers::{Input as HeadersInput};
 
 use config::static_files::{SingleFile};
 use default_error_page::{serve_error_page, error_page};
-use incoming::{Input, Request, Reply, Transport};
+use incoming::{Input, Request, Transport};
 use handlers::files::pools::get_pool;
 use handlers::files::common::reply_file;
 
