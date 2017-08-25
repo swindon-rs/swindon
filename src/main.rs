@@ -35,7 +35,6 @@ extern crate tk_bufstream;
 extern crate tk_http;
 extern crate tk_listen;
 extern crate tk_pool;
-extern crate tk_sendfile;
 extern crate tokio_core;
 extern crate tokio_io;
 extern crate trimmer;

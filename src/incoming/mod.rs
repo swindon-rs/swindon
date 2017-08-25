@@ -1,6 +1,5 @@
 use futures::future::Future;
 use tk_http::server::{Codec, Error};
-use tk_sendfile::Destination;
 use tokio_io::{AsyncRead, AsyncWrite};
 
 use metrics::{Metric, List};
@@ -26,8 +25,8 @@ pub use self::router::Router;
 /// A transport trait. We currently include ``AsRawFd`` in it to allow
 /// sendfile to work. But in the future we want to use specialization
 /// to optimize sendfile
-pub trait Transport: AsyncRead + AsyncWrite + Destination + 'static {}
-impl<T: AsyncRead + AsyncWrite + Destination + 'static> Transport for T {}
+pub trait Transport: AsyncRead + AsyncWrite + Send + 'static {}
+impl<T: AsyncRead + AsyncWrite + Send + 'static> Transport for T {}
 
 pub fn metrics() -> List {
     vec![
