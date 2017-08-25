@@ -16,6 +16,7 @@ extern crate futures;
 extern crate futures_cpupool;
 extern crate generic_array;
 extern crate httpbin;
+extern crate http_file_headers;
 extern crate libcantal;
 extern crate mime;
 extern crate mime_guess;

@@ -27,9 +27,10 @@ time = "0.1.35"
 lazy_static = "0.2.1"
 mime = "0.2.2"
 mime_guess = "1.8.0"
-tk-sendfile = "0.4.0"
+tk-sendfile = "0.4.0" # to remove
+http-file-headers = { rev="6d761c7", git="https://github.com/swindon-rs/http-file-headers" }
 tk-bufstream = "0.3.0"
-tk-http = "0.3.0"
+tk-http = "0.3.1"
 netbuf = "0.4.0"
 byteorder = "1.0.0"
 httpbin = "0.3.1"

@@ -49,13 +49,13 @@ async def test_host_override(proxy_server, swindon,
         assert await resp.read() == b'OK'
 
 
-async def test_method(proxy_server, swindon, request_method):
+async def test_method(proxy_server, swindon, proxy_request_method):
     url = swindon.url / 'proxy/hello'
     async with proxy_server() as proxy:
-        handler = proxy.send(request_method, url, timeout=5)
+        handler = proxy.send(proxy_request_method, url, timeout=5)
 
         req = await handler.request()
-        assert req.method == request_method
+        assert req.method == proxy_request_method
         assert req.path == '/proxy/hello'
         assert req.version == HttpVersion11
 

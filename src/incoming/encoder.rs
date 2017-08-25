@@ -3,10 +3,12 @@ use std::fmt::Display;
 use std::sync::Arc;
 use std::collections::HashMap;
 
+use futures::{Future, Async};
 use time;
 use tk_http::Status;
 use tk_http::server as http;
 use tk_http::server::{EncoderDone, FutureRawBody};
+use tokio_io::AsyncWrite;
 
 
 use config::Config;
@@ -21,6 +23,11 @@ pub struct Encoder<S> {
     debug: Debug,
 }
 
+pub struct WaitFlush<S> {
+    fut: http::WaitFlush<S>,
+    data: Option<(Arc<Config>, Debug)>,
+}
+
 /// Represents object that can be used for getting enough context for encoder
 /// from
 pub trait IntoContext: Sized {
@@ -30,6 +37,25 @@ pub trait IntoContext: Sized {
 impl IntoContext for (Arc<Config>, Debug) {
     fn into_context(self) -> Context {
         self
+    }
+}
+
+impl<S: AsyncWrite> Future for WaitFlush<S> {
+    type Item = Encoder<S>;
+    type Error = io::Error;
+    fn poll(&mut self) -> Result<Async<Encoder<S>>, io::Error> {
+        match self.fut.poll()? {
+            Async::Ready(x) => {
+                let (config, debug) = self.data.take()
+                    .expect("future polled twice");
+                Ok(Async::Ready(Encoder {
+                    enc: x,
+                    config: config,
+                    debug: debug,
+                }))
+            }
+            Async::NotReady => Ok(Async::NotReady),
+        }
     }
 }
 
@@ -124,6 +150,12 @@ impl<S> Encoder<S> {
     pub fn raw_body(self) -> FutureRawBody<S> {
         self.enc.raw_body()
     }
+    pub fn wait_flush(self, n: usize) -> WaitFlush<S> {
+        WaitFlush {
+            fut: self.enc.wait_flush(n),
+            data: Some((self.config, self.debug)),
+        }
+    }
 }
 
 impl<S> io::Write for Encoder<S> {
@@ -131,6 +163,6 @@ impl<S> io::Write for Encoder<S> {
         self.enc.write(buf)
     }
     fn flush(&mut self) -> io::Result<()> {
-        self.enc.flush()
+        io::Write::flush(&mut self.enc)
     }
 }

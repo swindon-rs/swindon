@@ -73,9 +73,16 @@ def user_id(_c=count(1)):
     return 'u:{}'.format(next(_c))
 
 
+@pytest.fixture(params=['GET', 'HEAD'])
+def static_request_method(request):
+    """Parametrized fixture changing request method
+    (GET / ).
+    """
+    return request.param
+
 @pytest.fixture(params=[
     'GET', 'PATCH', 'POST', 'PUT', 'UPDATED', 'DELETE', 'XXX'])
-def request_method(request):
+def proxy_request_method(request):
     """Parametrized fixture changing request method
     (GET / POST / PATCH / ...).
     """
@@ -95,11 +102,24 @@ def debug_routing(request):
 
 
 @pytest.fixture
-def http_request(request_method, http_version, debug_routing, loop):
+def http_request(proxy_request_method, http_version, debug_routing, loop):
 
     async def inner(url, **kwargs):
         async with aiohttp.ClientSession(version=http_version, loop=loop) as s:
-            async with s.request(request_method, url, **kwargs) as resp:
+            async with s.request(proxy_request_method, url, **kwargs) as resp:
+                data = await resp.read()
+                assert resp.version == http_version
+                assert_headers(resp.headers, debug_routing)
+                return resp, data
+    return inner
+
+# all head requests must equal to get requests
+@pytest.fixture
+def get_request(static_request_method, http_version, debug_routing, loop):
+
+    async def inner(url, **kwargs):
+        async with aiohttp.ClientSession(version=http_version, loop=loop) as s:
+            async with s.request(static_request_method, url, **kwargs) as resp:
                 data = await resp.read()
                 assert resp.version == http_version
                 assert_headers(resp.headers, debug_routing)

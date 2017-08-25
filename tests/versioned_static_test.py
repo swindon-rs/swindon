@@ -5,28 +5,35 @@ import aiohttp
 ALL_EQUAL = ["versioned", "versioned-fallback"]
 
 
-async def test_no_index_ver(swindon, http_request, debug_routing):
-    resp, data = await http_request(swindon.url / "versioned")
+def data_check(data, method, expected):
+    if method == "HEAD":
+        assert data == b''
+    else:
+        assert data == expected
+
+
+async def test_no_index_ver(swindon, get_request, debug_routing):
+    resp, data = await get_request(swindon.url / "versioned")
     assert resp.status == 404
     assert resp.headers['Content-Type'] == 'text/html'
 
 
-async def test_no_index_fb(swindon, http_request, debug_routing):
-    resp, data = await http_request(swindon.url / "versioned-fallback")
+async def test_no_index_fb(swindon, get_request, debug_routing):
+    resp, data = await get_request(swindon.url / "versioned-fallback")
     assert resp.status == 403
     assert resp.headers['Content-Type'] == 'text/html'
 
 
-async def test_no_index_dir(swindon, http_request, debug_routing):
-    resp, data = await http_request(swindon.url / "versioned-fallback/index")
+async def test_no_index_dir(swindon, get_request, debug_routing):
+    resp, data = await get_request(swindon.url / "versioned-fallback/index")
     assert resp.status == 403
     assert resp.headers['Content-Type'] == 'text/html'
 
 
 @pytest.mark.parametrize("path", ALL_EQUAL)
-async def test_by_version1(swindon, http_request, debug_routing,
-        path, TESTS_DIR):
-    resp, data = await http_request((swindon.url / path /
+async def test_by_version1(swindon, get_request, static_request_method,
+        debug_routing, path, TESTS_DIR):
+    resp, data = await get_request((swindon.url / path /
         'test.html').with_query(r='aabbbbbb'))
     assert resp.status == 200
     assert resp.headers['Content-Type'] == 'text/html'
@@ -35,13 +42,14 @@ async def test_by_version1(swindon, http_request, debug_routing,
             '"{}/hashed/aa/bbbbbb-test.html"'.format(TESTS_DIR)
     else:
         assert 'X-Swindon-File-Path' not in resp.headers
-    assert data == b'<!DOCTYPE html>\n<title>Hello</title>\n'
+    data_check(data, static_request_method,
+        b'<!DOCTYPE html>\n<title>Hello</title>\n')
 
 
 @pytest.mark.parametrize("path", ALL_EQUAL)
-async def test_by_version2(swindon, http_request, debug_routing,
-        path, TESTS_DIR):
-    resp, data = await http_request((swindon.url / path /
+async def test_by_version2(swindon, get_request, static_request_method,
+        debug_routing, path, TESTS_DIR):
+    resp, data = await get_request((swindon.url / path /
         'test.html').with_query(r='bbaaaaaa'))
     assert resp.status == 200
     assert resp.headers['Content-Type'] == 'text/html'
@@ -50,11 +58,12 @@ async def test_by_version2(swindon, http_request, debug_routing,
             '"{}/hashed/bb/aaaaaa-test.html"'.format(TESTS_DIR)
     else:
         assert 'X-Swindon-File-Path' not in resp.headers
-    assert data == b'<!DOCTYPE html>\n<title>Greetings</title>\n'
+    data_check(data, static_request_method,
+        b'<!DOCTYPE html>\n<title>Greetings</title>\n')
 
 
-async def test_version_404(swindon, http_request, debug_routing, TESTS_DIR):
-    resp, data = await http_request((swindon.url / "versioned" /
+async def test_version_404(swindon, get_request, debug_routing, TESTS_DIR):
+    resp, data = await get_request((swindon.url / "versioned" /
         'non-existent-file.html').with_query(r='aabbbbbb'))
     assert resp.status == 404
     assert resp.headers['Content-Type'] == 'text/html'
@@ -66,8 +75,8 @@ async def test_version_404(swindon, http_request, debug_routing, TESTS_DIR):
     assert 'X-Swindon-Deny' not in resp.headers
 
 
-async def test_no_version(swindon, http_request, debug_routing, TESTS_DIR):
-    resp, data = await http_request((swindon.url / "versioned" /
+async def test_no_version(swindon, get_request, debug_routing, TESTS_DIR):
+    resp, data = await get_request((swindon.url / "versioned" /
         'test.html').with_query(r='ccdddddd'))
     assert resp.status == 404
     assert resp.headers['Content-Type'] == 'text/html'
@@ -80,8 +89,9 @@ async def test_no_version(swindon, http_request, debug_routing, TESTS_DIR):
 
 
 @pytest.mark.parametrize("path", ALL_EQUAL)
-async def test_encoding(swindon, http_request, debug_routing, path, TESTS_DIR):
-    resp, data = await http_request((swindon.url / path / 'a+b.txt')
+async def test_encoding(swindon, get_request, static_request_method,
+        debug_routing, path, TESTS_DIR):
+    resp, data = await get_request((swindon.url / path / 'a+b.txt')
         .with_query(r='aabbbbbb'))
     assert resp.status == 200
     assert resp.headers['Content-Type'] == 'text/plain'
@@ -90,12 +100,12 @@ async def test_encoding(swindon, http_request, debug_routing, path, TESTS_DIR):
             '"{}/hashed/aa/bbbbbb-a+b.txt"'.format(TESTS_DIR)
     else:
         assert 'X-Swindon-File-Path' not in resp.headers
-    assert data == b'a+b at aabbbbbb\n'
+    data_check(data, static_request_method, b'a+b at aabbbbbb\n')
 
 
-async def test_encoding_fallback(swindon, http_request, debug_routing,
-        TESTS_DIR):
-    resp, data = await http_request(swindon.url / 'versioned-fallback/a+b.txt')
+async def test_encoding_fallback(swindon, get_request, static_request_method,
+        debug_routing, TESTS_DIR):
+    resp, data = await get_request(swindon.url / 'versioned-fallback/a+b.txt')
     assert resp.status == 200
     assert resp.headers['Content-Type'] == 'text/plain'
     if debug_routing:
@@ -103,11 +113,11 @@ async def test_encoding_fallback(swindon, http_request, debug_routing,
             '"{}/assets/a+b.txt"'.format(TESTS_DIR)
     else:
         assert 'X-Swindon-File-Path' not in resp.headers
-    assert data == b'a+b\n'
+    data_check(data, static_request_method, b'a+b\n')
 
 
-async def test_fallback_404(swindon, http_request, debug_routing, TESTS_DIR):
-    resp, data = await http_request(swindon.url /
+async def test_fallback_404(swindon, get_request, debug_routing, TESTS_DIR):
+    resp, data = await get_request(swindon.url /
         'versioned-fallback/non-existent-file.html')
     assert resp.status == 404
     assert resp.headers['Content-Type'] == 'text/html'
@@ -119,8 +129,9 @@ async def test_fallback_404(swindon, http_request, debug_routing, TESTS_DIR):
     assert 'X-Swindon-Deny' not in resp.headers
 
 
-async def test_other_params(swindon, http_request, debug_routing, TESTS_DIR):
-    resp, data = await http_request((swindon.url /
+async def test_other_params(swindon, get_request, static_request_method,
+        debug_routing, TESTS_DIR):
+    resp, data = await get_request((swindon.url /
         'versioned-fallback/a+b.txt')
         .with_query(some='param', another='param'))
     assert resp.status == 200
@@ -130,11 +141,12 @@ async def test_other_params(swindon, http_request, debug_routing, TESTS_DIR):
             '"{}/assets/a+b.txt"'.format(TESTS_DIR)
     else:
         assert 'X-Swindon-File-Path' not in resp.headers
-    assert data == b'a+b\n'
+    data_check(data, static_request_method, b'a+b\n')
 
 
-async def test_crappy_query(swindon, http_request, debug_routing, TESTS_DIR):
-    resp, data = await http_request(
+async def test_crappy_query(swindon, get_request, static_request_method,
+        debug_routing, TESTS_DIR):
+    resp, data = await get_request(
         str(swindon.url / 'versioned-fallback' / 'a+b.txt')
         + '?just_some_garbage')
     assert resp.status == 200
@@ -144,11 +156,11 @@ async def test_crappy_query(swindon, http_request, debug_routing, TESTS_DIR):
             '"{}/assets/a+b.txt"'.format(TESTS_DIR)
     else:
         assert 'X-Swindon-File-Path' not in resp.headers
-    assert data == b'a+b\n'
+    data_check(data, static_request_method, b'a+b\n')
 
 
-async def test_no_version_forbidden(swindon, http_request, debug_routing):
-    resp, data = await http_request(swindon.url /
+async def test_no_version_forbidden(swindon, get_request, debug_routing):
+    resp, data = await get_request(swindon.url /
         'versioned/test.html')
     assert resp.status == 404
     assert resp.headers['Content-Type'] == 'text/html'
@@ -158,8 +170,8 @@ async def test_no_version_forbidden(swindon, http_request, debug_routing):
     #     assert 'X-Swindon-Deny' not in resp.headers
 
 
-async def test_bad_version_forbidden(swindon, http_request, debug_routing):
-    resp, data = await http_request((swindon.url / 'versioned/test.html')
+async def test_bad_version_forbidden(swindon, get_request, debug_routing):
+    resp, data = await get_request((swindon.url / 'versioned/test.html')
         .with_query(r='xxx'))
     assert resp.status == 404
     assert resp.headers['Content-Type'] == 'text/html'

@@ -1,5 +1,5 @@
 use futures::future::Future;
-use tk_http::server::{Codec, EncoderDone, Error};
+use tk_http::server::{Codec, Error};
 use tk_sendfile::Destination;
 use tokio_io::{AsyncRead, AsyncWrite};
 
@@ -17,6 +17,7 @@ pub type Request<S> = Box<Codec<S, ResponseFuture=Reply<S>>>;
 pub type Reply<S> = Box<Future<Item=EncoderDone<S>, Error=Error>>;
 
 pub use self::debug::Debug;
+pub use tk_http::server::EncoderDone;
 pub use self::encoder::{Encoder, IntoContext, Context};
 pub use self::input::{Input, AuthInput};
 pub use self::quick_reply::reply;
