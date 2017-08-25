@@ -5,6 +5,7 @@ use std::collections::HashMap;
 
 use quire::validate::{Nothing, Enum, Structure, Scalar, Mapping, Sequence};
 use serde::de::{Deserializer, Deserialize, Error};
+use http_file_headers::{Config as HeadersConfig};
 
 use intern::DiskPoolName;
 
@@ -33,7 +34,7 @@ pub enum FallbackMode {
     never,        // don't serve anything without valid version
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug)]
 pub struct Static {
     pub mode: Mode,
     pub path: PathBuf,
@@ -44,17 +45,20 @@ pub struct Static {
     pub index_files: Vec<String>,
     // Computed values
     pub overrides_content_type: bool,
+    pub headers_config: Arc<HeadersConfig>,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug)]
 pub struct SingleFile {
     pub path: PathBuf,
     pub content_type: String,
     pub pool: DiskPoolName,
     pub extra_headers: HashMap<String, String>,
+    // Computed values
+    pub headers_config: Arc<HeadersConfig>,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug)]
 pub struct VersionedStatic {
     pub versioned_root: PathBuf,
     pub plain_root: PathBuf,
@@ -70,6 +74,7 @@ pub struct VersionedStatic {
     pub version_len: usize,
     pub overrides_content_type: bool,
     pub fallback: Arc<Static>,
+    pub headers_config: Arc<HeadersConfig>,
 }
 
 fn serve_mode<'x>() -> Enum<'x> {
@@ -137,6 +142,10 @@ impl<'a> Deserialize<'a> for Static {
             pub strip_host_suffix: Option<String>,
         }
         let int = Internal::deserialize(d)?;
+        let mut config = HeadersConfig::new();
+        for index_file in &int.index_files {
+            config.add_index_file(&index_file);
+        }
         return Ok(Static {
             overrides_content_type:
                 header_contains(&int.extra_headers, "Content-Type"),
@@ -147,6 +156,7 @@ impl<'a> Deserialize<'a> for Static {
             extra_headers: int.extra_headers,
             index_files: int.index_files,
             strip_host_suffix: int.strip_host_suffix,
+            headers_config: config.done(),
         })
     }
 }
@@ -171,6 +181,8 @@ impl<'a> Deserialize<'a> for SingleFile {
             content_type: int.content_type,
             pool: int.pool,
             extra_headers: int.extra_headers,
+            headers_config: HeadersConfig::new()
+                .done(),
         })
     }
 }
@@ -191,6 +203,8 @@ impl<'a> Deserialize<'a> for VersionedStatic {
             pub extra_headers: HashMap<String, String>,
         }
         let int = Internal::deserialize(d)?;
+        let config = HeadersConfig::new()
+            .done();
         return Ok(VersionedStatic {
             version_len: int.version_split.iter().map(|&x| x as usize).sum(),
             overrides_content_type:
@@ -205,6 +219,7 @@ impl<'a> Deserialize<'a> for VersionedStatic {
                 extra_headers: int.extra_headers.clone(),
                 index_files: Vec::new(),
                 strip_host_suffix: None,
+                headers_config: config.clone(),
             }),
             versioned_root: int.versioned_root,
             plain_root: int.plain_root,
@@ -216,6 +231,7 @@ impl<'a> Deserialize<'a> for VersionedStatic {
             text_charset: int.text_charset,
             pool: int.pool,
             extra_headers: int.extra_headers,
+            headers_config: config,
         })
     }
 }
@@ -223,3 +239,112 @@ impl<'a> Deserialize<'a> for VersionedStatic {
 pub fn header_contains(map: &HashMap<String, String>, name: &str) -> bool {
     map.iter().any(|(header, _)| header.eq_ignore_ascii_case(name))
 }
+
+impl PartialEq for Static {
+    fn eq(&self, other: &Static) -> bool {
+        let Static {
+            mode: ref a_mode,
+            path: ref a_path,
+            text_charset: ref a_text_charset,
+            pool: ref a_pool,
+            extra_headers: ref a_extra_headers,
+            strip_host_suffix: ref a_strip_host_suffix,
+            index_files: ref a_index_files,
+            overrides_content_type: _,
+            headers_config: _,
+        } = *self;
+        let Static {
+            mode: ref b_mode,
+            path: ref b_path,
+            text_charset: ref b_text_charset,
+            pool: ref b_pool,
+            extra_headers: ref b_extra_headers,
+            strip_host_suffix: ref b_strip_host_suffix,
+            index_files: ref b_index_files,
+            overrides_content_type: _,
+            headers_config: _,
+        } = *other;
+        return a_mode == b_mode &&
+               a_path == b_path &&
+               a_text_charset == b_text_charset &&
+               a_pool == b_pool &&
+               a_extra_headers == b_extra_headers &&
+               a_strip_host_suffix == b_strip_host_suffix &&
+               a_index_files == b_index_files;
+
+    }
+}
+
+impl PartialEq for SingleFile {
+    fn eq(&self, other: &SingleFile) -> bool {
+        let SingleFile {
+            path: ref a_path,
+            content_type: ref a_content_type,
+            pool: ref a_pool,
+            extra_headers: ref a_extra_headers,
+            headers_config: _,
+        } = *self;
+        let SingleFile {
+            path: ref b_path,
+            content_type: ref b_content_type,
+            pool: ref b_pool,
+            extra_headers: ref b_extra_headers,
+            headers_config: _,
+        } = *other;
+        return a_path == b_path &&
+               a_content_type == b_content_type &&
+               a_pool == b_pool &&
+               a_extra_headers == b_extra_headers;
+    }
+}
+
+impl PartialEq for VersionedStatic {
+    fn eq(&self, other: &VersionedStatic) -> bool {
+        let VersionedStatic {
+            versioned_root: ref a_versioned_root,
+            plain_root: ref a_plain_root,
+            version_arg: ref a_version_arg,
+            version_split: ref a_version_split,
+            version_chars: ref a_version_chars,
+            fallback_to_plain: ref a_fallback_to_plain,
+            fallback_mode: ref a_fallback_mode,
+            text_charset: ref a_text_charset,
+            pool: ref a_pool,
+            extra_headers: ref a_extra_headers,
+            version_len: _,
+            overrides_content_type: _,
+            fallback: _,
+            headers_config: _,
+        } = *self;
+        let VersionedStatic {
+            versioned_root: ref b_versioned_root,
+            plain_root: ref b_plain_root,
+            version_arg: ref b_version_arg,
+            version_split: ref b_version_split,
+            version_chars: ref b_version_chars,
+            fallback_to_plain: ref b_fallback_to_plain,
+            fallback_mode: ref b_fallback_mode,
+            text_charset: ref b_text_charset,
+            pool: ref b_pool,
+            extra_headers: ref b_extra_headers,
+            version_len: _,
+            overrides_content_type: _,
+            fallback: _,
+            headers_config: _,
+        } = *self;
+        return a_versioned_root == b_versioned_root &&
+               a_plain_root == b_plain_root &&
+               a_version_arg == b_version_arg &&
+               a_version_split == b_version_split &&
+               a_version_chars == b_version_chars &&
+               a_fallback_to_plain == b_fallback_to_plain &&
+               a_fallback_mode == b_fallback_mode &&
+               a_text_charset == b_text_charset &&
+               a_pool == b_pool &&
+               a_extra_headers == b_extra_headers;
+    }
+}
+
+impl Eq for Static {}
+impl Eq for SingleFile {}
+impl Eq for VersionedStatic {}
