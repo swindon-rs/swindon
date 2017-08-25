@@ -3,31 +3,31 @@ import pytest
 import aiohttp
 
 
-async def test_no_index(swindon, http_request, debug_routing):
+async def test_no_index(swindon, get_request, debug_routing):
     # XXX: on resp.read() connection gets closed
-    resp, data = await http_request(swindon.url / 'static')
+    resp, data = await get_request(swindon.url / 'static')
     assert resp.status == 403
     assert resp.headers['Content-Type'] == 'text/html'
 
 
-async def test_index(swindon, http_request, debug_routing):
+async def test_index(swindon, get_request, debug_routing):
     # XXX: on resp.read() connection gets closed
-    resp, data = await http_request(swindon.url / 'static-w-index')
+    resp, data = await get_request(swindon.url / 'static-w-index')
     assert resp.status == 200
     assert resp.headers['Content-Type'] == 'text/html'
     assert data == b'<!DOCTYPE html>\n<title>Hello</title>\n'
 
 
-async def test_disabled_index(swindon, http_request, debug_routing):
+async def test_disabled_index(swindon, get_request, debug_routing):
     # XXX: on resp.read() connection gets closed
-    resp, data = await http_request(swindon.url / 'static-wo-index')
+    resp, data = await get_request(swindon.url / 'static-wo-index')
     assert resp.status == 403
     assert resp.headers['Content-Type'] == 'text/html'
 
 
-async def test_ok(swindon, http_request, debug_routing, TESTS_DIR):
+async def test_ok(swindon, get_request, debug_routing, TESTS_DIR):
     url = swindon.url / 'static' / 'static_file.txt'
-    resp, data = await http_request(url)
+    resp, data = await get_request(url)
     assert resp.status == 200
     assert resp.headers['Content-Type'] == 'text/plain'
     assert resp.headers['Content-Length'] == '17'
@@ -39,12 +39,12 @@ async def test_ok(swindon, http_request, debug_routing, TESTS_DIR):
         assert 'X-Swindon-File-Path' not in resp.headers
 
 
-async def test_url_decoding(swindon, http_request, debug_routing, TESTS_DIR):
+async def test_url_decoding(swindon, get_request, debug_routing, TESTS_DIR):
 
     # Stringified url, because YARL normalizes some percent-encoded things
     url = str(swindon.url) + '/static/a%2bb.txt'
 
-    resp, data = await http_request(url)
+    resp, data = await get_request(url)
     assert resp.status == 200
     assert resp.headers['Content-Type'] == 'text/plain'
     assert resp.headers['Content-Length'] == '4'
@@ -56,11 +56,11 @@ async def test_url_decoding(swindon, http_request, debug_routing, TESTS_DIR):
         assert 'X-Swindon-File-Path' not in resp.headers
 
 
-async def test_permission(swindon, http_request, debug_routing, TESTS_DIR):
-    msg = open(os.path.dirname(__file__) + '/404.html', 'rb').read()
+async def test_permission(swindon, get_request, debug_routing, TESTS_DIR):
+    msg = open(os.path.dirname(__file__) + '/403.html', 'rb').read()
     url = swindon.url / 'static' / 'no-permission'
-    resp, data = await http_request(url)
-    assert resp.status == 404
+    resp, data = await get_request(url)
+    assert resp.status == 403
     assert data == msg
     assert resp.headers['Content-Type'] != 'text/no/permission'
     assert resp.headers['Content-Length'] == str(len(msg))
@@ -71,9 +71,9 @@ async def test_permission(swindon, http_request, debug_routing, TESTS_DIR):
         assert 'X-Swindon-File-Path' not in resp.headers
 
 
-async def test_extra_headers(swindon, http_request, debug_routing, TESTS_DIR):
+async def test_extra_headers(swindon, get_request, debug_routing, TESTS_DIR):
     url = swindon.url / 'static-w-headers' / 'static_file.html'
-    resp, data = await http_request(url)
+    resp, data = await get_request(url)
     assert resp.status == 200
     assert resp.headers['Content-Type'] == 'text/html'
     assert resp.headers['Content-Length'] == '17'
@@ -87,9 +87,9 @@ async def test_extra_headers(swindon, http_request, debug_routing, TESTS_DIR):
 
 
 async def test_headers_override(
-        swindon, request_method, http_version, debug_routing, loop, TESTS_DIR):
+        swindon, http_version, debug_routing, loop, TESTS_DIR):
     url = swindon.url / 'static-w-ctype' / 'static_file.txt'
-    meth = request_method
+    meth = "GET"
     async with aiohttp.ClientSession(version=http_version, loop=loop) as s:
         async with s.request(meth, url) as resp:
             assert resp.status == 200
@@ -108,9 +108,9 @@ async def test_headers_override(
                 assert 'X-Swindon-File-Path' not in resp.headers
 
 
-async def test_hostname(swindon, http_request, debug_routing, TESTS_DIR):
+async def test_hostname(swindon, get_request, debug_routing, TESTS_DIR):
     url = swindon.url / 'static-w-hostname' / 'test.txt'
-    resp, data = await http_request(url)
+    resp, data = await get_request(url)
     assert resp.status == 200
     assert resp.headers['Content-Type'] == 'text/plain'
     assert resp.headers['Content-Length'] == '17'
@@ -129,10 +129,10 @@ async def test_hostname(swindon, http_request, debug_routing, TESTS_DIR):
     lambda u: u.with_fragment('frag'),
     ], ids='?foo=bar,?foo=bar#frag,#frag'.split(','))
 async def test_url_with_query(
-        swindon, http_request, debug_routing, url_with, TESTS_DIR):
+        swindon, get_request, debug_routing, url_with, TESTS_DIR):
     url = swindon.url / 'static' / 'static_file.txt'
     url = url_with(url)
-    resp, data = await http_request(url)
+    resp, data = await get_request(url)
     assert resp.status == 200
     assert resp.headers['Content-Type'] == 'text/plain'
     assert resp.headers['Content-Length'] == '17'

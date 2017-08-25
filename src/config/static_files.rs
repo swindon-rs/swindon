@@ -44,14 +44,13 @@ pub struct Static {
     pub strip_host_suffix: Option<String>,
     pub index_files: Vec<String>,
     // Computed values
-    pub overrides_content_type: bool,
     pub headers_config: Arc<HeadersConfig>,
 }
 
 #[derive(Debug)]
 pub struct SingleFile {
     pub path: PathBuf,
-    pub content_type: String,
+    pub content_type: Option<String>,
     pub pool: DiskPoolName,
     pub extra_headers: HashMap<String, String>,
     // Computed values
@@ -72,7 +71,6 @@ pub struct VersionedStatic {
     pub extra_headers: HashMap<String, String>,
     // Computed values
     pub version_len: usize,
-    pub overrides_content_type: bool,
     pub fallback: Arc<Static>,
     pub headers_config: Arc<HeadersConfig>,
 }
@@ -100,7 +98,7 @@ pub fn validator<'x>() -> Structure<'x> {
 pub fn single_file<'x>() -> Structure<'x> {
     Structure::new()
     .member("path", Scalar::new())
-    .member("content_type", Scalar::new())
+    .member("content_type", Scalar::new().optional())
     .member("pool", Scalar::new().default("default"))
     .member("extra_headers", Mapping::new(Scalar::new(), Scalar::new()))
 }
@@ -143,12 +141,17 @@ impl<'a> Deserialize<'a> for Static {
         }
         let int = Internal::deserialize(d)?;
         let mut config = HeadersConfig::new();
+        match int.text_charset {
+            Some(ref charset) => { config.text_charset(charset); }
+            None => { config.no_text_charset(); }
+        }
+        if header_contains(&int.extra_headers, "Content-Type") {
+            config.content_type(false);
+        }
         for index_file in &int.index_files {
             config.add_index_file(&index_file);
         }
         return Ok(Static {
-            overrides_content_type:
-                header_contains(&int.extra_headers, "Content-Type"),
             mode: int.mode,
             path: int.path,
             text_charset: int.text_charset,
@@ -166,7 +169,7 @@ impl<'a> Deserialize<'a> for SingleFile {
         #[derive(Deserialize)]
         pub struct Internal {
             pub path: PathBuf,
-            pub content_type: String,
+            pub content_type: Option<String>,
             pub pool: DiskPoolName,
             pub extra_headers: HashMap<String, String>,
         }
@@ -176,13 +179,17 @@ impl<'a> Deserialize<'a> for SingleFile {
                 `content-type` parameter rather than in `extra-headers` \
                 in `!SingleFile` handler."));
         }
+        let mut config = HeadersConfig::new();
+        config.no_text_charset(); // TODO(tailhook) backward compatibility
+        if int.content_type.is_some() {
+            config.content_type(false);
+        }
         return Ok(SingleFile {
             path: int.path,
             content_type: int.content_type,
             pool: int.pool,
             extra_headers: int.extra_headers,
-            headers_config: HeadersConfig::new()
-                .done(),
+            headers_config: config.done(),
         })
     }
 }
@@ -203,15 +210,18 @@ impl<'a> Deserialize<'a> for VersionedStatic {
             pub extra_headers: HashMap<String, String>,
         }
         let int = Internal::deserialize(d)?;
-        let config = HeadersConfig::new()
-            .done();
+        let mut config = HeadersConfig::new();
+        match int.text_charset {
+            Some(ref charset) => { config.text_charset(charset); }
+            None => { config.no_text_charset(); }
+        }
+        if header_contains(&int.extra_headers, "Content-Type") {
+            config.content_type(false);
+        }
+        let config = config.done();
         return Ok(VersionedStatic {
             version_len: int.version_split.iter().map(|&x| x as usize).sum(),
-            overrides_content_type:
-                header_contains(&int.extra_headers, "Content-Type"),
             fallback: Arc::new(Static {
-                overrides_content_type:
-                    header_contains(&int.extra_headers, "Content-Type"),
                 mode: int.fallback_mode.clone(),
                 path: int.plain_root.clone(),
                 text_charset: int.text_charset.clone(),
@@ -250,7 +260,6 @@ impl PartialEq for Static {
             extra_headers: ref a_extra_headers,
             strip_host_suffix: ref a_strip_host_suffix,
             index_files: ref a_index_files,
-            overrides_content_type: _,
             headers_config: _,
         } = *self;
         let Static {
@@ -261,7 +270,6 @@ impl PartialEq for Static {
             extra_headers: ref b_extra_headers,
             strip_host_suffix: ref b_strip_host_suffix,
             index_files: ref b_index_files,
-            overrides_content_type: _,
             headers_config: _,
         } = *other;
         return a_mode == b_mode &&
@@ -312,7 +320,6 @@ impl PartialEq for VersionedStatic {
             pool: ref a_pool,
             extra_headers: ref a_extra_headers,
             version_len: _,
-            overrides_content_type: _,
             fallback: _,
             headers_config: _,
         } = *self;
@@ -328,10 +335,9 @@ impl PartialEq for VersionedStatic {
             pool: ref b_pool,
             extra_headers: ref b_extra_headers,
             version_len: _,
-            overrides_content_type: _,
             fallback: _,
             headers_config: _,
-        } = *self;
+        } = *other;
         return a_versioned_root == b_versioned_root &&
                a_plain_root == b_plain_root &&
                a_version_arg == b_version_arg &&

@@ -10,7 +10,6 @@ use config::static_files::{SingleFile};
 use default_error_page::{serve_error_page, error_page};
 use incoming::{Input, Request, Reply, Transport};
 use incoming::reply;
-use handlers::files::FileError;
 use handlers::files::pools::get_pool;
 
 
@@ -24,6 +23,8 @@ pub fn serve_file<S: Transport>(settings: &Arc<SingleFile>, mut inp: Input)
     inp.debug.set_fs_path(&settings.path);
     let pool = get_pool(&inp.runtime, &settings.pool);
     let settings = settings.clone();
+    unimplemented!();
+    /*
     reply(inp, move |mut e| {
         Box::new(pool.open(settings.path.clone())
             .then(move |res| match res {
@@ -54,4 +55,5 @@ pub fn serve_file<S: Transport>(settings: &Arc<SingleFile>, mut inp: Input)
                 }
             }))
     })
+    */
 }

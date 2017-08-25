@@ -10,17 +10,14 @@ use mime_guess::guess_mime_type;
 use mime::{TopLevel, Mime};
 use tk_http::server::Error;
 use tk_http::Status;
-use tk_sendfile::{FileOpener, IntoFileOpener, FileReader};
 
 use config::static_files::{VersionChars, VersionedStatic};
 use default_error_page::{error_page};
 use incoming::{Input, Request, Reply, Transport};
 use incoming::reply;
-use handlers::files::FileError;
 use handlers::files::decode::decode_component;
-use handlers::files::pools::get_pool;
 use handlers::files::normal;
-
+use handlers::files::pools::get_pool;
 
 quick_error! {
     #[derive(Debug, Copy, Clone)]
@@ -136,6 +133,8 @@ pub fn serve_versioned<S: Transport>(settings: &Arc<VersionedStatic>,
             Box::new(error_page(Status::NotFound, e))
         });
     }
+    unimplemented!();
+    /*
     reply(inp, move |mut e| {
         Box::new(pool.open(PathOpen::new(path, npath, &settings))
             .then(move |res| match res {
@@ -181,6 +180,7 @@ pub fn serve_versioned<S: Transport>(settings: &Arc<VersionedStatic>,
                 }
             }))
     })
+    */
 }
 
 impl PathOpen {
@@ -202,6 +202,7 @@ impl PathOpen {
     }
 }
 
+/*
 impl FileOpener for PathOpen {
     fn open(&mut self) -> Result<(&FileReader, u64), io::Error> {
         use self::VersionError::*;
@@ -252,13 +253,8 @@ impl FileOpener for PathOpen {
             .map(|&(ref f, s, _)| (f as &FileReader, s)).unwrap())
     }
 }
+*/
 
-impl IntoFileOpener for PathOpen {
-    type Opener = PathOpen;
-    fn into_file_opener(self) -> Self::Opener {
-        self
-    }
-}
 
 impl VersionError {
     fn to_header_string(&self) -> &'static str {

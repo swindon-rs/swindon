@@ -106,6 +106,18 @@ def http_request(request_method, http_version, debug_routing, loop):
                 return resp, data
     return inner
 
+@pytest.fixture
+def get_request(http_version, debug_routing, loop):
+
+    async def inner(url, **kwargs):
+        async with aiohttp.ClientSession(version=http_version, loop=loop) as s:
+            async with s.request('GET', url, **kwargs) as resp:
+                data = await resp.read()
+                assert resp.version == http_version
+                assert_headers(resp.headers, debug_routing)
+                return resp, data
+    return inner
+
 
 def assert_headers(headers, debug_routing):
     assert 'Content-Type' in headers
