@@ -44,17 +44,8 @@ install:
   - rustc -vV
   - cargo -vV
 
-build:
+build_script:
   - cargo build %cargoflags%
 
 test_script:
   - cargo test --verbose %cargoflags%
-
-notifications:
-- provider: Email
-  to:
-  - paul@colomiets.name
-  subject: Swindon build status changed
-  on_build_success: false
-  on_build_failure: false
-  on_build_status_changed: true
