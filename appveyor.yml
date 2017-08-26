@@ -1,5 +1,11 @@
 os: Visual Studio 2015
 
+artifacts:
+- path: target\debug\swindon.exe
+  name: debug-binary
+- path: target\debug\swindon-dev.exe
+  name: debug-binary
+
 environment:
   matrix:
 
@@ -42,3 +48,12 @@ build: false
 
 test_script:
   - cargo test --verbose %cargoflags%
+
+notifications:
+- provider: Email
+  to:
+  - paul@colomiets.name
+  subject: Swindon build status changed
+  on_build_success: false
+  on_build_failure: false
+  on_build_status_changed: true
