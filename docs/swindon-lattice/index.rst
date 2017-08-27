@@ -20,5 +20,6 @@ handshake.
     upstream
     backend
     websocket_shutdown_codes
+    examples
 
 .. _iana_ws: https://www.iana.org/assignments/websocket/websocket.xhtml
