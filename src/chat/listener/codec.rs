@@ -11,7 +11,7 @@ use tk_http::server as http;
 use tk_http::server::{EncoderDone, RecvMode};
 use serde_json::{self, Value as Json};
 
-use intern::{Topic, Lattice as Namespace};
+use intern::{Topic, Lattice as Namespace, SessionId};
 use chat::cid::PubCid;
 use chat::processor::Action;
 use chat::processor::Delta;
@@ -46,6 +46,10 @@ pub enum Route {
     LatticeSubscribe(PubCid, Namespace),
     /// `DELETE /v1/connection/<conn_id>/lattices/<namespace>`
     Detach(PubCid, Namespace),
+    /// `PUT /v1/connection/<conn_id>/users`
+    UsersSubscribe(PubCid),
+    /// `DELETE /v1/connection/<conn_id>/users`
+    UsersDetach(PubCid),
     /// `POST /v1/lattice/<namespace>`
     Lattice(Namespace),
 }
@@ -66,6 +70,12 @@ impl fmt::Display for Route {
             }
             Detach(ref cid, ref ns) => {
                 write!(f, "Lattice detach {:#?} {:?}", cid.0, ns)
+            }
+            UsersSubscribe(ref cid) => {
+                write!(f, "Users subscribe {:#?}", cid.0)
+            }
+            UsersDetach(ref cid) => {
+                write!(f, "Users detach {:#?}", cid.0)
             }
             Lattice(ref ns) => write!(f, "Lattice update {:?}", ns),
         }
@@ -162,6 +172,17 @@ impl Handler {
                             }
                             ("DELETE", Some(cid), Some(ns)) => {
                                 State::Query(Route::Detach(cid, ns))
+                            }
+                            _ => State::Error(Status::NotFound),
+                        }
+                    }
+                    Some("users") => {
+                        match (method, cid) {
+                            ("PUT", Some(cid)) => {
+                                State::Query(Route::UsersSubscribe(cid))
+                            }
+                            ("DELETE", Some(cid)) => {
+                                State::Query(Route::UsersDetach(cid))
                             }
                             _ => State::Error(Status::NotFound),
                         }
@@ -282,7 +303,7 @@ impl<S> http::Codec<S> for Request {
                 let data: Result<Delta,_> = serde_json::from_slice(data)
                     .map_err(|e| {
                         info!("Error decoding json for \
-                            '/v1/lattice/_/subscribe': \
+                            '/v1/connection/_/lattice': \
                             {:?}", e);
                     });
                 match data {
@@ -356,6 +377,51 @@ impl<S> http::Codec<S> for Request {
                         State::Error(Status::BadRequest)
                     }
                 }
+            }
+            State::Query(UsersSubscribe(PubCid(cid, srv_id))) => {
+                // TODO(tailhook) check content-type
+                let data: Result<Vec<SessionId>,_> =
+                    serde_json::from_slice(data)
+                    .map_err(|e| {
+                        info!("Error decoding json for \
+                            '/v1/connection/_/users': \
+                            {:?}", e);
+                    });
+                match data {
+                    Ok(list) => {
+                        self.wdata.remote.send(RemoteAction::AttachUsers {
+                            conn_id: cid.clone(),
+                            server_id: srv_id,
+                            list: list.clone(),
+                        });
+                        if srv_id == my_srv_id {
+                            self.wdata.processor.send(Action::AttachUsers {
+                                conn_id: cid,
+                                list: list,
+                            });
+                        } else {
+                            debug!("Skipping action with non-local cid");
+                        }
+                        State::Done
+                    }
+                    Err(_) => {
+                        State::Error(Status::BadRequest)
+                    }
+                }
+            }
+            State::Query(UsersDetach(PubCid(cid, srv_id))) => {
+                self.wdata.remote.send(RemoteAction::DetachUsers {
+                    conn_id: cid.clone(),
+                    server_id: srv_id,
+                });
+                if srv_id == my_srv_id {
+                    self.wdata.processor.send(Action::DetachUsers {
+                        conn_id: cid,
+                    });
+                } else {
+                    debug!("Skipping action with non-local cid");
+                }
+                State::Done
             }
             State::Done => unreachable!(),
             State::Error(e) => State::Error(e),

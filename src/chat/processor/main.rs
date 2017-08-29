@@ -50,6 +50,12 @@ fn pool_action(pool: &mut Pool, ts: Instant, action: Action) {
         Detach { conn_id, namespace } => {
             pool.lattice_detach(conn_id, namespace);
         }
+        AttachUsers { conn_id, list } => {
+            pool.users_attach(conn_id, list);
+        }
+        DetachUsers { conn_id } => {
+            pool.users_detach(conn_id);
+        }
     }
 }
 
