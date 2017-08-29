@@ -19,7 +19,7 @@ use futures::sync::mpsc::{UnboundedSender as Sender};
 
 use config;
 use intern::{Topic, SessionId, SessionPoolName, Lattice as Namespace};
-use intern::LatticeKey;
+use intern::{LatticeKey, LatticeVar};
 use chat::{Cid, ConnectionSender, CloseReason};
 use chat::message::{Meta, MetaWithExtra};
 use chat::error::MessageError;
@@ -45,6 +45,10 @@ pub use self::lattice::{SHARED_SETS, PRIVATE_SETS};
 pub use self::lattice::{SHARED_REGISTERS, PRIVATE_REGISTERS};
 pub use self::lattice::{SET_ITEMS};
 
+lazy_static! {
+    pub static ref SWINDON_USER: Namespace = Namespace::from("swindon.user");
+    pub static ref STATUS_VAR: LatticeVar = LatticeVar::from("status");
+}
 
 #[derive(Debug)]
 pub struct Event {
@@ -151,6 +155,13 @@ pub enum Action {
     },
     Detach {
         namespace: Namespace,
+        conn_id: Cid,
+    },
+    AttachUsers {
+        conn_id: Cid,
+        list: Vec<SessionId>,
+    },
+    DetachUsers {
         conn_id: Cid,
     },
 }
@@ -269,6 +280,13 @@ impl fmt::Debug for Action {
             }
             &Detach { ref conn_id, ref namespace } => {
                 write!(f, "Action::Detach({:?}, {:?})", conn_id, namespace)
+            }
+            &AttachUsers { ref conn_id, ref list } => {
+                write!(f, "Action::AttachUsers({:?}, {})",
+                    conn_id, list.len())
+            }
+            &DetachUsers { ref conn_id } => {
+                write!(f, "Action::Detach({:?})", conn_id)
             }
         }
     }

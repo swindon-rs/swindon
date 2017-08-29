@@ -9,6 +9,7 @@ use serde::de::{self, Deserialize, Deserializer, Visitor, MapAccess};
 use serde_json::Value;
 
 use intern::{LatticeKey as Key, LatticeVar as Var, SessionId};
+
 use metrics::{Integer};
 
 lazy_static! {
@@ -25,15 +26,15 @@ lazy_static! {
 
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Register(f64, Arc<Value>);
+pub struct Register(pub f64, pub Arc<Value>);
 
 #[derive(Debug, Clone)]
-pub struct Counter(u64);
+pub struct Counter(pub u64);
 
 // TODO(tailhook) implement some persistent hash set
 // TODO(tailhook) optimize set of only int-like values
 #[derive(Debug, Clone)]
-pub struct Set(Arc<HashSet<String>>);
+pub struct Set(pub Arc<HashSet<String>>);
 
 trait Crdt: Clone + Sized {
     /// Updates returning `true` if value changed
@@ -42,9 +43,9 @@ trait Crdt: Clone + Sized {
 
 #[derive(Debug, Clone)]
 pub struct Values {
-    counters: HashMap<Var, Counter>,
-    sets: HashMap<Var, Set>,
-    registers: HashMap<Var, Register>,
+    pub(in chat::processor) counters: HashMap<Var, Counter>,
+    pub(in chat::processor) sets: HashMap<Var, Set>,
+    pub(in chat::processor) registers: HashMap<Var, Register>,
 }
 
 pub struct Lattice {

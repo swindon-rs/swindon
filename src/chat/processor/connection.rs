@@ -13,6 +13,7 @@ pub struct NewConnection {
     pub cid: Cid,
     pub topics: HashSet<Topic>,
     pub lattices: HashSet<Namespace>,
+    pub users_lattice: bool,
     pub message_buffer: Vec<(Topic, Arc<Json>)>,
     pub channel: ConnectionSender,
 }
@@ -23,6 +24,7 @@ pub struct Connection {
     pub session_id: SessionId,
     pub topics: HashSet<Topic>,
     pub lattices: HashSet<Namespace>,
+    pub users_lattice: bool,
     pub channel: ConnectionSender,
 }
 
@@ -34,6 +36,7 @@ impl NewConnection {
             cid: conn_id,
             topics: HashSet::new(),
             lattices: HashSet::new(),
+            users_lattice: false,
             message_buffer: Vec::new(),
             channel: channel,
         }
@@ -44,6 +47,7 @@ impl NewConnection {
             session_id: session_id,
             topics: self.topics,
             lattices: self.lattices,
+            users_lattice: self.users_lattice,
             channel: self.channel,
         };
         for (t, m) in self.message_buffer {
