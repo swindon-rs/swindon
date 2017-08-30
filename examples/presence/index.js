@@ -1,4 +1,4 @@
-var buttonComponent = require('./button');
+var mainComponent = require('./user_list');
 
-buttonComponent.renderSync({})
+mainComponent.renderSync({})
     .appendTo(document.body);
