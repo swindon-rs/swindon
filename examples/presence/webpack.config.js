@@ -14,6 +14,9 @@ module.exports = {
         }, {
             loader: 'marko-loader',
             test: /\.marko$/,
+        }, {
+            loader: 'css-loader',
+            test: /\.css$/,
         }],
     },
     resolve: {
