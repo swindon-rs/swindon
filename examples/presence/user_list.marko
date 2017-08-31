@@ -1,5 +1,15 @@
+import cookie from 'cookie'
+
 class {
-    onMount() {
+    onCreate() {
+        var {swindon_presence_login} = cookie.parse(document.cookie)
+        this.state = {
+            login: swindon_presence_login,
+        }
     }
 }
--- USER LIST
+<h2>Logged in as: ${state.login}</h2>
+<h2>Other users:</h2>
+<ul>
+    <li>user1</li>
+</ul>
