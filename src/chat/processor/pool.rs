@@ -114,7 +114,7 @@ impl Pool {
     pub fn associate(&mut self, conn_id: Cid, session_id: SessionId,
         timestamp: Instant, metadata: Arc<Json>)
     {
-        let mut conn =
+        let (mut conn, users_lattice) =
             if let Some(p) = self.pending_connections.remove(&conn_id) {
                 p.associate(session_id.clone())
             } else {
@@ -147,7 +147,7 @@ impl Pool {
             session.connections.insert(conn_id);
             session.metadata = metadata;
             // TODO(tailhook) send update
-            copy_attachments(&mut session, &conn.lattices, conn_id);
+            copy_attachments(&mut session, &conn, conn_id, users_lattice);
             let val = self.sessions.active.insert(session_id.clone(),
                 timestamp, session);
             debug_assert!(val.is_none());
@@ -160,16 +160,25 @@ impl Pool {
             session.status_timestamp = SystemTime::now();
             session.connections.insert(conn_id);
             session.metadata = metadata;
-            copy_attachments(&mut session, &conn.lattices, conn_id);
+            copy_attachments(&mut session, &conn, conn_id, users_lattice);
         } else {
             let mut session = Session::new();
             session.connections.insert(conn_id);
             session.metadata = metadata;
-            copy_attachments(&mut session, &conn.lattices, conn_id);
+            copy_attachments(&mut session, &conn, conn_id, users_lattice);
             self.sessions.active.insert(session_id.clone(), expire, session);
             session.status_timestamp = SystemTime::now();
             // TODO(tailhook) send update
             ACTIVE_SESSIONS.incr(1);
+        }
+        if conn.users_lattice {
+            let sess = self.sessions.active.get(&session_id)
+                .expect("session just inserted");
+            let statuses = get_user_statuses(&sess.users_lattice.peers,
+                &self.sessions);
+            let msg = ConnectionMessage::Lattice(SWINDON_USER.clone(),
+                Arc::new(statuses));
+            conn.channel.send(msg);
         }
 
         let ins = self.connections.insert(conn_id, conn);
@@ -200,6 +209,13 @@ impl Pool {
                 for lat in &conn.lattices {
                     remove_lattice(session, &session_id,
                                    conn_id, &mut self.lattices, lat, false);
+                }
+                if conn.users_lattice {
+                    session.users_lattice.connections.remove(&conn_id);
+                    if session.users_lattice.connections.len() == 0 {
+                        session.users_lattice.peers.clear();
+                        session.users_lattice.peers.shrink_to_fit();
+                    }
                 }
                 session.connections.len()
             };
@@ -482,7 +498,7 @@ impl Pool {
         let conn = if let Some(conn) = self.connections.get_mut(&cid) {
             conn
         } else if let Some(conn) = self.pending_connections.get_mut(&cid) {
-            conn.users_lattice = true;
+            conn.users_lattice.extend(uids);
             return
         } else {
             info!("Attach of swindon.user for non-existing connection {:?}",
@@ -510,7 +526,7 @@ impl Pool {
         let conn = if let Some(conn) = self.connections.get_mut(&cid) {
             conn
         } else if let Some(conn) = self.pending_connections.get_mut(&cid) {
-            conn.users_lattice = false;
+            conn.users_lattice.clear();
             return
         } else {
             info!("Detach of swindon.user for non-existing connection {:?}",
@@ -608,11 +624,12 @@ fn lattice_from(channel: &mut ConnectionSender,
     channel.send(msg);
 }
 
-fn get_user_statuses(peers: &Vec<SessionId>, sessions: &Sessions)
+fn get_user_statuses<'x, I>(peers: I, sessions: &Sessions)
     -> HashMap<LatticeKey, Values>
+    where I: IntoIterator<Item=&'x SessionId>
 {
     fn to_f64(ts: SystemTime) -> f64 {
-        let d = UNIX_EPOCH.duration_since(ts).expect("valid time");
+        let d = ts.duration_since(UNIX_EPOCH).expect("valid time");
         (d.as_secs() * 1000) as f64 + (d.subsec_nanos() / 1_000_000) as f64
     }
 
@@ -637,11 +654,17 @@ fn get_user_statuses(peers: &Vec<SessionId>, sessions: &Sessions)
     result
 }
 
-fn copy_attachments(sess: &mut Session, list: &HashSet<Namespace>, cid: Cid) {
-    for namespace in list {
+fn copy_attachments(sess: &mut Session, conn: &Connection, cid: Cid,
+    users_lattice: HashSet<SessionId>)
+{
+    for namespace in &conn.lattices {
         sess.lattices.entry(namespace.clone())
             .or_insert_with(HashSet::new)
             .insert(cid);
+    }
+    if conn.users_lattice {
+        sess.users_lattice.peers.extend(users_lattice);
+        sess.users_lattice.connections.insert(cid);
     }
 }
 

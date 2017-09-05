@@ -13,7 +13,7 @@ pub struct NewConnection {
     pub cid: Cid,
     pub topics: HashSet<Topic>,
     pub lattices: HashSet<Namespace>,
-    pub users_lattice: bool,
+    pub users_lattice: HashSet<SessionId>,
     pub message_buffer: Vec<(Topic, Arc<Json>)>,
     pub channel: ConnectionSender,
 }
@@ -36,24 +36,26 @@ impl NewConnection {
             cid: conn_id,
             topics: HashSet::new(),
             lattices: HashSet::new(),
-            users_lattice: false,
+            users_lattice: HashSet::new(),
             message_buffer: Vec::new(),
             channel: channel,
         }
     }
-    pub fn associate(self, session_id: SessionId) -> Connection {
+    pub fn associate(self, session_id: SessionId)
+        -> (Connection, HashSet<SessionId>)
+    {
         let mut conn = Connection {
             cid: self.cid,
             session_id: session_id,
             topics: self.topics,
             lattices: self.lattices,
-            users_lattice: self.users_lattice,
+            users_lattice: self.users_lattice.len() > 0,
             channel: self.channel,
         };
         for (t, m) in self.message_buffer {
             conn.message(t, m);
         }
-        return conn;
+        return (conn, self.users_lattice);
     }
     pub fn message(&mut self, topic: Topic, data: Arc<Json>) {
         self.message_buffer.push((topic, data));
