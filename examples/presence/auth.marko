@@ -1,0 +1,15 @@
+import {history} from 'marko-path-router'
+
+class {
+    login() {
+        let value = this.getEl("name").value
+        if(value.length > 0) {
+            document.cookie = "swindon_presence_login=" + value
+            history.push('/list')
+        }
+    }
+}
+<input key="name" type="text" placeholder="My Name">
+<button on-click('login')>
+    Join
+</button>

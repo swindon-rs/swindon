@@ -67,6 +67,15 @@ pub enum RemoteAction {
         // TODO: probably use String here
         delta: Delta,
     },
+    AttachUsers {
+        conn_id: Cid,
+        server_id: ServerId,
+        list: Vec<SessionId>,
+    },
+    DetachUsers {
+        conn_id: Cid,
+        server_id: ServerId,
+    },
 
     // NOTE: In remote action we send original duration, not timestamp;
     UpdateActivity {
@@ -78,14 +87,16 @@ pub enum RemoteAction {
 impl Into<Action> for RemoteAction {
     fn into(self) -> Action {
         use self::RemoteAction::*;
+        // server_id is ignored here, because it's filtered
+        // in Watcher::local_send
         match self {
-            Subscribe { conn_id, topic, .. } => {
+            Subscribe { conn_id, topic, server_id: _ } => {
                 Action::Subscribe {
                     conn_id: conn_id,
                     topic: topic,
                 }
             }
-            Unsubscribe { conn_id, topic, .. } => {
+            Unsubscribe { conn_id, topic, server_id: _ } => {
                 Action::Unsubscribe {
                     conn_id: conn_id,
                     topic: topic,
@@ -97,7 +108,7 @@ impl Into<Action> for RemoteAction {
                     data: data,
                 }
             }
-            Attach { conn_id, namespace, .. } => {
+            Attach { conn_id, namespace, server_id: _ } => {
                 Action::Attach {
                     conn_id: conn_id,
                     namespace: namespace,
@@ -119,6 +130,17 @@ impl Into<Action> for RemoteAction {
                 Action::UpdateActivity {
                     session_id: session_id,
                     timestamp: Instant::now() + duration,
+                }
+            }
+            AttachUsers { conn_id, list, server_id: _ } => {
+                Action::AttachUsers {
+                    conn_id: conn_id,
+                    list: list,
+                }
+            }
+            DetachUsers { conn_id, server_id: _ } => {
+                Action::DetachUsers {
+                    conn_id: conn_id,
                 }
             }
         }

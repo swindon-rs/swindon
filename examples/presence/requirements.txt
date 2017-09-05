@@ -1,0 +1,2 @@
+aiohttp==2.2.3
+censusname==0.2.2
