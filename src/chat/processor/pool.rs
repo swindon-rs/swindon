@@ -17,6 +17,7 @@ use super::heap::HeapMap;
 use chat::processor::lattice::{Lattice, Delta, Values, Register};
 use metrics::{Integer, Counter};
 use chat::processor::{SWINDON_USER, STATUS_VAR};
+use chat::processor::pair::PairCollection;
 
 lazy_static! {
     pub static ref ACTIVE_SESSIONS: Integer = Integer::new();
@@ -50,6 +51,7 @@ pub struct Pool {
     connections: HashMap<Cid, Connection>,
     topics: HashMap<Topic, HashMap<Cid, Subscription>>,
     lattices: HashMap<Namespace, Lattice>,
+    user_listeners: HashMap<SessionId, HashSet<SessionId>>,
 
     // Setings
     new_connection_timeout: Duration,
@@ -98,6 +100,7 @@ impl Pool {
             connections: HashMap::new(),
             topics: HashMap::new(),
             lattices: HashMap::new(),
+            user_listeners: HashMap::new(),
             new_connection_timeout: (cfg.new_connection_idle_timeout).clone(),
         }
     }
@@ -174,6 +177,8 @@ impl Pool {
         if conn.users_lattice {
             let sess = self.sessions.active.get(&session_id)
                 .expect("session just inserted");
+            self.user_listeners.insert_list_key1(
+                &sess.users_lattice.peers, &session_id);
             let statuses = get_user_statuses(&sess.users_lattice.peers,
                 &self.sessions);
             let msg = ConnectionMessage::Lattice(SWINDON_USER.clone(),
@@ -213,6 +218,8 @@ impl Pool {
                 if conn.users_lattice {
                     session.users_lattice.connections.remove(&conn_id);
                     if session.users_lattice.connections.len() == 0 {
+                        self.user_listeners.remove_list_key1(
+                            &session.users_lattice.peers, &session_id);
                         session.users_lattice.peers.clear();
                         session.users_lattice.peers.shrink_to_fit();
                     }
@@ -220,7 +227,11 @@ impl Pool {
                 session.connections.len()
             };
             if conns == 0 {
-                if self.sessions.inactive.remove(&session_id).is_some() {
+                if let Some(sess) = self.sessions.inactive.remove(&session_id)
+                {
+                    // TODO(tailhook) remove lattice subscriptions
+                    self.user_listeners.remove_list_key1(
+                        &sess.users_lattice.peers, &session_id);
                     INACTIVE_SESSIONS.decr(1);
                 }
             }
@@ -259,7 +270,11 @@ impl Pool {
                 metadata: session.metadata.clone(),
             }).expect("can't send pool message");
             if session.connections.len() == 0 {
-                // TODO(tailhook) Maybe do session cleanup ?
+                // TODO(tailhook) remove lattice subscriptions
+                // TODO(tailhook) more cleanup needed?
+                // TODO(tailhook) send update that user is offline
+                self.user_listeners.remove_list_key1(
+                    &session.users_lattice.peers, &sess_id);
             } else {
                 session.status_timestamp = SystemTime::now();
                 // TODO(tailhook) send update
@@ -516,6 +531,7 @@ impl Pool {
                 return
             };
         sess.users_lattice.connections.insert(cid);
+        self.user_listeners.insert_list_key1(&uids, &conn.session_id);
         sess.users_lattice.peers.extend(uids);
 
         let msg = ConnectionMessage::Lattice(SWINDON_USER.clone(),

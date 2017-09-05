@@ -26,6 +26,7 @@ use chat::error::MessageError;
 
 mod main;
 mod pool;
+mod pair;
 mod public;
 mod session;
 mod heap;
