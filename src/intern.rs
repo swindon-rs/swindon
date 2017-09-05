@@ -69,6 +69,7 @@ fn valid_namespace(val: &str) -> bool {
         (c.is_alphanumeric() || c == '-' || c == '_' || c == '.'))
 }
 
+/// Note: must be a non-stric superset of a valid_sid
 fn valid_topic(val: &str) -> bool {
     if val.len() == 0 {
         return false;
@@ -77,6 +78,7 @@ fn valid_topic(val: &str) -> bool {
         (c.is_alphanumeric() || c == '-' || c == '_' || c == '.' || c == ':'))
 }
 
+/// Note: must be a non-strict subset of valid topic (LatticeKey)
 fn valid_sid(val: &str) -> bool {
     val.chars().all(|c| c.is_ascii() &&
         (c.is_alphanumeric() || c == '-' || c == '_' || c == ':'))

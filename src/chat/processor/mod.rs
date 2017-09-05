@@ -49,6 +49,11 @@ pub use self::lattice::{SET_ITEMS};
 lazy_static! {
     pub static ref SWINDON_USER: Namespace = Namespace::from("swindon.user");
     pub static ref STATUS_VAR: LatticeVar = LatticeVar::from("status");
+    pub static ref ACTIVE_STATUS: Arc<Json> = Arc::new(Json::from("active"));
+    pub static ref INACTIVE_STATUS: Arc<Json> =
+        Arc::new(Json::from("inactive"));
+    pub static ref OFFLINE_STATUS: Arc<Json> =
+        Arc::new(Json::from("offline"));
 }
 
 #[derive(Debug)]

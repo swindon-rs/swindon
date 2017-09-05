@@ -17,6 +17,7 @@ use super::heap::HeapMap;
 use chat::processor::lattice::{Lattice, Delta, Values, Register};
 use metrics::{Integer, Counter};
 use chat::processor::{SWINDON_USER, STATUS_VAR};
+use chat::processor::{ACTIVE_STATUS, INACTIVE_STATUS, OFFLINE_STATUS};
 use chat::processor::pair::PairCollection;
 
 lazy_static! {
@@ -143,13 +144,14 @@ impl Pool {
                 .expect("topics are consistent");
             *ptr = Subscription::Session;
         }
+        let now = SystemTime::now();
 
         let expire = timestamp + self.new_connection_timeout;
         if let Some(mut session) = self.sessions.inactive.remove(&session_id) {
-            session.status_timestamp = SystemTime::now();
             session.connections.insert(conn_id);
             session.metadata = metadata;
-            // TODO(tailhook) send update
+            session.status_timestamp = now;
+            self.publish_status(&session_id, &*ACTIVE_STATUS, now);
             copy_attachments(&mut session, &conn, conn_id, users_lattice);
             let val = self.sessions.active.insert(session_id.clone(),
                 timestamp, session);
@@ -160,7 +162,7 @@ impl Pool {
             self.sessions.active.update(&session_id, expire);
             let mut session = self.sessions.active.get_mut(&session_id)
                 .unwrap();
-            session.status_timestamp = SystemTime::now();
+            session.status_timestamp = now;
             session.connections.insert(conn_id);
             session.metadata = metadata;
             copy_attachments(&mut session, &conn, conn_id, users_lattice);
@@ -170,8 +172,8 @@ impl Pool {
             session.metadata = metadata;
             copy_attachments(&mut session, &conn, conn_id, users_lattice);
             self.sessions.active.insert(session_id.clone(), expire, session);
-            session.status_timestamp = SystemTime::now();
-            // TODO(tailhook) send update
+            session.status_timestamp = now;
+            self.publish_status(&session_id, &*ACTIVE_STATUS, now);
             ACTIVE_SESSIONS.incr(1);
         }
         if conn.users_lattice {
@@ -185,9 +187,28 @@ impl Pool {
                 Arc::new(statuses));
             conn.channel.send(msg);
         }
-
         let ins = self.connections.insert(conn_id, conn);
         debug_assert!(ins.is_none());
+    }
+
+    fn publish_status(&self, session_id: &SessionId,
+        status: &Arc<Json>, timestamp: SystemTime)
+    {
+        if let Some(subscr) = self.user_listeners.get(session_id) {
+            let up = Arc::new(single_update(&session_id, status, timestamp));
+            for sid in subscr {
+                if let Some(sess) = self.sessions.get(sid) {
+                    for cid in &sess.users_lattice.connections {
+                        if let Some(conn) = self.connections.get(cid) {
+                            conn.channel.send(
+                                ConnectionMessage::Lattice(
+                                    SWINDON_USER.clone(),
+                                    up.clone()));
+                        }
+                    }
+                }
+            }
+        }
     }
 
     pub fn del_connection(&mut self, conn_id: Cid) {
@@ -209,7 +230,6 @@ impl Pool {
                 let mut session = self.sessions.inactive.get_mut(&session_id)
                                   .unwrap();
                 session.status_timestamp = SystemTime::now();
-                // TODO(tailhook) send update
                 session.connections.remove(&conn_id);
                 for lat in &conn.lattices {
                     remove_lattice(session, &session_id,
@@ -227,6 +247,8 @@ impl Pool {
                 session.connections.len()
             };
             if conns == 0 {
+                self.publish_status(&session_id, &*OFFLINE_STATUS,
+                    SystemTime::now());
                 if let Some(sess) = self.sessions.inactive.remove(&session_id)
                 {
                     // TODO(tailhook) remove lattice subscriptions
@@ -244,16 +266,17 @@ impl Pool {
 
     pub fn update_activity(&mut self, sess_id: SessionId, activity_ts: Instant)
     {
+        let now = SystemTime::now();
         if let Some(mut session) = self.sessions.inactive.remove(&sess_id) {
             INACTIVE_SESSIONS.decr(1);
             ACTIVE_SESSIONS.incr(1);
-            session.status_timestamp = SystemTime::now();
-            // TODO(tailhook) send update
+            session.status_timestamp = now;
+            self.publish_status(&sess_id, &*ACTIVE_STATUS, now);
             self.sessions.active.insert(sess_id.clone(), activity_ts, session);
         } else {
             self.sessions.active.update_if_smaller(&sess_id, activity_ts);
             if let Some(sess) = self.sessions.active.get_mut(&sess_id) {
-                sess.status_timestamp = SystemTime::now();
+                sess.status_timestamp = now;
             }
         }
     }
@@ -263,6 +286,7 @@ impl Pool {
             .map(|(_, &x, _)| x < timestamp).unwrap_or(false)
         {
             let (sess_id, _, mut session) = self.sessions.active.pop().unwrap();
+            let now = SystemTime::now();
             ACTIVE_SESSIONS.decr(1);
             self.channel.unbounded_send(PoolMessage::InactiveSession {
                 session_id: sess_id.clone(),
@@ -272,12 +296,12 @@ impl Pool {
             if session.connections.len() == 0 {
                 // TODO(tailhook) remove lattice subscriptions
                 // TODO(tailhook) more cleanup needed?
-                // TODO(tailhook) send update that user is offline
+                self.publish_status(&sess_id, &*OFFLINE_STATUS, now);
                 self.user_listeners.remove_list_key1(
                     &session.users_lattice.peers, &sess_id);
             } else {
-                session.status_timestamp = SystemTime::now();
-                // TODO(tailhook) send update
+                session.status_timestamp = now;
+                self.publish_status(&sess_id, &*INACTIVE_STATUS, now);
                 let val = self.sessions.inactive.insert(sess_id, session);
                 INACTIVE_SESSIONS.incr(1);
                 debug_assert!(val.is_none());
@@ -644,30 +668,45 @@ fn get_user_statuses<'x, I>(peers: I, sessions: &Sessions)
     -> HashMap<LatticeKey, Values>
     where I: IntoIterator<Item=&'x SessionId>
 {
+    let mut result = HashMap::new();
+    for peer in peers {
+        let (ts, status) = if let Some(sess) = sessions.active.get(peer) {
+            (sess.status_timestamp, &*ACTIVE_STATUS)
+        } else if let Some(sess) = sessions.inactive.get(peer) {
+            (sess.status_timestamp, &*INACTIVE_STATUS)
+        } else {
+            (SystemTime::now(), &*OFFLINE_STATUS)
+        };
+
+        result.insert(peer.parse().unwrap(), user_status_update(status, ts));
+    }
+    result
+}
+
+fn single_update(user: &SessionId, value: &Arc<Json>, timestamp: SystemTime)
+    -> HashMap<LatticeKey, Values>
+{
+    let mut result = HashMap::new();
+    result.insert(user.parse().unwrap(),
+        user_status_update(value, timestamp));
+    result
+}
+
+fn user_status_update(value: &Arc<Json>, timestamp: SystemTime)
+    -> Values
+{
     fn to_f64(ts: SystemTime) -> f64 {
         let d = ts.duration_since(UNIX_EPOCH).expect("valid time");
         (d.as_secs() * 1000) as f64 + (d.subsec_nanos() / 1_000_000) as f64
     }
 
-    let mut result = HashMap::new();
-    for peer in peers {
-        let (ts, status) = if let Some(sess) = sessions.active.get(peer) {
-            (sess.status_timestamp, Json::from("active"))
-        } else if let Some(sess) = sessions.inactive.get(peer) {
-            (sess.status_timestamp, Json::from("inactive"))
-        } else {
-            (SystemTime::now(), Json::from("offline"))
-        };
-
-        result.insert(peer.parse().unwrap(), Values {
-            counters: Default::default(),
-            sets: Default::default(),
-            registers: vec![
-                (STATUS_VAR.clone(), Register(to_f64(ts), Arc::new(status))),
-            ].into_iter().collect(),
-        });
+    Values {
+        counters: Default::default(),
+        sets: Default::default(),
+        registers: vec![
+            (STATUS_VAR.clone(), Register(to_f64(timestamp), value.clone())),
+        ].into_iter().collect(),
     }
-    result
 }
 
 fn copy_attachments(sess: &mut Session, conn: &Connection, cid: Cid,
