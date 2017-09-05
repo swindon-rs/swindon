@@ -4,6 +4,7 @@ Backend API Reference
 Pub/Sub subscriptions
 ---------------------
 
+.. index:: triple: Subscribe; Pub-Sub; Lattice API
 .. http:PUT:: /v1/connection/(str:conn_id)/subscriptions/(path:topic)
 
    Subscribe client with ``conn_id`` to specific topic ``topic``.
@@ -27,6 +28,7 @@ Pub/Sub subscriptions
       Content-Length: 0
 
 
+.. index:: triple: Unsubscribe; Pub-Sub; Lattice API
 .. http:DELETE:: /v1/connection/(str:conn_id)/subscriptions/(path:topic)
 
    Unsubscribe client with ``conn_id`` from specific ``topic``.
@@ -47,6 +49,7 @@ Pub/Sub subscriptions
 
 .. _topic-publish:
 
+.. index:: triple: Publish; Pub-Sub; Lattice API
 .. http:POST:: /v1/publish/(path:topic)
 
    Publish JSON message to all subscribed clients.
@@ -71,9 +74,10 @@ Pub/Sub subscriptions
       Content-Length: 0
 
 
-Lattice subscriptions
+Lattice Subscriptions
 ---------------------
 
+.. index:: triple: Subscribe; Lattice; Lattice API
 .. http:PUT:: /v1/connection/(str:conn_id)/lattices/(path:namespace)
 
    Subscribe client with ``conn_id`` to lattice namespace ``namespace``.
@@ -101,6 +105,7 @@ Lattice subscriptions
       HTTP/1.1 204 No Content
       Content-Length: 0
 
+.. index:: triple: Unubscribe; Lattice; Lattice API
 .. http:DELETE:: /v1/connection/(str:conn_id)/lattices/(path:namespace)
 
    Unsubscribe client with ``conn_id`` from lattice ``namespace``.
@@ -118,6 +123,7 @@ Lattice subscriptions
       HTTP/1.1 204 No Content
       Content-Length: 0
 
+.. index:: triple: Update; Lattice; Lattice API
 .. http:POST:: /v1/lattice/(path:namespace)
 
    Publish an update to lattice namespace.
@@ -142,6 +148,53 @@ Lattice subscriptions
           "room1": {"last_seen_counter": 123},
           "room2": {"last_seen_counter": 24}}
       }}
+
+   .. sourcecode:: http
+
+      HTTP/1.1 204 No Content
+      Content-Length: 0
+
+
+Users Lattice
+-------------
+
+Users lattice, is a special lattice that is named ``swindon.user`` from the
+viewpoint of the server, but has different server-side API:
+
+.. index:: triple: Subscribe; Users Lattice; Lattice API
+.. http:PUT:: /v1/connection/(str:conn_id)/users
+
+   Subscribe client with ``conn_id`` to ``swindon.user`` namespace and
+   show they the status of specified users:
+
+   Example:
+
+   .. sourcecode:: http
+
+      PUT /v1/connection/nb9NC-HpR/users HTTP/1.1
+      Host: example.com
+      Content-Type: application/json
+      Content-Length: 109
+
+      ["7777", "8734"]
+
+   .. sourcecode:: http
+
+      HTTP/1.1 204 No Content
+      Content-Length: 0
+
+.. index:: triple: Unubscribe; Users Lattice; Lattice API
+.. http:DELETE:: /v1/connection/(str:conn_id)/users
+
+   Unsubscribe client with ``conn_id`` from lattice ``swindon.user``.
+
+   Example:
+
+   .. sourcecode:: http
+
+      DELETE /v1/connection/nb9NC-HpR/users HTTP/1.1
+      Host: example.com
+      Content-Length: 0
 
    .. sourcecode:: http
 
