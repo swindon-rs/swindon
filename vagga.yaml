@@ -105,6 +105,12 @@ containers:
     - !Py3Requirements "examples/presence/requirements.txt"
     - !NpmDependencies
       file: "examples/presence/package.json"
+
+    # temporary for git install
+    - !Sh |
+        cd /usr/lib/node_modules/swindon
+        npm install
+        npm run build
     environ:
       NODE_PATH: /usr/lib/node_modules
 

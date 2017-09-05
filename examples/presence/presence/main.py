@@ -1,11 +1,16 @@
 import os
+import re
 import logging
 import argparse
+from http.cookies import SimpleCookie
 from aiohttp import web
 from censusname import generate as make_name
 
 from .convention import swindon_convention
 from .swindon import connect
+
+
+NON_ALPHA = re.compile('[^a-z0-9_]')
 
 
 def main():
@@ -33,11 +38,12 @@ def main():
 
 @swindon_convention
 async def auth(req, http_authorization, http_cookie, url_querystring):
-    name = make_name()
-    id = name.lower().replace(' ', '_')
-    await req.app['swindon'].subscribe(req.connection, 'message-board')
+    name = SimpleCookie(http_cookie)['swindon_presence_login'].value
+    uid = NON_ALPHA.sub('_', name.lower())
+    req.app['swindon'].all_users.add(uid)
+    await req.app['swindon'].attach_users(req.connection, 'muc')
     return {
-        'user_id': id,
+        'user_id': uid,
         'username': name,
     }
 

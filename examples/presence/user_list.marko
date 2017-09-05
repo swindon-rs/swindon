@@ -1,15 +1,31 @@
 import cookie from 'cookie'
+import {Swindon, Lattice} from 'swindon'
 
 class {
     onCreate() {
         var {swindon_presence_login} = cookie.parse(document.cookie)
+        this.swindon = new Swindon('ws://' + location.host)
         this.state = {
             login: swindon_presence_login,
+            lattice: new Lattice({onUpdate: this.lattice_update.bind(this)}),
         }
+    }
+    onMount() {
+        this.guard = this.swindon.guard()
+                .lattice('swindon.user', '', this.state.lattice)
+    }
+    onUnmount() {
+        this.guard.close()
+    }
+    lattice_update(keys, lat) {
+        console.log("LATTTICE_UPDATE", lat)
+        this.forceUpdate()
     }
 }
 <h2>Logged in as: ${state.login}</h2>
 <h2>Other users:</h2>
 <ul>
-    <li>user1</li>
+    <li for(user in state.lattice.allKeys())>
+        ${user}: ${state.lattice.getRegister(user, 'status')[1]}
+    </li>
 </ul>

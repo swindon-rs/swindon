@@ -15,7 +15,7 @@
   },
   "dependencies": {
     "regenerator-runtime": "^0.10.5",
-    "swindon": "^0.3.2"
+    "swindon": "git://github.com/swindon-rs/swindon-js"
   },
   "scripts": {
   }
