@@ -13,6 +13,7 @@ use config::visitors::FromStrVisitor;
 #[derive(Deserialize, Debug, PartialEq, Eq)]
 pub struct Chat {
     pub allow_empty_subprotocol: bool,
+    pub use_tangle_prefix: bool,
     pub session_pool: SessionPoolName,
     pub http_route: Option<HandlerName>,
     pub message_handlers: RoutingTable,
@@ -34,6 +35,7 @@ pub struct RoutingTable {
 pub fn old_validator<'x>() -> Structure<'x> {
     Structure::new()
     .member("allow_empty_subprotocol", Scalar::new().default(true))
+    .member("use_tangle_prefix", Scalar::new().default(true))
     .member("session_pool", Scalar::new())
     .member("session_pool", Scalar::new())
     .member("http_route", http::destination_validator().optional())
@@ -44,6 +46,7 @@ pub fn old_validator<'x>() -> Structure<'x> {
 pub fn validator<'x>() -> Structure<'x> {
     Structure::new()
     .member("allow_empty_subprotocol", Scalar::new().default(false))
+    .member("use_tangle_prefix", Scalar::new().default(false))
     .member("session_pool", Scalar::new())
     .member("session_pool", Scalar::new())
     .member("http_route", http::destination_validator().optional())

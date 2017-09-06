@@ -4,6 +4,8 @@ _VARS:
   - &PROXY_ADDRESS ${proxy_address}
   - &SPOOL_ADDRESS1 ${spool_address1}
   - &SPOOL_ADDRESS2 ${spool_address2}
+  - &SPOOL_ADDRESS3 ${spool_address3}
+  - &SPOOL_ADDRESS4 ${spool_address4}
 
 listen:
 - *LISTEN
@@ -62,6 +64,11 @@ routing:
   localhost/swindon-chat: swindon_chat
   localhost/swindon-chat-w-timeouts: swindon_chat_w_timeouts
   localhost/swindon-chat-w-client-timeout: swindon_chat_w_client_timeout
+
+  ### !SwindonLattice routes ###
+  localhost/swindon-lattice: swindon_lattice
+  localhost/swindon-lattice-w-timeouts: swindon_lattice_w_timeouts
+  localhost/swindon-lattice-w-client-timeout: swindon_lattice_w_client_timeout
 
   ### !WebsocketEcho routes ###
   localhost/websocket-echo: websocket_echo
@@ -182,21 +189,39 @@ handlers:
 
   ### SwindonChat handlers ###
   swindon_chat: !SwindonChat
-    session_pool: swindon_pool
+    session_pool: swindon_pool_old
     http_route: swindon_proxy
     message_handlers:
       "*": swindon_chat_dest/
       prefixed.*: swindon_chat_dest/with-prefix
       rxid.*: swindon_chat_w_rxid/
   swindon_chat_w_timeouts: !SwindonChat
-    session_pool: pool_w_timeouts
+    session_pool: pool_w_timeouts_old
     message_handlers:
       "*": swindon_chat_dest/
   swindon_chat_w_client_timeout: !SwindonChat
-    session_pool: swindon_pool
+    session_pool: swindon_pool_old
     http_route: swindon_proxy
     message_handlers:
       "*": swindon_chat_w_timeout/
+
+  ### SwindonLattice handlers ###
+  swindon_lattice: !SwindonLattice
+    session_pool: swindon_pool_new
+    http_route: swindon_proxy
+    message_handlers:
+      "*": swindon_lattice_dest/
+      prefixed.*: swindon_lattice_dest/with-prefix
+      rxid.*: swindon_lattice_w_rxid/
+  swindon_lattice_w_timeouts: !SwindonLattice
+    session_pool: pool_w_timeouts_new
+    message_handlers:
+      "*": swindon_lattice_dest/
+  swindon_lattice_w_client_timeout: !SwindonLattice
+    session_pool: swindon_pool_new
+    http_route: swindon_proxy
+    message_handlers:
+      "*": swindon_lattice_w_timeout/
 
   ### WebsocketEcho handlers ###
   websocket_echo: !WebsocketEcho
@@ -210,7 +235,7 @@ handlers:
   strip_www_redirect: !StripWWWRedirect
 
 session-pools:
-  swindon_pool:
+  swindon_pool_old:
     listen:
     - *SPOOL_ADDRESS1
     inactivity_handlers:
@@ -221,11 +246,25 @@ session-pools:
     # max_connections: 1000
     # listen_error_timeout: 100ms
     # max_payload_size: 10485760
-  pool_w_timeouts:
+  swindon_pool_new:
+    listen:
+    - *SPOOL_ADDRESS3
+    inactivity_handlers:
+    - swindon_lattice_dest/
+    - swindon_lattice_w_timeout/
+  pool_w_timeouts_old:
     listen:
     - *SPOOL_ADDRESS2
     inactivity_handlers:
     - swindon_chat_dest
+    new_connection_idle_timeout: 1s
+    client_min_idle_timeout: 1s
+    client_max_idle_timeout: 10s
+  pool_w_timeouts_new:
+    listen:
+    - *SPOOL_ADDRESS4
+    inactivity_handlers:
+    - swindon_lattice_dest
     new_connection_idle_timeout: 1s
     client_min_idle_timeout: 1s
     client_max_idle_timeout: 10s
@@ -260,6 +299,22 @@ http-destinations:
     addresses:
     - *PROXY_ADDRESS
   swindon_chat_w_timeout:
+    override-host-header: swindon.internal
+    max-request-timeout: 1s
+    addresses:
+    - *PROXY_ADDRESS
+
+  ### SwindonLattice destinations ###
+  swindon_lattice_dest:
+    override-host-header: swindon.internal
+    addresses:
+    - *PROXY_ADDRESS
+  swindon_lattice_w_rxid:
+    override-host-header: swindon.internal
+    request-id-header: X-Request-Id
+    addresses:
+    - *PROXY_ADDRESS
+  swindon_lattice_w_timeout:
     override-host-header: swindon.internal
     max-request-timeout: 1s
     addresses:

@@ -6,7 +6,7 @@ from aiohttp import ClientSession
 
 async def auth(handler, auth_data):
     req = await handler.request()
-    assert req.path == '/tangle/authorize_connection'
+    assert req.path == '/swindon/authorize_connection'
     meta, *tail = await req.json()
     assert 'connection_id' in meta
     cid = meta['connection_id']
@@ -38,27 +38,27 @@ async def test_simple_replication(swindon_two, proxy_server, loop):
     peerA, peerB = swindon_two
     # await asyncio.sleep(1.5, loop=loop)  # wait reconnect
 
-    urlA = peerA.url / 'swindon-chat'
-    urlB = peerB.url / 'swindon-chat'
+    urlA = peerA.url / 'swindon-lattice'
+    urlB = peerB.url / 'swindon-lattice'
     async with proxy_server(port=peerA.proxy.port) as proxy:
-        handlerA = proxy.swindon_chat(urlA, timeout=1)
+        handlerA = proxy.swindon_lattice(urlA, timeout=1)
         cid1, ws1 = await auth(
             handlerA, {'user_id': 'replicated-user:1', 'username': 'John'})
 
-        url = peerA.api / 'v1/connection' / cid1 / 'subscriptions' / 'general'
+        url = peerA.api3 / 'v1/connection' / cid1 / 'subscriptions' / 'general'
         await put(url, loop)
 
-        handlerB = proxy.swindon_chat(urlB, timeout=1)
+        handlerB = proxy.swindon_lattice(urlB, timeout=1)
         cid2, ws2 = await auth(
             handlerB, {'user_id': 'replicated-user:1', 'username': 'John'})
 
-        url = peerB.api / 'v1/connection' / cid2 / 'subscriptions' / 'general'
+        url = peerB.api3 / 'v1/connection' / cid2 / 'subscriptions' / 'general'
         await put(url, loop)
 
         # subscribe both to some topic and publish into one peer.
 
         data = b'{"test": "message"}'
-        await post(peerB.api / 'v1/publish/general', data, loop)
+        await post(peerB.api3 / 'v1/publish/general', data, loop)
 
         msg1 = await ws1.receive_json()
         msg2 = await ws2.receive_json()
@@ -85,24 +85,24 @@ async def test_non_local_connections(swindon_two, proxy_server, loop, through):
     # * action replicated to peer B;
     # Expected result:
     # client B not subscribed to that topic
-    urlA = peerA.url / 'swindon-chat'
-    urlB = peerB.url / 'swindon-chat'
+    urlA = peerA.url / 'swindon-lattice'
+    urlB = peerB.url / 'swindon-lattice'
     async with proxy_server(port=peerA.proxy.port) as proxy:
-        handlerA = proxy.swindon_chat(urlA, timeout=1)
+        handlerA = proxy.swindon_lattice(urlA, timeout=1)
         cid1, ws1 = await auth(
             handlerA, {'user_id': 'replicated-user:1', 'username': 'John'})
 
-        handlerB = proxy.swindon_chat(urlB, timeout=1)
+        handlerB = proxy.swindon_lattice(urlB, timeout=1)
         cid2, ws2 = await auth(
             handlerB, {'user_id': 'replicated-user:2', 'username': 'John'})
 
         # Subscribe only first user;
-        url = subscribe_peer.api / 'v1/connection'
+        url = subscribe_peer.api3 / 'v1/connection'
         url = url / cid1 / 'subscriptions/general'
         await put(url, loop)
         # publish some data
         data = b'{"hello": "world"}'
-        await post(peerA.api / 'v1/publish/general', data, loop)
+        await post(peerA.api3 / 'v1/publish/general', data, loop)
 
         msg1 = await ws1.receive_json()
         assert msg1 == [
@@ -121,30 +121,30 @@ async def test_topic_unsubscribe(swindon_two, proxy_server, loop,
         control = peerA
     else:
         control = peerB
-    urlA = peerA.url / 'swindon-chat'
-    # urlB = peerB.url / 'swindon-chat'
+    urlA = peerA.url / 'swindon-lattice'
+    # urlB = peerB.url / 'swindon-lattice'
     async with proxy_server(port=peerA.proxy.port) as proxy:
-        handlerA = proxy.swindon_chat(urlA, timeout=1)
+        handlerA = proxy.swindon_lattice(urlA, timeout=1)
         cid, ws = await auth(handlerA, {"user_id": user_id})
 
-        topic_url = control.api / 'v1/connection'
+        topic_url = control.api3 / 'v1/connection'
         topic_url = topic_url / cid / 'subscriptions/xxxx'
         await put(topic_url, loop)
 
         # publish some data
         data = b'["hello", "from", "peerA"]'
-        await post(peerA.api / 'v1/publish/xxxx', data, loop)
+        await post(peerA.api3 / 'v1/publish/xxxx', data, loop)
         msg = await ws.receive_json()
         assert msg == [
             "message", {"topic": "xxxx"}, ["hello", "from", "peerA"]]
 
         data = b'["hello", "from", "peerB"]'
-        await post(peerB.api / 'v1/publish/xxxx', data, loop)
+        await post(peerB.api3 / 'v1/publish/xxxx', data, loop)
         msg = await ws.receive_json()
         assert msg == [
             "message", {"topic": "xxxx"}, ["hello", "from", "peerB"]]
 
-        topic_url = control.api / 'v1/connection'
+        topic_url = control.api3 / 'v1/connection'
         topic_url = topic_url / cid / 'subscriptions/xxxx'
         await delete(topic_url, loop)
         # XXX: publish can be received earlier than unsubscribe "replicated"
@@ -152,8 +152,8 @@ async def test_topic_unsubscribe(swindon_two, proxy_server, loop,
 
         # publish some data
         data = b'["hello", "world"]'
-        await post(peerA.api / 'v1/publish/xxxx', data, loop)
-        await post(peerB.api / 'v1/publish/xxxx', data, loop)
+        await post(peerA.api3 / 'v1/publish/xxxx', data, loop)
+        await post(peerB.api3 / 'v1/publish/xxxx', data, loop)
         with pytest.raises(asyncio.TimeoutError):
             with timeout(1, loop=loop):
                 assert await ws.receive_json() is None

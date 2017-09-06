@@ -143,7 +143,8 @@ def assert_headers(headers, debug_routing):
     assert headers.getall('Server') == ['swindon/func-tests']
 
 
-SwindonInfo = namedtuple('SwindonInfo', 'proc url proxy api api2')
+SwindonInfo = namedtuple('SwindonInfo',
+    'proc url proxy api api2 api3 api4')
 
 
 @pytest.fixture(scope='session')
@@ -176,6 +177,8 @@ def swindon_ports(unused_port, debug_routing, swindon_bin):
                 'proxy': unused_port(),
                 'session_pool_1': unused_port(),
                 'session_pool_2': unused_port(),
+                'session_pool_3': unused_port(),
+                'session_pool_4': unused_port(),
                 'replication': unused_port(),
             }
             return val
@@ -202,12 +205,16 @@ def swindon(_proc, request, debug_routing,
         proxy_port=default['proxy'],
         session_pool1_port=default['session_pool_1'],
         session_pool2_port=default['session_pool_2'],
+        session_pool3_port=default['session_pool_3'],
+        session_pool4_port=default['session_pool_4'],
 
         listen_address=to_addr(default['main']),
         debug_routing=str(debug_routing).lower(),
         proxy_address=to_addr(default['proxy']),
         spool_address1=to_addr(default['session_pool_1']),
         spool_address2=to_addr(default['session_pool_2']),
+        spool_address3=to_addr(default['session_pool_3']),
+        spool_address4=to_addr(default['session_pool_4']),
         TESTS_DIR=TESTS_DIR,
     )
     with run_swindon(_proc, swindon_bin, config, rust_log, default['main'],
@@ -232,12 +239,16 @@ def swindon_two(_proc, request, debug_routing,
         proxy_port=peer1['proxy'],
         session_pool1_port=peer1['session_pool_1'],
         session_pool2_port=peer1['session_pool_2'],
+        session_pool3_port=peer1['session_pool_3'],
+        session_pool4_port=peer1['session_pool_4'],
 
         listen_address=to_addr(peer1['main']),
         debug_routing=str(debug_routing).lower(),
         proxy_address=to_addr(peer1['proxy']),
         spool_address1=to_addr(peer1['session_pool_1']),
         spool_address2=to_addr(peer1['session_pool_2']),
+        spool_address3=to_addr(peer1['session_pool_3']),
+        spool_address4=to_addr(peer1['session_pool_4']),
         replication_listen_address=to_addr(peer1['replication']),
         replication_peer_address=to_addr(peer2['replication']),
         TESTS_DIR=TESTS_DIR,
@@ -247,12 +258,16 @@ def swindon_two(_proc, request, debug_routing,
         proxy_port=peer1['proxy'],  # NOTE: using peer1 proxy addr
         session_pool1_port=peer2['session_pool_1'],
         session_pool2_port=peer2['session_pool_2'],
+        session_pool3_port=peer2['session_pool_3'],
+        session_pool4_port=peer2['session_pool_4'],
 
         listen_address=to_addr(peer2['main']),
         debug_routing=str(debug_routing).lower(),
         proxy_address=to_addr(peer1['proxy']),  # NOTE: using peer1 proxy addr
         spool_address1=to_addr(peer2['session_pool_1']),
         spool_address2=to_addr(peer2['session_pool_2']),
+        spool_address3=to_addr(peer2['session_pool_3']),
+        spool_address4=to_addr(peer2['session_pool_4']),
         replication_listen_address=to_addr(peer2['replication']),
         replication_peer_address=to_addr(peer1['replication']),
         TESTS_DIR=TESTS_DIR,
@@ -312,8 +327,11 @@ def run_swindon(_proc, bin, config, log, *wait_ports, **options):
     proxy = yarl.URL('http://localhost:{proxy_port}'.format(**options))
     api1 = yarl.URL('http://localhost:{session_pool1_port}'.format(**options))
     api2 = yarl.URL('http://localhost:{session_pool2_port}'.format(**options))
+    api3 = yarl.URL('http://localhost:{session_pool3_port}'.format(**options))
+    api4 = yarl.URL('http://localhost:{session_pool4_port}'.format(**options))
     try:
-        yield SwindonInfo(proc, url, proxy, api1, api2)
+        yield SwindonInfo(proc, url, proxy,
+            api1, api2, api3, api4)
     finally:
         os.close(fd)
         os.remove(fname)
@@ -499,6 +517,21 @@ class _BaseServer:
         return _HandlerTuple((handler, client_resp))
 
     def start_ws(self, url, **kwargs):
+        print("STARTWS", url)
+        ws_fut = asyncio.ensure_future(
+            self.ws_connect(url,
+                protocols=['v1.swindon-lattice+json'],
+                **kwargs),
+            loop=self.loop)
+        req_fut = asyncio.ensure_future(
+            self.wait_request(),
+            loop=self.loop)
+        ws_fut.add_done_callback(lambda x: req_fut.cancel())
+        handler = _Handler(req_fut, self.set_response,
+                           self.wait_request, self.loop)
+        return _HandlerTuple((handler, ws_fut))
+
+    def start_ws_old(self, url, **kwargs):
         ws_fut = asyncio.ensure_future(
             self.ws_connect(url, **kwargs),
             loop=self.loop)
@@ -717,7 +750,8 @@ def proxy_server(request, swindon, loop):
 
         __aexit__ = server.__aexit__
         send = server.send
-        swindon_chat = server.start_ws
+        swindon_chat = server.start_ws_old
+        swindon_lattice = server.start_ws
 
     return _ServerWrapper
 

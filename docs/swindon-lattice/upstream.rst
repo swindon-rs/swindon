@@ -42,11 +42,11 @@ All endpoints can be prefixed with http destination prefix, for instance:
       chat1: !SwindonChat
          message-handlers:
            "*": chat-host/
-           tangle.*: auth-host/chat1
+           swindon.*: auth-host/chat1
       chat2: !SwindonChat
          message-handlers:
            "*": chat-host/
-           tangle.*: auth-host/chat2
+           swindon.*: auth-host/chat2
    http-destinations:
       chat-host:
          addresses: [chat.example.com]
@@ -58,7 +58,7 @@ Final request will be made against following URL:
 
 .. sourcecode:: http
 
-   POST /chat1/tangle/authorize_connection HTTP/1.1
+   POST /chat1/swindon/authorize_connection HTTP/1.1
    Host: auth.example.com
    Content-Type: application/json
    Content-Length: 11
@@ -78,7 +78,7 @@ Final request will be made against following URL:
 Authorization request
 ---------------------
 
-.. http:POST:: /tangle/authorize_connection
+.. http:POST:: /swindon/authorize_connection
 
    Connection authorization request. If upstream server replies with
    invalid response websocket connection will be closed.
@@ -98,7 +98,7 @@ Authorization request
 
    .. sourcecode:: http
 
-      POST /tangle/authorize_connection HTTP/1.1
+      POST /swindon/authorize_connection HTTP/1.1
       Content-Type: application/json
       Host: chat.example.com
 
@@ -124,7 +124,7 @@ Authorization request
 Inactive session notification
 -----------------------------
 
-.. http:POST:: /tangle/session_inactive
+.. http:POST:: /swindon/session_inactive
 
    Notifies upstream that user's session is inactive,
    see :ref:`Request Meta <request-meta>`.
@@ -133,7 +133,7 @@ Inactive session notification
 
    .. sourcecode:: http
 
-      POST /tangle/session_inactive HTTP/1.1
+      POST /swindon/session_inactive HTTP/1.1
       Host: example.com
       Authorization: Token some/base64encoded/data=
       Content-Type: application/json

@@ -5,6 +5,7 @@ use std::fs::{File, Metadata, metadata};
 use std::io::{self, Read};
 use std::path::{PathBuf, Path, Component};
 use std::rc::Rc;
+use std::sync::Arc;
 
 use quire::{self, Pos, Include, ErrorCollector, Options, parse_config};
 use quire::{raw_parse as parse_yaml};
@@ -245,13 +246,27 @@ pub fn read_config<P: AsRef<Path>>(filename: P)
     for (name, h) in &cfg.handlers {
         match h {
             &Handler::SwindonChat(ref chat) => {
-                match cfg.session_pools.get(&chat.session_pool) {
+                match cfg.session_pools.get_mut(&chat.session_pool) {
                     None => {
                         err!("No session pool {:?} defined", chat.session_pool)
                     }
-                    Some(ref pool) => {
-                        let dest = chat.message_handlers.resolve(
-                            "tangle.session_inactive");
+                    Some(mut pool) => {
+                        let tangle = chat.use_tangle_prefix;
+                        if pool.use_tangle_prefix.is_some() &&
+                            pool.use_tangle_prefix != Some(tangle)
+                        {
+                            err!("Inconsistent `use-tangle-prefix` for \
+                                  pool {:?}", chat.session_pool);
+                        }
+                        Arc::make_mut(&mut pool)
+                            .use_tangle_prefix = Some(tangle);
+                        let dest = if tangle {
+                            chat.message_handlers.resolve(
+                                "tangle.session_inactive")
+                        } else {
+                            chat.message_handlers.resolve(
+                                "swindon.session_inactive")
+                        };
                         if !pool.inactivity_handlers.contains(dest) &&
                             pool.inactivity_handlers.len() != 0 {
                             err!(concat!(

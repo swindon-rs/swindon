@@ -5,7 +5,7 @@ use serde::de::{self, Deserialize, Deserializer};
 use quire::validate::{Enum, Scalar};
 
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum ListenSocket {
     Tcp(SocketAddr),
     // TODO(tailhook)

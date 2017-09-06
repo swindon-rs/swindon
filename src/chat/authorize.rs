@@ -62,8 +62,11 @@ pub fn start_authorize(inp: &Input, conn_id: Cid, settings: &Arc<Chat>,
         channel: messages.clone(),
     });
 
-    let dest = settings.message_handlers
-        .resolve("tangle.authorize_connection");
+    let dest = if settings.use_tangle_prefix {
+        settings.message_handlers.resolve("tangle.authorize_connection")
+    } else {
+        settings.message_handlers.resolve("swindon.authorize_connection")
+    };
 
     let dest_settings = match inp.config.http_destinations.get(&dest.upstream)
     {
@@ -76,10 +79,18 @@ pub fn start_authorize(inp: &Input, conn_id: Cid, settings: &Arc<Chat>,
         }
     };
 
-    let path: Cow<_> = if dest.path == "/" {
-        "/tangle/authorize_connection".into()
+    let path: Cow<_> = if settings.use_tangle_prefix {
+        if dest.path == "/" {
+            "/tangle/authorize_connection".into()
+        } else {
+            (dest.path.to_string() + "/tangle/authorize_connection").into()
+        }
     } else {
-        (dest.path.to_string() + "/tangle/authorize_connection").into()
+        if dest.path == "/" {
+            "/swindon/authorize_connection".into()
+        } else {
+            (dest.path.to_string() + "/swindon/authorize_connection").into()
+        }
     };
     let mut up = inp.runtime.http_pools.upstream(&dest.upstream);
 
@@ -107,7 +118,7 @@ pub fn start_authorize(inp: &Input, conn_id: Cid, settings: &Arc<Chat>,
                 }
                 Ok(AsyncSink::Ready) => {
                     REQUESTS.incr(1);
-                    debug!("Sent /tangle/authorize_connection to proxy");
+                    debug!("Sent /swindon/authorize_connection to proxy");
                 }
                 Err(e) => {
                     error!("Error sending to pool {:?}: {}", dest.upstream, e);

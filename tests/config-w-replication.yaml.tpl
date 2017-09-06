@@ -4,6 +4,8 @@ _VARS:
   - &PROXY_ADDRESS ${proxy_address}
   - &SPOOL_ADDRESS1 ${spool_address1}
   - &SPOOL_ADDRESS2 ${spool_address2}
+  - &SPOOL_ADDRESS3 ${spool_address3}
+  - &SPOOL_ADDRESS4 ${spool_address4}
   - &REPLICATION_LISTEN ${replication_listen_address}
   - &REPLICATION_PEER ${replication_peer_address}
 
@@ -56,9 +58,9 @@ routing:
   localhost/proxy-w-ip-header: proxy_w_ip_header
   localhost/proxy-w-request-id: proxy_w_request_id
 
-  ### !SwindonChat routes ###
-  localhost/swindon-chat: swindon_chat
-  localhost/swindon-chat-w-timeouts: swindon_chat_w_timeouts
+  ### !SwindonLattice routes ###
+  localhost/swindon-lattice: swindon_lattice
+  localhost/swindon-lattice-w-timeouts: swindon_lattice_w_timeouts
 
   ### !WebsocketEcho routes ###
   localhost/websocket-echo: websocket_echo
@@ -79,7 +81,7 @@ authorization:
 
 # Configure all possible handlers?
 handlers:
-  # Allowed handlers are: SwindonChat, Static, SingleFile, Proxy,
+  # Allowed handlers are: SwindonLattice, Static, SingleFile, Proxy,
   #   EmptyGif, HttpBin, WebsocketEcho;
 
   ### EmptyGif handlers ###
@@ -169,17 +171,17 @@ handlers:
   swindon_proxy: !Proxy
     destination: swindon_http_dest
 
-  ### SwindonChat handlers ###
-  swindon_chat: !SwindonChat
+  ### SwindonLattice handlers ###
+  swindon_lattice: !SwindonLattice
     session_pool: swindon_pool
     http_route: swindon_proxy
     message_handlers:
-      "*": swindon_chat_dest/
-      prefixed.*: swindon_chat_dest/with-prefix
-  swindon_chat_w_timeouts: !SwindonChat
+      "*": swindon_lattice_dest/
+      prefixed.*: swindon_lattice_dest/with-prefix
+  swindon_lattice_w_timeouts: !SwindonLattice
     session_pool: pool_w_timeouts
     message_handlers:
-      "*": swindon_chat_dest/
+      "*": swindon_lattice_dest/
 
   ### WebsocketEcho handlers ###
   websocket_echo: !WebsocketEcho
@@ -195,9 +197,9 @@ handlers:
 session-pools:
   swindon_pool:
     listen:
-    - *SPOOL_ADDRESS1
+    - *SPOOL_ADDRESS3
     inactivity_handlers:
-    - swindon_chat_dest/
+    - swindon_lattice_dest/
     ### defaults: ###
     # pipeline_depth: 2
     # max_connections: 1000
@@ -205,9 +207,9 @@ session-pools:
     # max_payload_size: 10485760
   pool_w_timeouts:
     listen:
-    - *SPOOL_ADDRESS2
+    - *SPOOL_ADDRESS4
     inactivity_handlers:
-    - swindon_chat_dest
+    - swindon_lattice_dest
     new_connection_idle_timeout: 1s
     client_min_idle_timeout: 1s
     client_max_idle_timeout: 10s
@@ -218,11 +220,11 @@ http-destinations:
     addresses:
     - *PROXY_ADDRESS
 
-  ### SwindonChat destinations ###
+  ### SwindonLattice destinations ###
   swindon_http_dest:
     addresses:
     - *PROXY_ADDRESS
-  swindon_chat_dest:
+  swindon_lattice_dest:
     override-host-header: swindon.internal
     addresses:
     - *PROXY_ADDRESS

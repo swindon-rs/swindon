@@ -760,6 +760,7 @@ mod test {
                 listen_error_timeout: Duration::from_secs(1).into(),
                 pipeline_depth: 2,
                 max_payload_size: 10_000_000,
+                use_tangle_prefix: Some(false),
             }),
             tx);
         return (pool, rx);

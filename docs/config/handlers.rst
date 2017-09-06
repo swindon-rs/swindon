@@ -316,6 +316,26 @@ Settings:
 
    .. versionadded:: v0.5.5
 
+.. opt:: use-tangle-prefix
+
+   (default ``false``) This is backwards compatibility option. If set to true
+   all swindon calls such as ``/swindon/authorize_connection`` are called
+   with historical ``tangle`` prefix (like ``/tangle/authorize_connection``)
+
+   **Deprecated** Do not set to ``true`` for new applications.
+
+   .. note::
+
+      By default set to ``true`` in ``SwindonChat``
+      (``false`` in ``SwindonLattice``)
+
+   .. warn::
+
+      It's error to set this flag to a different values for different
+      handlers attached to the same session pool.
+
+   .. versionadded:: v0.7.0
+
 
 Redirect handlers
 -----------------

@@ -23,10 +23,16 @@ pub fn run(runtime: &Arc<Runtime>, settings: &Arc<SessionPool>,
     let mut handlers = Vec::new();
     let runtime = runtime.clone();
     for dest in &settings.inactivity_handlers {
-        let path = if dest.path == "/" {
-            Arc::new("/tangle/session_inactive".to_string())
+        let suffix = if settings.use_tangle_prefix.unwrap_or(false) {
+            "/tangle/session_inactive"
         } else {
-            Arc::new(dest.path.to_string() + "/tangle/session_inactive")
+            "/swindon/session_inactive"
+        };
+        // TODO(tailhook) these arcs can be created at config read
+        let path = if dest.path == "/" {
+            Arc::new(suffix.to_string())
+        } else {
+            Arc::new(dest.path.to_string() + suffix)
         };
         handlers.push((path, dest.upstream.clone()));
     }
@@ -61,7 +67,7 @@ pub fn run(runtime: &Arc<Runtime>, settings: &Arc<SessionPool>,
                                     }
                                     Ok(AsyncSink::Ready) => {
                                         REQUESTS.incr(1);
-                                        debug!("Sent /tangle/session_inactive");
+                                        debug!("Sent /swindon/session_inactive");
                                     }
                                     Err(e) => {
                                         // TODO(tailhook) log, retry later

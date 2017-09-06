@@ -4,7 +4,7 @@ use quire::validate::{Structure, Sequence, Scalar, Numeric};
 use super::listen::{self, ListenSocket};
 use super::http;
 
-#[derive(Deserialize, Debug, PartialEq, Eq)]
+#[derive(Deserialize, Debug, PartialEq, Eq, Clone)]
 pub struct SessionPool {
     pub listen: Vec<ListenSocket>,
     pub max_connections: usize,
@@ -22,6 +22,8 @@ pub struct SessionPool {
     // XXX: never used
     #[serde(with="::quire::duration")]
     pub client_default_idle_timeout: Duration,
+    #[serde(skip)]
+    pub use_tangle_prefix: Option<bool>,
 }
 
 
