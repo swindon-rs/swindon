@@ -15,6 +15,7 @@ extern crate env_logger;
 extern crate futures;
 extern crate futures_cpupool;
 extern crate generic_array;
+extern crate httpdate;
 extern crate httpbin;
 extern crate http_file_headers;
 extern crate libcantal;
