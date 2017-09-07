@@ -57,6 +57,7 @@ async def test_no_such_version(swindon, get_request, static_request_method,
     assert resp.headers['Content-Type'] == 'text/html'
     assert resp.headers['Cache-Control'] == 'no-cache, no-store, must-revalidate'
     if debug_routing:
+        # TODO(tailhook) fix debug path
         # this isn't very good for debugging, but let's cope with that
         assert resp.headers['X-Swindon-File-Path'] == \
             '"{}/hashed/aa/eebbbb-test.html"'.format(TESTS_DIR)
