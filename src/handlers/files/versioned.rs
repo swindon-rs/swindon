@@ -2,9 +2,11 @@ use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc};
 use std::str::from_utf8;
+use std::time::{SystemTime, Duration};
 
-use tk_http::Status;
 use http_file_headers::{Input as HeadersInput, Output};
+use httpdate::HttpDate;
+use tk_http::Status;
 
 use config::static_files::{VersionChars, VersionedStatic};
 use default_error_page::{error_page};
@@ -14,6 +16,11 @@ use handlers::files::normal;
 use handlers::files::pools::get_pool;
 use handlers::files::common::{reply_file, NotFile};
 
+
+const VERSIONED_CACHE: &str = "public, max-age=31536000, immutable";
+const VERSIONED_EXPIRES: u64 = 365*86400;
+const UNVERSIONED_CACHE: &str = "no-cache, no-store, must-revalidate";
+
 quick_error! {
     #[derive(Debug, Copy, Clone)]
     pub enum VersionError {
@@ -22,6 +29,12 @@ quick_error! {
         InvalidPath
         NoFile
     }
+}
+
+pub enum Cache {
+    NoHeader,
+    NoCache,
+    GoodCache,
 }
 
 fn find_param<'x>(query: &'x str, arg: &str) -> Option<&'x str> {
@@ -117,33 +130,56 @@ pub fn serve_versioned<S: Transport>(settings: &Arc<VersionedStatic>,
                 x => Ok(x),
             });
         let res = match (res, &npath, settings.fallback_to_plain) {
-            (Ok(x), _, _) => x,
-            (Err(_), &Some(ref pp), always)
-            | (Err(NoFile), &Some(ref pp), no_file)
-            | (Err(BadVersion), &Some(ref pp), no_file)
-            | (Err(InvalidPath), &Some(ref pp), no_file)
-            | (Err(NoVersion), &Some(ref pp), no_file)
-            | (Err(BadVersion), &Some(ref pp), bad_version)
-            | (Err(NoVersion), &Some(ref pp), bad_version)
-            | (Err(NoVersion), &Some(ref pp), no_version)
+            (Ok(x), _, _) => x.map(|f| (f, Cache::GoodCache)),
+            (Err(e@_), &Some(ref pp), always)
+            | (Err(e@NoFile), &Some(ref pp), no_file)
+            | (Err(e@BadVersion), &Some(ref pp), no_file)
+            | (Err(e@InvalidPath), &Some(ref pp), no_file)
+            | (Err(e@NoVersion), &Some(ref pp), no_file)
+            | (Err(e@BadVersion), &Some(ref pp), bad_version)
+            | (Err(e@NoVersion), &Some(ref pp), bad_version)
+            | (Err(e@NoVersion), &Some(ref pp), no_version)
             => {
-                hinp.probe_file(pp)
+                // TODO(tailhook) update debug path
+                hinp.probe_file(pp).map(|file| {
+                    let cache = match e {
+                        NoVersion => Cache::NoHeader,
+                        BadVersion => Cache::NoHeader,
+                        InvalidPath => Cache::NoHeader,
+                        NoFile => Cache::NoCache,
+                    };
+                    (file, cache)
+                })
             }
             (Err(_), _, _) => {
-                return Ok(Output::NotFound);
+                Ok((Output::NotFound, Cache::NoHeader))
             }
         };
         return res.map_err(|e| {
             if e.kind() == io::ErrorKind::PermissionDenied {
-                NotFile::Status(Status::Forbidden)
+                (NotFile::Status(Status::Forbidden), Cache::NoHeader)
             } else {
                 error!("Error reading file {:?} / {:?}: {}", path, npath, e);
-                NotFile::Status(Status::InternalServerError)
+                (NotFile::Status(Status::InternalServerError),
+                 Cache::NoHeader)
             }
         });
     });
 
-    reply_file(inp, pool, fut, move |e| {
+    reply_file(inp, pool, fut, move |e, cache| {
+        match cache {
+            Cache::NoHeader => {}
+            Cache::NoCache => {
+                e.add_header("Cache-Control", UNVERSIONED_CACHE.as_bytes());
+                e.add_header("Expires", b"0");
+            }
+            Cache::GoodCache => {
+                e.add_header("Cache-Control", VERSIONED_CACHE.as_bytes());
+                let expires = SystemTime::now() +
+                    Duration::new(VERSIONED_EXPIRES, 0);
+                e.format_header("Expires", &HttpDate::from(expires));
+            }
+        }
         e.add_extra_headers(&settings2.extra_headers);
     })
 }

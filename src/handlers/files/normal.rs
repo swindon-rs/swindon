@@ -38,25 +38,25 @@ pub fn serve_dir<S: Transport>(settings: &Arc<Static>, mut inp: Input)
         match hinp.probe_file(&path) {
             Ok(Output::Directory) if settings2.generate_index => {
                 generate_index(&path, &virtual_path, &settings2)
-                .map(|x| Err(NotFile::Directory(x)))
-                .unwrap_or_else(|s| Err(NotFile::Status(s)))
+                .map(|x| Err((NotFile::Directory(x), ())))
+                .unwrap_or_else(|s| Err((NotFile::Status(s), ())))
             }
             Ok(Output::Directory) => {
-                Err(NotFile::Status(Status::Forbidden))
+                Err((NotFile::Status(Status::Forbidden), ()))
             }
-            Ok(x) => Ok(x),
+            Ok(x) => Ok((x, ())),
             Err(e) => {
                 if e.kind() == io::ErrorKind::PermissionDenied {
-                    Err(NotFile::Status(Status::Forbidden))
+                    Err((NotFile::Status(Status::Forbidden), ()))
                 } else {
                     error!("Error reading file {:?}: {}", path, e);
-                    Err(NotFile::Status(Status::InternalServerError))
+                    Err((NotFile::Status(Status::InternalServerError), ()))
                 }
             }
         }
     });
 
-    reply_file(inp, pool, fut, move |e| {
+    reply_file(inp, pool, fut, move |e, ()| {
         e.add_extra_headers(&settings.extra_headers);
     })
 }

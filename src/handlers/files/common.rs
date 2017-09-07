@@ -1,12 +1,12 @@
 use futures::{Future};
-use futures::future::{ok, Either, loop_fn, Loop, FutureResult};
+use futures::future::{ok, Either, loop_fn, Loop};
 use futures_cpupool::{CpuFuture, CpuPool};
 use tk_http::server::Error;
 use tk_http::Status;
 use http_file_headers::{Output};
 
 use default_error_page::{error_page};
-use incoming::{self, Input, Request, Transport, Encoder, EncoderDone};
+use incoming::{self, Input, Request, Transport, Encoder};
 
 
 pub enum NotFile {
@@ -15,16 +15,19 @@ pub enum NotFile {
 }
 
 
-pub fn reply_file<S, A>(inp: Input, pool: CpuPool,
-    fut: CpuFuture<Output, NotFile>, fn_ok: A)
+pub fn reply_file<S, A, X>(inp: Input, pool: CpuPool,
+    fut: CpuFuture<(Output, X), (NotFile, X)>, fn_ok: A)
     -> Request<S>
     where S: Transport,
-          A: FnOnce(&mut Encoder<S>) + Send + 'static,
+          A: FnOnce(&mut Encoder<S>, X) + Send + 'static,
+          X: Send + 'static,
 {
     incoming::reply(inp, move |mut e| {
         Box::new(fut.then(move |result| {
             match result {
-                Ok(Output::File(outf)) | Ok(Output::FileRange(outf)) => {
+                Ok((Output::File(outf), x))
+                | Ok((Output::FileRange(outf), x))
+                => {
                     if outf.is_partial() {
                         e.status(Status::PartialContent);
                     } else {
@@ -34,7 +37,7 @@ pub fn reply_file<S, A>(inp: Input, pool: CpuPool,
                     for (name, val) in outf.headers() {
                         e.format_header(name, val);
                     }
-                    fn_ok(&mut e);
+                    fn_ok(&mut e, x);
                     if e.done_headers() {
                         // start writing body
                         Either::B(loop_fn((e, outf), move |(mut e, mut outf)| {
@@ -54,7 +57,9 @@ pub fn reply_file<S, A>(inp: Input, pool: CpuPool,
                         Either::A(ok(e.done()))
                     }
                 }
-                Ok(Output::FileHead(head)) | Ok(Output::NotModified(head)) => {
+                Ok((Output::FileHead(head), x))
+                | Ok((Output::NotModified(head), x))
+                => {
                     if head.is_not_modified() {
                         e.status(Status::NotModified);
                     } else if head.is_partial() {
@@ -67,32 +72,32 @@ pub fn reply_file<S, A>(inp: Input, pool: CpuPool,
                     for (name, val) in head.headers() {
                         e.format_header(name, val);
                     }
-                    fn_ok(&mut e);
+                    fn_ok(&mut e, x);
                     assert_eq!(e.done_headers(), false);
                     Either::A(ok(e.done()))
                 }
-                Ok(Output::InvalidRange) => {
+                Ok((Output::InvalidRange, _)) => {
                     Either::A(error_page(
                         Status::RequestRangeNotSatisfiable, e))
                 }
-                Ok(Output::InvalidMethod) => {
+                Ok((Output::InvalidMethod, _)) => {
                     Either::A(error_page(
                         Status::MethodNotAllowed, e))
                 }
-                Ok(Output::NotFound)  => {
+                Ok((Output::NotFound, _))  => {
                     Either::A(error_page(Status::NotFound, e))
                 }
-                Ok(Output::Directory) => {
+                Ok((Output::Directory, _)) => {
                     Either::A(error_page(Status::Forbidden, e))
                 }
-                Err(NotFile::Status(status)) => {
+                Err((NotFile::Status(status), _)) => {
                     Either::A(error_page(status, e))
                 }
-                Err(NotFile::Directory(data)) => {
+                Err((NotFile::Directory(data), x)) => {
                     e.status(Status::Ok);
                     e.add_length(data.len() as u64);
                     e.add_header("Content-Type", "text/html; charset=utf-8");
-                    fn_ok(&mut e);
+                    fn_ok(&mut e, x);
                     if e.done_headers() {
                         e.write_body(data)
                     }

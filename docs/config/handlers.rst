@@ -174,6 +174,31 @@ Common Settings
 !VersionedStatic Settings
 `````````````````````````
 
+VersionedStatic is a handler that returns file by revision specified in
+query args. For example url ``/img/myimage.jpg?r=deadbeef`` is served from
+``/versioned-root/de/adbeef/myimage.jpg``.
+
+These files are considered to be ``immutable``, i.e. if file changes the
+version changes. So we send files with headers::
+
+    Cache-Control: public, max-age=31536000, immutable
+
+‥ and ``Expires`` in 365 days in the future (for old user agents, also
+date more than 1 year might not work).
+
+In case we the target version is missing and we have fallback enabled
+(see below), we serve them uncacheable::
+
+    Cache-Control: no-cache, no-store, must-revalidate
+    Expires: 0
+
+And for files which doesn't have revision specified at all and ``no-version``
+(or less strict option) specified in ``fallback-to-plain`` we we serve files
+without ``Cache-Control`` header at all (usually cached for user's session).
+
+We may add more settings to customize cache headers in future.
+
+
 .. opt:: versioned-root
 
    (required) Root of the directory where versioned files should be served

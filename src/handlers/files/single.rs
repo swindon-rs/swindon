@@ -26,17 +26,19 @@ pub fn serve_file<S: Transport>(settings: &Arc<SingleFile>, mut inp: Input)
     let hinp = HeadersInput::from_headers(&settings.headers_config,
         inp.headers.method(), inp.headers.headers());
     let fut = pool.spawn_fn(move || {
-        hinp.probe_file(&settings2.path).map_err(|e| {
+        hinp.probe_file(&settings2.path)
+        .map(|x| (x, ()))
+        .map_err(|e| {
             if e.kind() == io::ErrorKind::PermissionDenied {
-                NotFile::Status(Status::Forbidden)
+                (NotFile::Status(Status::Forbidden), ())
             } else {
                 error!("Error reading file {:?}: {}", settings2.path, e);
-                NotFile::Status(Status::InternalServerError)
+                (NotFile::Status(Status::InternalServerError), ())
             }
         })
     });
 
-    reply_file(inp, pool, fut, move |e| {
+    reply_file(inp, pool, fut, move |e, ()| {
         if let Some(ref val) = settings.content_type {
             e.add_header("Content-Type", val);
         }
