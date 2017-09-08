@@ -742,3 +742,69 @@ async def test_client_call_timeout(proxy_server, swindon, loop, user_id):
             {'request_id': 1, "error_kind": "http_error", 'http_error': 500},
             None]
         assert not ws.closed
+
+
+async def test_swindon_user(proxy_server, swindon, loop, user_id, user_id2):
+        url = swindon.url / 'swindon-lattice'
+        async with proxy_server() as proxy:
+            handler = proxy.swindon_lattice(url, timeout=1)
+            req = await handler.request()
+            assert_auth(req)
+            meta, args, kwargs = await req.json()
+            cid1 = meta['connection_id']
+
+            async with aiohttp.ClientSession(loop=loop) as s:
+                subscr_url = swindon.api3 / 'v1/connection' / cid1 / 'users'
+                data = json.dumps([user_id]).encode('utf-8')
+                async with s.put(subscr_url, data=data) as resp:
+                    assert resp.status == 204
+
+            ws1 = await handler.json_response({
+                "user_id": user_id, "username": "Jack"})
+            hello = await ws1.receive_json()
+            assert hello == [
+                'hello', {}, {'user_id': user_id, 'username': 'Jack'}]
+            msg = await ws1.receive_json()
+            assert msg == ['lattice',
+                {'namespace': 'swindon.user'},
+                {user_id: {'status_register': [mock.ANY, 'active']}}]
+
+            # Log in second user but subscribe him later
+
+            handler = proxy.swindon_lattice(url, timeout=1)
+            req = await handler.request()
+            assert_auth(req)
+            meta, args, kwargs = await req.json()
+            cid2 = meta['connection_id']
+
+            ws2 = await handler.json_response({
+                "user_id": user_id2, "username": "John"})
+            hello = await ws2.receive_json()
+            assert hello == [
+                'hello', {}, {'user_id': user_id2, 'username': 'John'}]
+
+            # Now subscribe both users to each other
+            async with aiohttp.ClientSession(loop=loop) as s:
+                data = json.dumps([user_id, user_id2]).encode('utf-8')
+
+                subscr_url = swindon.api3 / 'v1/connection' / cid1 / 'users'
+                async with s.put(subscr_url, data=data) as resp:
+                    assert resp.status == 204
+
+                subscr_url = swindon.api3 / 'v1/connection' / cid2 / 'users'
+                async with s.put(subscr_url, data=data) as resp:
+                    assert resp.status == 204
+
+            msg = await ws1.receive_json()
+            # TODO(tailhook) this user is fully sent on resubscription
+            #                we can optimize it to send only new users
+            assert msg == ['lattice',
+                {'namespace': 'swindon.user'},
+                {user_id: {'status_register': [mock.ANY, 'active']},
+                 user_id2: {'status_register': [mock.ANY, 'active']}}]
+
+            msg = await ws2.receive_json()
+            assert msg == ['lattice',
+                {'namespace': 'swindon.user'},
+                {user_id: {'status_register': [mock.ANY, 'active']},
+                 user_id2: {'status_register': [mock.ANY, 'active']}}]

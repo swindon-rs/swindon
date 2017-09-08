@@ -72,6 +72,10 @@ def pytest_configure(config):
 def user_id(_c=count(1)):
     return 'u:{}'.format(next(_c))
 
+@pytest.fixture
+def user_id2(_c=count(1)):
+    return 'u:{}'.format(next(_c))
+
 
 @pytest.fixture(params=['GET', 'HEAD'])
 def static_request_method(request):
