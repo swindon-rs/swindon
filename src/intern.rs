@@ -81,7 +81,7 @@ fn valid_topic(val: &str) -> bool {
 /// Note: must be a non-strict subset of valid topic (LatticeKey)
 fn valid_sid(val: &str) -> bool {
     val.chars().all(|c| c.is_ascii() &&
-        (c.is_alphanumeric() || c == '-' || c == '_' || c == ':'))
+        (c.is_alphanumeric() || c == '-' || c == '_' || c == '.' || c == ':'))
 }
 
 impl Validator for UpstreamValidator {
