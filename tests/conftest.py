@@ -517,7 +517,6 @@ class _BaseServer:
         return _HandlerTuple((handler, client_resp))
 
     def start_ws(self, url, **kwargs):
-        print("STARTWS", url)
         ws_fut = asyncio.ensure_future(
             self.ws_connect(url,
                 protocols=['v1.swindon-lattice+json'],
