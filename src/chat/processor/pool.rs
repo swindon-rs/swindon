@@ -562,6 +562,26 @@ impl Pool {
             Arc::new(statuses));
         conn.channel.send(msg);
     }
+    pub fn users_update(&mut self, session_id: SessionId, uids: Vec<SessionId>)
+    {
+        let statuses = Arc::new(get_user_statuses(&uids, &self.sessions));
+        let sess = if let Some(sess) = self.sessions.get_mut(&session_id) {
+            sess
+        } else {
+            info!("Session id {:?} not found", session_id);
+            return
+        };
+        self.user_listeners.insert_list_key1(&uids, &session_id);
+        sess.users_lattice.peers.extend(uids);
+
+        for cid in &sess.users_lattice.connections {
+            if let Some(conn) = self.connections.get_mut(cid) {
+                let msg = ConnectionMessage::Lattice(SWINDON_USER.clone(),
+                    statuses.clone());
+                conn.channel.send(msg);
+            }
+        }
+    }
     pub fn users_detach(&mut self, cid: Cid) {
         let conn = if let Some(conn) = self.connections.get_mut(&cid) {
             conn

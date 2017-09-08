@@ -72,6 +72,10 @@ pub enum RemoteAction {
         server_id: ServerId,
         list: Vec<SessionId>,
     },
+    UpdateUsers {
+        session_id: SessionId,
+        list: Vec<SessionId>,
+    },
     DetachUsers {
         conn_id: Cid,
         server_id: ServerId,
@@ -137,6 +141,9 @@ impl Into<Action> for RemoteAction {
                     conn_id: conn_id,
                     list: list,
                 }
+            }
+            UpdateUsers { session_id, list } => {
+                Action::UpdateUsers { session_id, list }
             }
             DetachUsers { conn_id, server_id: _ } => {
                 Action::DetachUsers {

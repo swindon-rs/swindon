@@ -167,6 +167,10 @@ pub enum Action {
         conn_id: Cid,
         list: Vec<SessionId>,
     },
+    UpdateUsers {
+        session_id: SessionId,
+        list: Vec<SessionId>,
+    },
     DetachUsers {
         conn_id: Cid,
     },
@@ -290,6 +294,10 @@ impl fmt::Debug for Action {
             &AttachUsers { ref conn_id, ref list } => {
                 write!(f, "Action::AttachUsers({:?}, {})",
                     conn_id, list.len())
+            }
+            &UpdateUsers { ref session_id, ref list } => {
+                write!(f, "Action::UpdateUsers({:?}, {})",
+                    session_id, list.len())
             }
             &DetachUsers { ref conn_id } => {
                 write!(f, "Action::Detach({:?})", conn_id)

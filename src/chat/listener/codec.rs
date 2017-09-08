@@ -48,6 +48,8 @@ pub enum Route {
     Detach(PubCid, Namespace),
     /// `PUT /v1/connection/<conn_id>/users`
     UsersSubscribe(PubCid),
+    /// `PUT /v1/users/<conn_id>/users`
+    UsersUpdate(SessionId),
     /// `DELETE /v1/connection/<conn_id>/users`
     UsersDetach(PubCid),
     /// `POST /v1/lattice/<namespace>`
@@ -73,6 +75,9 @@ impl fmt::Display for Route {
             }
             UsersSubscribe(ref cid) => {
                 write!(f, "Users subscribe {:#?}", cid.0)
+            }
+            UsersUpdate(ref session_id) => {
+                write!(f, "Update users subscription {:#?}", session_id)
             }
             UsersDetach(ref cid) => {
                 write!(f, "Users detach {:#?}", cid.0)
@@ -212,6 +217,17 @@ impl Handler {
                     State::Query(Route::Lattice(ns))
                 } else {
                     State::Error(Status::NotFound)
+                }
+            }
+            ("PUT", "user", Some(tail)) => {
+                let mut p = tail.splitn(3, '/');
+                let session_id = p.next().and_then(|x| x.parse().ok());
+                let page = p.next();
+                match (page, session_id) {
+                    (Some("users"), Some(sid)) => {
+                        State::Query(Route::UsersUpdate(sid))
+                    }
+                    _ => State::Error(Status::NotFound),
                 }
             }
             _ => {
@@ -402,6 +418,32 @@ impl<S> http::Codec<S> for Request {
                         } else {
                             debug!("Skipping action with non-local cid");
                         }
+                        State::Done
+                    }
+                    Err(_) => {
+                        State::Error(Status::BadRequest)
+                    }
+                }
+            }
+            State::Query(UsersUpdate(session_id)) => {
+                // TODO(tailhook) check content-type
+                let data: Result<Vec<SessionId>,_> =
+                    serde_json::from_slice(data)
+                    .map_err(|e| {
+                        info!("Error decoding json for \
+                            '/v1/users/_/users': \
+                            {:?}", e);
+                    });
+                match data {
+                    Ok(list) => {
+                        self.wdata.remote.send(RemoteAction::UpdateUsers {
+                            session_id: session_id.clone(),
+                            list: list.clone(),
+                        });
+                        self.wdata.processor.send(Action::UpdateUsers {
+                            session_id: session_id,
+                            list: list,
+                        });
                         State::Done
                     }
                     Err(_) => {

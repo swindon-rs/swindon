@@ -183,6 +183,35 @@ viewpoint of the server, but has different server-side API:
       HTTP/1.1 204 No Content
       Content-Length: 0
 
+.. index:: triple: Update; Users Lattice; Lattice API
+.. http:PUT:: /v1/user/(str:user_id)/users
+
+   Add all user ids sent in this request to all the connections of
+   the user named ``user_id`` (which are subscribed to user status via
+   call above).
+
+   In other words show users specified in the body of this request to
+   user ``user_id`` (but only their connections that already subscribed to
+   the ``swindon.user`` namespace).
+
+
+   Example:
+
+   .. sourcecode:: http
+
+      PUT /v1/user/7777/users HTTP/1.1
+      Host: example.com
+      Content-Type: application/json
+      Content-Length: 109
+
+      ["8734"]
+
+   .. sourcecode:: http
+
+      HTTP/1.1 204 No Content
+      Content-Length: 0
+
+
 .. index:: triple: Unubscribe; Users Lattice; Lattice API
 .. http:DELETE:: /v1/connection/(str:conn_id)/users
 

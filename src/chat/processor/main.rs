@@ -53,6 +53,9 @@ fn pool_action(pool: &mut Pool, ts: Instant, action: Action) {
         AttachUsers { conn_id, list } => {
             pool.users_attach(conn_id, list);
         }
+        UpdateUsers { session_id, list } => {
+            pool.users_update(session_id, list);
+        }
         DetachUsers { conn_id } => {
             pool.users_detach(conn_id);
         }
