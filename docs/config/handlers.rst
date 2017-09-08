@@ -170,6 +170,7 @@ Common Settings
    (default ``100000``) Maximum number of files to show in generated index.
    This is required to prevent DoS attacks on listing large directories.
 
+.. _versioned-static:
 
 !VersionedStatic Settings
 `````````````````````````

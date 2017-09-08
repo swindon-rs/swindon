@@ -35,6 +35,9 @@ Available types:
       // on update -- will have no effect
       {"last_message_set": [1, 12]}
 
+
+.. _register-crdt:
+
 .. crdt:: register
 
     a value with a timestamp or a version, which is updated with

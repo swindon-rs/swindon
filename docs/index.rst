@@ -20,6 +20,7 @@ Contents:
    config/index
    internals/index
    swindon-lattice/index
+   changelog
 
 
 Indices and tables

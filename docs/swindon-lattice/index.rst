@@ -1,3 +1,5 @@
+.. _swindon-lattice:
+
 Swindon-lattice Protocol
 ========================
 
