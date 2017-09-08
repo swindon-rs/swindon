@@ -9,11 +9,6 @@ Swindon
 
 A HTTP edge (frontend) server with smart websocket support.
 
-.. image:: https://travis-ci.org/swindon-rs/swindon.svg?branch=master
-   :target: https://travis-ci.org/swindon-rs/swindon
-
-.. image:: https://codecov.io/gh/swindon-rs/swindon/branch/master/graph/badge.svg
-   :target: https://codecov.io/gh/swindon-rs/swindon
 
 License
 =======
