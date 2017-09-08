@@ -38,8 +38,6 @@ install:
 script:
 - cargo build $CARGO_ARGS
 - cargo test $CARGO_ARGS
-- source .travis/coverage.sh && coverage
-- bash <(curl -s https://codecov.io/bash)
 
 jobs:
   include:
@@ -48,8 +46,6 @@ jobs:
   - rust: stable
     os: osx
   - rust: beta
-    env:
-    - NO_MUSL=y
   - rust: nightly
   - env:
     - FUNC_TEST=y
@@ -59,6 +55,7 @@ jobs:
     - pip3 install -r tests/requirements.txt --user
     script:
     - cargo build $CARGO_ARGS
+    - cargo test $CARGO_ARGS # for coverage
     - >
       py.test --swindon-bin=$(pwd)/target/debug/swindon \
         --swindon-config=$(pwd)/tests/config.yaml.tpl \
