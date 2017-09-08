@@ -354,7 +354,7 @@ Settings:
       By default set to ``true`` in ``SwindonChat``
       (``false`` in ``SwindonLattice``)
 
-   .. warn::
+   .. warning::
 
       It's error to set this flag to a different values for different
       handlers attached to the same session pool.
