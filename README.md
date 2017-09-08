@@ -1,9 +1,11 @@
-=======
 Swindon
 =======
 
-:Status: Beta
-:Documentation: https://swindon-rs.github.io/swindon
+**Status: Beta**
+
+[Documentation](https://swindon-rs.github.io/swindon) |
+[Github](https://github.com/swindon-rs/swindon) |
+[Crate](https://crates.io/crates/swindon)
 
 A HTTP edge (frontend) server with smart websocket support.
 
