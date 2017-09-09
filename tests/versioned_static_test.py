@@ -38,7 +38,7 @@ async def test_by_version1(swindon, get_request, static_request_method,
     resp, data = await get_request((swindon.url / path /
         'test.html').with_query(r='aabbbbbb'))
     assert resp.status == 200
-    assert resp.headers['Content-Type'] == 'text/html'
+    assert resp.headers['Content-Type'] == 'text/html; charset=utf-8'
     assert resp.headers['Cache-Control'] == 'public, max-age=31536000, immutable'
     if debug_routing:
         assert resp.headers['X-Swindon-File-Path'] == \
@@ -54,7 +54,7 @@ async def test_no_such_version(swindon, get_request, static_request_method,
     resp, data = await get_request((swindon.url / 'versioned-fallback' /
         'test.html').with_query(r='aaeebbbb'))
     assert resp.status == 200
-    assert resp.headers['Content-Type'] == 'text/html'
+    assert resp.headers['Content-Type'] == 'text/html; charset=utf-8'
     assert resp.headers['Cache-Control'] == 'no-cache, no-store, must-revalidate'
     if debug_routing:
         # TODO(tailhook) fix debug path
@@ -73,7 +73,7 @@ async def test_by_version2(swindon, get_request, static_request_method,
     resp, data = await get_request((swindon.url / path /
         'test.html').with_query(r='bbaaaaaa'))
     assert resp.status == 200
-    assert resp.headers['Content-Type'] == 'text/html'
+    assert resp.headers['Content-Type'] == 'text/html; charset=utf-8'
     assert resp.headers['Cache-Control'] == 'public, max-age=31536000, immutable'
     if debug_routing:
         assert resp.headers['X-Swindon-File-Path'] == \
@@ -104,7 +104,7 @@ async def test_encoding(swindon, get_request, static_request_method,
     resp, data = await get_request((swindon.url / path / 'a+b.txt')
         .with_query(r='aabbbbbb'))
     assert resp.status == 200
-    assert resp.headers['Content-Type'] == 'text/plain'
+    assert resp.headers['Content-Type'] == 'text/plain; charset=utf-8'
     assert resp.headers['Cache-Control'] == 'public, max-age=31536000, immutable'
     if debug_routing:
         assert resp.headers['X-Swindon-File-Path'] == \
@@ -118,7 +118,7 @@ async def test_encoding_fallback(swindon, get_request, static_request_method,
         debug_routing, TESTS_DIR):
     resp, data = await get_request(swindon.url / 'versioned-fallback/a+b.txt')
     assert resp.status == 200
-    assert resp.headers['Content-Type'] == 'text/plain'
+    assert resp.headers['Content-Type'] == 'text/plain; charset=utf-8'
     if debug_routing:
         assert resp.headers['X-Swindon-File-Path'] == \
             '"{}/assets/a+b.txt"'.format(TESTS_DIR)
@@ -147,7 +147,7 @@ async def test_no_version(swindon, get_request, static_request_method,
         'versioned-fallback/a+b.txt')
         .with_query(some='param', another='param'))
     assert resp.status == 200
-    assert resp.headers['Content-Type'] == 'text/plain'
+    assert resp.headers['Content-Type'] == 'text/plain; charset=utf-8'
     if debug_routing:
         assert resp.headers['X-Swindon-File-Path'] == \
             '"{}/assets/a+b.txt"'.format(TESTS_DIR)
@@ -162,7 +162,7 @@ async def test_other_params(swindon, get_request, static_request_method,
         'versioned-fallback/a+b.txt')
         .with_query(some='param', another='param'))
     assert resp.status == 200
-    assert resp.headers['Content-Type'] == 'text/plain'
+    assert resp.headers['Content-Type'] == 'text/plain; charset=utf-8'
     if debug_routing:
         assert resp.headers['X-Swindon-File-Path'] == \
             '"{}/assets/a+b.txt"'.format(TESTS_DIR)
@@ -177,7 +177,7 @@ async def test_crappy_query(swindon, get_request, static_request_method,
         str(swindon.url / 'versioned-fallback' / 'a+b.txt')
         + '?just_some_garbage')
     assert resp.status == 200
-    assert resp.headers['Content-Type'] == 'text/plain'
+    assert resp.headers['Content-Type'] == 'text/plain; charset=utf-8'
     if debug_routing:
         assert resp.headers['X-Swindon-File-Path'] == \
             '"{}/assets/a+b.txt"'.format(TESTS_DIR)

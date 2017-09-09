@@ -36,7 +36,7 @@ async def test_index(swindon, get_request, static_request_method,
     # XXX: on resp.read() connection gets closed
     resp, data = await get_request(swindon.url / 'static-w-index')
     assert resp.status == 200
-    assert resp.headers['Content-Type'] == 'text/html'
+    assert resp.headers['Content-Type'] == 'text/html; charset=utf-8'
     data_check(data, static_request_method,
         b'<!DOCTYPE html>\n<title>Hello</title>\n')
 
@@ -53,7 +53,7 @@ async def test_ok(swindon, get_request, static_request_method,
     url = swindon.url / 'static' / 'static_file.txt'
     resp, data = await get_request(url)
     assert resp.status == 200
-    assert resp.headers['Content-Type'] == 'text/plain'
+    assert resp.headers['Content-Type'] == 'text/plain; charset=utf-8'
     assert resp.headers['Content-Length'] == '17'
     data_check(data, static_request_method, b'Static file test\n')
     if debug_routing:
@@ -71,7 +71,7 @@ async def test_url_decoding(swindon, get_request, static_request_method,
 
     resp, data = await get_request(url)
     assert resp.status == 200
-    assert resp.headers['Content-Type'] == 'text/plain'
+    assert resp.headers['Content-Type'] == 'text/plain; charset=utf-8'
     assert resp.headers['Content-Length'] == '4'
     data_check(data, static_request_method, b'a+b\n')
     if debug_routing:
@@ -101,7 +101,7 @@ async def test_extra_headers(swindon, get_request, static_request_method,
     url = swindon.url / 'static-w-headers' / 'static_file.html'
     resp, data = await get_request(url)
     assert resp.status == 200
-    assert resp.headers['Content-Type'] == 'text/html'
+    assert resp.headers['Content-Type'] == 'text/html; charset=utf-8'
     assert resp.headers['Content-Length'] == '17'
     assert resp.headers['X-Some-Header'] == 'some value'
     data_check(data, static_request_method, b'Static file test\n')
@@ -134,12 +134,34 @@ async def test_headers_override(static_request_method,
                 assert 'X-Swindon-File-Path' not in resp.headers
 
 
+async def test_no_charset(static_request_method,
+        swindon, http_version, debug_routing, loop, TESTS_DIR):
+    url = swindon.url / 'static-wo-charset' / 'static_file.txt'
+    async with aiohttp.ClientSession(version=http_version, loop=loop) as s:
+        async with s.request(static_request_method, url) as resp:
+            assert resp.status == 200
+            assert resp.version == http_version
+            assert resp.headers['Content-Length'] == '17'
+            data = await resp.read()
+            data_check(data, static_request_method,
+                b'Static file test\n')
+            ctype = [val for key, val in resp.raw_headers
+                     if key == b'CONTENT-TYPE']
+            assert len(ctype) == 1
+            assert ctype[0] == b'text/plain'
+            if debug_routing:
+                assert resp.headers.getall('X-Swindon-File-Path', []) == [
+                    '"{}/assets/static_file.txt"'.format(TESTS_DIR)]
+            else:
+                assert 'X-Swindon-File-Path' not in resp.headers
+
+
 async def test_hostname(swindon, get_request, static_request_method,
         debug_routing, TESTS_DIR):
     url = swindon.url / 'static-w-hostname' / 'test.txt'
     resp, data = await get_request(url)
     assert resp.status == 200
-    assert resp.headers['Content-Type'] == 'text/plain'
+    assert resp.headers['Content-Type'] == 'text/plain; charset=utf-8'
     assert resp.headers['Content-Length'] == '17'
     data_check(data, static_request_method, b'localhost+static\n')
     if debug_routing:
@@ -161,7 +183,7 @@ async def test_url_with_query(static_request_method,
     url = url_with(url)
     resp, data = await get_request(url)
     assert resp.status == 200
-    assert resp.headers['Content-Type'] == 'text/plain'
+    assert resp.headers['Content-Type'] == 'text/plain; charset=utf-8'
     assert resp.headers['Content-Length'] == '17'
     data_check(data, static_request_method, b'Static file test\n')
     if debug_routing:

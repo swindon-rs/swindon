@@ -109,7 +109,8 @@ Common Settings
 
 .. opt:: content-type
 
-   (required) Set Content type for served file.
+   (optional) Set Content type for served file. By default mime type is guessed
+   by extension
 
 !Static Settings
 ````````````````
@@ -135,7 +136,8 @@ Common Settings
 
 .. opt:: text-charset
 
-   (optional) Sets ``charset`` parameter of ``Content-Type`` header.
+   (optional, default ``utf-8``) Sets ``charset`` parameter
+   of ``Content-Type`` header.
 
 .. opt:: strip-host-suffix
 
@@ -263,7 +265,8 @@ We may add more settings to customize cache headers in future.
 
 .. opt:: text-charset
 
-   (optional) Sets ``charset`` parameter of ``Content-Type`` header.
+   (optional, default ``utf-8``) Sets ``charset`` parameter of
+   ``Content-Type`` header.
 
 
 

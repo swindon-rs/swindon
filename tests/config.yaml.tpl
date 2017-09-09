@@ -39,6 +39,7 @@ routing:
   localhost/static: static
   localhost/static-w-headers: static_w_headers
   localhost/static-w-ctype: static_w_ctype
+  localhost/static-wo-charset: static_wo_charset
   localhost/static-w-hostname: static_w_hostname
   localhost/static-w-index: static_w_index
   localhost/static-wo-index: static_wo_index
@@ -138,6 +139,9 @@ handlers:
     path: ${TESTS_DIR}/assets/
     extra-headers:
       Content-Type: something/other
+  static_wo_charset: !Static
+    path: ${TESTS_DIR}/assets/
+    text_charset: null
   static_w_hostname: !Static
     mode: with_hostname
     path: ${TESTS_DIR}/assets/
