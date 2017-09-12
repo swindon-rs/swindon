@@ -1,3 +1,5 @@
+.. _websocket-shutdown-codes:
+
 Websocket Shutdown Codes
 ========================
 
@@ -10,6 +12,8 @@ Here are codes that you can see in ``onclose`` event handler:
         console.log(ev.code, ev.reason)
    }
 
+.. note:: Chromium doesn't report custom shutdown codes to Javascript. So
+   we also duplicate same erorr using :ref:`fatal_error message`.
 
 Our custom codes (and reasons):
 

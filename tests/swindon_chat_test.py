@@ -112,14 +112,19 @@ async def test_ws_close_timeout(proxy_server, swindon, user_id, loop):
 
 
 @pytest.mark.parametrize('status_code', [
-    400, 401, 404, 410, 500, 503])
+    400, 401, 403, 404, 410, 500, 503])
 async def test_error_codes(proxy_server, swindon, loop, status_code):
     url = swindon.url / 'swindon-chat'
     async with proxy_server() as proxy:
         handler = proxy.swindon_chat(url, timeout=1)
         req = await handler.request()
         assert_auth(req)
-        ws = await handler.response(b'Custom Error', status=status_code)
+        ws = await handler.response(b'["Custom Error"]', status=status_code)
+        msg = await ws.receive()
+        assert msg.type == WSMsgType.TEXT
+        assert json.loads(msg.data) == ["fatal_error",
+            {"error_kind": "http_error", 'http_error': status_code},
+            ["Custom Error"]]
         msg = await ws.receive()
         assert msg.type == WSMsgType.CLOSE
         assert msg.data == 4000 + status_code
@@ -145,6 +150,11 @@ async def test_unexpected_responses(
         assert_auth(req)
         ws = await handler.response(body, status=status_code)
         msg = await ws.receive()
+        assert msg.type == WSMsgType.TEXT
+        assert json.loads(msg.data) == ["fatal_error",
+            {"error_kind": "http_error", 'http_error': 500},
+            None]
+        msg = await ws.receive()
         assert msg.type == WSMsgType.CLOSE
         assert msg.data == 4500
         assert msg.extra == 'backend_error'
@@ -169,6 +179,11 @@ async def test_invalid_auth_response(proxy_server, swindon, auth_resp):
         assert_auth(req)
 
         ws = await handler.response(auth_resp, content_type='application/json')
+        msg = await ws.receive()
+        assert msg.type == WSMsgType.TEXT
+        assert json.loads(msg.data) == ["fatal_error",
+            {"error_kind": "http_error", 'http_error': 500},
+            None]
         msg = await ws.receive()
         assert msg.type == WSMsgType.CLOSE
         assert msg.data == 4500
@@ -710,6 +725,11 @@ async def test_client_auth_timeout(proxy_server, swindon, loop):
         # assert handler.resp.cancelled()
 
         ws = await ws_fut
+        msg = await ws.receive()
+        assert msg.type == WSMsgType.TEXT
+        assert json.loads(msg.data) == ["fatal_error",
+            {"error_kind": "http_error", 'http_error': 500},
+            None]
         msg = await ws.receive()
         assert msg.type == WSMsgType.CLOSE
         assert msg.data == 4500

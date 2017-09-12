@@ -61,7 +61,7 @@ impl NewConnection {
         self.message_buffer.push((topic, data));
     }
     pub fn stop(&mut self, reason: CloseReason) {
-        self.channel.send(ConnectionMessage::StopSocket(reason));
+        self.channel.send(ConnectionMessage::StopSock(reason));
     }
 }
 
@@ -79,6 +79,6 @@ impl Connection {
         self.channel.send(msg);
     }
     pub fn stop(&mut self, reason: CloseReason) {
-        self.channel.send(ConnectionMessage::StopSocket(reason));
+        self.channel.send(ConnectionMessage::StopSock(reason));
     }
 }

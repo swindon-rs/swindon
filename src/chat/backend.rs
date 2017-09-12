@@ -12,8 +12,8 @@ use serde_json;
 use chat::authorize::{parse_userinfo, good_status};
 use chat::{Cid, ConnectionSender, ConnectionMessage, TangleAuth};
 use chat::CloseReason::{AuthHttp};
-use chat::ConnectionMessage::{Hello, StopSocket};
-use chat::error::MessageError;
+use chat::ConnectionMessage::{Hello, FatalError};
+use chat::error::MessageError::{self, HttpError};
 use chat::message::{AuthData, Auth, Call, Meta, Args, Kwargs};
 use chat::processor::{ProcessorPool, Action};
 use config::http_destinations::Destination;
@@ -235,17 +235,18 @@ impl<S> http::Codec<S> for AuthCodec {
                     Err(e) => {
                         debug!(
                             "Invalid JSON or user info in auth data: {}", e);
-                        self.sender.send(StopSocket(
-                            AuthHttp(Status::InternalServerError)));
+                        self.sender.send(FatalError(
+                            HttpError(Status::InternalServerError, None)));
                     }
                 };
             }
             Headers(status) => {
                 if good_status(status) {
-                    self.sender.send(StopSocket(AuthHttp(status)));
+                    self.sender.send(FatalError(
+                        HttpError(status, serde_json::from_slice(data).ok())));
                 } else {
-                    self.sender.send(StopSocket(
-                        AuthHttp(Status::InternalServerError)));
+                    self.sender.send(FatalError(
+                        HttpError(Status::InternalServerError, None)));
                 }
             }
             _ => unreachable!(),
@@ -313,8 +314,7 @@ impl<S> http::Codec<S> for CallCodec {
             }
             Headers(status) => {
                 self.sender.send(ConnectionMessage::Error(self.meta.clone(),
-                    MessageError::HttpError(status,
-                        serde_json::from_slice(data).ok())));
+                    HttpError(status, serde_json::from_slice(data).ok())));
             }
             _ => unreachable!(),
         }
@@ -387,8 +387,8 @@ impl Drop for AuthCodec {
                 // connection has been dropped in a middle of something.
                 // this can be a timeout or network error;
                 debug!("Connection was dropped with state: {:?}", state);
-                self.sender.send(StopSocket(
-                    AuthHttp(Status::InternalServerError)))
+                self.sender.send(FatalError(
+                    HttpError(Status::InternalServerError, None)))
             }
         }
     }
@@ -403,8 +403,7 @@ impl Drop for CallCodec {
                 // this can be a timeout or network error;
                 debug!("Connection was dropped with state: {:?}", state);
                 self.sender.send(ConnectionMessage::Error(self.meta.clone(),
-                    MessageError::HttpError(
-                        Status::InternalServerError, None)))
+                    HttpError(Status::InternalServerError, None)))
             }
         }
     }

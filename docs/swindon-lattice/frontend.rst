@@ -183,6 +183,26 @@ User Information (``hello``)
    by a backend (i.e. it's JSON data sent from a backend).
    See :ref:`backend-auth` for more info.
 
+
+.. _fatal_error message:
+
+Fatal Errors (``fatal_error``)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Fatal errors are very similar to method call errors, but they close connection
+after being received. Usually, fatal error is encountered when connection
+is first established (i.e. instead of ``hello``), but may also appear later.
+
+Many fatal error are also duplicated by :ref:`websocket shutdown codes`, but
+some browsers do not expose them to the application.
+
+Example::
+
+   ["fatal_error",
+    {"error_kind": "http_error", "http_error": 400},
+    {"data": "sent", "by": ["application", "handler"]}]
+
+
 .. _front-message:
 
 Message (``message``)

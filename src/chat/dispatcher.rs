@@ -79,7 +79,7 @@ impl websocket::Dispatcher for Dispatcher {
             Ping(_)|Pong(_) => unreachable!(),
             Close(code, text) => {
                 debug!("Received close message [{}]{:?}", code, text);
-                self.channel.send(ConnectionMessage::StopSocket(
+                self.channel.send(ConnectionMessage::StopSock(
                     CloseReason::PeerClose(code, text.into())));
                 ok(())
             }

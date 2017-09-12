@@ -14,10 +14,11 @@ use intern::SessionId;
 use config::chat::Chat;
 use incoming::{Input};
 use chat::{Cid, MessageError, CloseReason, ConnectionSender};
+use chat::MessageError::HttpError;
+use chat::ConnectionMessage::FatalError;
 use chat::backend;
 use chat::message::AuthData;
 use chat::processor::{Action};
-use chat::ConnectionMessage::{StopSocket};
 
 /// Issue Auth call to backend.
 ///
@@ -73,8 +74,8 @@ pub fn start_authorize(inp: &Input, conn_id: Cid, settings: &Arc<Chat>,
         Some(h) => h,
         None => {
             error!("No such destination {:?}", dest.upstream);
-            messages.send(StopSocket(CloseReason::AuthHttp(
-                Status::InternalServerError)));
+            messages.send(FatalError(
+                HttpError(Status::InternalServerError, None)));
             return;
         }
     };
@@ -97,7 +98,7 @@ pub fn start_authorize(inp: &Input, conn_id: Cid, settings: &Arc<Chat>,
     let auth_data = match auth_data(inp.headers) {
         Ok(data) => data,
         Err(status) => {
-            messages.send(StopSocket(CloseReason::AuthHttp(status)));
+            messages.send(FatalError(HttpError(status, None)));
             return;
         }
     };
@@ -113,8 +114,8 @@ pub fn start_authorize(inp: &Input, conn_id: Cid, settings: &Arc<Chat>,
             match pool.start_send(codec) {
                 Ok(AsyncSink::NotReady(_codec)) => {
                     FAILED_503.incr(1);
-                    messages.send(StopSocket(CloseReason::AuthHttp(
-                        Status::ServiceUnavailable)));
+                    messages.send(FatalError(
+                        HttpError(Status::ServiceUnavailable, None)));
                 }
                 Ok(AsyncSink::Ready) => {
                     REQUESTS.incr(1);
@@ -126,14 +127,14 @@ pub fn start_authorize(inp: &Input, conn_id: Cid, settings: &Arc<Chat>,
                     //                probably this means this destination
                     //                removed from config, but we should
                     //                investigate it further
-                    messages.send(StopSocket(CloseReason::AuthHttp(
-                        Status::ServiceUnavailable)));
+                    messages.send(FatalError(
+                        HttpError(Status::ServiceUnavailable, None)));
                 }
             }
         }
         None => {
             error!("No such destination {:?}", dest.upstream);
-            messages.send(StopSocket(CloseReason::AuthHttp(Status::NotFound)));
+            messages.send(FatalError(HttpError(Status::NotFound, None)));
         }
     }
 
@@ -151,6 +152,7 @@ pub fn good_status(status: Status) -> bool {
         Status::Forbidden|
         Status::NotFound|
         Status::Gone|
+        Status::InternalServerError|
         Status::ServiceUnavailable
         )
 }

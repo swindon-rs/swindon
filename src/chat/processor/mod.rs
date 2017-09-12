@@ -80,8 +80,10 @@ pub enum ConnectionMessage {
     Lattice(Namespace, Arc<HashMap<LatticeKey, lattice::Values>>),
     /// Error response to websocket call
     Error(Arc<Meta>, MessageError),
-    /// Force websocket stop
-    StopSocket(CloseReason),
+    /// Force websocket stop by backend
+    FatalError(MessageError),
+    /// Just stop the socket probably by to close message
+    StopSock(CloseReason),
 }
 
 #[derive(Debug)]
@@ -176,6 +178,30 @@ pub enum Action {
     },
 }
 
+// TODO(tailhook) optimize to not to create serde_json::Value
+pub fn json_err(err: &MessageError) -> Json {
+    match err {
+        &MessageError::HttpError(ref status, _) => {
+            json!({
+                "error_kind": "http_error",
+                "http_error": status.code(),
+            })
+        }
+        &MessageError::Utf8Error(_) => {
+            json!({"error_kind": "data_error"})
+        }
+        &MessageError::JsonError(_) => {
+            json!({"error_kind": "data_error"})
+        }
+        &MessageError::ValidationError(_) => {
+            json!({"error_kind": "validation_error"})
+        }
+        _ => {
+            json!({"error_kind": "internal_error"})
+        }
+    }
+}
+
 impl Serialize for ConnectionMessage {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error>
     {
@@ -213,32 +239,19 @@ impl Serialize for ConnectionMessage {
             }
             Error(ref meta, ref err) => {
                 tup.serialize_element("error")?;
-                let extra = match err {
-                    &MessageError::HttpError(ref status, _) => {
-                        json!({
-                            "error_kind": "http_error",
-                            "http_error": status.code(),
-                        })
-                    }
-                    &MessageError::Utf8Error(_) => {
-                        json!({"error_kind": "data_error"})
-                    }
-                    &MessageError::JsonError(_) => {
-                        json!({"error_kind": "data_error"})
-                    }
-                    &MessageError::ValidationError(_) => {
-                        json!({"error_kind": "validation_error"})
-                    }
-                    _ => {
-                        json!({"error_kind": "internal_error"})
-                    }
-                };
                 tup.serialize_element(&MetaWithExtra {
-                    meta: meta, extra: extra
+                    meta: meta, extra: json_err(err),
                 })?;
                 tup.serialize_element(&err)?;
             }
-            StopSocket(ref reason) => {
+            FatalError(ref err) => {
+                // this clause should never actually be called
+                // but we think it's unwise to put assertions in serializer
+                tup.serialize_element("fatal_error")?;
+                tup.serialize_element(&json_err(err))?;
+                tup.serialize_element(&json!(null))?;
+            }
+            StopSock(ref reason) => {
                 // this clause should never actually be called
                 // but we think it's unwise to put assertions in serializer
                 tup.serialize_element("stop")?;

@@ -13,10 +13,12 @@ use futures::future::{ok};
 use futures::sync::mpsc::{UnboundedReceiver as Receiver};
 use tokio_core::reactor::Handle;
 use tokio_io::{AsyncRead, AsyncWrite};
-use serde_json::to_string as json_encode;
+use serde_json::{to_string as json_encode, Value as Json};
 
-use chat::ConnectionMessage::{Hello, StopSocket};
+use chat::ConnectionMessage::{Hello, FatalError};
+use chat::MessageError::HttpError;
 use chat::{self, Cid, ConnectionMessage, ConnectionSender, TangleAuth};
+use chat::{json_err, good_status};
 use config::chat::Chat;
 use default_error_page::serve_error_page;
 use incoming::{Context, IntoContext};
@@ -91,7 +93,8 @@ impl<S: AsyncRead + AsyncWrite + 'static> Codec<S> for WebsockReply {
 
         let (tx, rx) = self.channel.take()
             .expect("hijack called only once");
-        let log_err_err = |e| debug!("closing websocket closed: {}", e);
+        let log_err_io = |e| debug!("closing websocket closed: {}", e);
+        let log_err_sock = |e| debug!("closing websocket closed: {}", e);
 
         self.handle.spawn(rx.into_future()
             .then(move |result| match result {
@@ -136,22 +139,51 @@ impl<S: AsyncRead + AsyncWrite + 'static> Codec<S> for WebsockReply {
                             .map_err(|e| debug!("websocket closed: {}", e))
                         }))
                 }
-                Ok((Some(StopSocket(close_reason)), _)) => {
-                    Either::B(websocket::Loop::<_, _, _>::closing(out, inp,
-                            close_reason.code(),
-                            close_reason.reason(),
-                            &cfg, &h1)
-                        .map_err(log_err_err))
+                Ok((Some(FatalError(ref err)), _)) => {
+                    let (code, data) = match *err {
+                        HttpError(s, ref data) if good_status(s) => {
+                            (s.code() + 4000,
+                             data.clone().unwrap_or(Json::Null))
+                        }
+                        _ => (4500, Json::Null),
+                    };
+                    Either::B(Either::A(
+                        // TODO(tailhook) optimize json
+                        out.send(Packet::Text(json_encode(&Json::Array(vec![
+                            "fatal_error".into(),
+                            json_err(err),
+                            data,
+                        ])).expect("can always serialize error")))
+                        .map_err(log_err_io)
+                        .and_then(move |out| {
+                            websocket::Loop::<_, _, _>::closing(out, inp,
+                                code,
+                                "backend_error",
+                                &cfg, &h1)
+                            .map_err(log_err_sock)
+                        })))
                 }
                 Ok((msg, _)) => {
                     panic!("Received {:?} instead of Hello", msg);
                 }
                 Err(_) => {
                     error!("Aborted handshake because pool closed");
-                    Either::B(websocket::Loop::<_, _, _>::closing(out, inp,
-                            1011, "", //
-                            &cfg, &h2)
-                        .map_err(log_err_err))
+                    Either::B(Either::B(
+                        // TODO(tailhook) optimize json
+                        out.send(Packet::Text(json_encode(&Json::Array(vec![
+                            "fatal_error".into(),
+                            json!({
+                                "error_kind": "pool_closed",
+                            }),
+                            Json::Null,
+                        ])).expect("can always serialize")))
+                        .map_err(log_err_io)
+                        .and_then(move |out| {
+                            websocket::Loop::<_, _, _>::closing(out, inp,
+                                    1011, "", //
+                                    &cfg, &h2)
+                            .map_err(log_err_sock)
+                        })))
                 }
             }));
     }
