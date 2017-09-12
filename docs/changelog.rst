@@ -33,6 +33,9 @@ v0.7.0
       * Serving devices (special files like ``/dev/null``) returns 403, while
         previously might work
 * User `online status tracking`_ is implemented in Swindon-lattice_ Protocol
+* The lattices ``swindon.*`` are reserved, and can't be subscribed to
+  and updated using normal backend lattice API (one ``swindon.user`` is already
+  used as desribed above)
 * The dot ``.`` character is allowed in ``user_id``
 * [bugfix] Updating only public part of lattice now delivers the changes to
   users

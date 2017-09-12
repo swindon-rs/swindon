@@ -164,7 +164,7 @@ impl Handler {
                         }
                     }
                     Some("lattices") => {
-                        let ns = tail.and_then(|x| {
+                        let ns: Option<Namespace> = tail.and_then(|x| {
                             if !x.contains('.') {
                                 x.replace("/", ".").parse().ok()
                             } else {
@@ -172,6 +172,10 @@ impl Handler {
                             }
                         });
                         match (method, cid, ns) {
+                            (_, _, Some(ref ns))
+                            if ns.starts_with("swindon.") => {
+                                State::Error(Status::Forbidden)
+                            }
                             ("PUT", Some(cid), Some(ns)) => {
                                 State::Query(Route::LatticeSubscribe(cid, ns))
                             }

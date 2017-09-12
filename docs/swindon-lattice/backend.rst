@@ -105,6 +105,9 @@ Lattice Subscriptions
       HTTP/1.1 204 No Content
       Content-Length: 0
 
+   .. note:: Lattice name can't start with ``swindon/`` (or ``swindon.`` as
+      seen in frontend. These lattices are reserved.
+
 .. index:: triple: Unubscribe; Lattice; Lattice API
 .. http:DELETE:: /v1/connection/(str:conn_id)/lattices/(path:namespace)
 

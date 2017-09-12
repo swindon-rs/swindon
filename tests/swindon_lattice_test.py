@@ -433,6 +433,34 @@ async def test_lattice_subscribe_update(proxy_server, swindon, loop, user_id):
                 }},
         ]
 
+async def test_lattice_forbidden(proxy_server, swindon, loop, user_id):
+    url = swindon.url / 'swindon-lattice'
+    async with proxy_server() as proxy:
+        handler = proxy.swindon_lattice(url, timeout=1)
+        req = await handler.request()
+        assert_auth(req)
+        meta, args, kwargs = await req.json()
+        assert 'connection_id' in meta
+        assert not args
+        assert kwargs
+        cid = meta['connection_id']
+
+        async with aiohttp.ClientSession(loop=loop) as s:
+            u = swindon.api3 / 'v1/connection' / cid / 'lattices'
+            u = u / 'swindon/something'
+            data = json.dumps({
+                'shared': {
+                    'some_room': {'last_message_counter': 123},
+                },
+                'private': {
+                    user_id: {
+                        'some_room': {'last_seen_counter': 120},
+                    }
+                },
+            })
+            async with s.put(u, data=data) as resp:
+                assert resp.status == 403
+
 @pytest.mark.parametrize('pub_update, priv_update, result', [
     (101, 102, {'pub_counter': 101, 'priv_counter': 102}),
     (99, 107, {'priv_counter': 107}),
