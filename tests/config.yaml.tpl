@@ -245,9 +245,7 @@ session-pools:
   swindon_pool_old:
     listen:
     - *SPOOL_ADDRESS1
-    inactivity_handlers:
-    - swindon_chat_dest/
-    - swindon_chat_w_timeout/
+    inactivity_handlers: []
     ### defaults: ###
     # pipeline_depth: 2
     # max_connections: 1000
@@ -256,9 +254,7 @@ session-pools:
   swindon_pool_new:
     listen:
     - *SPOOL_ADDRESS3
-    inactivity_handlers:
-    - swindon_lattice_dest/
-    - swindon_lattice_w_timeout/
+    inactivity_handlers: []
   pool_w_timeouts_old:
     listen:
     - *SPOOL_ADDRESS2

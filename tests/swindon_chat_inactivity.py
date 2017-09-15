@@ -4,7 +4,7 @@ from unittest import mock
 
 
 def assert_auth(req):
-    assert req.path == '/tangle/authorize_connection'
+    assert req.path == '/swindon/authorize_connection'
     assert req.headers["Host"] == "swindon.internal"
     assert req.headers['Content-Type'] == 'application/json'
     assert re.match('^swindon/(\d+\.){2}\d+$', req.headers['User-Agent'])
@@ -18,9 +18,9 @@ def assert_headers(req):
 
 
 async def test_inactivity(proxy_server, swindon, loop):
-    chat_url = swindon.url / 'swindon-chat-w-timeouts'
+    chat_url = swindon.url / 'swindon-lattice-w-timeouts'
     async with proxy_server() as proxy:
-        handler = proxy.swindon_chat(chat_url, timeout=1)
+        handler = proxy.swindon_lattice(chat_url, timeout=1)
         req = await handler.request()
         assert_auth(req)
         ws = await handler.json_response({
@@ -31,7 +31,7 @@ async def test_inactivity(proxy_server, swindon, loop):
             'hello', {}, {'user_id': 'user:1', 'username': 'Jim'}]
 
         req = await handler.request(timeout=1.2)
-        assert req.path == '/tangle/session_inactive'
+        assert req.path == '/swindon/session_inactive'
         assert_headers(req)
         assert req.headers.getall('Authorization') == [
             'Tangle eyJ1c2VyX2lkIjoidXNlcjoxIn0='
@@ -50,7 +50,7 @@ async def test_inactivity(proxy_server, swindon, loop):
         await handler.response(status=200)
 
         req = await handler.request(timeout=3.2)
-        assert req.path == '/tangle/session_inactive'
+        assert req.path == '/swindon/session_inactive'
         assert_headers(req)
         assert req.headers.getall('Authorization') == [
             'Tangle eyJ1c2VyX2lkIjoidXNlcjoxIn0='
