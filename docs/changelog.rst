@@ -7,12 +7,21 @@ Swindon Changes By Version
 v0.7.0
 ======
 
-* **[breaking]** by default ``SwindonLattice`` now uses
-  ``/swindon/authorize_connection`` and ``/swindon/session_inactive`` API
-  routes instead of ones prefixed by ``/tangle/`` previously (see upgrade
-  options below)
-* Swindon now compiles correctly on Windows
+* **[breaking]** changes to ``SwindonLattice`` protocol:
+    * uses ``/swindon/authorize_connection`` and ``/swindon/session_inactive``
+      API routes instead of ones prefixed by ``/tangle/`` previously
+    * deprecated handler type ``SwindonChat`` is removed, also dropped
+      ``allow-empty-subprotocol`` setting (the behavior can still be restored
+      by using :opt:`compatibility`)
+    * added :opt:`compatibility` setting
+    * The lattices ``swindon.*`` are reserved, and can't be subscribed to and
+      updated using normal backend lattice API (one ``swindon.user`` is already
+      used as desribed above)
 * Added :ref:`register CRDT <register-crdt>` type (basically last-write-wins)
+* User `online status tracking`_ is implemented in Swindon-lattice_ Protocol
+* [bugfix] Updating only public part of lattice now delivers the changes to
+  users
+* Swindon now compiles correctly on Windows
 * Many enhancements into file serving, in particular:
       * Range requests are supported
       * If-Modified-Since requests are supported
@@ -32,29 +41,19 @@ v0.7.0
         too (in addition to all ``text/*`` as before)
       * Serving devices (special files like ``/dev/null``) returns 403, while
         previously might work
-* User `online status tracking`_ is implemented in Swindon-lattice_ Protocol
-* The lattices ``swindon.*`` are reserved, and can't be subscribed to
-  and updated using normal backend lattice API (one ``swindon.user`` is already
-  used as desribed above)
 * The dot ``.`` character is allowed in ``user_id``
-* [bugfix] Updating only public part of lattice now delivers the changes to
-  users
 * Upgraded quire_ configuration library to the one based on the ``serde``
   crate, this should not change anything user-visible, except some tweaks of
   error messages in configs. But can also have some edge cases.
 
-There are few uptrade paths for swindon-lattice users:
+Upgrading:
 
-1. Before upgrading swindon start serving same at both ``/swindon/`` and
-   ``/tangle/`` prefixes. Then upgrade swindon. *(This options is preferred)*
-
-2. Set ``use-tangle-prefix: true`` in the ``!SwindonLattice`` handler, but be
-   aware that flag wasn't present in previous versions, so you will not be
-   able to downgrade swindon. Then fix the code and update the flag at will.
-
-3. Downgrade ``!SwindonLattice`` to ``!SwindonChat``. This will have same
-   effect as ``use-tangle-prefix: true`` but config stays compatible with
-   older swindon.
+1. Replace ``SwindonChat`` to ``SwindonLattice``
+2. Set :opt:`compatibility` field to desired level
+3. Upgrade application to support both versions of APIs (there are no things
+   that conflict with each other)
+4. Bump :opt:`compatibility`
+5. Remove support of the old API
 
 Note: ``/swindon/`` prefix was reserved (so you couldn't call such methods
 from frontend) in swindon since ``0.6.0``.

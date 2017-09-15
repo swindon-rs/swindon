@@ -245,13 +245,13 @@ pub fn read_config<P: AsRef<Path>>(filename: P)
     }
     for (name, h) in &cfg.handlers {
         match h {
-            &Handler::SwindonChat(ref chat) => {
+            &Handler::SwindonLattice(ref chat) => {
                 match cfg.session_pools.get_mut(&chat.session_pool) {
                     None => {
                         err!("No session pool {:?} defined", chat.session_pool)
                     }
                     Some(mut pool) => {
-                        let tangle = chat.use_tangle_prefix;
+                        let tangle = chat.use_tangle_prefix();
                         if pool.use_tangle_prefix.is_some() &&
                             pool.use_tangle_prefix != Some(tangle)
                         {

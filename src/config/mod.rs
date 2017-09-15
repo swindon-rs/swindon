@@ -6,6 +6,7 @@ mod fingerprint;
 mod http;
 mod read;
 mod root;
+mod version;
 // sections
 mod authorization;
 mod authorizers;
@@ -173,7 +174,7 @@ pub mod test {
 
             handlers:
 
-              example-chat: !SwindonChat
+              example-chat: !SwindonLattice
 
                 session-pool: example-session
                 http-route: example-chat-http

@@ -21,7 +21,7 @@ tokio-io = "0.1.0"
 quick-error = "1.1.0"
 log = "0.3.8"
 env_logger = "0.4.3"
-quire = { rev="2b630bf", git="https://github.com/tailhook/rust-quire" }
+quire = "0.3.0"
 argparse = "0.2.1"
 time = "0.1.35"
 lazy_static = "0.2.1"

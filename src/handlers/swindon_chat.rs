@@ -193,7 +193,7 @@ fn choose_proto(h: &http::WebsocketHandshake, settings: &Arc<Chat>)
     -> Result<Option<&'static str>, ()>
 {
     if h.protocols.len() == 0 {
-        if settings.allow_empty_subprotocol {
+        if settings.allow_empty_subprotocol() {
             Ok(None)
         } else {
             Err(())

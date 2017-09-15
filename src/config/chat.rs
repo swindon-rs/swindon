@@ -8,12 +8,25 @@ use quire::validate::{Structure, Scalar, Mapping};
 use super::http;
 use intern::{HandlerName, SessionPoolName};
 use config::visitors::FromStrVisitor;
+use config::version::Version;
+
+#[derive(Debug, Clone, PartialOrd, Ord, PartialEq, Eq)]
+#[allow(non_camel_case_types)]
+pub enum Compatibility {
+    /// no subprotocol check
+    v0_5_4,
+    /// `/tangle/authorize_connection`
+    /// `Authoriztion: Swindon something==`
+    /// no content type check
+    v0_6_2,
+    /// Anything bigger than ones above
+    latest
+}
 
 
-#[derive(Deserialize, Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct Chat {
-    pub allow_empty_subprotocol: bool,
-    pub use_tangle_prefix: bool,
+    pub compatibility: Compatibility,
     pub session_pool: SessionPoolName,
     pub http_route: Option<HandlerName>,
     pub message_handlers: RoutingTable,
@@ -32,40 +45,24 @@ pub struct RoutingTable {
     pub map: BTreeMap<Pattern, http::Destination>,
 }
 
-pub fn old_validator<'x>() -> Structure<'x> {
-    Structure::new()
-    .member("allow_empty_subprotocol", Scalar::new().default(true))
-    .member("use_tangle_prefix", Scalar::new().default(true))
-    .member("session_pool", Scalar::new())
-    .member("session_pool", Scalar::new())
-    .member("http_route", http::destination_validator().optional())
-    .member("message_handlers",
-        Mapping::new(Scalar::new(), http::destination_validator()))
+impl Chat {
+    pub fn allow_empty_subprotocol(&self) -> bool {
+        self.compatibility <= Compatibility::v0_5_4
+    }
+    pub fn use_tangle_prefix(&self) -> bool {
+        self.compatibility <= Compatibility::v0_6_2
+    }
 }
 
 pub fn validator<'x>() -> Structure<'x> {
     Structure::new()
-    .member("allow_empty_subprotocol", Scalar::new().default(false))
-    .member("use_tangle_prefix", Scalar::new().default(false))
+    .member("compatibility", Scalar::new().default("v0.7.0"))
     .member("session_pool", Scalar::new())
     .member("session_pool", Scalar::new())
     .member("http_route", http::destination_validator().optional())
     .member("message_handlers",
         Mapping::new(Scalar::new(), http::destination_validator()))
 }
-
-/*
-impl Encodable for Pattern {
-    fn encode<S: Encoder>(&self, s: &mut S) -> Result<(), S::Error> {
-        match *self {
-            Pattern::Default => s.emit_str("*")?,
-            Pattern::Glob(ref v) => s.emit_str(format!("{}*", v).as_str())?,
-            Pattern::Exact(ref v) => s.emit_str(v.as_str())?,
-        }
-        Ok(())
-    }
-}
-*/
 
 impl FromStr for Pattern {
     type Err = String;
@@ -131,6 +128,37 @@ impl RoutingTable {
         .find(|&(k, _)| k.matches(method))
         .map(|(_, v)| v)
         .unwrap_or(&self.default)
+    }
+}
+
+impl<'a> Deserialize<'a> for Chat {
+    fn deserialize<D: Deserializer<'a>>(d: D) -> Result<Self, D::Error> {
+
+        #[derive(Deserialize)]
+        struct Internal {
+            compatibility: Version<String>,
+            session_pool: SessionPoolName,
+            http_route: Option<HandlerName>,
+            message_handlers: RoutingTable,
+        }
+
+        let int = Internal::deserialize(d)?;
+
+        let compat = if int.compatibility < Version("v0.6.0") {
+            Compatibility::v0_5_4
+        } else if int.compatibility < Version("0.7.0") {
+            Compatibility::v0_6_2
+        } else {
+            // note in real application it may be written as `v0.8.1`,
+            // and future version of swindon may have that value as well
+            Compatibility::latest
+        };
+        Ok(Chat {
+            compatibility: compat,
+            session_pool: int.session_pool,
+            http_route: int.http_route,
+            message_handlers: int.message_handlers,
+        })
     }
 }
 

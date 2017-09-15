@@ -1,3 +1,7 @@
+"""
+Tests old swindon protocol even despite that there is no ``SwindonChat``
+setting
+"""
 import pytest
 import aiohttp
 import json

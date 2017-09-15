@@ -61,7 +61,7 @@ routing:
   localhost/proxy-w-host: proxy_w_host
   localhost/proxy-w-timeout: proxy_w_timeout
 
-  ### !SwindonChat routes ###
+  ### !SwindonLattice compatibility routes ###
   localhost/swindon-chat: swindon_chat
   localhost/swindon-chat-w-timeouts: swindon_chat_w_timeouts
   localhost/swindon-chat-w-client-timeout: swindon_chat_w_client_timeout
@@ -90,7 +90,7 @@ authorization:
 
 # Configure all possible handlers?
 handlers:
-  # Allowed handlers are: SwindonChat, Static, SingleFile, Proxy,
+  # Allowed handlers are: SwindonLattice, Static, SingleFile, Proxy,
   #   EmptyGif, HttpBin, WebsocketEcho;
 
   ### EmptyGif handlers ###
@@ -191,19 +191,22 @@ handlers:
   swindon_proxy: !Proxy
     destination: swindon_http_dest
 
-  ### SwindonChat handlers ###
-  swindon_chat: !SwindonChat
+  ### SwindonLattice compatibility handlers ###
+  swindon_chat: !SwindonLattice
+    compatibility: v0.5.4
     session_pool: swindon_pool_old
     http_route: swindon_proxy
     message_handlers:
       "*": swindon_chat_dest/
       prefixed.*: swindon_chat_dest/with-prefix
       rxid.*: swindon_chat_w_rxid/
-  swindon_chat_w_timeouts: !SwindonChat
+  swindon_chat_w_timeouts: !SwindonLattice
+    compatibility: v0.5.4
     session_pool: pool_w_timeouts_old
     message_handlers:
       "*": swindon_chat_dest/
-  swindon_chat_w_client_timeout: !SwindonChat
+  swindon_chat_w_client_timeout: !SwindonLattice
+    compatibility: v0.5.4
     session_pool: swindon_pool_old
     http_route: swindon_proxy
     message_handlers:
@@ -289,7 +292,7 @@ http-destinations:
     - *PROXY_ADDRESS
     max-request-timeout: 1s
 
-  ### SwindonChat destinations ###
+  ### SwindonLattice compatibility destinations ###
   swindon_http_dest:
     addresses:
     - *PROXY_ADDRESS

@@ -88,7 +88,7 @@ def test_unknown_chat_http_route(check_config):
         routing:
             localhost:/abc: chat
         handlers:
-            chat: !SwindonChat
+            chat: !SwindonLattice
                 session-pool: chat
                 http-route: unknown-dest
                 message-handlers:
@@ -113,7 +113,7 @@ def test_unknown_chat_message_handlers(check_config):
         routing:
             localhost:/abc: chat
         handlers:
-            chat: !SwindonChat
+            chat: !SwindonLattice
                 session-pool: chat
                 message-handlers:
                     "*": dummy/
@@ -137,11 +137,11 @@ def test_unknown_chat_message_handlers(check_config):
         routing:
             localhost:/abc: chat
         handlers:
-            chat: !SwindonChat
+            chat: !SwindonLattice
                 session-pool: chat
                 message-handlers:
                     "*": unknown-dest/
-                    "tangle.*": dummy/
+                    "swindon.*": dummy/
         session-pools:
             chat:
                 inactivity-handlers:
@@ -161,7 +161,7 @@ def test_override_host_header_is_set(check_config):
         routing:
             localhost:/abc: chat
         handlers:
-            chat: !SwindonChat
+            chat: !SwindonLattice
                 session-pool: chat
                 message-handlers:
                     "*": dummy/
@@ -279,7 +279,7 @@ def test_no_inactivity(check_config):
         routing:
             localhost:/abc: chat
         handlers:
-            chat: !SwindonChat
+            chat: !SwindonLattice
                 session-pool: chat
                 message-handlers:
                     "*": dummy/

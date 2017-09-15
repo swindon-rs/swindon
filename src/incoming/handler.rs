@@ -38,9 +38,6 @@ impl Handler {
             Handler::Proxy(ref settings) => {
                 Ok(handlers::proxy::serve(settings, input))
             }
-            Handler::SwindonChat(ref settings) => {
-                handlers::swindon_chat::serve(settings, input)
-            }
             Handler::SwindonLattice(ref settings) => {
                 handlers::swindon_chat::serve(settings, input)
             }

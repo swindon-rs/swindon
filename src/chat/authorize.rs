@@ -63,7 +63,7 @@ pub fn start_authorize(inp: &Input, conn_id: Cid, settings: &Arc<Chat>,
         channel: messages.clone(),
     });
 
-    let dest = if settings.use_tangle_prefix {
+    let dest = if settings.use_tangle_prefix() {
         settings.message_handlers.resolve("tangle.authorize_connection")
     } else {
         settings.message_handlers.resolve("swindon.authorize_connection")
@@ -80,7 +80,7 @@ pub fn start_authorize(inp: &Input, conn_id: Cid, settings: &Arc<Chat>,
         }
     };
 
-    let path: Cow<_> = if settings.use_tangle_prefix {
+    let path: Cow<_> = if settings.use_tangle_prefix() {
         if dest.path == "/" {
             "/tangle/authorize_connection".into()
         } else {

@@ -287,7 +287,8 @@ Swindon lattice handler::
       message-handlers:
         "*": backend/path
 
-Old name of the handler type is ``SwindonChat`` which is deprecated.
+.. versionchanged:: v0.7.0
+   Old name of the handler type is ``SwindonChat`` which is **removed in.
 
 The ``backend/path`` here, i.e. the message handler, should have
 :opt:`override-host-header` setting set, so that swindon knows what ``Host``
@@ -331,39 +332,23 @@ Settings:
 
    Patterns match order is: "exact" then "glob" otherwise "default".
 
-.. opt:: allow-empty-subprotocol
+.. opt:: compatibility
 
-   (default ``false``) This is backwards compatibility option. If set to true
-   it allows connecting without `Sec-WebSocket-Protocol` header.
+   (default no value, i.e. latest) This allows to enable old behavior of
+   the protocol. Here are the list of compatibility breaks:
 
-   **Deprecated** Do not set to ``true`` for new applications.
+   * ``v0.5.4`` -- allows skipping ``Sec-WebSocket-Protocol``
+   * ``v0.6.2`` -- does three things:
+       * uses ``/tangle/authorize_connection`` and
+         ``/tangle/session_inactive`` instead of ``/swindon//``-prefixed ones
+       * uses ``Authorization: Tangle <base64-encoded-data>``
+       * allows not-setting ``Content-Type: application/json`` in responses
 
-   .. note::
+   Note: some behavior is *not* restored intentionally, in particlar:
 
-      By default set to ``true`` in ``SwindonChat``
-      (``false`` in ``SwindonLattice``)
-
-   .. versionadded:: v0.5.5
-
-.. opt:: use-tangle-prefix
-
-   (default ``false``) This is backwards compatibility option. If set to true
-   all swindon calls such as ``/swindon/authorize_connection`` are called
-   with historical ``tangle`` prefix (like ``/tangle/authorize_connection``)
-
-   **Deprecated** Do not set to ``true`` for new applications.
-
-   .. note::
-
-      By default set to ``true`` in ``SwindonChat``
-      (``false`` in ``SwindonLattice``)
-
-   .. warning::
-
-      It's error to set this flag to a different values for different
-      handlers attached to the same session pool.
-
-   .. versionadded:: v0.7.0
+   1. Both ``swindon.*`` and ``tangle.*`` methods are reserved
+   2. Lattices ``swindon.*`` are reserved too
+   3. ``_register`` CRDT's and presence API work anyway
 
 
 Redirect handlers
