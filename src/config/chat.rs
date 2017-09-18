@@ -52,6 +52,12 @@ impl Chat {
     pub fn use_tangle_prefix(&self) -> bool {
         self.compatibility <= Compatibility::v0_6_2
     }
+    pub fn use_tangle_auth(&self) -> bool {
+        self.compatibility <= Compatibility::v0_6_2
+    }
+    pub fn weak_content_type(&self) -> bool {
+        self.compatibility <= Compatibility::v0_6_2
+    }
 }
 
 pub fn validator<'x>() -> Structure<'x> {

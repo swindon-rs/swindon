@@ -781,6 +781,7 @@ mod test {
                 pipeline_depth: 2,
                 max_payload_size: 10_000_000,
                 use_tangle_prefix: Some(false),
+                use_tangle_auth: Some(false),
             }),
             tx);
         return (pool, rx);

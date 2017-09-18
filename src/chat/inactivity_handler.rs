@@ -36,6 +36,7 @@ pub fn run(runtime: &Arc<Runtime>, settings: &Arc<SessionPool>,
         };
         handlers.push((path, dest.upstream.clone()));
     }
+    let settings = settings.clone();
     let (tx, rx) = oneshot();
     handle.spawn(stream.for_each(move |msg| {
             match msg {
@@ -56,7 +57,8 @@ pub fn run(runtime: &Arc<Runtime>, settings: &Arc<SessionPool>,
                         };
                         let mut up = runtime.http_pools.upstream(&upname);
                         let codec = Box::new(backend::InactivityCodec::new(
-                            path, &session_id, dest_settings));
+                            path, &session_id, dest_settings,
+                            settings.use_tangle_auth.unwrap_or(false)));
                         match up.get_mut().get_mut() {
                             Some(pool) => {
                                 match pool.start_send(codec) {

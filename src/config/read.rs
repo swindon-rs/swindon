@@ -255,11 +255,12 @@ pub fn read_config<P: AsRef<Path>>(filename: P)
                         if pool.use_tangle_prefix.is_some() &&
                             pool.use_tangle_prefix != Some(tangle)
                         {
-                            err!("Inconsistent `use-tangle-prefix` for \
+                            err!("Inconsistent `compatibility` for \
                                   pool {:?}", chat.session_pool);
                         }
                         Arc::make_mut(&mut pool)
                             .use_tangle_prefix = Some(tangle);
+
                         let dest = if tangle {
                             chat.message_handlers.resolve(
                                 "tangle.session_inactive")
@@ -267,6 +268,16 @@ pub fn read_config<P: AsRef<Path>>(filename: P)
                             chat.message_handlers.resolve(
                                 "swindon.session_inactive")
                         };
+
+                        let tangle = chat.use_tangle_auth();
+                        if pool.use_tangle_auth.is_some() &&
+                            pool.use_tangle_auth != Some(tangle)
+                        {
+                            err!("Inconsistent `compatibility` for \
+                                  pool {:?}", chat.session_pool);
+                        }
+                        Arc::make_mut(&mut pool)
+                            .use_tangle_auth = Some(tangle);
                         if !pool.inactivity_handlers.contains(dest) &&
                             pool.inactivity_handlers.len() != 0 {
                             err!(concat!(

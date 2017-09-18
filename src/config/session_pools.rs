@@ -24,6 +24,8 @@ pub struct SessionPool {
     pub client_default_idle_timeout: Duration,
     #[serde(skip)]
     pub use_tangle_prefix: Option<bool>,
+    #[serde(skip)]
+    pub use_tangle_auth: Option<bool>,
 }
 
 

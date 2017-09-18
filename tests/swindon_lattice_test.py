@@ -303,7 +303,7 @@ async def test_echo_messages(proxy_server, swindon):
             ['some message'],
             {},
         ]
-        auth_data = 'Tangle eyJ1c2VyX2lkIjoidXNlcjoyIn0='
+        auth_data = 'Swindon+json eyJ1c2VyX2lkIjoidXNlcjoyIn0='
         assert req.headers['Authorization'] == auth_data
 
         await handler.json_response({'echo': "some message"})

@@ -135,7 +135,7 @@ Inactive session notification
 
       POST /swindon/session_inactive HTTP/1.1
       Host: example.com
-      Authorization: Token some/base64encoded/data=
+      Authorization: Swindon+json some/base64encoded/data=
       Content-Type: application/json
       Content-Length: 11
 
@@ -159,7 +159,7 @@ Method field of websocket call is transformed into request path
 
    POST /chat/send_message HTTP/1.1
    Host: example.com
-   Authorization: Token some/base64encoded/data=
+   Authorization: Swindon+json some/base64encoded/data=
    Content-Type: application/json
    Content-Length: 114
 

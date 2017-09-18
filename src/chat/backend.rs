@@ -10,11 +10,12 @@ use serde::ser::Serialize;
 use serde_json;
 
 use chat::authorize::{parse_userinfo, good_status};
-use chat::{Cid, ConnectionSender, ConnectionMessage, TangleAuth};
+use chat::{Cid, ConnectionSender, ConnectionMessage};
 use chat::ConnectionMessage::{Hello, FatalError};
 use chat::error::MessageError::{HttpError};
 use chat::message::{AuthData, Auth, Call, Meta, Args, Kwargs};
 use chat::processor::{ProcessorPool, Action};
+use chat::tangle_auth::{TangleAuth, SwindonAuth};
 use config::http_destinations::Destination;
 use runtime::ServerId;
 use intern::SessionId;
@@ -65,6 +66,7 @@ pub struct InactivityCodec {
     path: Arc<String>,
     destination: Arc<Destination>,
     session_id: SessionId,
+    tangle_auth: bool,
 }
 
 impl AuthCodec {
@@ -132,13 +134,14 @@ impl CallCodec {
 
 impl InactivityCodec {
     pub fn new(path: &Arc<String>, sid: &SessionId,
-        destination: &Arc<Destination>)
+        destination: &Arc<Destination>, tangle_auth: bool)
         -> InactivityCodec
     {
         InactivityCodec {
             path: path.clone(),
             destination: destination.clone(),
             session_id: sid.clone(),
+            tangle_auth: tangle_auth,
         }
     }
 
@@ -329,8 +332,13 @@ impl<S> http::Codec<S> for InactivityCodec {
         if let Some(ref header) = self.destination.override_host_header {
             e.add_header("Host", header).unwrap();
         }
-        e.format_header("Authorization",
-                        TangleAuth(&self.session_id)).unwrap();
+        if self.tangle_auth {
+            e.format_header("Authorization",
+                            TangleAuth(&self.session_id)).unwrap();
+        } else {
+            e.format_header("Authorization",
+                            SwindonAuth(&self.session_id)).unwrap();
+        }
         e.add_header("Content-Type", "application/json").unwrap();
         self.add_request_id(&mut e);
         e.add_header("User-Agent", format!(

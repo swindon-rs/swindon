@@ -17,9 +17,10 @@ use serde_json::{to_string as json_encode, Value as Json};
 
 use chat::ConnectionMessage::{Hello, FatalError};
 use chat::MessageError::HttpError;
-use chat::{self, Cid, ConnectionMessage, ConnectionSender, TangleAuth};
+use chat::{self, Cid, ConnectionMessage, ConnectionSender};
 use chat::{json_err, good_status};
-use config::chat::Chat;
+use chat::tangle_auth::{SwindonAuth, TangleAuth};
+use config::chat::{Chat};
 use default_error_page::serve_error_page;
 use incoming::{Context, IntoContext};
 use incoming::{Request, Input, Reply, Encoder, Transport};
@@ -100,8 +101,12 @@ impl<S: AsyncRead + AsyncWrite + 'static> Codec<S> for WebsockReply {
             .then(move |result| match result {
                 Ok((Some(Hello(session_id, data)), rx)) => {
                     // Cache formatted auth
-                    let auth = Arc::new(
-                        format!("{}", TangleAuth(&session_id)));
+                    let auth =
+                        if s1.use_tangle_auth() {
+                            Arc::new(format!("{}", TangleAuth(&session_id)))
+                        } else {
+                            Arc::new(format!("{}", SwindonAuth(&session_id)))
+                        };
                     Either::A(
                         out.send(Packet::Text(
                             json_encode(&Hello(session_id.clone(), data))

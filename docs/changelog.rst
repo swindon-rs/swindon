@@ -17,6 +17,8 @@ v0.7.0
     * The lattices ``swindon.*`` are reserved, and can't be subscribed to and
       updated using normal backend lattice API (one ``swindon.user`` is already
       used as desribed above)
+    * The ``Authorization`` header has now prefix of ``Swindon+json`` rather
+      than ``Tangle``
 * Added :ref:`register CRDT <register-crdt>` type (basically last-write-wins)
 * User `online status tracking`_ is implemented in Swindon-lattice_ Protocol
 * [bugfix] Updating only public part of lattice now delivers the changes to

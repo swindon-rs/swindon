@@ -2,7 +2,7 @@ mod cid;
 mod authorize;
 mod backend;
 mod message;
-mod tangle_auth;
+pub mod tangle_auth;
 mod processor;
 mod error;
 mod close_reason;
@@ -13,7 +13,6 @@ mod inactivity_handler;
 mod replication;
 
 pub use self::cid::Cid;
-pub use self::tangle_auth::TangleAuth;
 pub use self::authorize::{start_authorize, good_status};
 pub use self::message::{Meta, Args, Kwargs};
 pub use self::error::MessageError;
