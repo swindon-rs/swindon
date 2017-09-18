@@ -26,6 +26,8 @@ pub struct SessionPool {
     pub use_tangle_prefix: Option<bool>,
     #[serde(skip)]
     pub use_tangle_auth: Option<bool>,
+    #[serde(skip)]
+    pub weak_content_type: Option<bool>,
 }
 
 

@@ -278,6 +278,17 @@ pub fn read_config<P: AsRef<Path>>(filename: P)
                         }
                         Arc::make_mut(&mut pool)
                             .use_tangle_auth = Some(tangle);
+
+                        let tangle = chat.weak_content_type();
+                        if pool.weak_content_type.is_some() &&
+                            pool.weak_content_type != Some(tangle)
+                        {
+                            err!("Inconsistent `compatibility` for \
+                                  pool {:?}", chat.session_pool);
+                        }
+                        Arc::make_mut(&mut pool)
+                            .weak_content_type = Some(tangle);
+
                         if !pool.inactivity_handlers.contains(dest) &&
                             pool.inactivity_handlers.len() != 0 {
                             err!(concat!(

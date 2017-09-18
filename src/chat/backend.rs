@@ -51,6 +51,8 @@ pub struct AuthCodec {
     destination: Arc<Destination>,
     sender: ConnectionSender,
     server_id: ServerId,
+    json_content: bool,
+    weak_content_type: bool,
 }
 
 pub struct CallCodec {
@@ -60,6 +62,8 @@ pub struct CallCodec {
     server_id: ServerId,
     destination: Arc<Destination>,
     sender: ConnectionSender,
+    json_content: bool,
+    weak_content_type: bool,
 }
 
 pub struct InactivityCodec {
@@ -72,7 +76,7 @@ pub struct InactivityCodec {
 impl AuthCodec {
     pub fn new(path: String, cid: Cid, req: AuthData,
         chat: ProcessorPool, destination: &Arc<Destination>,
-        tx: ConnectionSender, server_id: ServerId)
+        tx: ConnectionSender, server_id: ServerId, weak_content_type: bool)
         -> AuthCodec
     {
         AuthCodec {
@@ -82,6 +86,8 @@ impl AuthCodec {
             server_id: server_id,
             destination: destination.clone(),
             sender: tx,
+            json_content: false,
+            weak_content_type,
         }
     }
 
@@ -98,7 +104,7 @@ impl CallCodec {
         meta: &Arc<Meta>, args: Args, kw: Kwargs,
         destination: &Arc<Destination>,
         sender: ConnectionSender,
-        server_id: ServerId)
+        server_id: ServerId, weak_content_type: bool)
         -> CallCodec
     {
         CallCodec {
@@ -113,6 +119,8 @@ impl CallCodec {
             server_id: server_id,
             destination: destination.clone(),
             sender: sender,
+            json_content: false,
+            weak_content_type,
         }
     }
 
@@ -203,11 +211,39 @@ impl<S> http::Codec<S> for AuthCodec {
     fn headers_received(&mut self, headers: &http::Head)
         -> Result<http::RecvMode, http::Error>
     {
+        use chat::content_type::check_json;
+        use chat::content_type::ContentType::*;
         use self::AuthState::*;
         if let Wait = mem::replace(&mut self.state, Void) {
             self.state = Headers(
                 headers.status().unwrap_or(Status::InternalServerError));
-            // TODO(tailhook) limit and streaming
+
+            let weak_type = self.weak_content_type;
+            match check_json(headers.headers()) {
+                Absent | Invalid if weak_type => {
+                    warn!("Responses without a \
+                        Content-Type are deprecated");
+                    self.json_content = true;
+                }
+                Absent if headers.status() == Some(Status::Ok) => {
+                    info!("Response without a content-type");
+                    return Err(http::Error::custom("Absent Content-Type"));
+                }
+                Absent => {
+                    info!("Response without a content-type");
+                }
+                Valid => {
+                    self.json_content = true;
+                }
+                Invalid if headers.status() == Some(Status::Ok) => {
+                    info!("Response with invalid content-type");
+                    return Err(http::Error::custom("Invalid Content-Type"));
+                }
+                Invalid => {
+                    info!("Response with invalid content-type");
+                }
+            }
+            // TODO(tailhook) configure limit
             Ok(http::RecvMode::buffered(10_485_760))
         } else {
             panic!("wrong state");
@@ -244,8 +280,12 @@ impl<S> http::Codec<S> for AuthCodec {
             }
             Headers(status) => {
                 if good_status(status) {
-                    self.sender.send(FatalError(
-                        HttpError(status, serde_json::from_slice(data).ok())));
+                    if self.json_content {
+                        self.sender.send(FatalError(HttpError(status,
+                            serde_json::from_slice(data).ok())));
+                    } else {
+                        self.sender.send(FatalError(HttpError(status, None)));
+                    }
                 } else {
                     self.sender.send(FatalError(
                         HttpError(Status::InternalServerError, None)));
@@ -286,10 +326,38 @@ impl<S> http::Codec<S> for CallCodec {
     fn headers_received(&mut self, headers: &http::Head)
         -> Result<http::RecvMode, http::Error>
     {
+        use chat::content_type::check_json;
+        use chat::content_type::ContentType::*;
         use self::CallState::*;
         if let Wait = mem::replace(&mut self.state, Void) {
             self.state = Headers(
                 headers.status().unwrap_or(Status::InternalServerError));
+
+            let weak_type = self.weak_content_type;
+            match check_json(headers.headers()) {
+                Absent | Invalid if weak_type => {
+                    warn!("Responses without a \
+                        Content-Type are deprecated");
+                    self.json_content = true;
+                }
+                Absent if headers.status() == Some(Status::Ok) => {
+                    info!("Response without a content-type");
+                    return Err(http::Error::custom("Absent Content-Type"));
+                }
+                Absent => {
+                    info!("Response without a content-type");
+                }
+                Valid => {
+                    self.json_content = true;
+                }
+                Invalid if headers.status() == Some(Status::Ok) => {
+                    info!("Response with invalid content-type");
+                    return Err(http::Error::custom("Invalid Content-Type"));
+                }
+                Invalid => {
+                    info!("Response with invalid content-type");
+                }
+            }
             // TODO(tailhook) configure limit
             Ok(http::RecvMode::buffered(10_485_760))
         } else {
@@ -315,8 +383,15 @@ impl<S> http::Codec<S> for CallCodec {
                 }
             }
             Headers(status) => {
-                self.sender.send(ConnectionMessage::Error(self.meta.clone(),
-                    HttpError(status, serde_json::from_slice(data).ok())));
+                if self.json_content {
+                    self.sender.send(
+                        ConnectionMessage::Error(self.meta.clone(),
+                        HttpError(status, serde_json::from_slice(data).ok())));
+                } else {
+                    self.sender.send(
+                        ConnectionMessage::Error(self.meta.clone(),
+                        HttpError(status, None)));
+                }
             }
             _ => unreachable!(),
         }

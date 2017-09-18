@@ -18,7 +18,8 @@ async def auth(handler, auth_data):
 
 async def put(url, loop):
     async with ClientSession(loop=loop) as s:
-        async with s.put(url) as resp:
+        async with s.put(url,
+            headers={"Content-Type": "application/json"}) as resp:
             assert resp.status == 204
 
 
@@ -30,7 +31,9 @@ async def delete(url, loop):
 
 async def post(url, data, loop):
     async with ClientSession(loop=loop) as s:
-        async with s.post(url, data=data) as resp:
+        async with s.post(url,
+            headers={"Content-Type": "application/json"},
+            data=data) as resp:
             assert resp.status == 204
 
 

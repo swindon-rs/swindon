@@ -128,7 +128,8 @@ impl Dispatcher {
             path, self.cid, &meta, args, kw,
             dest_settings,
             self.channel.clone(),
-            self.runtime.server_id.clone()));
+            self.runtime.server_id.clone(),
+            self.settings.weak_content_type()));
         match up.get_mut().get_mut() {
             Some(pool) => {
                 match pool.start_send(codec) {

@@ -19,6 +19,9 @@ v0.7.0
       used as desribed above)
     * The ``Authorization`` header has now prefix of ``Swindon+json`` rather
       than ``Tangle``
+    * Responses to ``authorize_connection`` and method calls must contain
+      ``Content-Type: application/json`` header, as well as requests to
+      backend API endpoints that contain JSON data.
 * Added :ref:`register CRDT <register-crdt>` type (basically last-write-wins)
 * User `online status tracking`_ is implemented in Swindon-lattice_ Protocol
 * [bugfix] Updating only public part of lattice now delivers the changes to

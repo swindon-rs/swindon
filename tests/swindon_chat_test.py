@@ -123,7 +123,8 @@ async def test_error_codes(proxy_server, swindon, loop, status_code):
         handler = proxy.swindon_chat(url, timeout=1)
         req = await handler.request()
         assert_auth(req)
-        ws = await handler.response(b'["Custom Error"]', status=status_code)
+        ws = await handler.response(b'["Custom Error"]', status=status_code,
+            content_type='application/json')
         msg = await ws.receive()
         assert msg.type == WSMsgType.TEXT
         assert json.loads(msg.data) == ["fatal_error",

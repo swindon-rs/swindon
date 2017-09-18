@@ -1,16 +1,17 @@
-mod cid;
 mod authorize;
 mod backend;
-mod message;
-pub mod tangle_auth;
-mod processor;
-mod error;
+mod cid;
 mod close_reason;
-mod listener;
-mod dispatcher;
 mod connection_sender;
+mod content_type;
+mod dispatcher;
+mod error;
 mod inactivity_handler;
+mod listener;
+mod message;
+mod processor;
 mod replication;
+pub mod tangle_auth;
 
 pub use self::cid::Cid;
 pub use self::authorize::{start_authorize, good_status};

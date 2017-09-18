@@ -48,13 +48,16 @@ async def test_simple_userinfo(proxy_server, swindon, user_id):
 
 
 @pytest.mark.parametrize('resp,meta,data', [
-    ({'status': 400, 'text': '[invalid json'},
+    ({'status': 400, 'text': '[invalid json',
+      'content_type': 'application/json'},
      {'error_kind': 'http_error', 'http_error': 400},
      None),
-    ({'status': 400, 'text': '{"fields_missing": ["args"]}'},
+    ({'status': 400, 'text': '{"fields_missing": ["args"]}',
+      'content_type': 'application/json'},
      {'error_kind': 'http_error', 'http_error': 400},
      {"fields_missing": ['args']}),
-    ({'status': 200, 'text': '[not a valid json'},
+    ({'status': 200, 'text': '[not a valid json',
+      'content_type': 'application/json'},
      {'error_kind': 'data_error'},
      'expected ident at line 1 column 3'),
 ], ids=[
@@ -119,7 +122,8 @@ async def test_error_codes(proxy_server, swindon, loop, status_code):
         handler = proxy.swindon_lattice(url, timeout=1)
         req = await handler.request()
         assert_auth(req)
-        ws = await handler.response(b'["Custom Error"]', status=status_code)
+        ws = await handler.response(b'["Custom Error"]', status=status_code,
+            content_type='application/json')
         msg = await ws.receive()
         assert msg.type == WSMsgType.TEXT
         assert json.loads(msg.data) == ["fatal_error",
@@ -364,12 +368,15 @@ async def test_topic_subscribe_publish(proxy_server, swindon, loop, user_id):
         async with aiohttp.ClientSession(loop=loop) as s:
             sub_url = swindon.api3 / 'v1/connection' / cid / 'subscriptions'
             sub_url = sub_url / 'some/topic'
-            async with s.put(sub_url) as resp:
+            async with s.put(sub_url,
+                headers={'Content-Type': 'application/json'}) as resp:
                 assert resp.status == 204
 
             publish_url = swindon.api3 / 'v1/publish' / 'some/topic'
             data = b'{"Test": "message"}'
-            async with s.post(publish_url, data=data) as resp:
+            async with s.post(publish_url,
+                    headers={'Content-Type': 'application/json'},
+                    data=data) as resp:
                 assert resp.status == 204
 
         ws = await handler.json_response({
@@ -383,7 +390,9 @@ async def test_topic_subscribe_publish(proxy_server, swindon, loop, user_id):
         async with aiohttp.ClientSession(loop=loop) as s:
             publish_url = swindon.api3 / 'v1/publish' / 'some/topic'
             data = b'"other message"'
-            async with s.post(publish_url, data=data) as resp:
+            async with s.post(publish_url,
+                    headers={'Content-Type': 'application/json'},
+                    data=data) as resp:
                 assert resp.status == 204
         msg = await ws.receive_json()
         assert msg == ['message', {'topic': 'some.topic'}, 'other message']
@@ -415,7 +424,8 @@ async def test_lattice_subscribe_update(proxy_server, swindon, loop, user_id):
                     }
                 },
             })
-            async with s.put(u, data=data) as resp:
+            async with s.put(u, headers={'Content-Type': 'application/json'},
+                             data=data) as resp:
                 assert resp.status == 204
 
         ws = await handler.json_response({
@@ -458,7 +468,8 @@ async def test_lattice_forbidden(proxy_server, swindon, loop, user_id):
                     }
                 },
             })
-            async with s.put(u, data=data) as resp:
+            async with s.put(u, headers={'Content-Type': 'application/json'},
+                             data=data) as resp:
                 assert resp.status == 403
 
 @pytest.mark.parametrize('pub_update, priv_update, result', [
@@ -495,7 +506,8 @@ async def test_lattice_counter(proxy_server, swindon, loop, user_id,
                     user_id: { room_id: { 'priv_counter': 100 }},
                 },
             })
-            async with s.put(u, data=data) as resp:
+            async with s.put(u, headers={"Content-Type": 'application/json'},
+                             data=data) as resp:
                 assert resp.status == 204
 
         ws = await handler.json_response({
@@ -527,7 +539,8 @@ async def test_lattice_counter(proxy_server, swindon, loop, user_id,
                     }
                 },
             })
-            async with s.put(u, data=data) as resp:
+            async with s.put(u, headers={'Content-Type': 'application/json'},
+                             data=data) as resp:
                 assert resp.status == 204
 
         up = await ws.receive_json()
@@ -579,7 +592,8 @@ async def test_lattice_register(proxy_server, swindon, loop, user_id,
                     }
                 },
             })
-            async with s.put(u, data=data) as resp:
+            async with s.put(u, headers={"Content-Type": "application/json"},
+                             data=data) as resp:
                 assert resp.status == 204
 
         ws = await handler.json_response({
@@ -612,7 +626,8 @@ async def test_lattice_register(proxy_server, swindon, loop, user_id,
                     }
                 },
             })
-            async with s.put(u, data=data) as resp:
+            async with s.put(u, headers={'Content-Type': 'application/json'},
+                             data=data) as resp:
                 assert resp.status == 204
 
         up = await ws.receive_json()
@@ -806,7 +821,9 @@ async def test_swindon_user(proxy_server, swindon, loop,
         async with aiohttp.ClientSession(loop=loop) as s:
             subscr_url = swindon.api3 / 'v1/connection' / cid1 / 'users'
             data = json.dumps([user_id]).encode('utf-8')
-            async with s.put(subscr_url, data=data) as resp:
+            async with s.put(subscr_url,
+                    headers={'Content-Type': 'application/json'},
+                    data=data) as resp:
                 assert resp.status == 204
 
         ws1 = await handler.json_response({
@@ -838,16 +855,22 @@ async def test_swindon_user(proxy_server, swindon, loop,
             data = json.dumps([user_id, user_id2]).encode('utf-8')
 
             subscr_url = swindon.api3 / 'v1/connection' / cid2 / 'users'
-            async with s.put(subscr_url, data=data) as resp:
+            async with s.put(subscr_url,
+                    headers={'Content-Type': 'application/json'},
+                    data=data) as resp:
                 assert resp.status == 204
 
             if by_user_id:
                 subscr_url = swindon.api3 / 'v1/user' / user_id / 'users'
-                async with s.put(subscr_url, data=data) as resp:
+                async with s.put(subscr_url,
+                    headers={'Content-Type': 'application/json'},
+                    data=data) as resp:
                     assert resp.status == 204
             else:
                 subscr_url = swindon.api3 / 'v1/connection' / cid1 / 'users'
-                async with s.put(subscr_url, data=data) as resp:
+                async with s.put(subscr_url,
+                        headers={'Content-Type': 'application/json'},
+                        data=data) as resp:
                     assert resp.status == 204
 
         with timeout(1):

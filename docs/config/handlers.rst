@@ -342,7 +342,8 @@ Settings:
        * uses ``/tangle/authorize_connection`` and
          ``/tangle/session_inactive`` instead of ``/swindon//``-prefixed ones
        * uses ``Authorization: Tangle <base64-encoded-data>``
-       * allows not-setting ``Content-Type: application/json`` in responses
+       * treats arbitrary ``Content-Type`` as ``application/json`` rather
+         than verifying it
 
    Note: some behavior is *not* restored intentionally, in particlar:
 

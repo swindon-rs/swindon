@@ -782,6 +782,7 @@ mod test {
                 max_payload_size: 10_000_000,
                 use_tangle_prefix: Some(false),
                 use_tangle_auth: Some(false),
+                weak_content_type: Some(false),
             }),
             tx);
         return (pool, rx);

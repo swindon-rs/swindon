@@ -56,6 +56,23 @@ pub enum Route {
     Lattice(Namespace),
 }
 
+impl Route {
+    pub fn has_body(&self) -> bool {
+        use self::Route::*;
+        match *self {
+            Subscribe(..) => false,
+            Unsubscribe(..) => false,
+            Publish(..) => true,
+            LatticeSubscribe(..) => true,
+            Detach(..) => false,
+            UsersSubscribe(..) => true,
+            UsersUpdate(..) => true,
+            UsersDetach(..) => false,
+            Lattice(..) => true,
+        }
+    }
+}
+
 impl fmt::Display for Route {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         use self::Route::*;
@@ -108,7 +125,37 @@ impl<S> Dispatcher<S> for Handler {
                 if !path.starts_with("/v1/") {
                     State::Error(Status::NotFound)
                 } else {
-                    self.dispatch(&path[4..], headers.method())
+                    match self.dispatch(&path[4..], headers.method()) {
+                        State::Query(q) => {
+                            if q.has_body() {
+                                use chat::content_type::check_json;
+                                use chat::content_type::ContentType::*;
+                                let weak_type = self.wdata.settings
+                                    .weak_content_type.unwrap_or(false);
+                                match check_json(headers.headers()) {
+                                    Absent | Invalid if weak_type => {
+                                        warn!("Requests without a \
+                                            Content-Type are deprecated");
+                                        State::Query(q)
+                                    }
+                                    Absent => {
+                                        info!("Request without \
+                                            a content-type");
+                                        State::Error(Status::BadRequest)
+                                    }
+                                    Valid => State::Query(q),
+                                    Invalid => {
+                                        info!("Request with \
+                                            bad content-type");
+                                        State::Error(Status::BadRequest)
+                                    }
+                                }
+                            } else {
+                                State::Query(q)
+                            }
+                        }
+                        state => state,
+                    }
                 }
             }
             None => {

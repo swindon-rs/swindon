@@ -107,7 +107,7 @@ pub fn start_authorize(inp: &Input, conn_id: Cid, settings: &Arc<Chat>,
         dest_settings,
         messages.clone(),
         inp.runtime.server_id.clone(),
-        ));
+        settings.weak_content_type()));
 
     match up.get_mut().get_mut() {
         Some(pool) => {
