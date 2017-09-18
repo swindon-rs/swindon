@@ -13,7 +13,7 @@ use http_pools::{REQUESTS, FAILED_503};
 use intern::SessionId;
 use config::chat::Chat;
 use incoming::{Input};
-use chat::{Cid, MessageError, CloseReason, ConnectionSender};
+use chat::{Cid, MessageError, ConnectionSender};
 use chat::MessageError::HttpError;
 use chat::ConnectionMessage::FatalError;
 use chat::backend;

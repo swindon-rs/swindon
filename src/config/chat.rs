@@ -146,7 +146,7 @@ impl<'a> Deserialize<'a> for Chat {
 
         let compat = if int.compatibility < Version("v0.6.0") {
             Compatibility::v0_5_4
-        } else if int.compatibility < Version("0.7.0") {
+        } else if int.compatibility < Version("v0.7.0") {
             Compatibility::v0_6_2
         } else {
             // note in real application it may be written as `v0.8.1`,

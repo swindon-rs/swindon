@@ -11,9 +11,8 @@ use serde_json;
 
 use chat::authorize::{parse_userinfo, good_status};
 use chat::{Cid, ConnectionSender, ConnectionMessage, TangleAuth};
-use chat::CloseReason::{AuthHttp};
 use chat::ConnectionMessage::{Hello, FatalError};
-use chat::error::MessageError::{self, HttpError};
+use chat::error::MessageError::{HttpError};
 use chat::message::{AuthData, Auth, Call, Meta, Args, Kwargs};
 use chat::processor::{ProcessorPool, Action};
 use config::http_destinations::Destination;
@@ -330,7 +329,6 @@ impl<S> http::Codec<S> for InactivityCodec {
         if let Some(ref header) = self.destination.override_host_header {
             e.add_header("Host", header).unwrap();
         }
-        // TODO(tailhook) implement authrization
         e.format_header("Authorization",
                         TangleAuth(&self.session_id)).unwrap();
         e.add_header("Content-Type", "application/json").unwrap();

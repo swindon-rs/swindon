@@ -35,15 +35,7 @@ impl<T: AsRef<str>> AsRef<str> for Version<T> {
 }
 
 impl<T: AsRef<str>> Version<T> {
-    pub fn num(&self) -> &str {
-        let s = self.0.as_ref();
-        if s.starts_with("v") {
-            &s[1..]
-        } else {
-            s
-        }
-    }
-    pub fn components(&self) -> Components {
+    fn components(&self) -> Components {
         let mut ch = self.0.as_ref().char_indices().peekable();
         if ch.peek() == Some(&(0, 'v')) {
             ch.next();
