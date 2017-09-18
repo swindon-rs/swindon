@@ -288,7 +288,8 @@ Swindon lattice handler::
         "*": backend/path
 
 .. versionchanged:: v0.7.0
-   Old name of the handler type is ``SwindonChat`` which is **removed in.
+   Old name of the handler type is ``SwindonChat`` which is **removed** in
+   v0.7.0.
 
 The ``backend/path`` here, i.e. the message handler, should have
 :opt:`override-host-header` setting set, so that swindon knows what ``Host``

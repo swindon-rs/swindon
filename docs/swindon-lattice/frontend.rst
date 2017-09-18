@@ -66,15 +66,23 @@ Request:
 
 Possible responses:
 
+*Success result:*
+
 .. code-block:: json
 
-   # Success result
-   ["result", {"request_id": 123}, result_json_object]
+   ["result", {"request_id": 123}, {"result": "json", "object": 1}]
 
-   # Error results
-   ["error", {"request_id": 123, "tangle_code": "http_error", "error_code": 400}, json_body_object]
+*Error results:*
+
+.. code-block:: json
+
+   ["error", {"request_id": 123, "tangle_code": "http_error", "error_code": 400},
+    {"result": "json", "object": 1}]
+
+.. code-block:: json
+
    ["error", {"request_id": 123, "tangle_code": "validation_error"},
-    json_body_object]
+    {"result": "json", "object": 1}]
 
 
 Response Format
