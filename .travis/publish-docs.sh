@@ -1,7 +1,7 @@
 #!/bin/bash
 
 publish_docs() {
-    pip install sphinx docutils ghp-import --user &&
+    pip install sphinx==1.6.2 docutils ghp-import --user &&
     pip install -r docs/requirements.txt --user &&
     make html -C docs SPHINXBUILD=~/.local/bin/sphinx-build &&
     ~/.local/bin/ghp-import -n docs/_build/html &&
