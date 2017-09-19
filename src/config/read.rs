@@ -11,11 +11,12 @@ use quire::{self, Pos, Include, ErrorCollector, Options, parse_config};
 use quire::{raw_parse as parse_yaml};
 use quire::ast::{Ast, process as process_ast};
 
+use config::authorizers::Authorizer;
 use config::root::{ConfigData, Mixin, config_validator, mixin_validator};
 use super::Handler;
 use config::static_files::Mode;
 use config::log;
-use intern::{LogFormatName};
+use intern::{LogFormatName, Authorizer as AuthorizerName};
 
 
 quick_error! {
@@ -222,6 +223,11 @@ pub fn read_config<P: AsRef<Path>>(filename: P)
                 {{ request.version }}"
                 {{ response.status_code }}
             "#.into()).expect("can always compile debug log"));
+    }
+
+    if !cfg.authorizers.contains_key("default") {
+        cfg.authorizers.insert(AuthorizerName::from("default"),
+                               Authorizer::AllowAll);
     }
 
     // Extra config validations

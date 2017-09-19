@@ -8,6 +8,7 @@ use authorizers;
 impl Authorizer {
     pub fn check(&self, input: &mut Input) -> Result<bool, Error> {
         match *self {
+            Authorizer::AllowAll => Ok(true),
             Authorizer::SourceIp(ref cfg) => {
                 authorizers::source_ip::check(cfg, input)
             }
