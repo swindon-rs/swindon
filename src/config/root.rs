@@ -11,7 +11,6 @@ use intern::{LdapUpstream, Network, Authorizer as AuthorizerName};
 use intern::{LogFormatName};
 use config::listen::{self, ListenSocket};
 use config::routing::{self, Routing};
-use config::authorization::{self, Authorization};
 use config::handlers::{self, Handler};
 use config::authorizers::{self, Authorizer};
 use config::session_pools::{self, SessionPool};
@@ -133,7 +132,6 @@ pub fn config_validator<'a>() -> Structure<'a> {
     .member("output_body_whole_timeout", Scalar::new().default("1 hour"))
 
     .member("routing", routing::validator())
-    .member("authorization", authorization::validator())
 
     .member("replication", replication::validator())
     .member("debug_routing", Scalar::new().default(false))

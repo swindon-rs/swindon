@@ -8,7 +8,6 @@ mod read;
 mod root;
 mod version;
 // sections
-mod authorization;
 mod authorizers;
 mod handlers;
 mod listen;

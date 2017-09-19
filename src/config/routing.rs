@@ -49,8 +49,6 @@ impl FromStr for Route {
                         destination = Some(dest.as_str().parse().unwrap());
                     }
                 } else if let Some(auth) = m.get(1) {
-                    println!("GOT {:?} / {:?}",
-                        m.get(1).unwrap().as_str(), m.get(0).unwrap().as_str());
                     if let Some(old) = authorizer {
                         return Err(format!("Two authorizers {:?} and {:?}",
                             old, auth.as_str()));
