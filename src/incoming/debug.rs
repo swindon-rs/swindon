@@ -6,7 +6,7 @@ use tk_http::server::Head;
 
 use intern::{HandlerName, Authorizer};
 use config::Config;
-use config::routing::Route;
+use routing::Route;
 use request_id::RequestId;
 
 pub struct Debug(Option<Box<DebugInfo>>);
@@ -16,7 +16,6 @@ struct DebugInfo {
     fs_path: Option<PathBuf>,
     config: Arc<Config>,
     request_id: RequestId,
-    authorizer: Option<Authorizer>,
     allow: String,
     deny: String,
 }
@@ -27,7 +26,6 @@ impl Debug {
     {
         if cfg.debug_routing {
             Debug(Some(Box::new(DebugInfo {
-                authorizer: None,
                 route: None,
                 fs_path: None,
                 config: cfg.clone(),
@@ -53,7 +51,7 @@ impl Debug {
 
     pub fn get_route(&self) -> Option<&str> {
         self.0.as_ref().map(|dinfo| {
-            dinfo.route.as_ref().map(|x| &x.destination[..])
+            dinfo.route.as_ref().map(|x| &x.handler_name[..])
             .unwrap_or("-- no route --")
         })
     }
@@ -112,7 +110,7 @@ impl Debug {
 
     pub fn get_authorizer(&self) -> Option<&Authorizer> {
         self.0.as_ref().and_then(|dinfo| {
-            dinfo.route.as_ref().and_then(|x| x.authorizer.as_ref())
+            dinfo.route.as_ref().map(|x| &x.authorizer_name)
         })
     }
 

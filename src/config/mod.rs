@@ -8,16 +8,16 @@ mod read;
 mod root;
 mod version;
 // sections
-mod authorizers;
-mod handlers;
 mod listen;
 mod replication;
 mod session_pools;
-pub mod routing;
+pub mod authorizers;
+pub mod handlers;
 pub mod http_destinations;
 pub mod ldap;
 pub mod log;
 pub mod networks;
+pub mod routing;
 pub mod visitors;
 // handlers
 pub mod chat;
@@ -29,7 +29,7 @@ pub mod redirect;
 pub mod self_status;
 
 pub use self::read::Error;
-pub use self::root::ConfigData;
+pub use self::root::{ConfigData, ConfigSource};
 pub use self::listen::ListenSocket;
 pub use self::handlers::Handler;
 pub use self::authorizers::Authorizer;
@@ -72,8 +72,10 @@ impl ConfigCell {
     pub fn from_string(data: &str, name: &str) -> Result<ConfigCell, Error> {
         let v = root::config_validator();
         let o = Options::default();
+        let src = parse_string(name, data, &v, &o)?;
+        let data = read::postprocess_config(src)?;
         Ok(ConfigCell::new(Config {
-            data: parse_string(name, data, &v, &o)?,
+            data,
             fingerprint: fingerprint::calc(&Vec::new())?,
         }))
     }

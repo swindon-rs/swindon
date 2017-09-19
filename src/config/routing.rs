@@ -1,4 +1,5 @@
 use std::str::FromStr;
+use std::path::{Path, PathBuf};
 use regex::Regex;
 
 use serde::de::{Deserializer, Deserialize};
@@ -16,26 +17,76 @@ lazy_static! {
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub struct Route {
+pub struct RouteDef {
     pub destination: HandlerName,
     pub authorizer: Option<Authorizer>,
 }
 
-pub type Routing = RoutingTable<Route>;
+#[derive(Debug, PartialEq, Eq, Hash)]
+pub struct Host(bool, String);
+
+#[derive(Debug, PartialEq, Eq, Hash)]
+pub struct HostPath(Host, Option<PathBuf>);
+
+impl Host {
+    pub fn matches_www(&self) -> bool {
+        self.0 || self.1.starts_with("www.")
+    }
+}
+
+impl<'a> Deserialize<'a> for HostPath {
+    fn deserialize<D: Deserializer<'a>>(d: D) -> Result<Self, D::Error> {
+        d.deserialize_str(FromStrVisitor::new(
+            "hostname or hostname/path"))
+    }
+}
+
+impl FromStr for Host {
+    type Err = String;
+
+    fn from_str(val: &str) -> Result<Host, String> {
+        if val == "*" {
+            Ok(Host(true, String::from("")))
+        } else if val.starts_with("*.") {
+            Ok(Host(true, val[2..].to_string()))
+        } else {
+            Ok(Host(false, val.to_string()))
+        }
+    }
+}
+
+
+impl FromStr for HostPath {
+    type Err = String;
+    fn from_str(val: &str) -> Result<HostPath, String> {
+        let (host, path) = if let Some(i) = val.find('/') {
+            if &val[i..] == "/" {
+                (&val[..i], None)
+            } else {
+                (&val[..i], Some(val[i..].to_string()))
+            }
+        } else {
+            (val, None)
+        };
+        Ok(HostPath(host.parse().unwrap(),
+                    path.map(|x| Path::new(&x).to_path_buf())))
+    }
+}
+
 
 pub fn validator<'x>() -> Mapping<'x> {
     Mapping::new(Scalar::new(), Scalar::new())
 }
 
-impl<'a> Deserialize<'a> for Route {
+impl<'a> Deserialize<'a> for RouteDef {
     fn deserialize<D: Deserializer<'a>>(d: D) -> Result<Self, D::Error> {
         d.deserialize_str(FromStrVisitor::new("route [@authorizer]"))
     }
 }
 
-impl FromStr for Route {
+impl FromStr for RouteDef {
     type Err = String;
-    fn from_str(val: &str) -> Result<Route, String> {
+    fn from_str(val: &str) -> Result<RouteDef, String> {
         let mut val = val.trim();
         let mut destination = None;
         let mut authorizer = None;
@@ -66,7 +117,7 @@ impl FromStr for Route {
             }
         }
         if let Some(dest) = destination {
-            return Ok(Route {
+            return Ok(RouteDef {
                 destination: dest,
                 authorizer: authorizer,
             })
@@ -80,11 +131,11 @@ impl FromStr for Route {
 mod test {
     use std::str::FromStr;
     use string_intern::Symbol;
-    use super::Route;
+    use super::RouteDef;
 
     #[test]
     fn parse_dest() {
-        assert_eq!(Route::from_str("destination").unwrap(), Route {
+        assert_eq!(RouteDef::from_str("destination").unwrap(), RouteDef {
             destination: Symbol::from("destination"),
             authorizer: None,
         });
@@ -92,17 +143,72 @@ mod test {
 
     #[test]
     fn parse_auth() {
-        assert_eq!(Route::from_str("destination@auth").unwrap(), Route {
+        assert_eq!(RouteDef::from_str("destination@auth").unwrap(), RouteDef {
             destination: Symbol::from("destination"),
             authorizer: Some(Symbol::from("auth")),
         });
-        assert_eq!(Route::from_str("destination   @auth").unwrap(), Route {
-            destination: Symbol::from("destination"),
-            authorizer: Some(Symbol::from("auth")),
-        });
-        assert_eq!(Route::from_str("destination @auth").unwrap(), Route {
+        assert_eq!(RouteDef::from_str("destination   @auth").unwrap(),
+            RouteDef {
+                destination: Symbol::from("destination"),
+                authorizer: Some(Symbol::from("auth")),
+            });
+        assert_eq!(RouteDef::from_str("destination @auth").unwrap(), RouteDef {
             destination: Symbol::from("destination"),
             authorizer: Some(Symbol::from("auth")),
         });
     }
+}
+
+#[cfg(test)]
+mod parse_test {
+    use super::{HostPath, Host, Path};
+
+    fn parse_host_path(s: String) -> (Host, Path) {
+        let HostPath(host, path) = s.parse().unwrap();
+        return (host, path);
+    }
+
+    #[test]
+    fn simple() {
+        let s = "example.com".to_string();
+        let (host, path) = parse_host_path(s);
+        assert_eq!(host, Host(false, "example.com".into()));
+        assert!(path.is_none());
+    }
+
+    #[test]
+    fn base_host() {
+        let s = "*.example.com".to_string();
+        let (host, path) = parse_host_path(s);
+        assert_eq!(host, Host(true, "example.com".into()));
+        assert!(path.is_none());
+    }
+
+    #[test]
+    fn invalid_base_host() {
+        let s = "*example.com".to_string();
+        let (host, path) = parse_host_path(s);
+        assert_eq!(host, Host(false, "*example.com".into()));
+        assert!(path.is_none());
+
+        let s = ".example.com".to_string();
+        let (host, path) = parse_host_path(s);
+        assert_eq!(host, Host(false, ".example.com".into()));
+        assert!(path.is_none());
+    }
+
+    #[test]
+    fn invalid_host() {
+        // FiXME: only dot is invalid
+        let s = "*.".to_string();
+        let (host, path) = parse_host_path(s);
+        assert_eq!(host, Host(true, "".into()));
+        assert!(path.is_none());
+
+        let s = "*./".to_string();
+        let (host, path) = parse_host_path(s);
+        assert_eq!(host, Host(true, "".into()));
+        assert!(path.is_none());
+    }
+
 }

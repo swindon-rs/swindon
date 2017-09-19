@@ -6,7 +6,7 @@ use config::ldap;
 use config::networks;
 
 
-#[derive(Deserialize, Debug, PartialEq, Eq)]
+#[derive(Deserialize, Debug, Clone, PartialEq, Eq)]
 pub enum Authorizer {
     AllowAll,
     SourceIp(Arc<networks::SourceIpAuthorizer>),

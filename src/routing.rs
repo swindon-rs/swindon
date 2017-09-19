@@ -2,63 +2,59 @@ use std::collections::{HashMap, BTreeMap};
 use std::str::FromStr;
 
 use regex::{self, RegexSet};
-use serde::de::{Deserializer, Deserialize, Error};
+use serde::de::{Deserializer, Deserialize};
 
+use intern::{HandlerName, Authorizer as AuthorizerName};
+use config::{ConfigSource, Error};
+use config::routing::{Host, RouteDef};
+use config::handlers::Handler;
+use config::authorizers::Authorizer;
 use config::visitors::FromStrVisitor;
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct Route {
+    pub handler_name: HandlerName,
+    pub handler: Handler,
+    pub authorizer_name: AuthorizerName,
+    pub authorizer: Authorizer,
+}
 
 pub type Path = Option<String>;
 
 #[derive(Debug)]
-pub struct RoutingTable<H> {
+pub struct RoutingTable {
     set: RegexSet,
-    table: Vec<(Host, BTreeMap<Path, H>)>,
+    table: Vec<(Host, PathTable)>,
 }
 
-#[derive(Debug, PartialEq, Eq, Hash)]
-pub struct Host(bool, String);
-
-#[derive(Debug, PartialEq, Eq, Hash)]
-pub struct HostPath(Host, Path);
-
-impl Host {
-    pub fn matches_www(&self) -> bool {
-        self.0 || self.1.starts_with("www.")
-    }
+#[derive(Debug)]
+pub struct PathTable {
+    set: RegexSet,
+    table: Vec<(Path, Route)>,
 }
 
-impl<H: PartialEq> PartialEq for RoutingTable<H> {
-    fn eq(&self, other: &RoutingTable<H>) -> bool {
+impl PartialEq for RoutingTable {
+    fn eq(&self, other: &RoutingTable) -> bool {
         return self.table == other.table;
     }
 }
 
-impl<H: Eq> Eq for RoutingTable<H> {}
+impl Eq for RoutingTable {}
 
-impl<'a> Deserialize<'a> for HostPath {
-    fn deserialize<D: Deserializer<'a>>(d: D) -> Result<Self, D::Error> {
-        d.deserialize_str(FromStrVisitor::new(
-            "hostname or hostname/path"))
+impl PartialEq for PathTable {
+    fn eq(&self, other: &PathTable) -> bool {
+        return self.table == other.table;
     }
 }
 
-impl<'a, T: Deserialize<'a>> Deserialize<'a> for RoutingTable<T> {
-    fn deserialize<D: Deserializer<'a>>(d: D) -> Result<Self, D::Error> {
-        let tmp: HashMap<HostPath, T> = Deserialize::deserialize(d)?;
-        let mut rv = HashMap::new();
-        for (HostPath(host, path), dest) in tmp {
-            rv.entry(host)
-            .or_insert_with(|| BTreeMap::new())
-            .insert(path, dest);
-        }
-       Ok(RoutingTable::new(rv).map_err(|e| D::Error::custom(
-                &format!("Can't compile routing table: {}", e)))?)
-    }
-}
+impl Eq for PathTable {}
 
-impl<T> RoutingTable<T> {
-    pub fn new(mut items: HashMap<Host, BTreeMap<Path, T>>)
-        -> Result<RoutingTable<T>, regex::Error>
+impl RoutingTable {
+    pub fn new(src: &ConfigSource)
+        -> Result<RoutingTable, Error>
     {
+        unimplemented!();
+        /*
         let mut to_insert = Vec::new();
         for host in items.keys() {
             if !host.0 {
@@ -90,8 +86,9 @@ impl<T> RoutingTable<T> {
             set: regex,
             table: items,
         })
+        */
     }
-    pub fn hosts(&self) -> ::std::slice::Iter<(Host, BTreeMap<Path, T>)> {
+    pub fn hosts(&self) -> ::std::slice::Iter<(Host, PathTable)> {
         self.table.iter()
     }
     #[allow(dead_code)]
@@ -100,44 +97,14 @@ impl<T> RoutingTable<T> {
     }
 }
 
-impl FromStr for Host {
-    type Err = String;
-
-    fn from_str(val: &str) -> Result<Host, String> {
-        if val == "*" {
-            Ok(Host(true, String::from("")))
-        } else if val.starts_with("*.") {
-            Ok(Host(true, val[2..].to_string()))
-        } else {
-            Ok(Host(false, val.to_string()))
-        }
-    }
-}
-
-
-impl FromStr for HostPath {
-    type Err = String;
-    fn from_str(val: &str) -> Result<HostPath, String> {
-        let (host, path) = if let Some(i) = val.find('/') {
-            if &val[i..] == "/" {
-                (&val[..i], None)
-            } else {
-                (&val[..i], Some(val[i..].to_string()))
-            }
-        } else {
-            (val, None)
-        };
-        Ok(HostPath(host.parse().unwrap(), path))
-    }
-}
-
 /// Map host port to a route of arbitrary type
 ///
 /// Returns destination route and relative path
-pub fn route<'x, D>(host: &str, path: &'x str,
-    table: &'x RoutingTable<D>)
-    -> Option<(&'x D, &'x str, &'x str)>
+pub fn route<'x>(host: &str, path: &'x str,
+    table: &'x RoutingTable)
+    -> Option<(&'x Route, &'x str, &'x str)>
 {
+    /*
     let set = table.set.matches(host);
     if !set.matched_any() {
         return None;
@@ -153,6 +120,8 @@ pub fn route<'x, D>(host: &str, path: &'x str,
         }
     }
     return None;
+    */
+    unimplemented!();
 }
 
 fn path_match<S: AsRef<str>>(pattern: &Option<S>, value: &str) -> bool {
@@ -305,60 +274,6 @@ mod route_test {
         assert_eq!(route("subdomain.ex.org", "/two", &table), None);
         assert_eq!(route("example.org", "/", &table), None);
         assert_eq!(route("example.org", "/two", &table), None);
-    }
-
-}
-
-#[cfg(test)]
-mod parse_test {
-    use super::{HostPath, Host, Path};
-
-    fn parse_host_path(s: String) -> (Host, Path) {
-        let HostPath(host, path) = s.parse().unwrap();
-        return (host, path);
-    }
-
-    #[test]
-    fn simple() {
-        let s = "example.com".to_string();
-        let (host, path) = parse_host_path(s);
-        assert_eq!(host, Host(false, "example.com".into()));
-        assert!(path.is_none());
-    }
-
-    #[test]
-    fn base_host() {
-        let s = "*.example.com".to_string();
-        let (host, path) = parse_host_path(s);
-        assert_eq!(host, Host(true, "example.com".into()));
-        assert!(path.is_none());
-    }
-
-    #[test]
-    fn invalid_base_host() {
-        let s = "*example.com".to_string();
-        let (host, path) = parse_host_path(s);
-        assert_eq!(host, Host(false, "*example.com".into()));
-        assert!(path.is_none());
-
-        let s = ".example.com".to_string();
-        let (host, path) = parse_host_path(s);
-        assert_eq!(host, Host(false, ".example.com".into()));
-        assert!(path.is_none());
-    }
-
-    #[test]
-    fn invalid_host() {
-        // FiXME: only dot is invalid
-        let s = "*.".to_string();
-        let (host, path) = parse_host_path(s);
-        assert_eq!(host, Host(true, "".into()));
-        assert!(path.is_none());
-
-        let s = "*./".to_string();
-        let (host, path) = parse_host_path(s);
-        assert_eq!(host, Host(true, "".into()));
-        assert!(path.is_none());
     }
 
 }

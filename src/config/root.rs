@@ -10,7 +10,7 @@ use intern::{HandlerName, Upstream, SessionPoolName, DiskPoolName};
 use intern::{LdapUpstream, Network, Authorizer as AuthorizerName};
 use intern::{LogFormatName};
 use config::listen::{self, ListenSocket};
-use config::routing::{self, Routing};
+use config::routing::{self, HostPath, RouteDef};
 use config::handlers::{self, Handler};
 use config::authorizers::{self, Authorizer};
 use config::session_pools::{self, SessionPool};
@@ -19,7 +19,8 @@ use config::ldap;
 use config::log;
 use config::networks;
 use config::disk::{self, Disk};
-use super::replication::{self, Replication};
+use config::replication::{self, Replication};
+use routing::RoutingTable;
 
 
 #[derive(Deserialize, PartialEq, Eq, Debug)]
@@ -38,7 +39,7 @@ pub struct Mixin {
 }
 
 #[derive(Deserialize, PartialEq, Eq, Debug)]
-pub struct ConfigData {
+pub struct ConfigSource {
     pub listen: Vec<ListenSocket>,
     pub max_connections: usize,
     pub pipeline_depth: usize,
@@ -59,7 +60,7 @@ pub struct ConfigData {
     #[serde(with="::quire::duration")]
     pub output_body_whole_timeout: Duration,
 
-    pub routing: Routing,
+    pub routing: HashMap<HostPath, RouteDef>,
 
     pub handlers: HashMap<HandlerName, Handler>,
     pub authorizers: HashMap<AuthorizerName, Authorizer>,
@@ -84,6 +85,40 @@ pub struct ConfigData {
     /// We need to keep order of mixins stable for the purpose
     /// of fingerprinting
     pub mixins: BTreeMap<String, PathBuf>,
+}
+
+#[derive(PartialEq, Eq, Debug)]
+pub struct ConfigData {
+    pub listen: Vec<ListenSocket>,
+    pub max_connections: usize,
+    pub pipeline_depth: usize,
+    pub listen_error_timeout: Duration,
+    pub first_byte_timeout: Duration,
+    pub keep_alive_timeout: Duration,
+    pub headers_timeout: Duration,
+    pub input_body_byte_timeout: Duration,
+    pub input_body_whole_timeout: Duration,
+    pub output_body_byte_timeout: Duration,
+    pub output_body_whole_timeout: Duration,
+
+    pub routing: RoutingTable,
+
+    pub handlers: HashMap<HandlerName, Handler>,
+    pub authorizers: HashMap<AuthorizerName, Authorizer>,
+    pub session_pools: HashMap<SessionPoolName, Arc<SessionPool>>,
+    pub http_destinations: HashMap<Upstream, Arc<Destination>>,
+    pub ldap_destinations: HashMap<LdapUpstream, ldap::Destination>,
+    pub networks: HashMap<Network, networks::NetworkList>,
+    pub log_formats: HashMap<LogFormatName, log::Format>,
+    pub disk_pools: HashMap<DiskPoolName, Disk>,
+
+    pub replication: Arc<Replication>,
+    pub debug_routing: bool,
+    pub debug_logging: bool,
+    pub server_name: Option<String>,
+
+    pub set_user: Option<String>,
+    pub set_group: Option<String>,
 }
 
 trait MixinSections {

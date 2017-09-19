@@ -12,11 +12,13 @@ use quire::{raw_parse as parse_yaml};
 use quire::ast::{Ast, process as process_ast};
 
 use config::authorizers::Authorizer;
-use config::root::{ConfigData, Mixin, config_validator, mixin_validator};
+use config::root::{ConfigData, ConfigSource, Mixin};
+use config::root::{config_validator, mixin_validator};
 use super::Handler;
 use config::static_files::Mode;
 use config::log;
 use intern::{LogFormatName, Authorizer as AuthorizerName};
+use routing::RoutingTable;
 
 
 quick_error! {
@@ -170,7 +172,7 @@ pub fn read_config<P: AsRef<Path>>(filename: P)
         String::from("<main>"),
         metadata(filename)?,
     ));
-    let mut cfg: ConfigData = {
+    let mut src: ConfigSource = {
         let cell = RefCell::new(&mut files);
         let mut opt = Options::default();
         opt.allow_include(
@@ -178,7 +180,7 @@ pub fn read_config<P: AsRef<Path>>(filename: P)
         parse_config(filename, &config_validator(), &opt)?
     };
 
-    for (prefix, ref incl) in &cfg.mixins {
+    for (prefix, ref incl) in &src.mixins {
         let incl_path = join_filename(filename, &Path::new(incl))
             .map_err(|()| Error::BadMixinPath(filename.to_path_buf()))?;
         files.push((
@@ -195,26 +197,31 @@ pub fn read_config<P: AsRef<Path>>(filename: P)
             parse_config(&incl_path, &mixin_validator(), &opt)?
         };
         mix_in(&incl_path, prefix,
-               &mut cfg.handlers, mixin.handlers, "handler")?;
+               &mut src.handlers, mixin.handlers, "handler")?;
         mix_in(&incl_path, prefix,
-               &mut cfg.authorizers, mixin.authorizers, "authorizer")?;
+               &mut src.authorizers, mixin.authorizers, "authorizer")?;
         mix_in(&incl_path, prefix,
-               &mut cfg.session_pools, mixin.session_pools, "session-pool")?;
-        mix_in(&incl_path, prefix, &mut cfg.http_destinations,
+               &mut src.session_pools, mixin.session_pools, "session-pool")?;
+        mix_in(&incl_path, prefix, &mut src.http_destinations,
             mixin.http_destinations, "http-destination")?;
-        mix_in(&incl_path, prefix, &mut cfg.ldap_destinations,
+        mix_in(&incl_path, prefix, &mut src.ldap_destinations,
             mixin.ldap_destinations, "ldap-destination")?;
         mix_in(&incl_path, prefix,
-            &mut cfg.networks, mixin.networks, "network")?;
+            &mut src.networks, mixin.networks, "network")?;
         mix_in(&incl_path, prefix,
-            &mut cfg.log_formats, mixin.log_formats, "log-format")?;
+            &mut src.log_formats, mixin.log_formats, "log-format")?;
         mix_in(&incl_path, prefix,
-            &mut cfg.disk_pools, mixin.disk_pools, "disk-pools")?;
+            &mut src.disk_pools, mixin.disk_pools, "disk-pools")?;
     }
+    return Ok((postprocess_config(src)?, files));
+}
 
+pub fn postprocess_config(mut src: ConfigSource)
+    -> Result<ConfigData, Error>
+{
     // Set some defaults
-    if !cfg.log_formats.contains_key("debug-log") {
-        cfg.log_formats.insert(LogFormatName::from("debug-log"),
+    if !src.log_formats.contains_key("debug-log") {
+        src.log_formats.insert(LogFormatName::from("debug-log"),
             log::Format::from_string(r#"
                 {{ request.client_ip }}
                 {{ request.host }}
@@ -225,13 +232,47 @@ pub fn read_config<P: AsRef<Path>>(filename: P)
             "#.into()).expect("can always compile debug log"));
     }
 
-    if !cfg.authorizers.contains_key("default") {
-        cfg.authorizers.insert(AuthorizerName::from("default"),
+    if !src.authorizers.contains_key("default") {
+        src.authorizers.insert(AuthorizerName::from("default"),
                                Authorizer::AllowAll);
     }
 
+    let mut cfg = ConfigData {
+        routing: RoutingTable::new(&src)?,
+
+        listen: src.listen,
+        max_connections: src.max_connections,
+        pipeline_depth: src.pipeline_depth,
+        listen_error_timeout: src.listen_error_timeout,
+        first_byte_timeout: src.first_byte_timeout,
+        keep_alive_timeout: src.keep_alive_timeout,
+        headers_timeout: src.headers_timeout,
+        input_body_byte_timeout: src.input_body_byte_timeout,
+        input_body_whole_timeout: src.input_body_whole_timeout,
+        output_body_byte_timeout: src.output_body_byte_timeout,
+        output_body_whole_timeout: src.output_body_whole_timeout,
+
+        handlers: src.handlers,
+        authorizers: src.authorizers,
+        session_pools: src.session_pools,
+        http_destinations: src.http_destinations,
+        ldap_destinations: src.ldap_destinations,
+        networks: src.networks,
+        log_formats: src.log_formats,
+        disk_pools: src.disk_pools,
+
+        replication: src.replication,
+        debug_routing: src.debug_routing,
+        debug_logging: src.debug_logging,
+        server_name: src.server_name,
+
+        set_user: src.set_user,
+        set_group: src.set_group,
+    };
+
     // Extra config validations
 
+    /* TODO
     for &(ref domain, ref sub) in cfg.routing.hosts() {
         for (path, route) in sub {
             if cfg.handlers.get(&route.destination).is_none() {
@@ -251,6 +292,8 @@ pub fn read_config<P: AsRef<Path>>(filename: P)
             }
         }
     }
+    */
+
     for (name, h) in &cfg.handlers {
         match h {
             &Handler::SwindonLattice(ref chat) => {
@@ -360,5 +403,5 @@ pub fn read_config<P: AsRef<Path>>(filename: P)
         }
     }
 
-    Ok((cfg, files))
+    Ok(cfg)
 }

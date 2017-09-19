@@ -104,27 +104,15 @@ impl Router {
             request_id: request_id,
         };
 
-        if let Some(ref auth) = route.authorizer {
-            if let Some(authorizer) = cfg.authorizers.get(auth) {
-                match authorizer.check(&mut inp) {
-                    Ok(true) => {}
-                    Ok(false) => {
-                        return Err(Page(Status::Forbidden, inp.debug));
-                    }
-                    Err(e) => return Err(Fallback(e)),
-                }
-            } else {
-                error!("Can't find authorizer {}. Forbiddng request.", auth);
-                inp.debug.set_deny("authorizer-not-found");
+        match route.authorizer.check(&mut inp) {
+            Ok(true) => {}
+            Ok(false) => {
                 return Err(Page(Status::Forbidden, inp.debug));
             }
+            Err(e) => return Err(Fallback(e)),
         }
 
-        if let Some(handler) = cfg.handlers.get(&route.destination) {
-            handler.serve(inp).map_err(Fallback)
-        } else {
-            return Err(Page(Status::NotFound, inp.debug))
-        }
+        route.handler.serve(inp).map_err(Fallback)
     }
 }
 
