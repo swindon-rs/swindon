@@ -110,15 +110,9 @@ impl Debug {
         })
     }
 
-    pub fn set_authorizer(&mut self, s: &Authorizer) {
-        if let Some(ref mut dinfo) = self.0 {
-            dinfo.authorizer = Some(s.clone());
-        }
-    }
-
     pub fn get_authorizer(&self) -> Option<&Authorizer> {
         self.0.as_ref().and_then(|dinfo| {
-            dinfo.authorizer.as_ref()
+            dinfo.route.as_ref().and_then(|x| x.authorizer.as_ref())
         })
     }
 

@@ -18,7 +18,7 @@ pub type Reply<S> = Box<Future<Item=EncoderDone<S>, Error=Error>>;
 pub use self::debug::Debug;
 pub use tk_http::server::EncoderDone;
 pub use self::encoder::{Encoder, IntoContext, Context};
-pub use self::input::{Input, AuthInput};
+pub use self::input::{Input};
 pub use self::quick_reply::reply;
 pub use self::router::Router;
 

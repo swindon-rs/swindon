@@ -6,7 +6,7 @@ use tk_http::Status;
 use tk_http::server::{Dispatcher, Error as ServerError, Head};
 
 use runtime::Runtime;
-use incoming::{Request, Debug, AuthInput, Input, Transport};
+use incoming::{Request, Debug, Input, Transport};
 use routing::{parse_host, route};
 use default_error_page::serve_error_page;
 use request_id;
@@ -79,6 +79,32 @@ impl Router {
                 handle: &self.handle,
                 request_id: request_id,
             };
+        };
+        */
+
+        let matched_route = parsed_host
+            .and_then(|host| route(host, &path, &cfg.routing));
+
+        let (route, pref, suf) = if let Some((route, p, s)) = matched_route {
+            (route, p, s)
+        } else {
+            return Err(Page(Status::NotFound, debug));
+        };
+        debug.set_route(route);
+
+        let mut inp = Input {
+            addr: self.addr,
+            runtime: &self.runtime,
+            config: &cfg,
+            debug: debug,
+            headers: headers,
+            prefix: pref,
+            suffix: suf,
+            handle: &self.handle,
+            request_id: request_id,
+        };
+
+        if let Some(ref auth) = route.authorizer {
             if let Some(authorizer) = cfg.authorizers.get(auth) {
                 match authorizer.check(&mut inp) {
                     Ok(true) => {}
@@ -92,34 +118,12 @@ impl Router {
                 inp.debug.set_deny("authorizer-not-found");
                 return Err(Page(Status::Forbidden, inp.debug));
             }
-            debug = inp.debug;
-        };
-        */
+        }
 
-        let matched_route = parsed_host
-            .and_then(|host| route(host, &path, &cfg.routing));
-
-        let (handler, pref, suf) = if let Some((route, p, s)) = matched_route {
-            debug.set_route(route);
-            (cfg.handlers.get(&route.destination), p, s)
-        } else {
-            (None, "", path)
-        };
-        let inp = Input {
-            addr: self.addr,
-            runtime: &self.runtime,
-            config: &cfg,
-            debug: debug,
-            headers: headers,
-            prefix: pref,
-            suffix: suf,
-            handle: &self.handle,
-            request_id: request_id,
-        };
-        if let Some(handler) = handler {
+        if let Some(handler) = cfg.handlers.get(&route.destination) {
             handler.serve(inp).map_err(Fallback)
         } else {
-            Err(Page(Status::NotFound, inp.debug))
+            return Err(Page(Status::NotFound, inp.debug))
         }
     }
 }
