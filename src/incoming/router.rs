@@ -65,9 +65,7 @@ impl Router {
 
         let parsed_host = headers.host().map(parse_host);
 
-        let authorization_route = parsed_host
-            .and_then(|host| route(host, &path, &cfg.authorization));
-
+        /*
         if let Some((auth, pref, suf)) = authorization_route {
             debug.set_authorizer(auth);
             let mut inp = AuthInput {
@@ -96,13 +94,14 @@ impl Router {
             }
             debug = inp.debug;
         };
+        */
 
         let matched_route = parsed_host
             .and_then(|host| route(host, &path, &cfg.routing));
 
         let (handler, pref, suf) = if let Some((route, p, s)) = matched_route {
             debug.set_route(route);
-            (cfg.handlers.get(route), p, s)
+            (cfg.handlers.get(&route.destination), p, s)
         } else {
             (None, "", path)
         };

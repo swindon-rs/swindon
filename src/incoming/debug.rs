@@ -6,12 +6,13 @@ use tk_http::server::Head;
 
 use intern::{HandlerName, Authorizer};
 use config::Config;
+use config::routing::Route;
 use request_id::RequestId;
 
 pub struct Debug(Option<Box<DebugInfo>>);
 
 struct DebugInfo {
-    route: Option<HandlerName>,
+    route: Option<Route>,
     fs_path: Option<PathBuf>,
     config: Arc<Config>,
     request_id: RequestId,
@@ -43,7 +44,7 @@ impl Debug {
     /// # Panics
     ///
     /// Panics if route is already set (only in debug mode)
-    pub fn set_route(&mut self, route: &HandlerName) {
+    pub fn set_route(&mut self, route: &Route) {
         if let Some(ref mut dinfo) = self.0 {
             debug_assert!(dinfo.route.is_none());
             dinfo.route = Some(route.clone());
@@ -52,7 +53,7 @@ impl Debug {
 
     pub fn get_route(&self) -> Option<&str> {
         self.0.as_ref().map(|dinfo| {
-            dinfo.route.as_ref().map(|x| &x[..])
+            dinfo.route.as_ref().map(|x| &x.destination[..])
             .unwrap_or("-- no route --")
         })
     }

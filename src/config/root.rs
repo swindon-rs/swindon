@@ -61,7 +61,6 @@ pub struct ConfigData {
     pub output_body_whole_timeout: Duration,
 
     pub routing: Routing,
-    pub authorization: Authorization,
 
     pub handlers: HashMap<HandlerName, Handler>,
     pub authorizers: HashMap<AuthorizerName, Authorizer>,
