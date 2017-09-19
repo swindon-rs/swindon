@@ -270,7 +270,7 @@ def test_route_path_suffix(check_config):
     """)
     assert (
         "Path must not end with /: Host(false, \"localhost\")"
-        " Some(\"/some/path/\") handler\"handler\""
+        " Some(\"/some/path/\")"
         ) in err
 
 
