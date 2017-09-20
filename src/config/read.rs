@@ -250,6 +250,10 @@ pub fn postprocess_config(mut src: ConfigSource)
             "#.into()).expect("can always compile debug log"));
     }
 
+    if !src.handlers.contains_key("default") {
+        src.handlers.insert(HandlerName::from("default"), Handler::NotFound);
+    }
+
     if !src.authorizers.contains_key("default") {
         src.authorizers.insert(AuthorizerName::from("default"),
                                Authorizer::AllowAll);
