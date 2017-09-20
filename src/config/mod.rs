@@ -198,6 +198,9 @@ pub mod test {
                 path: /work/public
                 text-charset: utf-8
 
+              example-chat-static: !Static
+                path: /work/public
+
               websocket-echo-html: !SingleFile
                 path: /work/public/websocket.html
                 content-type: "text/html; charset=utf-8"
@@ -220,6 +223,7 @@ pub mod test {
                 queue-size-for-503: 100k
                 backend-connections-per-ip-port: 1
                 in-flight-requests-per-backend-connection: 1
+                override-host-header: swindon.internal
 
                 addresses:
                 - example.com:5000
@@ -233,7 +237,7 @@ pub mod test {
 
         assert_eq!(cfg.listen.len(), 1);
         assert_eq!(cfg.routing.num_hosts(), 3+3);
-        assert_eq!(cfg.handlers.len(), 7);
+        assert_eq!(cfg.handlers.len(), 9);
         assert_eq!(cfg.session_pools.len(), 1);
         assert_eq!(cfg.http_destinations.len(), 1);
         assert_eq!(cfg.disk_pools.len(), 0);

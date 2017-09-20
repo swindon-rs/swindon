@@ -297,9 +297,6 @@ pub fn postprocess_config(mut src: ConfigSource)
     /* TODO
     for &(ref domain, ref sub) in cfg.routing.hosts() {
         for (path, route) in sub {
-            if cfg.handlers.get(&route.destination).is_none() {
-                err!("Unknown handler {:?}", route.destination)
-            }
             if path.as_ref().map(|x| x.ends_with("/")).unwrap_or(false) {
                 err!("Path must not end with /: {:?} {:?}",
                      domain, path);
