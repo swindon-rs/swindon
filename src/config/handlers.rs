@@ -18,6 +18,7 @@ pub enum Handler {
     VersionedStatic(Arc<static_files::VersionedStatic>),
     Proxy(Arc<proxy::Proxy>),
     EmptyGif(Arc<empty_gif::EmptyGif>),
+    NotFound,
     HttpBin,
     /// This endpoints is for testing websocket implementation. It's not
     /// guaranteed to work in forward compatible manner. We use it for

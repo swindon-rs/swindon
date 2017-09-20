@@ -1,11 +1,13 @@
 use std::path::Path;
 
 use tk_http::server::{Dispatcher, Error};
+use tk_http::Status;
 use httpbin::HttpBin;
 
 use config::{Handler};
 use handlers;
 use incoming::{Request, Input, Transport};
+use default_error_page::serve_error_page;
 
 
 // TODO(tailhook) this should eventually be a virtual method on Handler trait
@@ -16,6 +18,9 @@ impl Handler {
         match *self {
             Handler::EmptyGif(ref h) => {
                 Ok(handlers::empty_gif::serve(h, input))
+            }
+            Handler::NotFound => {
+                Ok(serve_error_page(Status::NotFound, input))
             }
             Handler::HttpBin => {
                 HttpBin::new_at(&Path::new(
