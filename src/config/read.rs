@@ -10,6 +10,7 @@ use std::sync::Arc;
 use quire::{self, Pos, Include, ErrorCollector, Options, parse_config};
 use quire::{raw_parse as parse_yaml};
 use quire::ast::{Ast, process as process_ast};
+use regex;
 
 use config::authorizers::Authorizer;
 use config::root::{ConfigData, ConfigSource, Mixin};
@@ -17,7 +18,7 @@ use config::root::{config_validator, mixin_validator};
 use super::Handler;
 use config::static_files::Mode;
 use config::log;
-use intern::{LogFormatName, Authorizer as AuthorizerName};
+use intern::{LogFormatName, Authorizer as AuthorizerName, HandlerName};
 use routing::RoutingTable;
 
 
@@ -59,6 +60,19 @@ quick_error! {
             display("mixin {:?} has overlapping {} {:?}",
                 filename, typ, name)
             description("mixin has overlapping item")
+        }
+        Regex(err: regex::Error) {
+            display("error compiling routing regex: {}", err)
+            description("error compiling routing regex")
+            from()
+        }
+        NoHandler(name: HandlerName) {
+            display("handler {:?} not found", name)
+            description("handler not found")
+        }
+        NoAuthorizer(name: AuthorizerName) {
+            display("authorizer {:?} not found", name)
+            description("authorizer not found")
         }
     }
 }

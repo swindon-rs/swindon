@@ -1,15 +1,12 @@
-use std::collections::{HashMap, BTreeMap};
-use std::str::FromStr;
+use std::collections::{HashMap};
 
 use regex::{self, RegexSet};
-use serde::de::{Deserializer, Deserialize};
 
 use intern::{HandlerName, Authorizer as AuthorizerName};
 use config::{ConfigSource, Error};
 use config::routing::{Host, HostPath, RouteDef};
 use config::handlers::Handler;
 use config::authorizers::Authorizer;
-use config::visitors::FromStrVisitor;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Route {
@@ -19,18 +16,16 @@ pub struct Route {
     pub authorizer: Authorizer,
 }
 
-pub type Path = Option<String>;
-
 #[derive(Debug)]
 pub struct RoutingTable {
     set: RegexSet,
-    table: Vec<(Host, PathTable)>,
+    table: Vec<(String, PathTable)>,
 }
 
 #[derive(Debug)]
 pub struct PathTable {
     set: RegexSet,
-    table: Vec<(Path, Route)>,
+    table: Vec<(String, Route)>,
 }
 
 impl PartialEq for RoutingTable {
@@ -49,19 +44,79 @@ impl PartialEq for PathTable {
 
 impl Eq for PathTable {}
 
+fn inherit(to: &mut RouteDef, from: &RouteDef) {
+    match (&mut to.authorizer, &from.authorizer) {
+        (&mut ref mut dest @ None, &Some(ref x)) => {
+            *dest = Some(x.clone());
+        }
+        _ => {}
+    }
+}
+fn is_done(item: &RouteDef) -> bool {
+    matches!(*item, RouteDef {
+        handler: _,
+        authorizer: Some(_),
+    })
+}
+fn default() -> RouteDef {
+    RouteDef {
+        handler: HandlerName::from("default"),
+        authorizer: None,
+    }
+}
+
+impl PathTable {
+    fn new(mut table: Vec<(String, Route)>) -> Result<PathTable, Error> {
+        table.sort_by(|&(ref a, _), &(ref b, _)| {
+            // sort by longest first, but then keep order reproducible
+            b.len().cmp(&a.len()).then(a.cmp(b))
+        });
+        let rset = RegexSet::new(
+            table.iter().map(|&(ref path, _)| {
+                String::from("^") + &regex::escape(&path) + "(?:$|/)"
+            }))?;
+        Ok(PathTable {
+            set: rset,
+            table: table,
+        })
+    }
+}
+
+trait Resolver {
+    fn handler(&self, &HandlerName) -> Option<Handler>;
+    fn authorizer(&self, &AuthorizerName) -> Option<Authorizer>;
+    fn route(&self, route: &RouteDef) -> Result<Route, Error> {
+        let auth = route.authorizer.clone()
+            .unwrap_or(AuthorizerName::from("default"));
+        Ok(Route {
+            handler: self.handler(&route.handler)
+                .ok_or_else(|| Error::NoHandler(route.handler.clone()))?,
+            handler_name: route.handler.clone(),
+            authorizer: self.authorizer(&auth)
+                .ok_or_else(|| Error::NoAuthorizer(auth.clone()))?,
+            authorizer_name: auth,
+        })
+    }
+}
+
+impl<'a> Resolver for &'a ConfigSource {
+    fn handler(&self, n: &HandlerName) -> Option<Handler> {
+        self.handlers.get(n).cloned()
+    }
+    fn authorizer(&self, n: &AuthorizerName) -> Option<Authorizer> {
+        self.authorizers.get(n).cloned()
+    }
+}
+
 impl RoutingTable {
     pub fn new(src: &ConfigSource)
         -> Result<RoutingTable, Error>
     {
-        RoutingTable::_create(src.routing.iter(),
-            |n| src.handlers.get(n),
-            |n| src.authorizers.get(n))
+        RoutingTable::_create(src.routing.iter(), src)
     }
-    fn _create<'x, I, H, A>(iter: I, get_handler: H, get_authorizer: A)
+    fn _create<'x, I, R: Resolver>(iter: I, res: R)
         -> Result<RoutingTable, Error>
         where I: Iterator<Item=(&'x HostPath, &'x RouteDef)>,
-              H: Fn(&HandlerName) -> Option<&'x Handler>,
-              A: Fn(&AuthorizerName) -> Option<&'x Authorizer>,
     {
         #[derive(Debug)]
         struct Host {
@@ -72,6 +127,36 @@ impl RoutingTable {
         struct Domain {
             root: Option<RouteDef>,
             paths: HashMap<String, RouteDef>,
+        }
+
+        fn update_by_path(ndef: &mut RouteDef, path: &str,
+            domain: &Domain)
+        {
+            for (idx, _) in path.rmatch_indices("/") {
+                if is_done(ndef) {
+                    break;
+                }
+                if idx == 0 {
+                    if let Some(ref root) = domain.root {
+                        inherit(ndef, root);
+                    }
+                } else {
+                    if let Some(p) = domain.paths.get(&path[..idx]) {
+                        inherit(ndef, p);
+                    }
+                }
+            }
+        }
+        fn update_from_host(ndef: &mut RouteDef, host: Option<&Host>) {
+            match host {
+                Some(&Host {
+                    star: Some(Domain { root: Some(ref r), .. }),
+                    ..
+                }) => {
+                    inherit(ndef, r);
+                }
+                _ => {}
+            }
         }
 
         let mut table = HashMap::new();
@@ -106,63 +191,119 @@ impl RoutingTable {
                 dom.root = Some(rdef.clone());
             }
         }
-        for (name, host) in &mut table {
-            if let Some(ref mut host) = host.exact {
-                for (path, def) in &mut host.paths {
-                    println!("PATH {:?}", path);
-                    for (idx, _) in path.rmatch_indices("/") {
-                        println!("search {:?}", &path[..idx]);
+        let mut hosts_table = Vec::new();
+        for (name, host) in &table {
+            let exact = if let Some(ref exact) = host.exact {
+                let mut path_table = Vec::new();
+                for (path, def) in &exact.paths {
+                    let mut ndef = def.clone();
+                    update_by_path(&mut ndef, path, &exact);
+                    update_from_host(&mut ndef, Some(&host));
+                    for (idx, _) in name.match_indices(".") {
+                        if is_done(&ndef) {
+                            break;
+                        }
+                        update_from_host(&mut ndef, table.get(&name[idx+1..]));
                     }
+                    update_from_host(&mut ndef, table.get(""));
+                    path_table.push((path.clone(), res.route(&ndef)?));
                 }
-            }
-            if let Some(ref mut host) = host.star {
-                for (path, def) in &mut host.paths {
-                    println!("PATH {:?}", path);
-                    for (idx, _) in path.rmatch_indices("/") {
-                        println!("search {:?}", &path[..idx]);
-                    }
-                }
-            }
-        }
 
-        println!("TREE {:#?}", table);
-        unimplemented!();
-        /*
-        let mut to_insert = Vec::new();
-        for host in iter {
-            if !host.0 {
-                let pat = Host(true, host.1.clone());
-                if !items.contains_key(&pat) {
-                    to_insert.push(pat);
+                let mut ndef = exact.root.clone().unwrap_or(default());
+                update_from_host(&mut ndef, Some(&host));
+                for (idx, _) in name.match_indices(".") {
+                    if is_done(&ndef) {
+                        break;
+                    }
+                    update_from_host(&mut ndef, table.get(&name[idx+1..]));
+                }
+                update_from_host(&mut ndef, table.get(""));
+                path_table.push((String::from(""), res.route(&ndef)?));
+
+                Some(PathTable::new(path_table)?)
+            } else {
+                None
+            };
+            let star = if let Some(ref star) = host.star {
+                let mut path_table = Vec::new();
+                for (path, def) in &star.paths {
+                    let mut ndef = def.clone();
+                    update_by_path(&mut ndef, path, &star);
+                    for (idx, _) in name.match_indices(".") {
+                        if is_done(&ndef) {
+                            break;
+                        }
+                        update_from_host(&mut ndef, table.get(&name[idx+1..]));
+                    }
+                    update_from_host(&mut ndef, table.get(""));
+                    path_table.push((path.clone(), res.route(&ndef)?));
+                }
+
+                let mut ndef = star.root.clone().unwrap_or(default());
+                update_from_host(&mut ndef, Some(&host));
+                for (idx, _) in name.match_indices(".") {
+                    if is_done(&ndef) {
+                        break;
+                    }
+                    update_from_host(&mut ndef, table.get(&name[idx+1..]));
+                }
+                update_from_host(&mut ndef, table.get(""));
+                path_table.push((String::from(""), res.route(&ndef)?));
+
+                PathTable::new(path_table)?
+            } else {
+                // no star domain, this means there is an exact domain
+                // it means subdomains of the exact domain must not match
+                // higher level star domain for handler, but must match for
+                // authorizer
+                let mut ndef = default();
+                for (idx, _) in name.match_indices(".") {
+                    if is_done(&ndef) {
+                        break;
+                    }
+                    update_from_host(&mut ndef, table.get(&name[idx+1..]));
+                }
+                update_from_host(&mut ndef, table.get(""));
+                PathTable::new(vec![
+                    (String::from(""), res.route(&ndef)?)
+                ])?
+            };
+            hosts_table.push((name.clone(), star, exact));
+        }
+        hosts_table.sort_by(|&(ref a, _, _), &(ref b, _, _)| {
+            b.len().cmp(&a.len()).then(a.cmp(b))
+        });
+        let mut real_table = Vec::new();
+        let mut regex_table = Vec::new();
+        for (name, star, exact) in hosts_table.into_iter() {
+            match exact {
+                Some(exact) => {
+                    regex_table.push(
+                        String::from("^") + &regex::escape(&name) + "$");
+                    real_table.push((name.clone(), exact));
+                    regex_table.push(
+                        String::from(r"^.*\.") + &regex::escape(&name) + "$");
+                    real_table.push((name, star));
+                }
+                None => {
+                    if name == "" {
+                        regex_table.push(String::from(r"^.*$"));
+                    } else {
+                        regex_table.push(
+                            String::from(r"^(?:.*\.)?") +
+                                &regex::escape(&name) + "$");
+                    }
+                    real_table.push((name, star));
                 }
             }
         }
-        for host in to_insert {
-            items.insert(host, BTreeMap::new());
-        }
-        let mut items: Vec<_> = items.into_iter().collect();
-        items.sort_by(|&(ref a, _), &(ref b, _)| b.1.len().cmp(&a.1.len())
-            .then_with(|| a.0.cmp(&b.0)));
-        let regex = RegexSet::new(
-            items.iter().map(|&(ref h, _)| {
-                if h.0 && h.1 == "" {
-                    String::from("^.*$")
-                } else if h.0 {
-                    String::from(r#"^(?:^|.*\.)"#) +
-                        &regex::escape(&h.1) + "$"
-                } else {
-                    String::from("^") + &regex::escape(&h.1) + "$"
-                }
-            })
-        )?;
-        Ok(RoutingTable {
-            set: regex,
-            table: items,
-        })
-        */
-    }
-    pub fn hosts(&self) -> ::std::slice::Iter<(Host, PathTable)> {
-        self.table.iter()
+        let rset = RegexSet::new(regex_table.into_iter())?;
+        let table = RoutingTable {
+            set: rset,
+            table: real_table,
+        };
+        println!("Routing table {:#?}", table);
+        Ok(table)
     }
     #[allow(dead_code)]
     pub fn num_hosts(&self) -> usize {
@@ -177,7 +318,6 @@ pub fn route<'x>(host: &str, path: &'x str,
     table: &'x RoutingTable)
     -> Option<(&'x Route, &'x str, &'x str)>
 {
-    /*
     let set = table.set.matches(host);
     if !set.matched_any() {
         return None;
@@ -185,34 +325,14 @@ pub fn route<'x>(host: &str, path: &'x str,
     let idx = set.iter().next().unwrap();
     let (_, ref sub_table) = table.table[idx];
 
-    for (route_path, result) in sub_table.iter().rev() {
-        if path_match(&route_path, path) {
-            // Longest match is the last in reversed iteration
-            let prefix = route_path.as_ref().map(|x| &x[..]).unwrap_or("");
-            return Some((result, prefix, &path[prefix.len()..]));
-        }
+    let set = sub_table.set.matches(path);
+    if !set.matched_any() {
+        return None;
     }
-    return None;
-    */
-    unimplemented!();
+    let idx = set.iter().next().unwrap();
+    let (ref rpath, ref route) = sub_table.table[idx];
+    return Some((route, rpath, &path[rpath.len()..]));
 }
-
-fn path_match<S: AsRef<str>>(pattern: &Option<S>, value: &str) -> bool {
-    if let Some(ref prefix) = *pattern {
-        let prefix = prefix.as_ref();
-        if value.starts_with(prefix) && (
-                value.len() == prefix.len() ||
-                value[prefix.len()..].starts_with("/") ||
-                value[prefix.len()..].starts_with("?"))
-        {
-            return true;
-        }
-        return false;
-    } else {
-        return true;
-    }
-}
-
 
 /// Returns host with trimmed whitespace and without port number if exists
 pub fn parse_host(host_header: &str) -> &str {
@@ -225,13 +345,22 @@ pub fn parse_host(host_header: &str) -> &str {
 #[cfg(test)]
 mod route_test {
     use std::str::FromStr;
-    use super::route;
-    use super::RoutingTable;
+    use super::{route, RoutingTable, Resolver};
     use intern::{HandlerName, Authorizer as AuthorizerName};
     use config::routing::{HostPath, RouteDef};
     use config::handlers::Handler;
     use config::authorizers::Authorizer;
 
+    struct Fake;
+
+    impl Resolver for Fake {
+        fn handler(&self, _: &HandlerName) -> Option<Handler> {
+            Some(Handler::HttpBin)
+        }
+        fn authorizer(&self, _: &AuthorizerName) -> Option<Authorizer> {
+            Some(Authorizer::AllowAll)
+        }
+    }
 
     fn table(table: Vec<(&'static str, &'static str, &'static str)>)
         -> RoutingTable
@@ -243,10 +372,8 @@ mod route_test {
                     else { Some(AuthorizerName::from(a)) }
             })
         }).collect::<Vec<_>>();
-        let h = Handler::HttpBin;
-        let a = Authorizer::AllowAll;
         RoutingTable::_create(items.iter().map(|&(ref x, ref y)| (x, y)),
-            |_| Some(&h), |_| Some(&a)).unwrap()
+            Fake).unwrap()
     }
 
     pub fn route_h<'x>(host: &str, path: &'x str,
@@ -258,10 +385,11 @@ mod route_test {
     }
 
     pub fn route_a<'x>(host: &str, path: &'x str,
-        table: &'x RoutingTable) -> Option<&'x str>
+        table: &'x RoutingTable) -> &'x str
     {
         route(host, path, table)
         .map(|(x, _, _)| &x.authorizer_name[..])
+        .unwrap_or("default")
     }
 
     #[test]
@@ -275,6 +403,26 @@ mod route_test {
                    Some(("1", "", "/")));
         assert_eq!(route_h("example.org", "/hello", &table), None);
         assert_eq!(route_h("example.org", "/", &table), None);
+    }
+
+    #[test]
+    fn nest_authorizer_path() {
+        let table = table(vec![
+            ("example.com", "1", ""),
+            ("example.com/admin", "2", "admin"),
+            ("example.com/admin/somewhere", "3", ""),
+            ("example.com/somewhere", "4", ""),
+        ]);
+        assert_eq!(route_a("example.com", "/hello", &table), "default");
+        assert_eq!(route_a("example.com", "/admin", &table), "admin");
+        assert_eq!(route_a("example.com", "/admin/somewhere", &table),
+            "admin");
+        assert_eq!(route_a("example.com", "/admin/elsewhere", &table),
+            "admin");
+        assert_eq!(route_a("example.com", "/admin/else/where", &table),
+            "admin");
+        assert_eq!(route_a("example.com", "/elsewhere", &table), "default");
+        assert_eq!(route_a("example.com", "/", &table), "default");
     }
 
     #[test]
@@ -297,8 +445,10 @@ mod route_test {
 
         assert_eq!(route_h("test.example.com", "/hello", &table),
                    Some(("2", "", "/hello")));
-        assert_eq!(route_h("www.example.com", "/", &table), None);
-        assert_eq!(route_h("www.example.com", "/static/i", &table), None);
+        assert_eq!(route_h("www.example.com", "/", &table),
+                   Some(("default", "", "/")));
+        assert_eq!(route_h("www.example.com", "/static/i", &table),
+                   Some(("default", "", "/static/i")));
         assert_eq!(route_h("www.example.com", "/static/favicon.ico", &table),
                    Some(("4", "/static/favicon.ico", "")));
         assert_eq!(route_h("xxx.example.com", "/hello", &table),
@@ -339,7 +489,7 @@ mod route_test {
         assert_eq!(route_h("localhost", "/path", &table),
                    Some(("3", "/path", "")));
         assert_eq!(route_h("test.example.com", "/hello", &table),
-                   None);
+                   Some(("default", "", "/hello")));
     }
 
     #[test]

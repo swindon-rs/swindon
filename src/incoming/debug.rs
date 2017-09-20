@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 
 use tk_http::server::Head;
 
-use intern::{HandlerName, Authorizer};
+use intern::{Authorizer};
 use config::Config;
 use routing::Route;
 use request_id::RequestId;

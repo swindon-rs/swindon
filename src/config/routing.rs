@@ -1,5 +1,4 @@
 use std::str::FromStr;
-use std::path::{Path, PathBuf};
 use regex::Regex;
 
 use serde::de::{Deserializer, Deserialize};
@@ -7,7 +6,6 @@ use quire::validate::{Mapping, Scalar};
 
 use config::visitors::FromStrVisitor;
 use intern::{HandlerName, Authorizer};
-use routing::RoutingTable;
 
 lazy_static! {
     static ref ROUTING_RE: Regex = Regex::new(
