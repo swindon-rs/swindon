@@ -18,15 +18,15 @@ lazy_static! {
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct RouteDef {
-    pub destination: HandlerName,
+    pub handler: HandlerName,
     pub authorizer: Option<Authorizer>,
 }
 
 #[derive(Debug, PartialEq, Eq, Hash)]
-pub struct Host(bool, String);
+pub struct Host(pub bool, pub String);
 
 #[derive(Debug, PartialEq, Eq, Hash)]
-pub struct HostPath(Host, Option<PathBuf>);
+pub struct HostPath(pub Host, pub Option<String>);
 
 impl Host {
     pub fn matches_www(&self) -> bool {
@@ -68,8 +68,7 @@ impl FromStr for HostPath {
         } else {
             (val, None)
         };
-        Ok(HostPath(host.parse().unwrap(),
-                    path.map(|x| Path::new(&x).to_path_buf())))
+        Ok(HostPath(host.parse().unwrap(), path))
     }
 }
 
@@ -88,16 +87,16 @@ impl FromStr for RouteDef {
     type Err = String;
     fn from_str(val: &str) -> Result<RouteDef, String> {
         let mut val = val.trim();
-        let mut destination = None;
+        let mut handler = None;
         let mut authorizer = None;
         while val.len() > 0 {
             if let Some(m) = ROUTING_RE.captures(val) {
                 if let Some(dest) = m.get(5) {
-                    if let Some(old) = destination {
-                        return Err(format!("Two destinations {:?} and {:?}",
+                    if let Some(old) = handler {
+                        return Err(format!("Two handlers {:?} and {:?}",
                             old, dest.as_str()));
                     } else {
-                        destination = Some(dest.as_str().parse().unwrap());
+                        handler = Some(dest.as_str().parse().unwrap());
                     }
                 } else if let Some(auth) = m.get(1) {
                     if let Some(old) = authorizer {
@@ -116,13 +115,13 @@ impl FromStr for RouteDef {
                 return Err(format!("Unexpected token {:?}", val));
             }
         }
-        if let Some(dest) = destination {
+        if let Some(dest) = handler {
             return Ok(RouteDef {
-                destination: dest,
+                handler: dest,
                 authorizer: authorizer,
             })
         } else {
-            return Err(String::from("destination is required"));
+            return Err(String::from("handler is required"));
         }
     }
 }
@@ -135,25 +134,25 @@ mod test {
 
     #[test]
     fn parse_dest() {
-        assert_eq!(RouteDef::from_str("destination").unwrap(), RouteDef {
-            destination: Symbol::from("destination"),
+        assert_eq!(RouteDef::from_str("handler").unwrap(), RouteDef {
+            handler: Symbol::from("handler"),
             authorizer: None,
         });
     }
 
     #[test]
     fn parse_auth() {
-        assert_eq!(RouteDef::from_str("destination@auth").unwrap(), RouteDef {
-            destination: Symbol::from("destination"),
+        assert_eq!(RouteDef::from_str("handler@auth").unwrap(), RouteDef {
+            handler: Symbol::from("handler"),
             authorizer: Some(Symbol::from("auth")),
         });
-        assert_eq!(RouteDef::from_str("destination   @auth").unwrap(),
+        assert_eq!(RouteDef::from_str("handler   @auth").unwrap(),
             RouteDef {
-                destination: Symbol::from("destination"),
+                handler: Symbol::from("handler"),
                 authorizer: Some(Symbol::from("auth")),
             });
-        assert_eq!(RouteDef::from_str("destination @auth").unwrap(), RouteDef {
-            destination: Symbol::from("destination"),
+        assert_eq!(RouteDef::from_str("handler @auth").unwrap(), RouteDef {
+            handler: Symbol::from("handler"),
             authorizer: Some(Symbol::from("auth")),
         });
     }
@@ -161,9 +160,9 @@ mod test {
 
 #[cfg(test)]
 mod parse_test {
-    use super::{HostPath, Host, Path};
+    use super::{HostPath, Host};
 
-    fn parse_host_path(s: String) -> (Host, Path) {
+    fn parse_host_path(s: String) -> (Host, Option<String>) {
         let HostPath(host, path) = s.parse().unwrap();
         return (host, path);
     }

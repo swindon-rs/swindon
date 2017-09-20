@@ -152,7 +152,7 @@ impl Configurator {
 pub mod test {
     use std::sync::Arc;
     use quire::{parse_string, Options};
-    use config::root::{ConfigData as Config, config_validator};
+    use config::{ConfigCell, Config};
 
     pub fn make_config() -> Arc<Config> {
         let raw = r#"
@@ -224,10 +224,7 @@ pub mod test {
                 addresses:
                 - example.com:5000
         "#;
-        let v = config_validator();
-        let o = Options::default();
-        let cfg: Config = parse_string("<inline>", raw, &v, &o).unwrap();
-        Arc::new(cfg)
+        ConfigCell::from_string(raw, "<inline>").unwrap().get()
     }
 
     #[test]

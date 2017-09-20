@@ -39,6 +39,10 @@ quick_error! {
             description("validation error")
             from()
         }
+        Routing(err: String) {
+            display("routing table error: {}", err)
+            description("routing table error")
+        }
         BadMixinPath(filename: PathBuf) {
             display("bad mixin path: {:?}, \
                 only relative paths are allowed", filename)
