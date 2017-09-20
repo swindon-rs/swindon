@@ -302,7 +302,6 @@ impl RoutingTable {
             set: rset,
             table: real_table,
         };
-        println!("Routing table {:#?}", table);
         Ok(table)
     }
     #[allow(dead_code)]
