@@ -6,6 +6,7 @@ debug-routing: true
 debug-logging: true
 
 routing:
+  localhost/: default @local
   localhost/~~swindon-status: status
   localhost/empty.gif: empty-gif
   localhost/sources: src
@@ -17,18 +18,14 @@ routing:
   proxy.devd.io: bin
   mb.devd.io: mbst
   chat.example.com/: example-chat
+  chat.example.com/admin: default @ldap
   #chat.example.com/css: example-chat-static
   #chat.example.com/js: example-chat-static
   #chat.example.com/index.html: example-chat-static
 
-authorization:
-  chat.example.com/admin: ldap
-  auth.example.com: ldap
-  localhost: local
-
 handlers:
 
-  example-chat: !SwindonChat
+  example-chat: !SwindonLattice
 
     session-pool: example-chat-session
     #http-route: example-chat-http

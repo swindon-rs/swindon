@@ -8,19 +8,58 @@ Ldap authorization is in the works.
 Authorization Table
 ===================
 
-We have another routing table for authorization, which is similar to and
-works exactly like ``routing`` section, but it covers only authorization.
-It's expected that this table is more coarse-grained in most cases, but
-it's not mandatory. Here is an example:
+.. versionchanged:: v0.7.0
+
+Authorizer are flagged in ``routing`` table as ``@authorizer``.
 
 .. code-block:: yaml
 
-    authorization:
-      corporate.example.com: corporate-network
-      corporate.example.com/admin: super-admins
+    routing:
+      corporate.example.com: site @corporate-network
+      corporate.example.com/admin: admin @super-admins
 
-Note: everything is allowed by default (because it's a web server, it's here
-to publish things).
+Everything is allowed by default (because it's a web server, it's here
+to publish things). But you can override it by setting ``default`` authorizer,
+which applies implicitly.
+
+Note that unlike handlers, authorizers are inherited across paths and
+subdomains unless overrriden:
+
+.. code-block:: yaml
+
+    routing:
+        *.example.org: site @auth1
+        example.org: main-site
+        example.org/admin: admin @admin
+        example.org/admin/something: something
+        example.org/otherthing: otherthing
+
+Is equivalent to:
+
+.. code-block:: yaml
+
+    routing:
+        *.example.org: site @auth1
+        example.org: main-site @auth1
+        example.org/admin: admin @admin
+        example.org/admin/something: something @admin
+        example.org/otherthing: otherthing @auth1
+
+Also note that exact domain is more specific star domain:
+
+    routing:
+        *.example.org: handler
+        example.org: handler @auth
+
+Here the ``auth`` is not applied to ``somethign.example.org``, but in this
+case:
+
+    routing:
+        *.example.org: handler @auth
+
+The authorization (as well as handler) is applied both for the main site
+``example.org`` and all the subdomains.
+
 
 The routing here is the same as in normal routing table, in particular:
 ``corporate-network`` limit is not obeyed on ``corporate.example.com/admin``.

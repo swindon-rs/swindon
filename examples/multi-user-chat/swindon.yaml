@@ -14,10 +14,11 @@ routing:
 
 handlers:
 
-  chat: !SwindonChat
+  chat: !SwindonLatice
 
     session-pool: chat
     http-route: html
+    compatibility: v0.6.2
 
     message-handlers:
       "*": chat

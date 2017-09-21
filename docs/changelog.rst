@@ -24,6 +24,15 @@ v0.7.0
       backend API endpoints that contain JSON data.
 * Added :ref:`register CRDT <register-crdt>` type (basically last-write-wins)
 * User `online status tracking`_ is implemented in Swindon-lattice_ Protocol
+* **[breaking]** no ``authorization`` section any more. You can add
+  authorizer by adding ``@authorizer-name`` in the normal routing table.
+* **[breaking]** there is now ``default`` handler implicitly defined. You
+  can override it and it will work everywhere where plain 404 were previosly
+  returned
+* **[breaking]** there is now ``default`` authorizer. You can override it
+  and it will apply for every route whenever not overridden by other
+  authorizer
+* Added ``AllowAll`` authorizer (just to be explicit)
 * [bugfix] Updating only public part of lattice now delivers the changes to
   users
 * Swindon now compiles correctly on Windows

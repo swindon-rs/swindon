@@ -19,14 +19,9 @@ routing:
   #chat.example.com/js: example-chat-static
   #chat.example.com/index.html: example-chat-static
 
-authorization:
-  chat.example.com/admin: ldap
-  auth.example.com: ldap
-  localhost: local
-
 handlers:
 
-  example-chat: !SwindonChat
+  example-chat: !SwindonLattice
 
     session-pool: example-chat-session
     http-route: example-chat-http
