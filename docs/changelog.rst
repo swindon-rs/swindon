@@ -23,8 +23,8 @@ v0.7.0
       ``Content-Type: application/json`` header, as well as requests to
       backend API endpoints that contain JSON data.
 * Added :ref:`register CRDT <register-crdt>` type (basically last-write-wins)
-* User `online status tracking`_ is implemented in Swindon-lattice_ Protocol
-* Added mixins_ support
+* User `online status tracking`_ is implemented in :ref:`Swindon-lattice`
+* Added :ref:`mixins` support
 * **[breaking]** no ``authorization`` section any more. You can add
   authorizer by adding ``@authorizer-name`` in the normal routing table.
 * **[breaking]** there is now ``default`` handler implicitly defined. You
