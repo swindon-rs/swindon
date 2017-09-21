@@ -8,17 +8,16 @@ mod read;
 mod root;
 mod version;
 // sections
-mod authorization;
-mod authorizers;
-mod handlers;
 mod listen;
 mod replication;
-mod routing;
 mod session_pools;
+pub mod authorizers;
+pub mod handlers;
 pub mod http_destinations;
 pub mod ldap;
 pub mod log;
 pub mod networks;
+pub mod routing;
 pub mod visitors;
 // handlers
 pub mod chat;
@@ -30,7 +29,7 @@ pub mod redirect;
 pub mod self_status;
 
 pub use self::read::Error;
-pub use self::root::ConfigData;
+pub use self::root::{ConfigData, ConfigSource};
 pub use self::listen::ListenSocket;
 pub use self::handlers::Handler;
 pub use self::authorizers::Authorizer;
@@ -73,8 +72,10 @@ impl ConfigCell {
     pub fn from_string(data: &str, name: &str) -> Result<ConfigCell, Error> {
         let v = root::config_validator();
         let o = Options::default();
+        let src = parse_string(name, data, &v, &o)?;
+        let data = read::postprocess_config(src)?;
         Ok(ConfigCell::new(Config {
-            data: parse_string(name, data, &v, &o)?,
+            data,
             fingerprint: fingerprint::calc(&Vec::new())?,
         }))
     }
@@ -151,7 +152,7 @@ impl Configurator {
 pub mod test {
     use std::sync::Arc;
     use quire::{parse_string, Options};
-    use config::root::{ConfigData as Config, config_validator};
+    use config::{ConfigCell, Config};
 
     pub fn make_config() -> Arc<Config> {
         let raw = r#"
@@ -197,6 +198,9 @@ pub mod test {
                 path: /work/public
                 text-charset: utf-8
 
+              example-chat-static: !Static
+                path: /work/public
+
               websocket-echo-html: !SingleFile
                 path: /work/public/websocket.html
                 content-type: "text/html; charset=utf-8"
@@ -219,14 +223,12 @@ pub mod test {
                 queue-size-for-503: 100k
                 backend-connections-per-ip-port: 1
                 in-flight-requests-per-backend-connection: 1
+                override-host-header: swindon.internal
 
                 addresses:
                 - example.com:5000
         "#;
-        let v = config_validator();
-        let o = Options::default();
-        let cfg: Config = parse_string("<inline>", raw, &v, &o).unwrap();
-        Arc::new(cfg)
+        ConfigCell::from_string(raw, "<inline>").unwrap().get()
     }
 
     #[test]
@@ -235,7 +237,7 @@ pub mod test {
 
         assert_eq!(cfg.listen.len(), 1);
         assert_eq!(cfg.routing.num_hosts(), 3+3);
-        assert_eq!(cfg.handlers.len(), 7);
+        assert_eq!(cfg.handlers.len(), 9);
         assert_eq!(cfg.session_pools.len(), 1);
         assert_eq!(cfg.http_destinations.len(), 1);
         assert_eq!(cfg.disk_pools.len(), 0);

@@ -4,18 +4,18 @@ use std::path::{Path, PathBuf};
 
 use tk_http::server::Head;
 
-use intern::{HandlerName, Authorizer};
+use intern::{Authorizer};
 use config::Config;
+use routing::Route;
 use request_id::RequestId;
 
 pub struct Debug(Option<Box<DebugInfo>>);
 
 struct DebugInfo {
-    route: Option<HandlerName>,
+    route: Option<Route>,
     fs_path: Option<PathBuf>,
     config: Arc<Config>,
     request_id: RequestId,
-    authorizer: Option<Authorizer>,
     allow: String,
     deny: String,
 }
@@ -26,7 +26,6 @@ impl Debug {
     {
         if cfg.debug_routing {
             Debug(Some(Box::new(DebugInfo {
-                authorizer: None,
                 route: None,
                 fs_path: None,
                 config: cfg.clone(),
@@ -43,7 +42,7 @@ impl Debug {
     /// # Panics
     ///
     /// Panics if route is already set (only in debug mode)
-    pub fn set_route(&mut self, route: &HandlerName) {
+    pub fn set_route(&mut self, route: &Route) {
         if let Some(ref mut dinfo) = self.0 {
             debug_assert!(dinfo.route.is_none());
             dinfo.route = Some(route.clone());
@@ -52,7 +51,7 @@ impl Debug {
 
     pub fn get_route(&self) -> Option<&str> {
         self.0.as_ref().map(|dinfo| {
-            dinfo.route.as_ref().map(|x| &x[..])
+            dinfo.route.as_ref().map(|x| &x.handler_name[..])
             .unwrap_or("-- no route --")
         })
     }
@@ -109,15 +108,9 @@ impl Debug {
         })
     }
 
-    pub fn set_authorizer(&mut self, s: &Authorizer) {
-        if let Some(ref mut dinfo) = self.0 {
-            dinfo.authorizer = Some(s.clone());
-        }
-    }
-
     pub fn get_authorizer(&self) -> Option<&Authorizer> {
         self.0.as_ref().and_then(|dinfo| {
-            dinfo.authorizer.as_ref()
+            dinfo.route.as_ref().map(|x| &x.authorizer_name)
         })
     }
 

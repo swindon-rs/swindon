@@ -39,6 +39,36 @@ Authorizers section contains named authorizers. For example:
         forwarded-ip-header: X-Remote-Ip
         accept-forwarded-headers-from: frontend-servers
 
+Note by default there is a hidden ``default`` authorizer:
+
+
+.. code-block:: yaml
+
+    authorizers:
+      default: !AllowAll
+
+You can override it and it will be used for anything having no authorizer:
+
+.. code-block:: yaml
+
+    authorizers:
+      default: !SourceIp
+        allowed-network: localhost
+
+
+AllowAll Authorizer
+====================
+
+This authorizer allows everybody access the page. It's here to be used
+as default one, but maybe specified explicitly if default is overriden or
+just for convenience.
+
+.. index:: pair: !AllowAll; Authorizers
+
+.. code-block:: yaml
+
+     public-data: !AllowAll
+
 
 Source Ip Authorizer
 ====================

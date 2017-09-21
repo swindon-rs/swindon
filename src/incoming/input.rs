@@ -27,21 +27,3 @@ impl<'a> IntoContext for Input<'a> {
         (self.config.clone(), self.debug)
     }
 }
-
-pub struct AuthInput<'a> {
-    pub addr: SocketAddr,
-    pub runtime: &'a Arc<Runtime>,
-    pub config: &'a Arc<Config>,
-    pub debug: Debug,
-    pub headers: &'a Head<'a>,
-    pub prefix: &'a str,
-    pub suffix: &'a str,
-    pub handle: &'a Handle,
-    pub request_id: RequestId,
-}
-
-impl<'a> IntoContext for AuthInput<'a> {
-    fn into_context(self) -> (Arc<Config>, Debug) {
-        (self.config.clone(), self.debug)
-    }
-}

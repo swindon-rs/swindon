@@ -72,12 +72,8 @@ routing:
   www.example.com: strip_www_redirect
 
   ### !Authorized routes ###
-  localhost/auth/local: empty_gif
-  localhost/auth/by-header: empty_gif
-
-authorization:
-  localhost/auth/local: only-127-0-0-1
-  localhost/auth/by-header: by-header
+  localhost/auth/local: empty_gif @only-127-0-0-1
+  localhost/auth/by-header: empty_gif @by-header
 
 # Configure all possible handlers?
 handlers:

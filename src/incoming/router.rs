@@ -6,7 +6,7 @@ use tk_http::Status;
 use tk_http::server::{Dispatcher, Error as ServerError, Head};
 
 use runtime::Runtime;
-use incoming::{Request, Debug, AuthInput, Input, Transport};
+use incoming::{Request, Debug, Input, Transport};
 use routing::{parse_host, route};
 use default_error_page::serve_error_page;
 use request_id;
@@ -65,9 +65,7 @@ impl Router {
 
         let parsed_host = headers.host().map(parse_host);
 
-        let authorization_route = parsed_host
-            .and_then(|host| route(host, &path, &cfg.authorization));
-
+        /*
         if let Some((auth, pref, suf)) = authorization_route {
             debug.set_authorizer(auth);
             let mut inp = AuthInput {
@@ -81,32 +79,20 @@ impl Router {
                 handle: &self.handle,
                 request_id: request_id,
             };
-            if let Some(authorizer) = cfg.authorizers.get(auth) {
-                match authorizer.check(&mut inp) {
-                    Ok(true) => {}
-                    Ok(false) => {
-                        return Err(Page(Status::Forbidden, inp.debug));
-                    }
-                    Err(e) => return Err(Fallback(e)),
-                }
-            } else {
-                error!("Can't find authorizer {}. Forbiddng request.", auth);
-                inp.debug.set_deny("authorizer-not-found");
-                return Err(Page(Status::Forbidden, inp.debug));
-            }
-            debug = inp.debug;
         };
+        */
 
         let matched_route = parsed_host
             .and_then(|host| route(host, &path, &cfg.routing));
 
-        let (handler, pref, suf) = if let Some((route, p, s)) = matched_route {
-            debug.set_route(route);
-            (cfg.handlers.get(route), p, s)
+        let (route, pref, suf) = if let Some((route, p, s)) = matched_route {
+            (route, p, s)
         } else {
-            (None, "", path)
+            return Err(Page(Status::NotFound, debug));
         };
-        let inp = Input {
+        debug.set_route(route);
+
+        let mut inp = Input {
             addr: self.addr,
             runtime: &self.runtime,
             config: &cfg,
@@ -117,11 +103,16 @@ impl Router {
             handle: &self.handle,
             request_id: request_id,
         };
-        if let Some(handler) = handler {
-            handler.serve(inp).map_err(Fallback)
-        } else {
-            Err(Page(Status::NotFound, inp.debug))
+
+        match route.authorizer.check(&mut inp) {
+            Ok(true) => {}
+            Ok(false) => {
+                return Err(Page(Status::Forbidden, inp.debug));
+            }
+            Err(e) => return Err(Fallback(e)),
         }
+
+        route.handler.serve(inp).map_err(Fallback)
     }
 }
 
