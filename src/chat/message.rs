@@ -197,7 +197,7 @@ mod test {
         );
         error_starts!(
             "[null, null, null, 4]",
-                "invalid type: unit value, expected a string"
+                "invalid type: null, expected a string"
         );
         error_starts!(
             "[\"1\", 2, 3, 4]",

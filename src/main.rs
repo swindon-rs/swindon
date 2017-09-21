@@ -20,7 +20,6 @@ extern crate httpbin;
 extern crate http_file_headers;
 extern crate libc;
 extern crate libcantal;
-extern crate mime;
 extern crate mime_guess;
 extern crate netbuf;
 extern crate ns_std_threaded;
