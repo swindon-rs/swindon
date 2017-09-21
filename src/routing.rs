@@ -73,7 +73,7 @@ impl PathTable {
         });
         let rset = RegexSet::new(
             table.iter().map(|&(ref path, _)| {
-                String::from("^") + &regex::escape(&path) + "(?:$|/)"
+                String::from("^") + &regex::escape(&path) + r"(?:$|/|\?|#)"
             }))?;
         Ok(PathTable {
             set: rset,
@@ -178,7 +178,8 @@ impl RoutingTable {
                     && !host.starts_with("www.")
                 {
                     return Err(Error::Routing(
-                        format!("Host {:?} does not start with `www.`", host)
+                        format!("Host {:?} does not start with `www.` \
+                            (required for StripWWWRedirect handler)", host)
                     ));
                 }
 
@@ -472,6 +473,22 @@ mod route_test {
                    Some(("6", "", "/hello")));
         assert_eq!(route_h("city.example.com", "/static", &table),
                    Some(("3", "/static", "")));
+    }
+
+    #[test]
+    fn route_suffix() {
+        // Routing table
+        //   localhost/static-file: 1
+        let table = table(vec![
+            ("localhost/static-file", "1", ""),
+        ]);
+
+        assert_eq!(route_h("localhost", "/static-file?a=b", &table),
+                   Some(("1", "/static-file", "?a=b")));
+        assert_eq!(route_h("localhost", "/static-file#a=b", &table),
+                   Some(("1", "/static-file", "#a=b")));
+        assert_eq!(route_h("localhost", "/static-file?x=1#a=b", &table),
+                   Some(("1", "/static-file", "?x=1#a=b")));
     }
 
     #[test]
