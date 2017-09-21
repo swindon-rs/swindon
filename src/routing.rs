@@ -5,7 +5,7 @@ use regex::{self, RegexSet};
 use intern::{HandlerName, Authorizer as AuthorizerName};
 use config::{ConfigSource, Error};
 use config::routing::{Host, HostPath, RouteDef};
-use config::handlers::Handler;
+use config::handlers::Handler::{self, StripWWWRedirect};
 use config::authorizers::Authorizer;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -172,6 +172,16 @@ impl RoutingTable {
                     paths: HashMap::new(),
                 })
             } else {
+
+                // TODO(tailhook) move it, maybe make a warning
+                if res.handler(&rdef.handler) == Some(StripWWWRedirect)
+                    && !host.starts_with("www.")
+                {
+                    return Err(Error::Routing(
+                        format!("Host {:?} does not start with `www.`", host)
+                    ));
+                }
+
                 entry.exact.get_or_insert(Domain {
                     root: None,
                     paths: HashMap::new(),
@@ -304,6 +314,7 @@ impl RoutingTable {
         };
         Ok(table)
     }
+
     #[allow(dead_code)]
     pub fn num_hosts(&self) -> usize {
         self.table.len()

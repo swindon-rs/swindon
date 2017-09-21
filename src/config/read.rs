@@ -292,27 +292,6 @@ pub fn postprocess_config(mut src: ConfigSource)
         set_group: src.set_group,
     };
 
-    // Extra config validations
-
-    /* TODO
-    for &(ref domain, ref sub) in cfg.routing.hosts() {
-        for (path, route) in sub {
-            if path.as_ref().map(|x| x.ends_with("/")).unwrap_or(false) {
-                err!("Path must not end with /: {:?} {:?}",
-                     domain, path);
-            }
-            if let Some(&Handler::StripWWWRedirect) =
-                cfg.handlers.get(&route.destination)
-            {
-                if !domain.matches_www() {
-                    err!(concat!("Expected `www.` prefix for StripWWWRedirect",
-                                 " handler route: {:?} {:?}"), domain, path);
-                }
-            }
-        }
-    }
-    */
-
     for (name, h) in &cfg.handlers {
         match h {
             &Handler::SwindonLattice(ref chat) => {

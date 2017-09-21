@@ -26,12 +26,6 @@ pub struct Host(pub bool, pub String);
 #[derive(Debug, PartialEq, Eq, Hash)]
 pub struct HostPath(pub Host, pub Option<String>);
 
-impl Host {
-    pub fn matches_www(&self) -> bool {
-        self.0 || self.1.starts_with("www.")
-    }
-}
-
 impl<'a> Deserialize<'a> for HostPath {
     fn deserialize<D: Deserializer<'a>>(d: D) -> Result<Self, D::Error> {
         d.deserialize_str(FromStrVisitor::new(
@@ -61,6 +55,10 @@ impl FromStr for HostPath {
             if &val[i..] == "/" {
                 (&val[..i], None)
             } else {
+                if val.ends_with("/") {
+                    return Err(format!("Path must not end \
+                                        with / in {:?}", val));
+                }
                 (&val[..i], Some(val[i..].to_string()))
             }
         } else {
