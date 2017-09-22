@@ -1,3 +1,4 @@
+===========
 Auth & Auth
 ===========
 
@@ -28,34 +29,38 @@ subdomains unless overrriden:
 .. code-block:: yaml
 
     routing:
-        *.example.org: site @auth1
-        example.org: main-site
-        example.org/admin: admin @admin
-        example.org/admin/something: something
-        example.org/otherthing: otherthing
+        "*.example.org": site @auth1
+        "example.org": main-site
+        "example.org/admin": admin @admin
+        "example.org/admin/something": something
+        "example.org/otherthing": otherthing
 
 Is equivalent to:
 
 .. code-block:: yaml
 
     routing:
-        *.example.org: site @auth1
-        example.org: main-site @auth1
-        example.org/admin: admin @admin
-        example.org/admin/something: something @admin
-        example.org/otherthing: otherthing @auth1
+        "*.example.org": site @auth1
+        "example.org": main-site @auth1
+        "example.org/admin": admin @admin
+        "example.org/admin/something": something @admin
+        "example.org/otherthing": otherthing @auth1
 
 Also note that exact domain is more specific star domain:
 
+.. code-block:: yaml
+
     routing:
-        *.example.org: handler
-        example.org: handler @auth
+        "*.example.org": handler
+        "example.org": handler @auth
 
 Here the ``auth`` is not applied to ``somethign.example.org``, but in this
 case:
 
+.. code-block:: yaml
+
     routing:
-        *.example.org: handler @auth
+        "*.example.org": handler @auth
 
 The authorization (as well as handler) is applied both for the main site
 ``example.org`` and all the subdomains.
