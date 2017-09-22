@@ -8,7 +8,8 @@ Welcome to Swindon's documentation!
 
 
 Swindon is a web server that eventually should develop all the features needed
-by х
+for a frontend server. But the most powerful feature is a
+:ref:`protocol <swindon-lattice>` for handling websockets.
 
 
 Contents:
