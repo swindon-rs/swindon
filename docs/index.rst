@@ -11,6 +11,7 @@ Swindon is a web server that eventually should develop all the features needed
 for a frontend server. But the most powerful feature is a
 :ref:`protocol <swindon-lattice>` for handling websockets.
 
+Github_ | Crate_
 
 Contents:
 
@@ -23,6 +24,8 @@ Contents:
    swindon-lattice/index
    changelog
 
+.. _github: https://github.com/swindon-rs/swindon
+.. _crate: https://crates.io/crates/swindon
 
 Indices and tables
 ==================
