@@ -5,7 +5,8 @@ Swindon
 
 [Documentation](https://swindon-rs.github.io/swindon) |
 [Github](https://github.com/swindon-rs/swindon) |
-[Crate](https://crates.io/crates/swindon)
+[Crate](https://crates.io/crates/swindon) |
+[Chat](https://gitter.im/swindon-rs/Lobby)
 
 A HTTP edge (frontend) server with smart websocket support.
 
