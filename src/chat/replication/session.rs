@@ -103,6 +103,11 @@ impl ReplicationSession {
         }
         for addr in &cfg.listen {
             match *addr {
+                ListenSocket::Tcp(addr)
+                if self.shutters.contains_key(&addr) => {
+                    // already listening
+                    continue;
+                }
                 ListenSocket::Tcp(addr) => {
                     let (tx, rx) = oneshot();
                     match listen(addr, self.tx.clone(),

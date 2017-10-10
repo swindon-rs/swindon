@@ -105,6 +105,11 @@ impl SessionPools {
 
             for addr in &settings.listen {
                 match *addr {
+                    ListenSocket::Tcp(addr)
+                    if worker.shutters.contains_key(&addr) => {
+                        // already listening
+                        continue;
+                    }
                     ListenSocket::Tcp(addr) => {
                         let (tx, rx) = oneshot();
                         // TODO(tailhook) wait and retry on error
