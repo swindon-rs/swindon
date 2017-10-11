@@ -16,6 +16,7 @@ use std::cmp::max;
 use std::hash::Hash;
 use std::borrow::Borrow;
 use std::collections::HashMap;
+use std::collections::hash_map;
 
 use slab::Slab;
 
@@ -25,6 +26,11 @@ pub struct HeapMap<K, T, V>
     heap: Heap<(T, usize)>,
     map: HashMap<K, usize>,
     slab: Slab<(Slot, K, V)>,
+}
+
+pub struct Iter<'a, K: 'a, V: 'a> {
+    iter: hash_map::Iter<'a, K, usize>,
+    slab: &'a Slab<(Slot, K, V)>,
 }
 
 struct Heap<T> {
@@ -40,6 +46,15 @@ struct Heap<T> {
 struct Slot {
     idx: usize,
 }
+
+impl<'a, K, V> Iterator for Iter<'a, K, V> {
+    type Item = (&'a K, &'a V);
+    fn next(&mut self) -> Option<Self::Item> {
+        self.iter.next()
+        .map(|(key, idx)| (key, &self.slab.get(*idx).unwrap().2))
+    }
+}
+
 
 impl<T: Ord> Heap<T> {
     pub fn new() -> Heap<T> {
@@ -267,6 +282,12 @@ impl<K, T, V> HeapMap<K, T, V>
             map.remove(&key).unwrap();
             (key, ts, value)
         })
+    }
+    pub fn iter(&self) -> Iter<K, V> {
+        Iter {
+            iter: self.map.iter(),
+            slab: &self.slab,
+        }
     }
     #[allow(dead_code)]
     pub fn len(&self) -> usize {

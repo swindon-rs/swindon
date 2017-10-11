@@ -2,9 +2,10 @@ use std::time::Instant;
 use std::sync::mpsc::Receiver;
 use std::collections::HashMap;
 
-use super::{Event, Action};
-use super::pool::Pool;
-use super::try_iter::try_iter;
+use chat::SyncData;
+use chat::processor::{Event, Action};
+use chat::processor::pool::Pool;
+use chat::processor::try_iter::try_iter;
 use metrics::Integer;
 
 lazy_static! {
@@ -15,6 +16,8 @@ fn pool_action(pool: &mut Pool, ts: Instant, action: Action) {
     use super::Action::*;
     match action {
         // handled earlier
+        PeerSync {..} => unreachable!(),
+        StartSync {..} => unreachable!(),
         NewSessionPool {..} => unreachable!(),
         StopSessionPool => unreachable!(),
         // Connection management
@@ -100,6 +103,22 @@ pub fn run(rx: Receiver<Event>) {
                         pool.stop();
                         SESSION_POOLS.set(pools.len() as i64);
                     }
+                }
+                PeerSync { server_id, state } => {
+                    unimplemented!();
+                }
+                StartSync { tx } => {
+                    tx.send(SyncData {
+                        connections: pools.iter().map(|(key, p)| {
+                            (key.clone(),
+                                p.sessions.active.iter().map(|(sid, s)| {
+                                    (sid.clone(), s.connections.len())
+                                }).chain(
+                                    p.sessions.inactive.iter().map(|(sid, s)|
+                                        (sid.clone(), s.connections.len())
+                                    )).collect())
+                        }).collect(),
+                    }).ok();
                 }
                 _ => {
                     // For all other actions we resolve pool first

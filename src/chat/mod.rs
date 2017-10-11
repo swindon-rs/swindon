@@ -24,7 +24,10 @@ pub use self::dispatcher::Dispatcher;
 pub use self::connection_sender::ConnectionSender;
 pub use self::replication::ReplicationSession;
 
+use std::collections::HashMap;
+
 use metrics::{Counter, Integer, List, Metric};
+use intern::{SessionId, SessionPoolName};
 
 lazy_static! {
     pub static ref CONNECTS: Counter = Counter::new();
@@ -33,6 +36,11 @@ lazy_static! {
 }
 
 pub struct Shutdown;
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct SyncData {
+    connections: HashMap<SessionPoolName, HashMap<SessionId, usize>>,
+}
 
 pub fn metrics() -> List {
     vec![

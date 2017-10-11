@@ -39,14 +39,14 @@ enum Subscription {
 }
 
 pub struct Sessions {
-    active: HeapMap<SessionId, Instant, Session>,
-    inactive: HashMap<SessionId, Session>,
+    pub(in chat) active: HeapMap<SessionId, Instant, Session>,
+    pub(in chat) inactive: HashMap<SessionId, Session>,
 }
 
 pub struct Pool {
     name: SessionPoolName,
     channel: Sender<PoolMessage>,
-    sessions: Sessions,
+    pub(in chat) sessions: Sessions,
 
     pending_connections: HashMap<Cid, NewConnection>,
     connections: HashMap<Cid, Connection>,

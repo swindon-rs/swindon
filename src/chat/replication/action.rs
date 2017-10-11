@@ -5,7 +5,7 @@ use serde_json::Value as Json;
 use runtime::ServerId;
 use intern::{SessionId, SessionPoolName, Topic, Lattice as Namespace};
 use config::Replication;
-use chat::Cid;
+use chat::{Cid, SyncData};
 use chat::processor::{Action, Delta};
 use super::OutgoingChannel;
 
@@ -36,6 +36,10 @@ pub struct Message(pub SessionPoolName, pub RemoteAction);
 
 #[derive(Debug, Serialize, Deserialize)]
 pub enum RemoteAction {
+    InitialSync {
+        server_id: ServerId,
+        state: SyncData,
+    },
     Subscribe {
         conn_id: Cid,
         server_id: ServerId,
@@ -94,6 +98,9 @@ impl Into<Action> for RemoteAction {
         // server_id is ignored here, because it's filtered
         // in Watcher::local_send
         match self {
+            InitialSync { server_id, state } => {
+                Action::PeerSync { server_id, state }
+            }
             Subscribe { conn_id, topic, server_id: _ } => {
                 Action::Subscribe {
                     conn_id: conn_id,

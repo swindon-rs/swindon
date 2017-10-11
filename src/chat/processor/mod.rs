@@ -13,14 +13,16 @@ use std::sync::Arc;
 use std::collections::HashMap;
 use std::fmt;
 
+use runtime::ServerId;
 use serde_json::Value as Json;
 use serde::ser::{Serialize, Serializer, SerializeTuple};
 use futures::sync::mpsc::{UnboundedSender as Sender};
+use futures::sync::oneshot;
 
 use config;
 use intern::{Topic, SessionId, SessionPoolName, Lattice as Namespace};
 use intern::{LatticeKey, LatticeVar};
-use chat::{Cid, ConnectionSender, CloseReason};
+use chat::{Cid, ConnectionSender, CloseReason, SyncData};
 use chat::message::{Meta, MetaWithExtra};
 use chat::error::MessageError;
 
@@ -98,6 +100,11 @@ pub enum PoolMessage {
 
 pub enum Action {
 
+    PeerSync {
+        server_id: ServerId,
+        state: SyncData,
+    },
+    StartSync { tx: oneshot::Sender<SyncData> },
     // ------ Session pool management ------
     //   For all actions session pool name is passed in event structure
     NewSessionPool {
@@ -268,6 +275,12 @@ impl fmt::Debug for Action {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         use self::Action::*;
         match self {
+            &StartSync {..} => {
+                write!(f, "Action::StartSync")
+            }
+            &PeerSync {..} => {
+                write!(f, "Action::PeerSync")
+            }
             &NewSessionPool {..} => {
                 write!(f, "Action::NewSessionPool")
             }
