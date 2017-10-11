@@ -1,12 +1,12 @@
 use std::sync::{Arc, RwLock, RwLockWriteGuard};
 use std::collections::HashMap;
 
+use abstract_ns::{Resolve, union_stream};
 use tk_http::client::{Codec, Config as HConfig, Proto, Error, EncoderDone};
 use tokio_core::net::TcpStream;
 use tokio_core::reactor::Handle;
 use tk_pool::Pool;
 use tk_pool::uniform::{UniformMx, Config as PConfig};
-use abstract_ns::{Router, Resolver, union_stream};
 use futures::Stream;
 use futures::future::FutureResult;
 

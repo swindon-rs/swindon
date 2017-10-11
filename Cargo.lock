@@ -2,7 +2,7 @@
 name = "swindon"
 version = "0.7.0"
 dependencies = [
- "abstract-ns 0.3.4 (registry+https://github.com/rust-lang/crates.io-index)",
+ "abstract-ns 0.3.4 (git+https://github.com/tailhook/abstract-ns?rev=23603f8)",
  "argparse 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "assert_matches 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "blake2 0.6.1 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -23,6 +23,7 @@ dependencies = [
  "matches 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "mime_guess 1.8.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "netbuf 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ns-router 0.1.0 (git+https://github.com/tailhook/ns-router?rev=a913fc4)",
  "ns-std-threaded 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "quick-error 1.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "quire 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -44,6 +45,17 @@ dependencies = [
  "tokio-io 0.1.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "trimmer 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "typenum 1.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "abstract-ns"
+version = "0.3.4"
+source = "git+https://github.com/tailhook/abstract-ns?rev=23603f8#23603f8ab563cd518045255f51f9328dbd242786"
+dependencies = [
+ "futures 0.1.16 (registry+https://github.com/rust-lang/crates.io-index)",
+ "quick-error 1.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rand 0.3.16 (registry+https://github.com/rust-lang/crates.io-index)",
+ "void 1.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -528,6 +540,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "ns-router"
+version = "0.1.0"
+source = "git+https://github.com/tailhook/ns-router?rev=a913fc4#a913fc43e8ddd85a34bfb998c5081c218eab09ec"
+dependencies = [
+ "abstract-ns 0.3.4 (git+https://github.com/tailhook/abstract-ns?rev=23603f8)",
+ "futures 0.1.16 (registry+https://github.com/rust-lang/crates.io-index)",
+ "log 0.3.8 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tokio-core 0.1.9 (registry+https://github.com/rust-lang/crates.io-index)",
+ "void 1.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "ns-std-threaded"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1006,6 +1030,7 @@ dependencies = [
 ]
 
 [metadata]
+"checksum abstract-ns 0.3.4 (git+https://github.com/tailhook/abstract-ns?rev=23603f8)" = "<none>"
 "checksum abstract-ns 0.3.4 (registry+https://github.com/rust-lang/crates.io-index)" = "2f451afbdf8ed8c8f8a98433055bb9a6b7a72aef4baff16227d2a43dd547f43b"
 "checksum aho-corasick 0.5.3 (registry+https://github.com/rust-lang/crates.io-index)" = "ca972c2ea5f742bfce5687b9aef75506a764f61d37f8f649047846a9686ddb66"
 "checksum aho-corasick 0.6.3 (registry+https://github.com/rust-lang/crates.io-index)" = "500909c4f87a9e52355b26626d890833e9e1d53ac566db76c36faa984b889699"
@@ -1066,6 +1091,7 @@ dependencies = [
 "checksum net2 0.2.31 (registry+https://github.com/rust-lang/crates.io-index)" = "3a80f842784ef6c9a958b68b7516bc7e35883c614004dd94959a4dca1b716c09"
 "checksum netbuf 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)" = "55e207462a9ce32b17e5ee075e2739dc689d392ce15b67e9a1c1065f0dc14b1b"
 "checksum nodrop 0.1.9 (registry+https://github.com/rust-lang/crates.io-index)" = "52cd74cd09beba596430cc6e3091b74007169a56246e1262f0ba451ea95117b2"
+"checksum ns-router 0.1.0 (git+https://github.com/tailhook/ns-router?rev=a913fc4)" = "<none>"
 "checksum ns-std-threaded 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "fce2e49dd898b78ee2e5f37305f31786c7ea72faf262fd2076a2fd8f1d2de95d"
 "checksum num-traits 0.1.40 (registry+https://github.com/rust-lang/crates.io-index)" = "99843c856d68d8b4313b03a17e33c4bb42ae8f6610ea81b28abe076ac721b9b0"
 "checksum num_cpus 1.6.2 (registry+https://github.com/rust-lang/crates.io-index)" = "aec53c34f2d0247c5ca5d32cca1478762f301740468ee9ee6dcb7a0dd7a0c584"

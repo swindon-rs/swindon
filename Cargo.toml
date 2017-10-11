@@ -40,7 +40,8 @@ string-intern = {version="0.1.7", features=["serde"], default-features=false}
 rand = "0.3.14"
 tk-pool = "0.3.1"
 tk-listen = "0.1.0"
-abstract-ns = "0.3.4"
+abstract-ns = { git="https://github.com/tailhook/abstract-ns", rev="23603f8" }
+ns-router = { git="https://github.com/tailhook/ns-router", rev="a913fc4" }
 ns-std-threaded = "0.2.0"
 libc = "0.2.31"
 scoped-tls = "0.1.0"
