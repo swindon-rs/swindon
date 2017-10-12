@@ -1,7 +1,20 @@
+import aiohttp
 import asyncio
+import json
 import pytest
-from async_timeout import timeout
+import re
+
 from aiohttp import ClientSession
+from async_timeout import timeout
+from unittest import mock
+
+
+def assert_auth(req):
+    assert req.path == '/swindon/authorize_connection'
+    assert req.headers["Host"] == "swindon.internal"
+    assert req.headers['Content-Type'] == 'application/json'
+    assert re.match('^swindon/(\d+\.){2}\d+$', req.headers['User-Agent'])
+    assert 'Authorization' not in req.headers
 
 
 async def auth(handler, auth_data):
@@ -160,3 +173,90 @@ async def test_topic_unsubscribe(swindon_two, proxy_server, loop,
         with pytest.raises(asyncio.TimeoutError):
             with timeout(1, loop=loop):
                 assert await ws.receive_json() is None
+
+
+@pytest.mark.parametrize('by_user_id', [True, False])
+async def test_swindon_user(proxy_server, swindon_two, loop,
+        user_id, user_id2, by_user_id):
+
+    peerA, peerB = swindon_two
+
+    urlA = peerA.url / 'swindon-lattice'
+    urlB = peerB.url / 'swindon-lattice'
+    async with proxy_server(port=peerA.proxy.port) as proxy:
+        handlerA = proxy.swindon_lattice(urlA, timeout=1)
+        req = await handlerA.request()
+        assert_auth(req)
+        meta, args, kwargs = await req.json()
+        cid1 = meta['connection_id']
+
+        async with aiohttp.ClientSession(loop=loop) as s:
+            subscr_url = peerA.api3 / 'v1/connection' / cid1 / 'users'
+            data = json.dumps([user_id]).encode('utf-8')
+            async with s.put(subscr_url,
+                    headers={'Content-Type': 'application/json'},
+                    data=data) as resp:
+                assert resp.status == 204
+
+        ws1 = await handlerA.json_response({
+            "user_id": user_id, "username": "Jack"})
+        hello = await ws1.receive_json()
+        assert hello == [
+            'hello', {}, {'user_id': user_id, 'username': 'Jack'}]
+        msg = await ws1.receive_json()
+        assert msg == ['lattice',
+            {'namespace': 'swindon.user'},
+            {user_id: {'status_register': [mock.ANY, 'active']}}]
+
+        # Log in second user but subscribe him later
+
+        handlerB = proxy.swindon_lattice(urlB, timeout=1)
+        req = await handlerB.request()
+        assert_auth(req)
+        meta, args, kwargs = await req.json()
+        cid2 = meta['connection_id']
+
+        ws2 = await handlerB.json_response({
+            "user_id": user_id2, "username": "John"})
+        hello = await ws2.receive_json()
+        assert hello == [
+            'hello', {}, {'user_id': user_id2, 'username': 'John'}]
+
+        # Now subscribe both users to each other
+        async with aiohttp.ClientSession(loop=loop) as s:
+            data = json.dumps([user_id, user_id2]).encode('utf-8')
+
+            subscr_url = peerB.api3 / 'v1/connection' / cid2 / 'users'
+            async with s.put(subscr_url,
+                    headers={'Content-Type': 'application/json'},
+                    data=data) as resp:
+                assert resp.status == 204
+
+            if by_user_id:
+                subscr_url = peerB.api3 / 'v1/user' / user_id / 'users'
+                async with s.put(subscr_url,
+                    headers={'Content-Type': 'application/json'},
+                    data=data) as resp:
+                    assert resp.status == 204
+            else:
+                subscr_url = peerB.api3 / 'v1/connection' / cid1 / 'users'
+                async with s.put(subscr_url,
+                        headers={'Content-Type': 'application/json'},
+                        data=data) as resp:
+                    assert resp.status == 204
+
+        with timeout(1):
+            msg = await ws1.receive_json()
+        # TODO(tailhook) this user is fully sent on resubscription
+        #                we can optimize it to send only new users
+        assert msg == ['lattice',
+            {'namespace': 'swindon.user'},
+            {user_id: {'status_register': [mock.ANY, 'active']},
+             user_id2: {'status_register': [mock.ANY, 'active']}}]
+
+        with timeout(1):
+            msg = await ws2.receive_json()
+        assert msg == ['lattice',
+            {'namespace': 'swindon.user'},
+            {user_id: {'status_register': [mock.ANY, 'active']},
+             user_id2: {'status_register': [mock.ANY, 'active']}}]
