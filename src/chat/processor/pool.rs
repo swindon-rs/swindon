@@ -275,8 +275,18 @@ impl Pool {
             self.sessions.active.insert(sess_id.clone(), activity_ts, session);
         } else {
             self.sessions.active.update_if_smaller(&sess_id, activity_ts);
-            if let Some(sess) = self.sessions.active.get_mut(&sess_id) {
+            let has_session = if
+                let Some(sess) = self.sessions.active.get_mut(&sess_id)
+            {
                 sess.status_timestamp = now;
+                true
+            } else {
+                false
+            };
+            if !has_session {
+                let mut sess = Session::new();
+                sess.status_timestamp = now;
+                self.sessions.active.insert(sess_id, activity_ts, sess);
             }
         }
     }

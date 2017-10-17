@@ -1,6 +1,7 @@
-use std::sync::Arc;
-use std::mem;
 use std::fmt;
+use std::mem;
+use std::sync::Arc;
+use std::time::Duration;
 
 use futures::Async;
 use futures::future::{FutureResult, ok};
@@ -15,9 +16,11 @@ use chat::ConnectionMessage::{Hello, FatalError};
 use chat::error::MessageError::{HttpError};
 use chat::message::{AuthData, Auth, Call, Meta, Args, Kwargs};
 use chat::processor::{ProcessorPool, Action};
+use chat::replication::{RemotePool, RemoteAction};
 use chat::tangle_auth::{TangleAuth, SwindonAuth};
+use config::SessionPool;
 use config::http_destinations::Destination;
-use runtime::ServerId;
+use runtime::{ServerId};
 use intern::SessionId;
 use proxy::{Response};
 use request_id;
@@ -53,6 +56,8 @@ pub struct AuthCodec {
     server_id: ServerId,
     json_content: bool,
     weak_content_type: bool,
+    remote: RemotePool,
+    pool_config: Arc<SessionPool>,
 }
 
 pub struct CallCodec {
@@ -76,7 +81,8 @@ pub struct InactivityCodec {
 impl AuthCodec {
     pub fn new(path: String, cid: Cid, req: AuthData,
         chat: ProcessorPool, destination: &Arc<Destination>,
-        tx: ConnectionSender, server_id: ServerId, weak_content_type: bool)
+        tx: ConnectionSender, server_id: ServerId, weak_content_type: bool,
+        remote: &RemotePool, pool_config: &Arc<SessionPool>)
         -> AuthCodec
     {
         AuthCodec {
@@ -88,6 +94,8 @@ impl AuthCodec {
             sender: tx,
             json_content: false,
             weak_content_type,
+            remote: remote.clone(),
+            pool_config: pool_config.clone(),
         }
     }
 
@@ -264,6 +272,12 @@ impl<S> http::Codec<S> for AuthCodec {
                             sess_id, userinfo);
                         self.sender.send(Hello(sess_id.clone(),
                                                userinfo.clone()));
+                        self.remote.send(RemoteAction::UpdateActivity {
+                            session_id: sess_id.clone(),
+                            // Get duration from config
+                            duration: self.pool_config
+                                .new_connection_idle_timeout,
+                        });
                         self.chat.send(Action::Associate {
                             conn_id: self.conn_id,
                             session_id: sess_id,

@@ -58,6 +58,8 @@ pub fn start_authorize(inp: &Input, conn_id: Cid, settings: &Arc<Chat>,
 {
     let pool = inp.runtime.session_pools
         .processor.pool(&settings.session_pool);
+    let remote = inp.runtime.session_pools.remote_sender
+        .pool(&settings.session_pool);
     pool.send(Action::NewConnection {
         conn_id: conn_id,
         channel: messages.clone(),
@@ -67,6 +69,17 @@ pub fn start_authorize(inp: &Input, conn_id: Cid, settings: &Arc<Chat>,
         settings.message_handlers.resolve("tangle.authorize_connection")
     } else {
         settings.message_handlers.resolve("swindon.authorize_connection")
+    };
+    let pool_config = match inp.config.session_pools
+        .get(&settings.session_pool)
+    {
+        Some(c) => c,
+        None => {
+            error!("No such session_pool {:?}", settings.session_pool);
+            messages.send(FatalError(
+                HttpError(Status::InternalServerError, None)));
+            return;
+        }
     };
 
     let dest_settings = match inp.config.http_destinations.get(&dest.upstream)
@@ -107,7 +120,10 @@ pub fn start_authorize(inp: &Input, conn_id: Cid, settings: &Arc<Chat>,
         dest_settings,
         messages.clone(),
         inp.runtime.server_id.clone(),
-        settings.weak_content_type()));
+        settings.weak_content_type(),
+        &remote,
+        pool_config,
+    ));
 
     match up.get_mut().get_mut() {
         Some(pool) => {

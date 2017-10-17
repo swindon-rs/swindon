@@ -54,6 +54,7 @@ pub struct RemoteSender {
     queue: UnboundedSender<ReplAction>,
 }
 
+#[derive(Clone)]
 pub struct RemotePool {
     pool: SessionPoolName,
     queue: UnboundedSender<ReplAction>,
