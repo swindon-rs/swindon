@@ -116,13 +116,15 @@ async def test_non_local_connections(swindon_two, proxy_server, loop, through):
         url = subscribe_peer.api3 / 'v1/connection'
         url = url / cid1 / 'subscriptions/general'
         await put(url, loop)
+        await asyncio.sleep(0.1)  # wait for replication
         # publish some data
         data = b'{"hello": "world"}'
         await post(peerA.api3 / 'v1/publish/general', data, loop)
 
-        msg1 = await ws1.receive_json()
-        assert msg1 == [
-            "message", {"topic": "general"}, {"hello": "world"}]
+        with timeout(1):
+            msg1 = await ws1.receive_json()
+            assert msg1 == [
+                "message", {"topic": "general"}, {"hello": "world"}]
 
         with pytest.raises(asyncio.TimeoutError):
             with timeout(1, loop=loop):
