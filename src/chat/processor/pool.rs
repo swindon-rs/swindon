@@ -287,6 +287,7 @@ impl Pool {
                 let mut sess = Session::new();
                 sess.status_timestamp = now;
                 self.sessions.active.insert(sess_id, activity_ts, sess);
+                ACTIVE_SESSIONS.incr(1);
             }
         }
     }
