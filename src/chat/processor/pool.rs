@@ -227,7 +227,7 @@ impl Pool {
 
         if self.sessions.inactive.contains_key(&session_id) {
             let conns = {
-                let mut session = self.sessions.inactive.get_mut(&session_id)
+                let session = self.sessions.inactive.get_mut(&session_id)
                                   .unwrap();
                 session.status_timestamp = SystemTime::now();
                 session.connections.remove(&conn_id);
@@ -257,7 +257,7 @@ impl Pool {
                     INACTIVE_SESSIONS.decr(1);
                 }
             }
-        } if let Some(mut session) = self.sessions.active.get_mut(&session_id)
+        } if let Some(session) = self.sessions.active.get_mut(&session_id)
         {
             session.connections.remove(&conn_id);
             // We delete it on inactivation

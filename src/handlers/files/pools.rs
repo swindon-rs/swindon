@@ -66,7 +66,7 @@ impl DiskPools {
         })))
     }
     pub fn update(&self, config: &HashMap<DiskPoolName, config::Disk>) {
-        let mut pools = &mut *self.0.write().expect("writelock for pools");
+        let pools = &mut *self.0.write().expect("writelock for pools");
         for (name, props) in config {
             let mut hasher = DefaultHasher::new();
             props.hash(&mut hasher);

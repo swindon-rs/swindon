@@ -161,12 +161,12 @@ impl RoutingTable {
 
         let mut table = HashMap::new();
         for (&HostPath(Host(star, ref host), ref path), rdef) in iter {
-            let mut entry = table.entry(host.clone())
+            let entry = table.entry(host.clone())
                 .or_insert(Host {
                     exact: None,
                     star: None,
                 });
-            let mut dom = if star {
+            let dom = if star {
                 entry.star.get_or_insert(Domain {
                     root: None,
                     paths: HashMap::new(),

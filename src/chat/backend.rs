@@ -1,7 +1,6 @@
 use std::fmt;
 use std::mem;
 use std::sync::Arc;
-use std::time::Duration;
 
 use futures::Async;
 use futures::future::{FutureResult, ok};
