@@ -3,13 +3,14 @@ use std::hash::Hash;
 use std::fmt;
 use std::collections::{HashMap, HashSet};
 use std::collections::hash_map::Entry::{Occupied, Vacant};
+use std::time::{Instant, Duration};
 
+use humantime::parse_duration;
 use serde::ser::{Serialize, Serializer, SerializeMap};
 use serde::de::{self, Deserialize, Deserializer, Visitor, MapAccess};
 use serde_json::Value;
 
 use intern::{LatticeKey as Key, LatticeVar as Var, SessionId};
-
 use metrics::{Integer};
 
 lazy_static! {
@@ -42,10 +43,18 @@ trait Crdt: Clone + Sized {
 }
 
 #[derive(Debug, Clone)]
+pub enum Expires {
+    WithSession,
+    At(Instant),
+    IfUnused(Instant),
+}
+
+#[derive(Debug, Clone)]
 pub struct Values {
     pub(in chat::processor) counters: HashMap<Var, Counter>,
     pub(in chat::processor) sets: HashMap<Var, Set>,
     pub(in chat::processor) registers: HashMap<Var, Register>,
+    pub(in chat::processor) expires: Expires,
 }
 
 pub struct Lattice {
@@ -66,6 +75,7 @@ impl Values {
             counters: HashMap::new(),
             sets: HashMap::new(),
             registers: HashMap::new(),
+            expires: Expires::WithSession,
         }
     }
     pub fn update(&mut self, other: &Values) {
@@ -121,6 +131,8 @@ impl Lattice {
     /// Updates lattice to be up to date with Delta and returns modified delta
     /// that contains only data that really changed and not out of date
     pub fn update(&mut self, mut delta: Delta) -> Delta {
+        use self::Expires::*;
+
         let mut del = Vec::new();
         for (room, values) in &mut delta.shared {
             let mine = self.shared.entry(room.clone())
@@ -138,6 +150,15 @@ impl Lattice {
 
             if values.is_empty() {
                 del.push(room.clone());
+            } else {
+                match values.expires {
+                    At(..) => {}
+                    WithSession | IfUnused(..) => {
+                        // TODO(tailhook) make it configurable
+                        values.expires = IfUnused(
+                            Instant::now() + Duration::new(60, 0));
+                    }
+                }
             }
         }
         for key in &del {
@@ -311,6 +332,8 @@ impl<'de> Visitor<'de> for ValuesVisitor {
             counters: HashMap::new(),
             sets: HashMap::new(),
             registers: HashMap::new(),
+            // TODO(tailhook) parse `expires_in` key
+            expires: Expires::WithSession,
         };
         while let Some(key) = access.next_key::<&str>()? {
             if key.ends_with("_counter") {
@@ -328,6 +351,11 @@ impl<'de> Visitor<'de> for ValuesVisitor {
                 let key = key[..key.len() - "_register".len()].parse()
                     .map_err(de::Error::custom)?;
                 values.registers.insert(key, val);
+            } else if key == "expires_in" {
+                let val: &str = access.next_value()?;
+                let dur = parse_duration(val)
+                    .map_err(|e| de::Error::custom(e))?;
+                values.expires = Expires::At(Instant::now() + dur);
             } else {
                 return Err(de::Error::custom(format!(
                     "Unsupported key {:?}", key)))
@@ -356,6 +384,9 @@ impl<'de> Deserialize<'de> for Set {
 #[cfg(test)]
 mod test {
     use std::str::FromStr;
+    use std::time::Instant;
+    use std::mem::size_of;
+
     use serde_json::{from_str as json_decode, Value};
     use serde_json::ser::to_string;
 
@@ -409,5 +440,10 @@ mod test {
         assert_eq!(val.registers.len(), 1);
         assert_eq!(to_string(&val).unwrap(),
             String::from(r#"{"status_register":[123.0,{"icon":"test"}]}"#));
+    }
+
+    #[test]
+    fn mem() {
+        assert_eq!(size_of::<Expires>(), size_of::<Option<Instant>>());
     }
 }

@@ -157,6 +157,28 @@ Lattice Subscriptions
       HTTP/1.1 204 No Content
       Content-Length: 0
 
+   The ``shared`` attribute contains keys in the lattice that will be shared
+   between users. The ``private`` part is keyed by a user id and contain
+   same kind of object for each user.
+
+   Each key-value pair in that object is a CRDT variable-value. The type of
+   the variable is defined by the suffix. The types of variables are
+   defined in :ref:`CRDT Types <crdt-types>` section.
+
+   There is one special key supported in ``private`` section (the plan is to
+   add public expiration later too):
+
+   .. index:: pair: expires_in; Lattice API
+
+   expires_in
+      A time after which entry will be automatically deleted on server-side.
+      It's duration string like "10 seconds", "10s", or "90 minutes" in
+      a `human-readable format`__
+
+      **(this functionality is experimental)**
+
+      __ https://docs.rs/humantime/1.0.0/humantime/fn.parse_duration.html
+
 
 Users Lattice
 -------------

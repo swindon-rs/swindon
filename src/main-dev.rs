@@ -18,6 +18,7 @@ extern crate generic_array;
 extern crate httpdate;
 extern crate httpbin;
 extern crate http_file_headers;
+extern crate humantime;
 extern crate libcantal;
 extern crate mime_guess;
 extern crate netbuf;

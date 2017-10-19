@@ -19,6 +19,9 @@ use metrics::{Integer, Counter};
 use chat::processor::{SWINDON_USER, STATUS_VAR};
 use chat::processor::{ACTIVE_STATUS, INACTIVE_STATUS, OFFLINE_STATUS};
 use chat::processor::pair::PairCollection;
+use chat::processor::lattice::Expires;
+use chat::processor::lattice::{PRIVATE_KEYS, PRIVATE_COUNTERS, PRIVATE_SETS};
+use chat::processor::lattice::{PRIVATE_REGISTERS};
 
 lazy_static! {
     pub static ref ACTIVE_SESSIONS: Integer = Integer::new();
@@ -30,6 +33,8 @@ lazy_static! {
 
     pub static ref LATTICES: Integer = Integer::new();
 }
+
+const LATTICE_CLEANUP_INTERVAL: u64 = 60000;
 
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
@@ -54,6 +59,7 @@ pub struct Pool {
     lattices: HashMap<Namespace, Lattice>,
     user_listeners: HashMap<SessionId, HashSet<SessionId>>,
 
+    last_lattice_cleanup: Instant,
     // Setings
     new_connection_timeout: Duration,
 }
@@ -103,6 +109,7 @@ impl Pool {
             lattices: HashMap::new(),
             user_listeners: HashMap::new(),
             new_connection_timeout: (cfg.new_connection_idle_timeout).clone(),
+            last_lattice_cleanup: Instant::now(),
         }
     }
 
@@ -293,6 +300,71 @@ impl Pool {
     }
 
     pub fn cleanup(&mut self, timestamp: Instant) -> Option<Instant> {
+        let sess_ts = self.clean_sessions(timestamp);
+        let lattice_ts = self.lattice_cleanup(timestamp);
+        sess_ts.iter().chain(lattice_ts.iter()).min().cloned()
+    }
+
+    fn lattice_cleanup(&mut self, timestamp: Instant) -> Option<Instant> {
+        use chat::processor::lattice::Expires::*;
+        let interval = Duration::from_millis(LATTICE_CLEANUP_INTERVAL);
+        if timestamp < self.last_lattice_cleanup + interval {
+            if self.lattices.len() > 0 {
+                return Some(self.last_lattice_cleanup + interval);
+            }
+            return None;
+        }
+        for (_name, lat) in &mut self.lattices {
+            let mut to_delete = Vec::new();
+            for (sess_id, data) in &mut lat.private {
+                let has_session = self.sessions.get(sess_id).is_some();
+                let mut delete_keys = Vec::new();
+                for (key, values) in data.iter_mut() {
+                    match values.expires {
+                        WithSession if !has_session => {
+                            delete_keys.push(key.clone());
+                        }
+                        WithSession => {}
+                        At(x) if x < timestamp => {
+                            delete_keys.push(key.clone());
+                        }
+                        At(..) => {}
+                        IfUnused(x) if x < timestamp => {
+                            if !has_session {
+                                delete_keys.push(key.clone());
+                            } else {
+                                values.expires = WithSession;
+                            }
+                        }
+                        IfUnused(..) => {}
+                    }
+                }
+                for key in delete_keys {
+                    if let Some(v) = data.remove(&key) {
+                        PRIVATE_KEYS.decr(1);
+                        PRIVATE_COUNTERS.decr(v.counters.len() as i64);
+                        PRIVATE_SETS.decr(v.sets.len() as i64);
+                        PRIVATE_REGISTERS.decr(v.registers.len() as i64);
+                    }
+                }
+                if data.is_empty() {
+                    to_delete.push(sess_id.clone());
+                }
+            }
+            for sess_id in to_delete {
+                lat.private.remove(&sess_id);
+            }
+            // TODO(tailhook) clean public data too
+        }
+        self.last_lattice_cleanup = timestamp;
+        // TODO(tailhook) remove empty namespaces
+        if self.lattices.len() > 0 {
+            return Some(timestamp + interval);
+        }
+        return None
+    }
+
+    fn clean_sessions(&mut self, timestamp: Instant) -> Option<Instant> {
         while self.sessions.active.peek()
             .map(|(_, &x, _)| x < timestamp).unwrap_or(false)
         {
@@ -737,6 +809,7 @@ fn user_status_update(value: &Arc<Json>, timestamp: SystemTime)
         registers: vec![
             (STATUS_VAR.clone(), Register(to_f64(timestamp), value.clone())),
         ].into_iter().collect(),
+        expires: Expires::WithSession,
     }
 }
 
