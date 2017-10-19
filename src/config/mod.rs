@@ -151,7 +151,6 @@ impl Configurator {
 #[cfg(test)]
 pub mod test {
     use std::sync::Arc;
-    use quire::{parse_string, Options};
     use config::{ConfigCell, Config};
 
     pub fn make_config() -> Arc<Config> {
