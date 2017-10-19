@@ -2,6 +2,20 @@
 Swindon Changes By Version
 ==========================
 
+.. _changelog-v0.7.2:
+
+v0.7.2
+======
+
+* ``SwindonLattice`` protocol:
+    * Added :ref:`expires_in <expires_in>` experimental
+      API
+    * Private lattice data is now cleaned in 1 minute if unused, this removes
+      a memory leak, but may be a problem if connection authorization works for
+      longer that a minute
+    * ``active`` user online status is now replicated better
+
+
 .. _changelog-v0.7.0:
 
 v0.7.0

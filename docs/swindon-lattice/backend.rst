@@ -168,6 +168,7 @@ Lattice Subscriptions
    There is one special key supported in ``private`` section (the plan is to
    add public expiration later too):
 
+   .. _expires_in:
    .. index:: pair: expires_in; Lattice API
 
    expires_in
