@@ -14,6 +14,9 @@ v0.7.2
       a memory leak, but may be a problem if connection authorization works for
       longer that a minute
     * ``active`` user online status is now replicated better
+* Previously when swindon couldn't resolve name on startup it could crash
+  connectin pool (http-destination) and never fix it again. Now it will retry
+  name resolution indefinitely
 
 
 .. _changelog-v0.7.0:
