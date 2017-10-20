@@ -9,7 +9,7 @@ use futures::sync::mpsc::{unbounded, UnboundedSender};
 use futures::sync::oneshot::{channel as oneshot, Sender};
 use tk_http::websocket::Packet;
 use serde_json::to_string as json_encode;
-use abstract_ns::{Router};
+use ns_router::{Router};
 
 use intern::SessionPoolName;
 use runtime::{Runtime, ServerId};

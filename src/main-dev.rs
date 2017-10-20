@@ -23,6 +23,7 @@ extern crate libcantal;
 extern crate mime_guess;
 extern crate netbuf;
 extern crate ns_std_threaded;
+extern crate ns_router;
 extern crate quire;
 extern crate rand;
 extern crate regex;

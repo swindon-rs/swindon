@@ -1,13 +1,12 @@
 use std::sync::{Arc, RwLock, RwLockWriteGuard};
 use std::collections::HashMap;
 
+use ns_router::{Router};
 use tk_http::client::{Codec, Config as HConfig, Proto, Error, EncoderDone};
 use tokio_core::net::TcpStream;
 use tokio_core::reactor::Handle;
 use tk_pool::Pool;
 use tk_pool::uniform::{UniformMx, Config as PConfig};
-use abstract_ns::{Router, Resolver, union_stream};
-use futures::Stream;
 use futures::future::FutureResult;
 
 use intern::Upstream;
@@ -84,12 +83,8 @@ impl HttpPools {
                     .connections_per_address(
                         dest.backend_connections_per_ip_port)
                     .done();
-                let stream = union_stream(
-                        dest.addresses.iter()
-                        .map(|x| resolver.subscribe(x))
-                        .collect()
-                    ).map_err(|e| Error::custom(e));
-                let mx = UniformMx::new(handle, &pool_config, stream,
+                let addr = resolver.subscribe_many(&dest.addresses, 80);
+                let mx = UniformMx::new(handle, &pool_config, addr,
                     move |addr| Proto::connect_tcp(addr, &conn_config, &h2));
                 let pool = Pool::create(handle, dest.queue_size_for_503, mx);
                 plain.insert(k.clone(), pool);

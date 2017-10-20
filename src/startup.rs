@@ -1,20 +1,22 @@
-use std::io;
-use std::sync::Arc;
-use std::net::SocketAddr;
 use std::collections::HashMap;
+use std::io;
+use std::net::SocketAddr;
+use std::sync::Arc;
+use std::time::Duration;
 
-use abstract_ns;
-use ns_std_threaded;
-use tokio_core::reactor::{Handle};
-use tokio_core::net::TcpListener;
+use abstract_ns::HostResolve;
 use futures::Stream;
 use futures::future::{Future};
 use futures::sync::oneshot::{channel as oneshot, Sender, Receiver};
 use futures_cpupool;
+use ns_router::{self, SubscribeExt};
+use ns_std_threaded;
 use self_meter_http::Meter;
-use tk_http;
 use tk_http::server::Proto;
+use tk_http;
 use tk_listen::ListenExt;
+use tokio_core::net::TcpListener;
+use tokio_core::reactor::{Handle};
 
 use config::{ListenSocket, ConfigCell};
 use incoming::Router;
@@ -29,7 +31,7 @@ pub struct State {
     http_pools: HttpPools,
     session_pools: chat::SessionPools,
     disk_pools: DiskPools,
-    ns: abstract_ns::Router,
+    ns: ns_router::Router,
     listener_shutters: HashMap<SocketAddr, Sender<()>>,
     replication_session: chat::ReplicationSession,
     runtime: Arc<Runtime>,
@@ -93,11 +95,16 @@ pub fn populate_loop(handle: &Handle, cfg: &ConfigCell, verbose: bool)
         .create()
     };
 
-    let ns = ns_std_threaded::ThreadedResolver::new(ns_pool);
+    let std = ns_std_threaded::ThreadedResolver::use_pool(ns_pool);
 
-    let mut rb = abstract_ns::RouterBuilder::new();
-    rb.add_default(ns);
-    let resolver = rb.into_resolver();
+    // TODO(tailhook) add config for it, allow update
+    let resolver = ns_router::Router::from_config(
+        &ns_router::Config::new()
+        .set_fallthrough(std.null_service_resolver()
+            // TODO(tailhook) allow configure interval
+            .interval_subscriber(Duration::new(1, 0), handle))
+        .done(),
+        handle);
 
     let server_id = request_id::new();
     let http_pools = HttpPools::new();

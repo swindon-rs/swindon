@@ -2,19 +2,20 @@ use std::io;
 use std::net::SocketAddr;
 use std::time::Instant;
 use std::sync::Arc;
-use futures::{Future, Stream};
+
 use futures::future::{FutureResult, Either, ok, err};
-use futures::sync::oneshot::Receiver;
 use futures::sync::mpsc::unbounded;
-use tokio_core::reactor::{Timeout, Handle};
-use tokio_core::net::{TcpListener, TcpStream};
-use tk_listen::ListenExt;
+use futures::sync::oneshot::Receiver;
+use futures::{Future, Stream};
+use ns_router::{Router};
+use serde_json;
 use tk_http::server::{Proto, Config};
+use tk_http::websocket::client::HandshakeProto;
 use tk_http::websocket::{Config as WsConfig, Loop};
 use tk_http::websocket::{Dispatcher, Frame, Error};
-use tk_http::websocket::client::HandshakeProto;
-use abstract_ns::{Router, Resolver};
-use serde_json;
+use tk_listen::ListenExt;
+use tokio_core::net::{TcpListener, TcpStream};
+use tokio_core::reactor::{Timeout, Handle};
 
 use config::Replication;
 use runtime::ServerId;
@@ -59,13 +60,13 @@ pub fn connect(peer: &str, sender: IncomingChannel,
     let h1 = handle.clone();
     let h2 = handle.clone();
     let p1 = peer.to_string();
-    let p2 = p1.clone();
+    let p2 = p1.clone(); // better use "name" or some string-interned thing?
 
     let timeout = Timeout::new_at(timeout_at, &handle)
     .expect("timeout created");
 
     handle.spawn(
-    resolver.resolve(peer)
+    resolver.resolve_auto(peer, 80)
     .map_err(|e|
         // I'm not sure this is a good idea actually
         e.into_io())

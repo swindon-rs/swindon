@@ -38,10 +38,11 @@ matches = "0.1.4"
 assert_matches = "1.0.1"
 string-intern = {version="0.1.7", features=["serde"], default-features=false}
 rand = "0.3.14"
-tk-pool = "0.3.1"
+tk-pool = "0.4.0"
 tk-listen = "0.1.0"
-abstract-ns = "0.3.4"
-ns-std-threaded = "0.2.0"
+abstract-ns = "0.4.0"
+ns-router = "0.1.0"
+ns-std-threaded = "0.3.0"
 libc = "0.2.31"
 scoped-tls = "0.1.0"
 self-meter-http = "0.4.1"
@@ -58,8 +59,12 @@ regex = "0.2.2"
 trimmer = "0.3.2"
 humantime = "1.0.0"
 
+[patch.crates-io]
+abstract-ns = { git="https://github.com/tailhook/abstract-ns", rev="d1a7147" }
+
 [profile.release]
 debug = true
+
 
 [[bin]]
 name = "swindon"
