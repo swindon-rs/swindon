@@ -14,7 +14,7 @@ routing:
 
 handlers:
 
-  chat: !SwindonLatice
+  chat: !SwindonLattice
 
     session-pool: chat
     http-route: html
