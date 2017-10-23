@@ -185,6 +185,15 @@ impl Lattice {
 
                 if values.is_empty() {
                     del_rooms.push(room.clone());
+                } else {
+                    match values.expires {
+                        At(..) => {}
+                        WithSession | IfUnused(..) => {
+                            // TODO(tailhook) make it configurable
+                            values.expires = IfUnused(
+                                Instant::now() + Duration::new(60, 0));
+                        }
+                    }
                 }
             }
             for key in &del_rooms {
@@ -194,6 +203,7 @@ impl Lattice {
         return delta
     }
 
+    // TODO(tailhook) maybe don't delete them, but rather set expiration time
     pub fn remove_session(&mut self, sid: &SessionId) {
         if let Some(skeys) = self.private.remove(sid) {
             PRIVATE_KEYS.decr(skeys.len() as i64);
