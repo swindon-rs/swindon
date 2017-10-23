@@ -470,6 +470,42 @@ commands:
         - npm
         - start
 
+  example-multi-user-chat2-two-nodes: !Supervise
+    description:
+      Run swindon and multi-user-chat 2 example
+      employing two nodes of swindon with replication
+    prerequisites: [make]
+    children:
+      swindon1: !Command
+        container: xenial
+        work-dir: examples/multi-user-chat2
+        environ: { RUST_BACKTRACE: 1 }
+        run:
+        - ../../target/debug/swindon
+        - --verbose
+        - --config=swindon1.yaml
+      swindon2: !Command
+        container: xenial
+        work-dir: examples/multi-user-chat2
+        environ: { RUST_BACKTRACE: 1 }
+        run:
+        - ../../target/debug/swindon
+        - --verbose
+        - --config=swindon2.yaml
+      chat: !Command
+        container: multi-user-chat2
+        work-dir: examples/multi-user-chat2
+        run:
+        - python3
+        - -m
+        - muc
+      react-app: !Command
+        container: multi-user-chat2
+        work-dir: examples/multi-user-chat2
+        run:
+        - npm
+        - start
+
   bulk: !Command
     description: Run any bulk command
     container: xenial
