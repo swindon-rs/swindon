@@ -292,8 +292,10 @@ impl Pool {
             };
             if !has_session {
                 let mut sess = Session::new();
+                self.sessions.active.insert(
+                    sess_id.clone(), activity_ts, sess);
                 sess.status_timestamp = now;
-                self.sessions.active.insert(sess_id, activity_ts, sess);
+                self.publish_status(&sess_id, &*ACTIVE_STATUS, now);
                 ACTIVE_SESSIONS.incr(1);
             }
         }
