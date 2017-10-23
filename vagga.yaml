@@ -418,6 +418,45 @@ commands:
         - -m
         - presence
 
+  example-presence-two-nodes: !Supervise
+    description:
+      Run swindon and presence example
+      employing two nodes of swindon with replication
+    prerequisites: [make]
+    children:
+      swindon1: !Command
+        container: xenial
+        work-dir: examples/presence
+        environ: { RUST_BACKTRACE: 1 }
+        run:
+        - ../../target/debug/swindon
+        - --verbose
+        - --config=swindon1.yaml
+      swindon2: !Command
+        container: xenial
+        work-dir: examples/presence
+        environ: { RUST_BACKTRACE: 1 }
+        run:
+        - ../../target/debug/swindon
+        - --verbose
+        - --config=swindon2.yaml
+      webpack: !Command
+        container: presence
+        work-dir: examples/presence
+        run:
+        - webpack
+        - --watch
+      board: !Command
+        container: presence
+        work-dir: examples/presence
+        environ:
+          LISTEN_FDS: 1
+        pass-tcp-socket: 127.0.0.1:8082
+        run:
+        - python3
+        - -m
+        - presence
+
   example-multi-user-chat: !Supervise
     description: Run swindon and multi-user-chat example
     prerequisites: [make]
