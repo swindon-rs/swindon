@@ -2,6 +2,18 @@
 Swindon Changes By Version
 ==========================
 
+.. _changelog-v0.7.3:
+
+v0.7.3
+======
+
+* Bugfix: TTL on private lattice data introduced in v0.7.2 were sometimes not
+  handled properly on auth, effectively leaving users unsubscribed right after
+  authorization
+* Bugfix: while we started to sync users activity properly in v0.7.2, the
+  information from a replica wasn't properly propagated to clients
+
+
 .. _changelog-v0.7.2:
 
 v0.7.2
