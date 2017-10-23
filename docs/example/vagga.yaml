@@ -7,7 +7,7 @@ containers:
       suite: xenial
       components: [swindon-stable]
       trusted: true
-    - !Install [swindon=0.7.2+xenial1]
+    - !Install [swindon=0.7.3+xenial1]
 
 commands:
   swindon: !Command
