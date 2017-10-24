@@ -60,19 +60,46 @@ jobs:
     - bash <(curl -s https://codecov.io/bash)
 
   # deploy
-  - stage: Publish
+  - stage: deploy
     env:
     - secure: "n0eOmD1J2imokgTyXv6F0ep3PvfVTI+1pGyA8y6liDz/DiU7gh0orqIYTAj7oUvrvF+DkDvYPnFiTF3Hea4BpeVZeD6cnr3yDWaqF5GOsBAzVe6quahXXbtF066nml4qti9eQAjlcePp85ZJAJ+Ro3XwMoijI4ZyHsXRTQ6Sg6pVMCje9TNzyUyXNkHrtlkBHkdLNTaJiDkV3L3DPREJGXkjqRqm/3cP4+VPaxr14YZ/iAxOSpxQabyy1AaXVYWkWfL07yvdofLJkRCmae8o8ZCdrRbiqYOZ4ICPUNiIEUuIBUKaomF+D7Abjef3vePkxhodqtzef63rLWdfDGOorjSa4o32leIjkJNTmOWMO6NsXfDge9F6QUa+auTDnml5JJzq0/Dhmi9HwgZF75NcfNgpBhC+wbjzu/9mSo+WJlWGJFa0hNtzmBOs87DZfBYFIUGanxLHA3vfeBOoGFrU4Nu3YFKD52gFGMBBe4zC/fG9hQWbiZvhSIHVx+nyJBDPGjGb7XqixCV1ttHy85bDQ7cNxpz9DtMY9ZXywJtyO7z7X3jNrPG/t5jJEyfwebNWuYV8g15snvhjqFzovaElTShS0ZW8m4eiZaVT+O8Rk6FzNSFZjE1WdyYUgFK+Wdi70KwhqyyYyRlxvAEVl/ZPd0hfE76fs4TgZH8BT96MabM="
-    install: true
-    script: |
-      if [[ $TRAVIS_BRANCH = master && $TRAVIS_PULL_REQUEST = false ]]; then
-        .travis/publish-docs.sh;
-      fi
+    install:
+    - pip install sphinx==1.6.2 docutils --user
+    - pip install -r docs/requirements.txt --user
+    script:
+    - make html -C docs SPHINXBUILD=~/.local/bin/sphinx-build
+    - touch docs/_build/html/.nojekyll
+    local_dir: docs/_build/html
+    deploy:
+      provider: pages
+      skip_cleanup: true
+      github_token:
+        secure: "SKTy9qH9o90kdzDrTXhjVQR1qXt+ayk/8ptSvK8IqSzVj8AV1Jwe94c+KqfiXsoJnEU0jV0KUqF57cjhRUSMrtRUlLt1vteeMciGxGhjmet3ilaBy9/hIeop3kzHmkeDDhyvw+rzRt6sT6qhBQs3WXUSPf3RCqdoGk92QxH5jAeWNDxLIBAijvuHyxV6rjpw/HNrs4J6wcypKvN68OhE9MaY9UHKf2+H6755LVz/TlVFkshbTSK9ANTaWKJ5dNLhV4622tCG9lqrebv3nhdUNxDY6z2xKFGgURc2lCi4Fs268Eg1CIQ9M2QIStIF62+x8IJhAfl7WQbPTBrkI5VCOsK59QXhaA9GcmYGSo/efZoZP3xPos+4lDqNLcQhrotc9hU5zsrO9TnTt4Um0n3HupyX+cRqs6L6pUiBJiqPWWg+xZmPLVNa5KgFTUQVrVPWcBPKVn0XV4eWJQjBTVEOjd7XdL2JuqZOsEPY99IPdIDoMS9vAmxRb+aq3VffAKuv+CV5sRWpkA895O3yI5Ohc2cJ0aWsqUKnvd+TwRFqJF2+mcCRdnyGx7xgfTkR12TFTtY99IvO6OggXIX3dfTmXZKtDGNsw9ScGcYjrGRvAqiawOv3IgLjswR70NtKnyNLIqcVxbq/h7lKW+J1xMRueTJKviq624nE46n2/yePgSA="
+      on:
+        branch: master
 
+  - stage: deploy
+    os: linux
+    rust: stable
+    env:
+    # CARGO_TOKEN
+    - secure: "Ee7XgamcihD8OLT/0AdQSms6uOotKTvsAAXWczkg9E5u5rXePVBZtJ3DtOAFEp4nKoqlWDkBuTb+GqcyPb4tnOIy0Bd+pEnY2dTgtLyO2XE/yaaC/7JsOzyrNqaD19lj+vyUbII3LCkf795FLQSLeUNLLarlJyJv21Spuvx7hqKjjP+tAgriHxyd1s5hrMG6qSGci8jadkHMrjked2dQbsfyeHSqI1IFoqDuz8yuqro3Pm9cPGL9KAL6M1CQ82l+J9CJGdY81cwiWwb7SuMHmviBg0dChbfsyEizyMGsJJgLNXypKuUfdwaMEXoqi3h0Mmn7F7ykJ11kRYnuXs2v8TGPtdSruLfl0uDOhQgBMAWjIIgwBNBeyWD/zY+0jTzONiTFCItYUlEWy5Q/unnxsxhSJTa5XCFqZ+RNaIYFAwlipJL9H8StvHjWWYJSISusFzFJD2/UhRlv2XouPKYhiW7jTgB4bj5PP9DrdMKSoPEVyn2qq9I/I6Yfg83m3qbgcXaYV1SOn2fc+Ji21xuPmFIfMszXl976WOq6AsGEzopwHBbaT4602wGBMJh/Sq2ZfTmmhaOGXD9XmQz3sLUVJOPyeCdSdu5jqAS+vmSPsXk011aovOq4kJMlEbWD8lMB8Waqs/C7S9ciJvm+mZLu5aBrM4XNrF4cXhMNmwOZEsc="
+    install: true
+    script: true
+
+    deploy:
+    - provider: script
+      script: 'cargo publish --verbose --token=$CARGO_TOKEN'
+      on:
+        tags: true
+
+  - stage: deploy
+    install:
+    - rustup target add x86_64-unknown-linux-musl
+    - cargo build --target=x86_64-unknown-linux-musl --release
+    script: true
     before_deploy: |
       mkdir -p dist
-      rustup target add x86_64-unknown-linux-musl
-      cargo build --target=x86_64-unknown-linux-musl --release
       fakeroot sh -ecx '
         install -D target/x86_64-unknown-linux-musl/release/swindon pkg/usr/bin/swindon
         install -D target/x86_64-unknown-linux-musl/release/swindon-dev pkg/usr/bin/swindon-dev
