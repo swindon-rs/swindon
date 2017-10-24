@@ -69,10 +69,10 @@ jobs:
     script:
     - make html -C docs SPHINXBUILD=~/.local/bin/sphinx-build
     - touch docs/_build/html/.nojekyll
-    local_dir: docs/_build/html
     deploy:
       provider: pages
       skip_cleanup: true
+      local_dir: docs/_build/html
       github_token:
         secure: "SKTy9qH9o90kdzDrTXhjVQR1qXt+ayk/8ptSvK8IqSzVj8AV1Jwe94c+KqfiXsoJnEU0jV0KUqF57cjhRUSMrtRUlLt1vteeMciGxGhjmet3ilaBy9/hIeop3kzHmkeDDhyvw+rzRt6sT6qhBQs3WXUSPf3RCqdoGk92QxH5jAeWNDxLIBAijvuHyxV6rjpw/HNrs4J6wcypKvN68OhE9MaY9UHKf2+H6755LVz/TlVFkshbTSK9ANTaWKJ5dNLhV4622tCG9lqrebv3nhdUNxDY6z2xKFGgURc2lCi4Fs268Eg1CIQ9M2QIStIF62+x8IJhAfl7WQbPTBrkI5VCOsK59QXhaA9GcmYGSo/efZoZP3xPos+4lDqNLcQhrotc9hU5zsrO9TnTt4Um0n3HupyX+cRqs6L6pUiBJiqPWWg+xZmPLVNa5KgFTUQVrVPWcBPKVn0XV4eWJQjBTVEOjd7XdL2JuqZOsEPY99IPdIDoMS9vAmxRb+aq3VffAKuv+CV5sRWpkA895O3yI5Ohc2cJ0aWsqUKnvd+TwRFqJF2+mcCRdnyGx7xgfTkR12TFTtY99IvO6OggXIX3dfTmXZKtDGNsw9ScGcYjrGRvAqiawOv3IgLjswR70NtKnyNLIqcVxbq/h7lKW+J1xMRueTJKviq624nE46n2/yePgSA="
       on:
