@@ -59,9 +59,6 @@ regex = "0.2.2"
 trimmer = "0.3.2"
 humantime = "1.0.0"
 
-[patch.crates-io]
-abstract-ns = { git="https://github.com/tailhook/abstract-ns", rev="d1a7147" }
-
 [profile.release]
 debug = true
 
