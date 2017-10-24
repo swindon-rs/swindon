@@ -125,6 +125,8 @@ pub fn populate_loop(handle: &Handle, cfg: &ConfigCell, verbose: bool)
     });
     let root = cfg.get();
 
+    warn!("Started with server_id {}", server_id);
+
     let mut listener_shutters = HashMap::new();
 
     // TODO(tailhook) do something when config updates
