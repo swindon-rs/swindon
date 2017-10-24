@@ -2,6 +2,15 @@
 Swindon Changes By Version
 ==========================
 
+.. _changelog-v0.7.4:
+
+v0.7.4
+======
+
+* Bugfix: due to a bug in abstract-ns domain names with numbers were not
+  resolved properly (in client protocols: replication, http destination...)
+* Added a log message on start (to find restarts in log easier)
+
 .. _changelog-v0.7.3:
 
 v0.7.3
