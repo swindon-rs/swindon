@@ -389,6 +389,45 @@ commands:
         - -m
         - messageboard
 
+  example-message-board2-two-nodes: !Supervise
+    description:
+      Run swindon and message board 2 example
+      employing two nodes of swindon with replication
+    prerequisites: [make]
+    children:
+      swindon1: !Command
+        container: xenial
+        work-dir: examples/message-board2
+        environ: { RUST_BACKTRACE: 1, RUST_LOG: "debug,tokio_core=warn" }
+        run:
+        - ../../target/debug/swindon
+        - --verbose
+        - --config=swindon1.yaml
+      swindon2: !Command
+        container: xenial
+        work-dir: examples/message-board2
+        environ: { RUST_BACKTRACE: 1, RUST_LOG: "debug,tokio_core=warn" }
+        run:
+        - ../../target/debug/swindon
+        - --verbose
+        - --config=swindon2.yaml
+      webpack: !Command
+        container: message-board2
+        work-dir: examples/message-board2
+        run:
+        - webpack
+        - --watch
+      board: !Command
+        container: message-board2
+        work-dir: examples/message-board2
+        environ:
+          LISTEN_FDS: 1
+        pass-tcp-socket: 127.0.0.1:8082
+        run:
+        - python3
+        - -m
+        - messageboard
+
   example-presence: !Supervise
     description: Run swindon and presence example
     prerequisites: [make]

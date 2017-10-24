@@ -1,0 +1,53 @@
+listen:
+- 127.0.0.3:8080
+
+debug-routing: true
+
+routing:
+  "*": chat
+  "*/css": public
+  "*/empty.gif": empty-gif
+  "*/js": public
+  "*/~~swindon-status": status
+
+handlers:
+
+  chat: !SwindonLattice
+
+    session-pool: chat
+    http-route: html
+    compatibility: v0.6.2
+
+    message-handlers:
+      "*": chat
+
+  empty-gif: !EmptyGif
+  status: !SelfStatus
+
+  public: !Static
+    mode: relative_to_domain_root
+    path: ./public
+    text-charset: utf-8
+
+  html: !SingleFile
+    path: ./public/index.html
+    content-type: "text/html; charset=utf-8"
+
+
+session-pools:
+  chat:
+    listen: [127.0.0.1:8091]
+    inactivity-handlers: [chat]
+
+
+http-destinations:
+  chat:
+    override-host-header: swindon.internal
+    addresses:
+    - 127.0.0.1:8082
+
+replication:
+  listen:
+  - 127.0.0.3:7878
+  peers:
+  - 127.0.0.2:7878
