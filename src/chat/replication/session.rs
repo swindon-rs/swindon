@@ -1,5 +1,4 @@
 use std::sync::Arc;
-use std::net::SocketAddr;
 use std::collections::HashMap;
 use std::time::{Instant, Duration};
 use tokio_core::reactor::Handle;
@@ -13,8 +12,10 @@ use ns_router::{Router};
 
 use intern::SessionPoolName;
 use runtime::{Runtime, ServerId};
-use config::{ListenSocket, Replication};
+use config::listen::Listen;
+use config::{Replication};
 use chat::processor::Processor;
+use slot;
 
 use super::{ReplAction, RemoteAction, IncomingChannel, OutgoingChannel};
 use super::action::Message;
@@ -24,7 +25,7 @@ use super::spawn::{listen, connect};
 pub struct ReplicationSession {
     pub remote_sender: RemoteSender,
     tx: IncomingChannel,
-    shutters: HashMap<SocketAddr, Sender<()>>,
+    listener_channel: slot::Sender<Listen>,
     reconnect_shutter: Option<Sender<()>>,
 }
 
@@ -62,7 +63,7 @@ pub struct RemotePool {
 
 impl ReplicationSession {
     pub fn new(processor: Processor, resolver: &Router, handle: &Handle,
-        server_id: &ServerId)
+        server_id: &ServerId, cfg: &Arc<Replication>)
         -> ReplicationSession
     {
         let (tx, rx) = unbounded();
@@ -79,54 +80,24 @@ impl ReplicationSession {
             .map(|_| debug!("rx stopped"))
             .map_err(|_| debug!("watcher error")));
 
+        let (listen_tx, listen_rx) = slot::channel();
+        listen(
+            resolver.subscribe_stream(listen_rx, 80),
+            tx.clone(), server_id, cfg, handle);
+
         ReplicationSession {
             tx: tx.clone(),
             remote_sender: RemoteSender { queue: tx },
-            shutters: HashMap::new(),
+            listener_channel: listen_tx,
             reconnect_shutter: None,
         }
     }
 
     pub fn update(&mut self, cfg: &Arc<Replication>,
-        handle: &Handle, runtime: &Arc<Runtime>)
+        handle: &Handle, _runtime: &Arc<Runtime>)
     {
-        let mut to_delete = Vec::new();
-        for (&addr, _) in &self.shutters {
-            let laddr = ListenSocket::Tcp(addr);
-            if cfg.listen.iter().find(|&x| x == &laddr).is_none() {
-                to_delete.push(addr);
-            }
-        }
-        for addr in to_delete {
-            if let Some(shutter) = self.shutters.remove(&addr) {
-                shutter.send(()).ok();
-            }
-        }
-        for addr in &cfg.listen {
-            match *addr {
-                ListenSocket::Tcp(addr)
-                if self.shutters.contains_key(&addr) => {
-                    // already listening
-                    continue;
-                }
-                ListenSocket::Tcp(addr) => {
-                    let (tx, rx) = oneshot();
-                    match listen(addr, self.tx.clone(),
-                        &runtime.server_id, &cfg, handle, rx)
-                    {
-                        Ok(()) => {
-                            self.shutters.insert(addr, tx);
-                        }
-                        Err(e) => {
-                            error!("Error listening {}: {}. \
-                                Will retry on next config reload",
-                                addr, e);
-                        }
-                    }
-                }
-            }
-        }
-
+        self.listener_channel.swap(cfg.listen.clone())
+            .map_err(|_| error!("Can't update replication listener")).ok();
         // stop reconnecting
         if let Some(tx) = self.reconnect_shutter.take() {
             tx.send(()).ok();
@@ -136,6 +107,7 @@ impl ReplicationSession {
         let s = cfg.clone();
         let tx = self.tx.clone();
 
+        println!("START INTERVAL");
         use futures::Sink; // conflicting with tx.send in RemotePool
         handle.spawn(Interval::new(Duration::new(1, 0), &handle)
             .expect("interval created")

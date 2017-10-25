@@ -1,9 +1,8 @@
-use std::net::SocketAddr;
 use std::sync::{Arc, RwLock};
 use std::collections::HashMap;
 
 use tokio_core::reactor::Handle;
-use futures::sync::oneshot::{channel as oneshot, Sender};
+use futures::sync::oneshot::{Sender};
 use futures::sync::mpsc::{unbounded as channel};
 
 use runtime::Runtime;
@@ -13,7 +12,9 @@ use chat::inactivity_handler;
 use chat::processor::{Processor};
 use chat::Shutdown;
 use chat::replication::RemoteSender;
-use config::{SessionPool, ListenSocket};
+use config::listen::Listen;
+use config::{SessionPool};
+use slot;
 
 
 #[derive(Clone)]
@@ -24,8 +25,7 @@ pub struct SessionPools {
 }
 
 struct Worker {
-    data: Arc<WorkerData>,
-    shutters: HashMap<SocketAddr, Sender<Shutdown>>,
+    listener_channel: slot::Sender<Listen>,
     inactivity_shutter: Sender<Shutdown>,
 }
 
@@ -54,78 +54,43 @@ impl SessionPools {
         for k in to_delete {
             if let Some(wrk) = pools.remove(&k) {
                 self.processor.destroy_pool(&k);
-                for (_, shutter) in wrk.shutters {
-                    shutter.send(Shutdown).ok();
-                }
+                drop(wrk.listener_channel);
                 wrk.inactivity_shutter.send(Shutdown).ok();
             }
         }
 
         // Create new pools
         for (name, settings) in cfg {
-            if pools.contains_key(name) {
+            if let Some(ref mut pool) = pools.get(name) {
+                pool.listener_channel.swap(settings.listen.clone())
+                    .map_err(|_| error!("Can't update addresses for {}",
+                                        name))
+                    .ok();
                 continue;
             }
-
             let (tx, rx) = channel();
             self.processor.create_pool(name, settings, tx);
             let in_shutter = inactivity_handler::run(
                 runtime, settings, handle, rx);
 
+            let (listen_tx, listen_rx) = slot::channel();
+            listen_tx.swap(settings.listen.clone()).unwrap();
+            let wdata = Arc::new(WorkerData {
+                name: name.clone(),
+                runtime: runtime.clone(),
+                settings: settings.clone(),
+                processor: self.processor.pool(name),
+                remote: self.remote_sender.pool(name),
+                handle: handle.clone(),
+            });
+            listen(
+                runtime.resolver.subscribe_stream(listen_rx, 80),
+                &wdata);
+
             pools.insert(name.clone(), Worker {
-                data: Arc::new(WorkerData {
-                    name: name.clone(),
-                    runtime: runtime.clone(),
-                    settings: settings.clone(),
-                    processor: self.processor.pool(name),
-                    remote: self.remote_sender.pool(name),
-                    handle: handle.clone(),
-                }),
-                shutters: HashMap::new(),
+                listener_channel: listen_tx,
                 inactivity_shutter: in_shutter,
             });
-        }
-
-        // listen sockets
-        for (name, settings) in cfg {
-            let worker = pools.get_mut(name).unwrap();
-
-            let mut to_delete = Vec::new();
-            for (&addr, _) in &worker.shutters {
-                let laddr = ListenSocket::Tcp(addr);
-                if settings.listen.iter().find(|&x| x == &laddr).is_none() {
-                    to_delete.push(addr);
-                }
-            }
-            for addr in to_delete {
-                if let Some(shutter) = worker.shutters.remove(&addr) {
-                    shutter.send(Shutdown).ok();
-                }
-            }
-
-            for addr in &settings.listen {
-                match *addr {
-                    ListenSocket::Tcp(addr)
-                    if worker.shutters.contains_key(&addr) => {
-                        // already listening
-                        continue;
-                    }
-                    ListenSocket::Tcp(addr) => {
-                        let (tx, rx) = oneshot();
-                        // TODO(tailhook) wait and retry on error
-                        match listen(addr, &worker.data, rx) {
-                            Ok(()) => {
-                                worker.shutters.insert(addr, tx);
-                            }
-                            Err(e) => {
-                                error!("Error listening {}: {}. \
-                                    Will retry on next config reload",
-                                    addr, e);
-                            }
-                        }
-                    }
-                }
-            }
         }
     }
 }

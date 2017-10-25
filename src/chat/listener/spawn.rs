@@ -1,20 +1,16 @@
-use std::io;
 use std::sync::Arc;
-use std::net::SocketAddr;
 
 use futures::stream::Stream;
 use tk_http;
 use tk_http::server::Proto;
-use tk_listen::ListenExt;
+use tk_listen::{BindMany, ListenExt};
 use futures::future::{Future};
-use tokio_core::net::TcpListener;
 use tokio_core::reactor::{Handle};
-use futures::sync::oneshot::{Receiver};
+use ns_router::future::AddrStream;
 
 use intern::SessionPoolName;
 use config::SessionPool;
 use runtime::Runtime;
-use chat::Shutdown;
 use chat::listener::codec::Handler;
 use chat::processor::{ProcessorPool};
 use chat::replication::RemotePool;
@@ -30,15 +26,12 @@ pub struct WorkerData {
     pub handle: Handle, // Does it belong here?
 }
 
-pub fn listen(addr: SocketAddr, worker_data: &Arc<WorkerData>,
-    shutter: Receiver<Shutdown>)
-    -> Result<(), io::Error>
-{
+pub fn listen(addr_stream: AddrStream, worker_data: &Arc<WorkerData>) {
     let w1 = worker_data.clone();
     let w2 = worker_data.clone();
     let runtime = worker_data.runtime.clone();
     let h1 = runtime.handle.clone();
-    let listener = TcpListener::bind(&addr, &worker_data.handle)?;
+
     // TODO(tailhook) how to update?
     let hcfg = tk_http::server::Config::new()
         .inflight_request_limit(worker_data.settings.pipeline_depth)
@@ -47,16 +40,14 @@ pub fn listen(addr: SocketAddr, worker_data: &Arc<WorkerData>,
         .done();
 
     worker_data.handle.spawn(
-        listener.incoming()
+        BindMany::new(addr_stream.map(|addr| addr.addresses_at(0)), &h1)
         .sleep_on_error(w1.settings.listen_error_timeout, &runtime.handle)
         .map(move |(socket, saddr)| {
              Proto::new(socket, &hcfg, Handler::new(saddr, w2.clone()), &h1)
              .map_err(|e| debug!("Chat backend protocol error: {}", e))
         })
         .listen(worker_data.settings.max_connections)
-        .select(shutter.then(move |_| Ok(())))
-        .map(move |(_, _)| info!("Listener {} exited", addr))
-        .map_err(move |(_, _)| info!("Listener {} exited", addr))
+        .map(move |()| error!("Replication listener exited"))
+        .map_err(move |()| error!("Replication listener errored"))
     );
-    Ok(())
 }

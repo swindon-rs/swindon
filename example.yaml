@@ -1,6 +1,7 @@
 listen:
 - 127.0.0.1:8080
-- 127.0.0.1:8000
+- !Tcp 127.0.0.1:8000
+- 0.0.0.0:8000
 
 debug-routing: true
 debug-logging: true

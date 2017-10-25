@@ -14,6 +14,7 @@ pub struct Debug(Option<Box<DebugInfo>>);
 struct DebugInfo {
     route: Option<Route>,
     fs_path: Option<PathBuf>,
+    #[allow(dead_code)]
     config: Arc<Config>,
     request_id: RequestId,
     allow: String,

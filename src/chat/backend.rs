@@ -32,6 +32,7 @@ enum AuthState {
     Init(String, AuthData),
     Wait,
     Headers(Status),
+    #[allow(dead_code)]
     Done(Response),
     Void,
 }

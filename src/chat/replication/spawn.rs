@@ -1,11 +1,9 @@
 use std::io;
-use std::net::SocketAddr;
 use std::time::Instant;
 use std::sync::Arc;
 
 use futures::future::{FutureResult, Either, ok, err};
 use futures::sync::mpsc::unbounded;
-use futures::sync::oneshot::Receiver;
 use futures::{Future, Stream};
 use ns_router::{Router};
 use serde_json;
@@ -13,9 +11,10 @@ use tk_http::server::{Proto, Config};
 use tk_http::websocket::client::HandshakeProto;
 use tk_http::websocket::{Config as WsConfig, Loop};
 use tk_http::websocket::{Dispatcher, Frame, Error};
-use tk_listen::ListenExt;
-use tokio_core::net::{TcpListener, TcpStream};
+use tk_listen::{BindMany, ListenExt};
+use tokio_core::net::{TcpStream};
 use tokio_core::reactor::{Timeout, Handle};
+use ns_router::future::AddrStream;
 
 use config::Replication;
 use runtime::ServerId;
@@ -25,18 +24,16 @@ use super::{IncomingChannel, ReplAction};
 use chat::replication::{CONNECTIONS, FRAMES_SENT, FRAMES_RECEIVED};
 
 
-pub fn listen(addr: SocketAddr, sender: IncomingChannel,
-    server_id: &ServerId, settings: &Arc<Replication>,
-    handle: &Handle, shutter: Receiver<()>)
-    -> Result<(), io::Error>
+pub fn listen(addr_stream: AddrStream, sender: IncomingChannel,
+    server_id: &ServerId, settings: &Arc<Replication>, handle: &Handle)
 {
     // TODO: setup proper configuration;
     let hcfg = Config::new().done();
     let h1 = handle.clone();
     let srv_id = server_id.clone();
 
-    let listener = TcpListener::bind(&addr, &handle)?;
-    handle.spawn(listener.incoming()
+    handle.spawn(
+        BindMany::new(addr_stream.map(|addr| addr.addresses_at(0)), &h1)
         .sleep_on_error(settings.listen_error_timeout, &handle)
         .map(move |(socket, _)| {
             let disp = Incoming::new(sender.clone(), srv_id, &h1);
@@ -44,11 +41,9 @@ pub fn listen(addr: SocketAddr, sender: IncomingChannel,
             .map_err(|e| debug!("Http protocol error: {}", e))
         })
         .listen(settings.max_connections)
-        .select(shutter.map_err(|_| unreachable!()))
-        .map(move |(_, _)| info!("Listener {} exited", addr))
-        .map_err(move |(_, _)| info!("Listener {} exited", addr))
+        .map(move |()| error!("Replication listener exited"))
+        .map_err(move |()| error!("Replication listener exited"))
     );
-    Ok(())
 }
 
 pub fn connect(peer: &str, sender: IncomingChannel,

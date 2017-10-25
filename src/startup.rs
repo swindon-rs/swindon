@@ -1,50 +1,45 @@
-use std::collections::HashMap;
-use std::io;
-use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Duration;
 
 use abstract_ns::HostResolve;
 use futures::Stream;
 use futures::future::{Future};
-use futures::sync::oneshot::{channel as oneshot, Sender, Receiver};
 use futures_cpupool;
 use ns_router::{self, SubscribeExt};
+use ns_router::future::AddrStream;
 use ns_std_threaded;
 use self_meter_http::Meter;
 use tk_http::server::Proto;
 use tk_http;
-use tk_listen::ListenExt;
-use tokio_core::net::TcpListener;
+use tk_listen::{BindMany, ListenExt};
 use tokio_core::reactor::{Handle};
 
-use config::{ListenSocket, ConfigCell};
+use config::listen::Listen;
+use config::{ConfigCell};
 use incoming::Router;
 use chat;
 use runtime::Runtime;
 use http_pools::{HttpPools};
 use handlers::files::{DiskPools};
 use request_id;
+use slot;
 
 
 pub struct State {
     http_pools: HttpPools,
     session_pools: chat::SessionPools,
     disk_pools: DiskPools,
-    ns: ns_router::Router,
-    listener_shutters: HashMap<SocketAddr, Sender<()>>,
+    listener_channel: slot::Sender<Listen>,
     replication_session: chat::ReplicationSession,
     runtime: Arc<Runtime>,
 }
 
-pub fn spawn_listener(addr: SocketAddr, handle: &Handle,
-    runtime: &Arc<Runtime>, shutter: Receiver<()>)
-    -> Result<(), io::Error>
+pub fn spawn_listener(addr_stream: AddrStream, handle: &Handle,
+    runtime: &Arc<Runtime>, verbose: bool)
 {
     let root = runtime.config.get();
     let r1 = runtime.clone();
     let r2 = runtime.clone();
-    let listener = TcpListener::bind(&addr, &handle)?;
     // TODO(tailhook) how to update?
     let hcfg = tk_http::server::Config::new()
         .inflight_request_limit(root.pipeline_depth)
@@ -59,9 +54,16 @@ pub fn spawn_listener(addr: SocketAddr, handle: &Handle,
         .output_body_whole_timeout(root.output_body_whole_timeout)
         .done();
     let h1 = handle.clone();
-
     handle.spawn(
-        listener.incoming()
+        BindMany::new(addr_stream.map(move |addr| {
+                if verbose {
+                    println!("Listening at {}",
+                        addr.addresses_at(0)
+                            .map(|x| x.to_string())
+                            .collect::<Vec<_>>().join(", "));
+                }
+                addr.addresses_at(0)
+            }), handle)
         .sleep_on_error(r1.config.get().listen_error_timeout, &r1.handle)
         .map(move |(socket, saddr)| {
              Proto::new(socket, &hcfg,
@@ -69,11 +71,9 @@ pub fn spawn_listener(addr: SocketAddr, handle: &Handle,
              .map_err(|e| debug!("Http protocol error: {}", e))
         })
         .listen(root.max_connections)
-        .select(shutter.map_err(|_| unreachable!()))
-        .map(move |(_, _)| info!("Listener {} exited", addr))
-        .map_err(move |(_, _)| info!("Listener {} exited", addr))
+        .map(move |()| panic!("Main listener exited"))
+        .map_err(move |()| panic!("Main listener errored"))
     );
-    Ok(())
 }
 
 pub fn populate_loop(handle: &Handle, cfg: &ConfigCell, verbose: bool)
@@ -110,7 +110,8 @@ pub fn populate_loop(handle: &Handle, cfg: &ConfigCell, verbose: bool)
     let http_pools = HttpPools::new();
     let processor = chat::Processor::new();
     let mut replication_session = chat::ReplicationSession::new(
-        processor.clone(), &resolver, handle, &server_id);
+        processor.clone(), &resolver, handle, &server_id,
+        &cfg.get().replication);
     let session_pools = chat::SessionPools::new(
         processor, replication_session.remote_sender.clone());
     let disk_pools = DiskPools::new(&meter);
@@ -122,45 +123,28 @@ pub fn populate_loop(handle: &Handle, cfg: &ConfigCell, verbose: bool)
         disk_pools: disk_pools.clone(),
         meter: meter,
         server_id: server_id,
+        resolver: resolver.clone(),
     });
     let root = cfg.get();
 
     warn!("Started with server_id {}", server_id);
 
-    let mut listener_shutters = HashMap::new();
+    let (listen_tx, listen_rx) = slot::channel();
+    listen_tx.swap(root.listen.clone()).unwrap();
 
-    // TODO(tailhook) do something when config updates
-    for sock in &root.listen {
-        match sock {
-            &ListenSocket::Tcp(addr) => {
-                if verbose {
-                    println!("Listening at {}", addr);
-                }
-                let (tx, rx) = oneshot();
-                // TODO(tailhook) wait and retry on error
-                match spawn_listener(addr, handle, &runtime, rx) {
-                    Ok(()) => {
-                        listener_shutters.insert(addr, tx);
-                    }
-                    Err(e) => {
-                        error!("Error listening {}: {}. Will retry on next \
-                                configuration reload", addr, e);
-                    }
-                }
-            }
-        }
-    }
+    spawn_listener(
+        resolver.subscribe_stream(listen_rx, 80),
+        handle, &runtime, verbose);
 
     disk_pools.update(&root.disk_pools);
     http_pools.update(&root.http_destinations, &resolver, handle);
     session_pools.update(&root.session_pools, handle, &runtime);
-    replication_session.update(&root.replication, handle, &runtime);
+    replication_session.update(&cfg.get().replication, handle, &runtime);
     State {
-        ns: resolver,
         http_pools: http_pools,
         session_pools: session_pools,
         replication_session: replication_session,
-        listener_shutters: listener_shutters,
+        listener_channel: listen_tx,
         runtime: runtime,
         disk_pools: disk_pools,
     }
@@ -168,9 +152,11 @@ pub fn populate_loop(handle: &Handle, cfg: &ConfigCell, verbose: bool)
 
 #[allow(dead_code)]
 pub fn update_loop(state: &mut State, cfg: &ConfigCell, handle: &Handle) {
-    // TODO(tailhook) update listening sockets
+    state.listener_channel.swap(cfg.get().listen.clone())
+        .map_err(|_| error!("Can't update listening sockets")).ok();
     state.disk_pools.update(&cfg.get().disk_pools);
-    state.http_pools.update(&cfg.get().http_destinations, &state.ns, handle);
+    state.http_pools.update(&cfg.get().http_destinations,
+        &state.runtime.resolver, handle);
     state.session_pools.update(&cfg.get().session_pools,
         handle, &state.runtime);
     state.replication_session.update(&cfg.get().replication,

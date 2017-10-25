@@ -41,6 +41,7 @@ extern crate tokio_core;
 extern crate tokio_io;
 extern crate trimmer;
 extern crate typenum;
+extern crate void;
 mod authorizers;
 mod base64;
 mod chat;
@@ -57,6 +58,7 @@ mod proxy;
 mod request_id;
 mod routing;
 mod runtime;
+mod slot;
 mod startup;
 mod template;
 

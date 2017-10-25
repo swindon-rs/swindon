@@ -20,6 +20,7 @@ enum State {
     Headers(HalfReq),
     Sent {
         /// Mostly to resend the request
+        #[allow(dead_code)]
         request: RepReq,
         response: oneshot::Receiver<Response>,
     },

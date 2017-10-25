@@ -9,7 +9,7 @@ use quire::validate::{Structure, Sequence, Mapping, Scalar, Numeric};
 use intern::{HandlerName, Upstream, SessionPoolName, DiskPoolName};
 use intern::{LdapUpstream, Network, Authorizer as AuthorizerName};
 use intern::{LogFormatName};
-use config::listen::{self, ListenSocket};
+use config::listen::{self, Listen};
 use config::routing::{self, HostPath, RouteDef};
 use config::handlers::{self, Handler};
 use config::authorizers::{self, Authorizer};
@@ -40,7 +40,7 @@ pub struct Mixin {
 
 #[derive(Deserialize, PartialEq, Eq, Debug)]
 pub struct ConfigSource {
-    pub listen: Vec<ListenSocket>,
+    pub listen: Listen,
     pub max_connections: usize,
     pub pipeline_depth: usize,
     #[serde(with="::quire::duration")]
@@ -89,7 +89,7 @@ pub struct ConfigSource {
 
 #[derive(PartialEq, Eq, Debug)]
 pub struct ConfigData {
-    pub listen: Vec<ListenSocket>,
+    pub listen: Listen,
     pub max_connections: usize,
     pub pipeline_depth: usize,
     pub listen_error_timeout: Duration,

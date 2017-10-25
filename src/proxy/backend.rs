@@ -13,6 +13,7 @@ enum State {
     Init(RepReq),
     Wait,
     Headers(HalfResp),
+    #[allow(dead_code)]
     Done(Response),
     Void,
 }

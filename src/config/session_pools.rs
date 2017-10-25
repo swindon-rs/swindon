@@ -1,12 +1,12 @@
 use std::time::Duration;
 use quire::validate::{Structure, Sequence, Scalar, Numeric};
 
-use super::listen::{self, ListenSocket};
+use super::listen::{self, Listen};
 use super::http;
 
 #[derive(Deserialize, Debug, PartialEq, Eq, Clone)]
 pub struct SessionPool {
-    pub listen: Vec<ListenSocket>,
+    pub listen: Listen,
     pub max_connections: usize,
     pub pipeline_depth: usize,
     #[serde(with="::quire::duration")]

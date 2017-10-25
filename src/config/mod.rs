@@ -8,13 +8,13 @@ mod read;
 mod root;
 mod version;
 // sections
-mod listen;
 mod replication;
 mod session_pools;
 pub mod authorizers;
 pub mod handlers;
 pub mod http_destinations;
 pub mod ldap;
+pub mod listen;
 pub mod log;
 pub mod networks;
 pub mod routing;

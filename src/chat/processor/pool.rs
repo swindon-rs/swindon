@@ -49,7 +49,6 @@ pub struct Sessions {
 }
 
 pub struct Pool {
-    name: SessionPoolName,
     channel: Sender<PoolMessage>,
     sessions: Sessions,
 
@@ -95,12 +94,11 @@ impl Sessions {
 
 impl Pool {
 
-    pub fn new(name: SessionPoolName, cfg: Arc<config::SessionPool>,
+    pub fn new(_name: SessionPoolName, cfg: Arc<config::SessionPool>,
         channel: Sender<PoolMessage>)
         -> Pool
     {
         Pool {
-            name: name,
             channel: channel,
             sessions: Sessions::new(),
             pending_connections: HashMap::new(),
@@ -843,6 +841,7 @@ mod test {
 
     use string_intern::{Symbol, Validator};
     use config;
+    use config::listen::Listen;
     use chat::{Cid, ConnectionSender};
 
     use super::Pool;
@@ -854,9 +853,9 @@ mod test {
         let (tx, rx) = channel();
         let pool = Pool::new(SessionPoolName::from("test_pool"),
             Arc::new(config::SessionPool {
-                listen: vec![
-                    config::ListenSocket::Tcp(
-                    "127.0.0.1:65535".parse().unwrap())],
+                listen: Listen::new(vec![
+                    config::ListenSocket::Tcp(String::from("127.0.0.1:65535"))
+                ]),
                 inactivity_handlers: Vec::new(),
                 new_connection_idle_timeout: Duration::from_secs(60),
                 client_min_idle_timeout: Duration::from_secs(60),

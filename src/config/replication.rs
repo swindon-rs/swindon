@@ -1,12 +1,12 @@
 use std::time::Duration;
 use quire::validate::{Structure, Sequence, Scalar, Numeric};
 
-use super::listen::{self, ListenSocket};
+use config::listen::{self, Listen};
 
 
 #[derive(Debug, Deserialize, PartialEq, Eq)]
 pub struct Replication {
-    pub listen: Vec<ListenSocket>,
+    pub listen: Listen,
     pub peers: Vec<String>,
     pub max_connections: usize,
     #[serde(with="::quire::duration")]

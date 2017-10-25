@@ -40,6 +40,7 @@ extern crate tokio_core;
 extern crate tokio_io;
 extern crate trimmer;
 extern crate typenum;
+extern crate void;
 
 mod authorizers;
 mod base64;
@@ -58,6 +59,7 @@ mod request_id;
 mod routing;
 mod runtime;
 mod startup;
+mod slot;
 mod template;
 
 use std::process::exit;
