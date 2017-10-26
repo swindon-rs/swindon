@@ -78,8 +78,8 @@ fn _generate_config(buf: &mut String, port: u16, routes: &[Route],
     writeln!(buf, "routing:")?;
 
     // Default status routes
-    writeln!(buf, "  localhost/~~swindon-status/: status")?;
-    writeln!(buf, "  devd.io/~~swindon-status/: status")?;
+    writeln!(buf, "  localhost/~~swindon-status: status")?;
+    writeln!(buf, "  devd.io/~~swindon-status: status")?;
 
     for (idx, route) in routes.iter().enumerate() {
         match *route {
@@ -122,12 +122,12 @@ fn _generate_config(buf: &mut String, port: u16, routes: &[Route],
             }
         }
     }
-    writeln!(buf, "")?;
-    writeln!(buf, "http-destinations:")?;
-
-    // default status destinations
+    // default status handler
     writeln!(buf, "")?;
     writeln!(buf, "  status: !SelfStatus")?;
+
+    writeln!(buf, "")?;
+    writeln!(buf, "http-destinations:")?;
 
     for (idx, route) in routes.iter().enumerate() {
         match *route {
