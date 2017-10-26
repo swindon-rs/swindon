@@ -110,7 +110,6 @@ impl ReplicationSession {
         let s = cfg.clone();
         let tx = self.tx.clone();
 
-        println!("START INTERVAL");
         use futures::Sink; // conflicting with tx.send in RemotePool
         handle.spawn(Interval::new(Duration::new(1, 0), &handle)
             .expect("interval created")
