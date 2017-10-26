@@ -2,6 +2,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use abstract_ns::HostResolve;
+use async_slot as slot;
 use futures::Stream;
 use futures::future::{Future};
 use futures_cpupool;
@@ -13,6 +14,7 @@ use tk_http::server::Proto;
 use tk_http;
 use tk_listen::{BindMany, ListenExt};
 use tokio_core::reactor::{Handle};
+use void::Void;
 
 use config::listen::Listen;
 use config::{ConfigCell};
@@ -22,7 +24,6 @@ use runtime::Runtime;
 use http_pools::{HttpPools};
 use handlers::files::{DiskPools};
 use request_id;
-use slot;
 
 
 pub struct State {
@@ -133,7 +134,8 @@ pub fn populate_loop(handle: &Handle, cfg: &ConfigCell, verbose: bool)
     listen_tx.swap(root.listen.clone()).unwrap();
 
     spawn_listener(
-        resolver.subscribe_stream(listen_rx, 80),
+        resolver.subscribe_stream(
+            listen_rx.map_err(|()| -> Void { unreachable!() }), 80),
         handle, &runtime, verbose);
 
     disk_pools.update(&root.disk_pools);

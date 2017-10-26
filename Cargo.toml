@@ -59,6 +59,7 @@ regex = "0.2.2"
 trimmer = "0.3.2"
 humantime = "1.0.0"
 void = "1.0.0"
+async-slot = "0.1.0"
 
 [profile.release]
 debug = true

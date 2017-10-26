@@ -1,6 +1,8 @@
 use std::sync::Arc;
 use std::collections::HashMap;
 use std::time::{Instant, Duration};
+
+use async_slot as slot;
 use tokio_core::reactor::Handle;
 use tokio_core::reactor::Interval;
 use futures::{self, Future, Stream, Async, AsyncSink};
@@ -9,13 +11,13 @@ use futures::sync::oneshot::{channel as oneshot, Sender};
 use tk_http::websocket::Packet;
 use serde_json::to_string as json_encode;
 use ns_router::{Router};
+use void::Void;
 
 use intern::SessionPoolName;
 use runtime::{Runtime, ServerId};
 use config::listen::Listen;
 use config::{Replication};
 use chat::processor::Processor;
-use slot;
 
 use super::{ReplAction, RemoteAction, IncomingChannel, OutgoingChannel};
 use super::action::Message;
@@ -82,7 +84,8 @@ impl ReplicationSession {
 
         let (listen_tx, listen_rx) = slot::channel();
         listen(
-            resolver.subscribe_stream(listen_rx, 80),
+            resolver.subscribe_stream(
+                listen_rx.map_err(|()| -> Void { unreachable!() }), 80),
             tx.clone(), server_id, cfg, handle);
 
         ReplicationSession {

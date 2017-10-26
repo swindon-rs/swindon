@@ -1,9 +1,11 @@
 use std::sync::{Arc, RwLock};
 use std::collections::HashMap;
 
-use tokio_core::reactor::Handle;
+use async_slot as slot;
+use futures::Stream;
 use futures::sync::oneshot::{Sender};
 use futures::sync::mpsc::{unbounded as channel};
+use tokio_core::reactor::Handle;
 
 use runtime::Runtime;
 use intern::SessionPoolName;
@@ -14,7 +16,7 @@ use chat::Shutdown;
 use chat::replication::RemoteSender;
 use config::listen::Listen;
 use config::{SessionPool};
-use slot;
+use void::Void;
 
 
 #[derive(Clone)]
@@ -84,7 +86,8 @@ impl SessionPools {
                 handle: handle.clone(),
             });
             listen(
-                runtime.resolver.subscribe_stream(listen_rx, 80),
+                runtime.resolver.subscribe_stream(
+                    listen_rx.map_err(|()| -> Void { unreachable!() }), 80),
                 &wdata);
 
             pools.insert(name.clone(), Worker {

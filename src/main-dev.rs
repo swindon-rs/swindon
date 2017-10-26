@@ -7,6 +7,7 @@
 #[macro_use] extern crate serde_json;
 extern crate abstract_ns;
 extern crate argparse;
+extern crate async_slot;
 extern crate blake2;
 extern crate byteorder;
 extern crate digest;
@@ -59,7 +60,6 @@ mod request_id;
 mod routing;
 mod runtime;
 mod startup;
-mod slot;
 mod template;
 
 use std::process::exit;
