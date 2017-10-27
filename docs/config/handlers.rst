@@ -101,7 +101,9 @@ Common Settings
 
    (optional) Extra HTTP headers to be added to response.
 
-``!SingleFile`` settings:
+
+!SingleFile settings
+````````````````````
 
 .. opt:: path
 
@@ -111,6 +113,7 @@ Common Settings
 
    (optional) Set Content type for served file. By default mime type is guessed
    by extension
+
 
 !Static Settings
 ````````````````
@@ -171,6 +174,7 @@ Common Settings
 
    (default ``100000``) Maximum number of files to show in generated index.
    This is required to prevent DoS attacks on listing large directories.
+
 
 .. _versioned-static:
 
