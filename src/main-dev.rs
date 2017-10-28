@@ -10,6 +10,7 @@ extern crate argparse;
 extern crate async_slot;
 extern crate blake2;
 extern crate byteorder;
+extern crate crossbeam;
 extern crate digest;
 extern crate digest_writer;
 extern crate env_logger;

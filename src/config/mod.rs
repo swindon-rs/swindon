@@ -1,5 +1,5 @@
 use std::fs::{metadata, Metadata};
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc};
 use std::path::{PathBuf, Path};
 
 mod fingerprint;
@@ -40,6 +40,7 @@ pub use self::http::Destination;
 pub use self::redirect::BaseRedirect;
 pub use self::replication::Replication;
 
+use crossbeam::sync::ArcCell;
 use quire::{parse_string, Options};
 
 pub struct Configurator {
@@ -55,7 +56,7 @@ pub struct Config {
 
 #[derive(Clone)]
 // TODO(tailhook) replace into ArcCell
-pub struct ConfigCell(Arc<RwLock<Arc<Config>>>);
+pub struct ConfigCell(Arc<ArcCell<Config>>);
 
 impl ::std::ops::Deref for Config {
     type Target = ConfigData;
@@ -66,7 +67,7 @@ impl ::std::ops::Deref for Config {
 
 impl ConfigCell {
     fn new(cfg: Config) -> ConfigCell {
-        ConfigCell(Arc::new(RwLock::new(Arc::new(cfg))))
+        ConfigCell(Arc::new(ArcCell::new(Arc::new(cfg))))
     }
     #[allow(dead_code)]
     pub fn from_string(data: &str, name: &str) -> Result<ConfigCell, Error> {
@@ -80,14 +81,10 @@ impl ConfigCell {
         }))
     }
     pub fn get(&self) -> Arc<Config> {
-        self.0.read()
-            .expect("config exists")
-            .clone()
+        self.0.get()
     }
     pub fn fingerprint(&self) -> String {
-        format!("{:x}", self.0.read()
-            .expect("config cell is valid")
-            .fingerprint)
+        format!("{:x}", self.0.get().fingerprint)
     }
 }
 
@@ -134,13 +131,10 @@ impl Configurator {
         if **self.config().get() != new_cfg {
             let print = fingerprint::calc(&new_meta)?;
             self.file_metadata = new_meta;
-            *self.cell.0.write()
-                // we overwrite it so poisoned config is fine
-                .unwrap_or_else(|p| p.into_inner())
-                = Arc::new(Config {
-                    data: new_cfg,
-                    fingerprint: print,
-                });
+            self.cell.0.set(Arc::new(Config {
+                data: new_cfg,
+                fingerprint: print,
+            }));
             Ok(true)
         } else {
             Ok(false)
