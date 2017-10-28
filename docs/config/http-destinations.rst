@@ -125,3 +125,8 @@ Options
 
    * for ``!SwindonChat`` handler -- a combination of server id, connection id
      and request id is used.
+
+.. opt:: secure
+
+   (default is ``false``) Whether to use HTTPS for client instead of plain
+   HTTP.
