@@ -125,10 +125,10 @@ pub fn main() {
     };
     let cfg = configurator.config();
 
-    if verbose {
-        println!("Config fingerprint: {}", cfg.fingerprint());
-    }
     if check {
+        if verbose {
+            println!("Config fingerprint: {}", cfg.fingerprint());
+        }
         exit(0);
     }
 

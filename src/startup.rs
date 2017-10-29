@@ -128,7 +128,8 @@ pub fn populate_loop(handle: &Handle, cfg: &ConfigCell, verbose: bool)
     });
     let root = cfg.get();
 
-    warn!("Started with server_id {}", server_id);
+    warn!("Started with server_id {}, config {}",
+        server_id, cfg.fingerprint());
 
     let (listen_tx, listen_rx) = slot::channel();
     listen_tx.swap(root.listen.clone()).unwrap();
