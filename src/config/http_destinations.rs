@@ -2,6 +2,7 @@ use std::time::Duration;
 
 use quire::validate::{Structure, Scalar, Enum, Numeric, Nothing};
 use quire::validate::{Sequence};
+use intern::TlsClientName;
 
 #[derive(Deserialize, Debug, PartialEq, Eq)]
 #[allow(non_camel_case_types)]
@@ -11,7 +12,7 @@ pub enum LoadBalancing {
 
 #[derive(Deserialize, Debug, PartialEq, Eq)]
 pub struct Destination {
-    pub secure: bool,
+    pub tls: Option<TlsClientName>,
     pub load_balancing: LoadBalancing,
     pub queue_size_for_503: usize,
     pub backend_connections_per_ip_port: u32,
@@ -29,7 +30,7 @@ pub struct Destination {
 
 pub fn validator<'x>() -> Structure<'x> {
     Structure::new()
-    .member("secure", Scalar::new().default(false))
+    .member("tls", Scalar::new().optional())
     .member("load_balancing", Enum::new()
         .option("queue", Nothing)
         .allow_plain()

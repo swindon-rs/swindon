@@ -229,6 +229,9 @@ pub fn read_config<P: AsRef<Path>>(filename: P)
         mix_in(&incl_path, prefix,
             &mut src.log_formats, mixin.log_formats, "log-format")?;
         mix_in(&incl_path, prefix,
+            &mut src.tls_client_settings, mixin.tls_client_settings,
+                "tls-client-settings")?;
+        mix_in(&incl_path, prefix,
             &mut src.disk_pools, mixin.disk_pools, "disk-pools")?;
     }
     return Ok((postprocess_config(src)?, files));
@@ -281,6 +284,7 @@ pub fn postprocess_config(mut src: ConfigSource)
         ldap_destinations: src.ldap_destinations,
         networks: src.networks,
         log_formats: src.log_formats,
+        tls_client_settings: src.tls_client_settings,
         disk_pools: src.disk_pools,
 
         replication: src.replication,

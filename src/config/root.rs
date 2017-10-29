@@ -6,20 +6,21 @@ use std::path::PathBuf;
 
 use quire::validate::{Structure, Sequence, Mapping, Scalar, Numeric};
 
-use intern::{HandlerName, Upstream, SessionPoolName, DiskPoolName};
-use intern::{LdapUpstream, Network, Authorizer as AuthorizerName};
-use intern::{LogFormatName};
-use config::listen::{self, Listen};
-use config::routing::{self, HostPath, RouteDef};
-use config::handlers::{self, Handler};
 use config::authorizers::{self, Authorizer};
-use config::session_pools::{self, SessionPool};
+use config::disk::{self, Disk};
+use config::handlers::{self, Handler};
 use config::http_destinations::{self, Destination};
 use config::ldap;
+use config::listen::{self, Listen};
 use config::log;
 use config::networks;
-use config::disk::{self, Disk};
 use config::replication::{self, Replication};
+use config::routing::{self, HostPath, RouteDef};
+use config::session_pools::{self, SessionPool};
+use config::tls;
+use intern::{HandlerName, Upstream, SessionPoolName, DiskPoolName};
+use intern::{LdapUpstream, Network, Authorizer as AuthorizerName};
+use intern::{LogFormatName, TlsClientName};
 use routing::RoutingTable;
 
 
@@ -32,6 +33,7 @@ pub struct Mixin {
     pub ldap_destinations: HashMap<LdapUpstream, ldap::Destination>,
     pub networks: HashMap<Network, networks::NetworkList>,
     pub log_formats: HashMap<LogFormatName, log::Format>,
+    pub tls_client_settings: HashMap<TlsClientName, tls::ClientSettings>,
     /// Note: "default" disk pool is always created, the only thing you can
     /// do is to update it's pool size, It's pool size can't be less than
     /// one, however.
@@ -69,6 +71,7 @@ pub struct ConfigSource {
     pub ldap_destinations: HashMap<LdapUpstream, ldap::Destination>,
     pub networks: HashMap<Network, networks::NetworkList>,
     pub log_formats: HashMap<LogFormatName, log::Format>,
+    pub tls_client_settings: HashMap<TlsClientName, tls::ClientSettings>,
     /// Note: "default" disk pool is always created, the only thing you can
     /// do is to update it's pool size, It's pool size can't be less than
     /// one, however.
@@ -110,6 +113,7 @@ pub struct ConfigData {
     pub ldap_destinations: HashMap<LdapUpstream, ldap::Destination>,
     pub networks: HashMap<Network, networks::NetworkList>,
     pub log_formats: HashMap<LogFormatName, log::Format>,
+    pub tls_client_settings: HashMap<TlsClientName, tls::ClientSettings>,
     pub disk_pools: HashMap<DiskPoolName, Disk>,
 
     pub replication: Arc<Replication>,
@@ -140,6 +144,8 @@ impl<'a> MixinSections for Structure<'a> {
         .member("networks", Mapping::new(Scalar::new(), networks::validator()))
         .member("log_formats", Mapping::new(Scalar::new(),
             log::format_validator()))
+        .member("tls_client_settings", Mapping::new(Scalar::new(),
+            tls::client_validator()))
         .member("disk_pools", Mapping::new(Scalar::new(), disk::validator()))
     }
 }

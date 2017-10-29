@@ -17,6 +17,7 @@ mod private {
     pub struct AuthorizerValidator;
     pub struct NetworkValidator;
     pub struct LogFormatValidator;
+    pub struct TlsClientValidator;
 }
 use self::private::*;
 
@@ -37,6 +38,7 @@ pub type LdapUpstream = Symbol<LdapValidator>;
 pub type Authorizer = Symbol<AuthorizerValidator>;
 pub type Network = Symbol<NetworkValidator>;
 pub type LogFormatName = Symbol<LogFormatValidator>;
+pub type TlsClientName = Symbol<TlsClientValidator>;
 
 quick_error! {
     #[derive(Debug)]
@@ -94,6 +96,19 @@ impl Validator for UpstreamValidator {
     }
     fn display(value: &Symbol<Self>, fmt: &mut fmt::Formatter) -> fmt::Result {
         write!(fmt, "upstream{:?}", value.as_ref())
+    }
+}
+
+impl Validator for TlsClientValidator {
+    type Err = BadIdent;
+    fn validate_symbol(val: &str) -> Result<(), Self::Err> {
+        if !valid_ident(val) {
+            return Err(BadIdent::InvalidChar);
+        }
+        Ok(())
+    }
+    fn display(value: &Symbol<Self>, fmt: &mut fmt::Formatter) -> fmt::Result {
+        write!(fmt, "tlsc{:?}", value.as_ref())
     }
 }
 
