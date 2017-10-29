@@ -62,16 +62,16 @@ mod routing;
 mod runtime;
 mod startup;
 mod template;
+mod updater;
 
 use std::io::{self, Write};
-use std::time::Duration;
 use std::env;
 use std::process::exit;
 
 use futures::stream::Stream;
 use argparse::{ArgumentParser, Parse, StoreTrue, Print};
 use tokio_core::reactor::Core;
-use tokio_core::reactor::Interval;
+
 
 fn init_logging() {
     let format = |record: &log::LogRecord| {
@@ -116,7 +116,7 @@ pub fn main() {
         ap.parse_args_or_exit();
     }
 
-    let mut configurator = match config::Configurator::new(&config) {
+    let configurator = match config::Configurator::new(&config) {
         Ok(cfg) => cfg,
         Err(e) => {
             writeln!(&mut io::stderr(), "{}", e).ok();
@@ -149,23 +149,11 @@ pub fn main() {
                 exit(2);
             }
         };
-
-        let config_updater = Interval::new(Duration::new(10, 0), &lp.handle())
-            .expect("interval created")
-            .for_each(move |_| {
-                match configurator.try_update() {
-                    Ok(false) => {}
-                    Ok(true) => {
-                        info!("Updated config");
-                        startup::update_loop(&mut loop_state, &cfg, &uhandle);
-                    }
-                    Err(e) => {
-                        error!("{}", e);
-                    }
-                }
+        let rx = updater::update_thread(configurator);
+        lp.run(rx.for_each(move |()| {
+                warn!("Updated config: {}", cfg.fingerprint());
+                startup::update_loop(&mut loop_state, &cfg, &uhandle);
                 Ok(())
-            });
-
-        lp.run(config_updater).unwrap();
+            })).unwrap();
     });
 }
