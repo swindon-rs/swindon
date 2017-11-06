@@ -1,6 +1,7 @@
 use std::fs::{metadata, Metadata};
 use std::sync::{Arc};
 use std::path::{PathBuf, Path};
+use std::collections::HashMap;
 
 mod fingerprint;
 mod http;
@@ -43,11 +44,21 @@ pub use self::replication::Replication;
 
 use crossbeam::sync::ArcCell;
 use quire::{parse_string, Options};
+#[cfg(features="tls_rustls")] use rustls::ClientConfig;
+
+use intern::TlsClientName;
+
 
 pub struct Configurator {
     path: PathBuf,
     file_metadata: Vec<(PathBuf, String, Metadata)>,
+    client_tls_cells: HashMap<TlsClientName, TlsClientLoader>,
     cell: ConfigCell,
+}
+
+pub struct TlsClientLoader {
+    cell: Arc<ArcCell<ClientConfig>>,
+    file_metadata: Vec<(PathBuf, Metadata)>,
 }
 
 pub struct Config {
@@ -101,6 +112,7 @@ impl Configurator {
                 fingerprint: fingerprint::calc(&meta)?,
             }),
             file_metadata: meta,
+            client_tls_cells: HashMap::new(),
         })
     }
     pub fn config(&self) -> ConfigCell {

@@ -196,10 +196,17 @@ commands:
 
   cargo-test: !Command
     container: xenial
-    description: Run CI tests (with crates in container)
+    description: Run just cargo tests
     environ:
       RUST_BACKTRACE: 1
     run: [cargo, test]
+
+  _cargo-test-no-features: !Command
+    container: xenial
+    description: Run cargo tests without default features
+    environ:
+      RUST_BACKTRACE: 1
+    run: [cargo, test, --no-default-features]
 
   func-test: &functest !Command
     container: pytest
@@ -211,7 +218,7 @@ commands:
     run: [pytest]
 
   test: !Command
-    prerequisites: [make, cargo-test]
+    prerequisites: [make, _cargo-test-no-features, cargo-test]
     <<: *functest
 
   run: &run !Command

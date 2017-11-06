@@ -1,6 +1,5 @@
 listen:
 - 127.0.0.1:8080
-- !Tcp 127.0.0.1:8000
 - 0.0.0.0:8000
 
 debug-routing: true
@@ -105,7 +104,8 @@ http-destinations:
     in-flight-requests-per-backend-connection: 1
 
     addresses:
-    - httpbin.org:80
+    - 127.0.0.1:8888
+    #- httpbin.org:80
 
 authorizers:
 
