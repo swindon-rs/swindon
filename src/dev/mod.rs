@@ -113,7 +113,6 @@ fn _generate_config(buf: &mut String, port: u16, routes: &[Route],
                 writeln!(buf, "  h{}: !Proxy", idx)?;
                 writeln!(buf, "    mode: forward")?;
                 writeln!(buf, "    ip-header: X-Forwarded-For")?;
-                writeln!(buf, "    request-id-header: X-Request-Id")?;
                 writeln!(buf, "    destination: d{}/{}", idx, path)?;
                 if crossdomain {
                     writeln!(buf, "    extra-headers:")?;
@@ -136,6 +135,7 @@ fn _generate_config(buf: &mut String, port: u16, routes: &[Route],
                 writeln!(buf, "")?;
                 writeln!(buf, "  d{}:", idx)?;
                 writeln!(buf, "    load-balancing: queue")?;
+                writeln!(buf, "    request-id-header: X-Request-Id")?;
                 writeln!(buf, "    addresses: [{}]", host)?;
             }
         }
