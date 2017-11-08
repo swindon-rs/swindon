@@ -44,7 +44,7 @@ pub use self::replication::Replication;
 
 use crossbeam::sync::ArcCell;
 use quire::{parse_string, Options};
-#[cfg(features="tls_rustls")] use rustls::ClientConfig;
+#[cfg(feature="tls_rustls")] use rustls::ClientConfig;
 
 use intern::TlsClientName;
 
@@ -56,9 +56,14 @@ pub struct Configurator {
     cell: ConfigCell,
 }
 
+#[cfg(feature="tls_rustls")]
 pub struct TlsClientLoader {
     cell: Arc<ArcCell<ClientConfig>>,
     file_metadata: Vec<(PathBuf, Metadata)>,
+}
+
+#[cfg(not(feature="tls_rustls"))]
+pub struct TlsClientLoader {
 }
 
 pub struct Config {
