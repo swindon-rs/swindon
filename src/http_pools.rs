@@ -5,8 +5,9 @@ use ns_router::{Router};
 use tk_http::client::{Codec, Config as HConfig, Proto, Error, EncoderDone};
 use tokio_core::net::TcpStream;
 use tokio_core::reactor::Handle;
-use tk_pool::Pool;
-use tk_pool::uniform::{UniformMx, Config as PConfig};
+use tk_pool::queue::Pool;
+use tk_pool::metrics::Noop;
+use tk_pool::pool_for;
 use futures::future::FutureResult;
 
 use intern::Upstream;
@@ -24,7 +25,8 @@ lazy_static! {
 /// FutureResult, but we will probably change it to something
 pub type HttpFuture<S> = FutureResult<EncoderDone<S>, Error>;
 pub type HttpPool = Pool<
-        Box<Codec<TcpStream, Future=HttpFuture<TcpStream>>+Send>
+        Box<Codec<TcpStream, Future=HttpFuture<TcpStream>>+Send>,
+        Noop,
     >;
 
 pub struct UpstreamRef<'a> {
@@ -79,14 +81,15 @@ impl HttpPools {
                     .safe_pipeline_timeout(dest.safe_pipeline_timeout)
                     .max_request_timeout(dest.max_request_timeout)
                     .done();
-                let pool_config = PConfig::new()
-                    .connections_per_address(
-                        dest.backend_connections_per_ip_port)
-                    .done();
-                let addr = resolver.subscribe_many(&dest.addresses, 80);
-                let mx = UniformMx::new(handle, &pool_config, addr,
-                    move |addr| Proto::connect_tcp(addr, &conn_config, &h2));
-                let pool = Pool::create(handle, dest.queue_size_for_503, mx);
+                let pool = pool_for(move |addr| {
+                        Proto::connect_tcp(addr, &conn_config, &h2)
+                    })
+                    .connect_to(resolver.subscribe_many(&dest.addresses, 80))
+                    .lazy_uniform_connections(
+                        dest.backend_connections_per_ip_port as u32)
+                    .with_queue_size(
+                        dest.queue_size_for_503)
+                    .spawn_on(handle);
                 plain.insert(k.clone(), pool);
             }
         }
