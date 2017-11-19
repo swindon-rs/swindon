@@ -13,7 +13,7 @@ pub enum LoadBalancing {
 pub struct Destination {
     pub load_balancing: LoadBalancing,
     pub queue_size_for_503: usize,
-    pub backend_connections_per_ip_port: usize,
+    pub backend_connections_per_ip_port: u32,
     pub in_flight_requests_per_backend_connection: usize,
     pub addresses: Vec<String>,
     #[serde(with="::quire::duration")]
