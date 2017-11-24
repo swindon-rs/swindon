@@ -2,6 +2,19 @@
 Swindon Changes By Version
 ==========================
 
+
+.. _changelog-v0.7.5:
+
+v0.7.5
+======
+
+* All ``listen`` settings are now updatable, i.e. swindon will rebind if
+  the name resolves to different addresses or when config changes.
+* When swindon fails to listen on some address it will retry every second
+  instead of waiting for configuration change
+* Fixes broken ``swindon-dev`` when proxying is used
+
+
 .. _changelog-v0.7.4:
 
 v0.7.4
