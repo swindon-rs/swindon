@@ -1,5 +1,9 @@
+use std::sync::Arc;
+
 use libcantal::{self, Name, NameVisitor, Value, Collection, Error};
 use owning_ref::OwningHandle;
+
+use runtime::Runtime;
 
 pub use libcantal::{Counter, Integer};
 
@@ -39,7 +43,7 @@ pub fn all() -> Box<Vec<Box<Collection>>> {
     ])
 }
 
-pub fn start() -> Result<ActiveCollection, Error> {
+pub fn start(runtime: &Arc<Runtime>) -> Result<ActiveCollection, Error> {
     OwningHandle::try_new(all(), |m| {
         libcantal::start(unsafe { &*m }).map(Wrapper)
     }).map(ActiveCollection)

@@ -133,14 +133,14 @@ pub fn main() {
         exit(0);
     }
 
-    let mut guard = Some(metrics::start()
-        .map_err(|e| warn!("Error exporting metrics: {}", e)));
-
     request_id::with_generator(|| {
         let mut lp = Core::new().unwrap();
         let uhandle = lp.handle();
         let mut loop_state = startup::populate_loop(
             &lp.handle(), &cfg, verbose);
+
+        let mut guard = Some(metrics::start(&loop_state.runtime)
+            .map_err(|e| warn!("Error exporting metrics: {}", e)));
 
         match privileges::drop(&cfg.get()) {
             Ok(()) => {}
@@ -152,11 +152,11 @@ pub fn main() {
         };
         let rx = updater::update_thread(configurator);
         lp.run(rx.for_each(move |()| {
-                drop(guard.take());
-                guard = Some(metrics::start()
-                    .map_err(|e| warn!("Error exporting metrics: {}", e)));
                 warn!("Updated config: {}", cfg.fingerprint());
                 startup::update_loop(&mut loop_state, &cfg, &uhandle);
+                drop(guard.take());
+                guard = Some(metrics::start(&loop_state.runtime)
+                    .map_err(|e| warn!("Error exporting metrics: {}", e)));
                 Ok(())
             })).unwrap();
     });

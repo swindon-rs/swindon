@@ -38,7 +38,7 @@ matches = "0.1.4"
 assert_matches = "1.0.1"
 string-intern = {version="0.1.7", features=["serde"], default-features=false}
 rand = "0.3.14"
-tk-pool = "0.5.1"
+tk-pool = "0.5.2"
 tk-listen = "0.1.0"
 abstract-ns = "0.4.1"
 ns-router = "0.1.3"

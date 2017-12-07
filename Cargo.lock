@@ -783,7 +783,7 @@ dependencies = [
  "tk-bufstream 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "tk-http 0.3.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "tk-listen 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "tk-pool 0.5.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tk-pool 0.5.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio-core 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio-io 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "trimmer 0.3.5 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -890,7 +890,7 @@ dependencies = [
 
 [[package]]
 name = "tk-pool"
-version = "0.5.1"
+version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "abstract-ns 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1131,7 +1131,7 @@ dependencies = [
 "checksum tk-bufstream 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)" = "9bb87b067cbeb3362045e3f97e40ff3bd5b369bd1b23e6e8d308354534b83237"
 "checksum tk-http 0.3.5 (registry+https://github.com/rust-lang/crates.io-index)" = "b3dc250718f283a1a466bb600ac0452c3ea4d094ff4f514b9fa36e3b411264e2"
 "checksum tk-listen 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)" = "7a1b83ad6efb44e5f428a08fbe3cd8267d64d8fad71880003f3a3211a4e52669"
-"checksum tk-pool 0.5.1 (registry+https://github.com/rust-lang/crates.io-index)" = "0b637f52040cfece21c737b90a1ed8bc13595f89895fc117a9cd3d4a802d088e"
+"checksum tk-pool 0.5.2 (registry+https://github.com/rust-lang/crates.io-index)" = "920f07d823ddd2fdef70b49e599c1bc90dbe4bd6b5a32a88bc314fc58f5132fa"
 "checksum tokio-core 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)" = "c843a027f7c1df5f81e7734a0df3f67bf329411781ebf36393ce67beef6071e3"
 "checksum tokio-io 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)" = "514aae203178929dbf03318ad7c683126672d4d96eccb77b29603d33c9e25743"
 "checksum trimmer 0.3.5 (registry+https://github.com/rust-lang/crates.io-index)" = "db7d0ecf506306f452048fb8305b74c43d3fc4540128b2b012dc76ff7f227e45"

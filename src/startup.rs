@@ -32,7 +32,7 @@ pub struct State {
     disk_pools: DiskPools,
     listener_channel: slot::Sender<Listen>,
     replication_session: chat::ReplicationSession,
-    runtime: Arc<Runtime>,
+    pub runtime: Arc<Runtime>,
 }
 
 pub fn spawn_listener(addr_stream: AddrStream, handle: &Handle,
