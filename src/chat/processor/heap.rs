@@ -22,8 +22,11 @@ use slab::Slab;
 pub struct HeapMap<K, T, V>
     where K: Hash+Eq+Clone, T: Ord
 {
+    /// Heap of (timestamp, slab-index)
     heap: Heap<(T, usize)>,
+    /// Map of {key: slab-index}
     map: HashMap<K, usize>,
+    /// Slab of {slab-index: (heap-index, key, value)}
     slab: Slab<(Slot, K, V)>,
 }
 
@@ -57,10 +60,7 @@ impl<T: Ord> Heap<T> {
     pub fn push(&mut self, t: T) -> Slot {
         self.assert_consistent();
         let len = self.items.len();
-        if self.index.available() == 0 {
-            self.index.reserve_exact(len);
-        }
-        let slot_idx = self.index.insert(len).unwrap();
+        let slot_idx = self.index.insert(len);
         self.items.push((t, slot_idx));
         self.percolate_up(len);
         self.assert_consistent();
@@ -83,7 +83,7 @@ impl<T: Ord> Heap<T> {
 
     pub fn remove(&mut self, slot: Slot) -> T {
         self.assert_consistent();
-        let idx = self.index.remove(slot.idx).unwrap();
+        let idx = self.index.remove(slot.idx);
         let (item, slot_idx) = self.items.swap_remove(idx);
         debug_assert_eq!(slot.idx, slot_idx);
         if idx < self.items.len() {
@@ -196,14 +196,14 @@ impl<K, T, V> HeapMap<K, T, V>
         let HeapMap { ref mut slab, ref mut map, ref mut heap } = *self;
         slab.reserve_exact(1);
         let old_index = {
-            let entry = slab.vacant_entry().unwrap();
-            let index = entry.index();
+            let entry = slab.vacant_entry();
+            let index = entry.key();
             let slot = heap.push((timestamp, index));
             entry.insert((slot, key.clone(), value));
             map.insert(key, index)
         };
         if let Some(old_index) = old_index {
-            let (oslot, _, oval) = slab.remove(old_index).unwrap();
+            let (oslot, _, oval) = slab.remove(old_index);
             heap.remove(oslot);
             Some(oval)
         } else {
@@ -230,28 +230,28 @@ impl<K, T, V> HeapMap<K, T, V>
         where K: Borrow<Q>, Q: Hash + Eq
     {
         let HeapMap { ref mut slab, ref mut map, ref mut heap } = *self;
-        map.get(k).map(|&index| {
-            let mut entry = slab.entry(index).unwrap();
-            entry.replace_with(|(slot, key, value)| {
-                // TODO(tailhook) optimize timeout update
-                heap.remove(slot);
-                let slot = heap.push((timestamp, index));
-                (slot, key, value)
-            })
+        map.get_mut(k).map(|entry_index| {
+            let (slot, key, value) = slab.remove(*entry_index);
+            // TODO(tailhook) optimize timeout update
+            heap.remove(slot);
+            let entry = slab.vacant_entry();
+            let slot = heap.push((timestamp, entry.key()));
+            *entry_index = entry.key();
+            entry.insert((slot, key, value));
         });
     }
     pub fn update_if_smaller<Q: ?Sized>(&mut self, k: &Q, timestamp: T)
         where K: Borrow<Q>, Q: Hash + Eq
     {
         let HeapMap { ref mut slab, ref mut map, ref mut heap } = *self;
-        map.get(k).map(|&index| {
-            let mut entry = slab.entry(index).unwrap();
-            entry.replace_with(|(slot, key, value)| {
-                // TODO(tailhook) optimize timeout update
-                let (old_ts, index) = heap.remove(slot);
-                let slot = heap.push((max(timestamp, old_ts), index));
-                (slot, key, value)
-            })
+        map.get_mut(k).map(|entry_index| {
+            let (slot, key, value) = slab.remove(*entry_index);
+            // TODO(tailhook) optimize timeout update
+            let (old_ts, _) = heap.remove(slot);
+            let entry = slab.vacant_entry();
+            let slot = heap.push((max(timestamp, old_ts), entry.key()));
+            *entry_index = entry.key();
+            entry.insert((slot, key, value));
         });
     }
     pub fn peek(&self) -> Option<(&K, &T, &V)> {
@@ -263,7 +263,7 @@ impl<K, T, V> HeapMap<K, T, V>
     pub fn pop(&mut self) -> Option<(K, T, V)> {
         let HeapMap { ref mut slab, ref mut map, ref mut heap } = *self;
         heap.pop().map(|(ts, idx)| {
-            let (_, key, value) = slab.remove(idx).unwrap();
+            let (_, key, value) = slab.remove(idx);
             map.remove(&key).unwrap();
             (key, ts, value)
         })
