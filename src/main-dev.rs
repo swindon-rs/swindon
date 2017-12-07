@@ -1,3 +1,4 @@
+#![allow(dead_code)]  // not all features are used
 #[macro_use] extern crate lazy_static;
 #[macro_use] extern crate log;
 #[macro_use] extern crate matches;
@@ -26,6 +27,7 @@ extern crate mime_guess;
 extern crate netbuf;
 extern crate ns_std_threaded;
 extern crate ns_router;
+extern crate owning_ref;
 extern crate quire;
 extern crate rand;
 extern crate regex;

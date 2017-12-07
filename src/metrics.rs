@@ -1,10 +1,16 @@
-use libcantal::{Name, NameVisitor, Value, Collection};
+use libcantal::{self, Name, NameVisitor, Value, Collection, Error};
+use owning_ref::OwningHandle;
 
 pub use libcantal::{Counter, Integer};
 
 pub type List = Vec<(Metric, &'static Value)>;
 
 pub struct Metric(pub &'static str, pub &'static str);
+
+// this is not actually static, but we have no lifetime name for it
+struct Wrapper(libcantal::ActiveCollection<'static>);
+
+pub struct ActiveCollection(OwningHandle<Box<Vec<Box<Collection>>>, Wrapper>);
 
 impl Name for Metric {
     fn get(&self, key: &str) -> Option<&str> {
@@ -20,10 +26,21 @@ impl Name for Metric {
     }
 }
 
-pub fn all() -> Vec<Box<Collection>> {
-    vec![
+impl ::std::ops::Deref for Wrapper {
+    type Target = ();
+    fn deref(&self) -> &() { &() }
+}
+
+pub fn all() -> Box<Vec<Box<Collection>>> {
+    Box::new(vec![
         Box::new(::incoming::metrics()),
         Box::new(::chat::metrics()),
         Box::new(::http_pools::metrics()),
-    ]
+    ])
+}
+
+pub fn start() -> Result<ActiveCollection, Error> {
+    OwningHandle::try_new(all(), |m| {
+        libcantal::start(unsafe { &*m }).map(Wrapper)
+    }).map(ActiveCollection)
 }

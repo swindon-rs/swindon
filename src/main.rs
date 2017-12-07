@@ -27,6 +27,7 @@ extern crate mime_guess;
 extern crate netbuf;
 extern crate ns_std_threaded;
 extern crate ns_router;
+extern crate owning_ref;
 extern crate quire;
 extern crate rand;
 extern crate regex;
@@ -132,8 +133,8 @@ pub fn main() {
         exit(0);
     }
 
-    let metrics = metrics::all();
-    let _guard = libcantal::start(&metrics);
+    let mut guard = Some(metrics::start()
+        .map_err(|e| warn!("Error exporting metrics: {}", e)));
 
     request_id::with_generator(|| {
         let mut lp = Core::new().unwrap();
@@ -151,6 +152,9 @@ pub fn main() {
         };
         let rx = updater::update_thread(configurator);
         lp.run(rx.for_each(move |()| {
+                drop(guard.take());
+                guard = Some(metrics::start()
+                    .map_err(|e| warn!("Error exporting metrics: {}", e)));
                 warn!("Updated config: {}", cfg.fingerprint());
                 startup::update_loop(&mut loop_state, &cfg, &uhandle);
                 Ok(())
