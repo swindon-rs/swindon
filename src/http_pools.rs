@@ -12,6 +12,7 @@ use tokio_core::reactor::Handle;
 use tk_pool::queue::Pool;
 use tk_pool::pool_for;
 use futures::future::FutureResult;
+use libcantal::{Collection, Visitor};
 
 use intern::Upstream;
 use config::http_destinations::Destination;
@@ -119,6 +120,29 @@ impl Metrics {
             requests_queued: Counter::new(),
             requests_forwarded: Counter::new(),
         }
+    }
+}
+
+impl Collection for PoolMetrics {
+    fn visit<'x>(&'x self, v: &mut Visitor<'x>) {
+        use metrics::Metric as M;
+        let ref s = self.0;
+        let g = format!("http.pools.{}", s.name);
+        v.metric(&M(&g, "connecting"), &s.connecting);
+        v.metric(&M(&g, "connecting"), &s.connecting);
+        v.metric(&M(&g, "connected"), &s.connected);
+        v.metric(&M(&g, "blacklisted"), &s.blacklisted);
+        v.metric(&M(&g, "request_queue"), &s.request_queue);
+
+        v.metric(&M(&g, "connection_attempted"), &s.connection_attempted);
+        v.metric(&M(&g, "connection_aborted"), &s.connection_aborted);
+        v.metric(&M(&g, "connection_errored"), &s.connection_errored);
+        v.metric(&M(&g, "connection_established"), &s.connection_established);
+        v.metric(&M(&g, "connection_dropped"), &s.connection_dropped);
+        v.metric(&M(&g, "blacklist_added"), &s.blacklist_added);
+        v.metric(&M(&g, "blacklist_removed"), &s.blacklist_removed);
+        v.metric(&M(&g, "requests_queued"), &s.requests_queued);
+        v.metric(&M(&g, "requests_forwarded"), &s.requests_forwarded);
     }
 }
 
@@ -288,6 +312,14 @@ pub fn metrics() -> List {
         (Metric(base, "pools_stopped"), &*POOLS_STOPPED),
     ]
 }
+
+pub fn pool_metrics(h: &HttpPools) -> Vec<PoolMetrics> {
+    h.plain.read().expect("http pools are okay")
+        .values()
+        .map(|p| p.metrics.clone())
+        .collect()
+}
+
 
 impl NewErrorLog<Error, Error> for PoolLog {
     type ErrorLog = PoolLog;

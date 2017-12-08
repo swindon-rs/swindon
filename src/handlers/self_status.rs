@@ -18,6 +18,8 @@ pub fn serve<S: 'static>(settings: &Arc<SelfStatus>, inp: Input)
     let settings = settings.clone();
     let meter = inp.runtime.meter.clone();
     let fingerprint = inp.runtime.config.fingerprint();
+    let runtime = inp.runtime.clone();
+
     reply(inp, move |mut e| {
 
         #[derive(Serialize)]
@@ -39,7 +41,7 @@ pub fn serve<S: 'static>(settings: &Arc<SelfStatus>, inp: Input)
             serde_json::to_writer(BufWriter::new(&mut e), &Response {
                 process: meter.process_report(),
                 threads: meter.thread_report(),
-                metrics: Json(&metrics::all()),
+                metrics: Json(&metrics::all(&runtime)),
                 config_fingerprint: fingerprint,
                 version: env!("CARGO_PKG_VERSION"),
             }).expect("report is serializable");
