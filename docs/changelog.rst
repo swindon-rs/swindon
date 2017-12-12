@@ -2,6 +2,16 @@
 Swindon Changes By Version
 ==========================
 
+.. _changelog-v0.7.6:
+
+v0.7.6
+======
+
+* Add more detailed metrics for connection pools (``http-destination``)
+* Separate metrics for each ``http-destination``
+* Internals: Swindon now rewrites cantal metrics on config reload
+* Internals: We reread config in a separate thread (so config reload makes
+  smaller or no latency spike and do not hold server when disk is slow)
 
 .. _changelog-v0.7.5:
 
