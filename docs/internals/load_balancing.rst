@@ -29,3 +29,25 @@ More specifically:
 .. note:: The picture describes a concept but the default settings are
    different.  Default connection limit is 100 and we don't enable pipelining
    by default (because it's unsafe to pipeline POST requests or long-polling).
+
+Demo
+----
+
+Here is a demo of swindon's load balancing compared with other common
+techniques:
+
+.. raw:: html
+
+   <iframe src="simulations/index.html" frameborder="0"
+    width="800" height="700"></iframe>
+   <p align="right">
+     <a href="simulations/index.html" target="_newtab">Open in New Tab</a>
+   </p>
+
+.. admonition:: Credits
+
+   The demo is adapted from `a wonderful talk`__ by `Steve Gury`__. The plan
+   is to eventually incorporate the technique from his talk.
+
+   __ https://storage.googleapis.com/strangeloop2017/index.html
+   __ https://twitter.com/stevegury

@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Predictive Load balancing: Unfair but Faster & more Robust</title>
+    <style>
+        body,
+        html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+        }
+
+        body {
+          display: flex;
+          flex-direction: column;
+        }
+        canvas {
+            background-color: #f5f5f2;
+            flex-grow: 2;
+        }
+        .buttons {
+          display: flex;
+        }
+    </style>
+</head>
+
+<body>
+    <div class='buttons'>
+      <button onclick="start_btn()">Start</button>
+      <button onclick="reset_btn()">Reset</button>
+    </div>
+    <canvas></canvas>
+    <script src="lodash.min.js"></script>
+    <script src="lib/Server.js"></script>
+    <script src="lib/Request.js"></script>
+    <script src="lib/WindowHistogram.js"></script>
+    <script src="lib/HeatMap.js"></script>
+    <script src="lib/SlidingMedian.js"></script>
+    <script src="lib/Stats.js"></script>
+    <script src="lib/LatencyPlot.js"></script>
+    <script src="defaultConfig.js"></script>
+    <script>
+        config.showLatencyPlot = true;
+        config.showHistogram = true;
+        //config.showHeatMap = true;
+
+        config.loadbalancing = "leastloaded"; // random, roundrobin, leastloaded
+        config.source.number = 2;
+        config.server.number = 10;
+        config.source.globalRps = 2;
+        config.networkDelay = 500;
+        config.source.work = () => 800 + normalRandom() * 100;
+        config.server.latency = (req) => Math.round(req.work);
+        /*
+        const t0 = Date.now();
+
+        setTimeout(() => {
+            for (let i = config.server.number/2; i<config.server.number; i++) {
+                servers[i].color = "#CCC";
+                servers[i].latency = function (req) {
+                    const x = config.server.latency(req)
+                    const now = Date.now();
+                    const elapsed = now - t0;
+                    if (elapsed > 15000) {
+                        delete servers[i].color;
+                        config.source.globalRps = 3;
+                        return x;
+                    } else {
+                        return x + 10000 * (15000 - elapsed) / 15000;
+                    }
+                }
+            }
+        }, 30);
+        */
+    </script>
+    <script src="lib/Main.js"></script>
+</body>
+</html>
+
