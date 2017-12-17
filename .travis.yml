@@ -59,10 +59,7 @@ jobs:
         -rsxX --kcov=$HOME/.local/bin/kcov $TEST_ARGS
     - bash <(curl -s https://codecov.io/bash)
 
-  # deploy
-  - stage: deploy
-    env:
-    - secure: "n0eOmD1J2imokgTyXv6F0ep3PvfVTI+1pGyA8y6liDz/DiU7gh0orqIYTAj7oUvrvF+DkDvYPnFiTF3Hea4BpeVZeD6cnr3yDWaqF5GOsBAzVe6quahXXbtF066nml4qti9eQAjlcePp85ZJAJ+Ro3XwMoijI4ZyHsXRTQ6Sg6pVMCje9TNzyUyXNkHrtlkBHkdLNTaJiDkV3L3DPREJGXkjqRqm/3cP4+VPaxr14YZ/iAxOSpxQabyy1AaXVYWkWfL07yvdofLJkRCmae8o8ZCdrRbiqYOZ4ICPUNiIEUuIBUKaomF+D7Abjef3vePkxhodqtzef63rLWdfDGOorjSa4o32leIjkJNTmOWMO6NsXfDge9F6QUa+auTDnml5JJzq0/Dhmi9HwgZF75NcfNgpBhC+wbjzu/9mSo+WJlWGJFa0hNtzmBOs87DZfBYFIUGanxLHA3vfeBOoGFrU4Nu3YFKD52gFGMBBe4zC/fG9hQWbiZvhSIHVx+nyJBDPGjGb7XqixCV1ttHy85bDQ7cNxpz9DtMY9ZXywJtyO7z7X3jNrPG/t5jJEyfwebNWuYV8g15snvhjqFzovaElTShS0ZW8m4eiZaVT+O8Rk6FzNSFZjE1WdyYUgFK+Wdi70KwhqyyYyRlxvAEVl/ZPd0hfE76fs4TgZH8BT96MabM="
+  - env:
     install:
     - pip install sphinx==1.6.2 docutils --user
     - pip install -r docs/requirements.txt --user
@@ -78,6 +75,7 @@ jobs:
       on:
         branch: master
 
+  # deploy
   - stage: deploy
     os: linux
     rust: stable
