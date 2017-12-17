@@ -45,6 +45,7 @@ jobs:
   - rust: nightly
   - env:
     - FUNC_TEST=y
+    - AIOHTTP_NO_EXTENSIONS=1
     install:
     - source .travis/coverage.sh && build_kcov
     - curl https://bootstrap.pypa.io/get-pip.py -o - | python3.5 - --user
@@ -53,13 +54,14 @@ jobs:
     - cargo build $CARGO_ARGS
     - cargo test $CARGO_ARGS # for coverage
     - >
-      py.test --swindon-bin=$(pwd)/target/debug/swindon \
+      pytest --swindon-bin=$(pwd)/target/debug/swindon \
         --swindon-config=$(pwd)/tests/config.yaml.tpl \
         --swindon-replication-config=$(pwd)/tests/config-w-replication.yaml.tpl \
         -rsxX --kcov=$HOME/.local/bin/kcov $TEST_ARGS
     - bash <(curl -s https://codecov.io/bash)
 
   - env:
+    - DOC=true
     install:
     - pip install sphinx==1.6.2 docutils --user
     - pip install -r docs/requirements.txt --user

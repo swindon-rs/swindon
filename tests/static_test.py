@@ -124,7 +124,7 @@ async def test_headers_override(static_request_method,
             data_check(data, static_request_method,
                 b'Static file test\n')
             ctype = [val for key, val in resp.raw_headers
-                     if key == b'CONTENT-TYPE']
+                     if key == b'Content-Type']
             assert len(ctype) == 1
             assert ctype[0] == b'something/other'
             if debug_routing:
@@ -146,7 +146,7 @@ async def test_no_charset(static_request_method,
             data_check(data, static_request_method,
                 b'Static file test\n')
             ctype = [val for key, val in resp.raw_headers
-                     if key == b'CONTENT-TYPE']
+                     if key == b'Content-Type']
             assert len(ctype) == 1
             assert ctype[0] == b'text/plain'
             if debug_routing:

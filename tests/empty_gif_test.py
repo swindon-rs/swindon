@@ -43,11 +43,11 @@ async def test_headers_override(swindon, http_request):
     resp, data = await http_request(url)
     assert resp.status == 200
     clen = [val for key, val in resp.raw_headers
-            if key == b'CONTENT-LENGTH']
+            if key == b'Content-Length']
     assert len(clen) == 1
     assert resp.headers['Content-Length'] == '26'
 
     ctype = [val for key, val in resp.raw_headers
-             if key == b'CONTENT-TYPE']
+             if key == b'Content-Type']
     assert len(ctype) == 1
     assert ctype[0] == b'image/other'

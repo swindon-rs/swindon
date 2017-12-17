@@ -206,7 +206,9 @@ commands:
     work-dir: /work/tests
     prerequisites: [make]
     user-id: 1
-    run: [py.test]
+    environ:
+      AIOHTTP_NO_EXTENSIONS: 1
+    run: [pytest]
 
   test: !Command
     prerequisites: [make, cargo-test]

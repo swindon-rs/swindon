@@ -53,18 +53,6 @@ def pytest_addoption(parser):
                            " \"%(default)s\""))
 
 
-SWINDON_BIN = []
-
-
-def pytest_configure(config):
-    bins = config.getoption('--swindon-bin')[:]
-    SWINDON_BIN[:] = bins or ['target/debug/swindon']
-    for _ in range(len(SWINDON_BIN)):
-        p = SWINDON_BIN.pop(0)
-        p = ROOT / p
-        assert p.exists(), p
-        SWINDON_BIN.append(str(p))
-
 # Fixtures
 
 
@@ -189,9 +177,14 @@ def swindon_ports(unused_port, debug_routing, swindon_bin):
     return Dict()
 
 
-@pytest.fixture(scope='session', params=SWINDON_BIN)
+@pytest.fixture(scope='module')
 def swindon_bin(request):
-    return request.param
+    bins = (request.config.getoption('--swindon-bin') or
+            ['target/debug/swindon'])
+    for item in bins:
+        p = ROOT / item
+        assert p.exists(), p
+        return p
 
 
 @pytest.fixture(scope='module')
@@ -341,14 +334,14 @@ def run_swindon(_proc, bin, config, log, *wait_ports, **options):
         os.remove(fname)
 
 
-@pytest.fixture(params=SWINDON_BIN)
-def check_config(request):
-    return partial(_check_config, __swindon_bin=request.param)
+@pytest.fixture()
+def check_config(request, swindon_bin):
+    return partial(_check_config, __swindon_bin=swindon_bin)
 
 
-@pytest.fixture(params=SWINDON_BIN)
-def check_fingerprint(request):
-    return partial(_check_fingerprint, __swindon_bin=request.param)
+@pytest.fixture()
+def check_fingerprint(swindon_bin):
+    return partial(_check_fingerprint, __swindon_bin=swindon_bin)
 
 
 @contextmanager
