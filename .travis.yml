@@ -8,7 +8,7 @@ addons:
     sources:
     - sourceline: 'ppa:fkrull/deadsnakes'
     packages:
-    - python3.5
+    - python3.6
     - libcurl4-openssl-dev
     - libelf-dev
     - libdw-dev
@@ -48,7 +48,7 @@ jobs:
     - AIOHTTP_NO_EXTENSIONS=1
     install:
     - source .travis/coverage.sh && build_kcov
-    - curl https://bootstrap.pypa.io/get-pip.py -o - | python3.5 - --user
+    - curl https://bootstrap.pypa.io/get-pip.py -o - | python3.6 - --user
     - pip3 install -r tests/requirements.txt --user
     script:
     - cargo build $CARGO_ARGS
