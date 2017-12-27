@@ -65,8 +65,8 @@ mod startup;
 mod template;
 mod updater;
 
-use std::io::{self, Write};
 use std::env;
+use std::io::{self, Write};
 use std::process::exit;
 
 use futures::stream::Stream;
@@ -74,25 +74,11 @@ use argparse::{ArgumentParser, Parse, StoreTrue, Print};
 use tokio_core::reactor::Core;
 
 
-fn init_logging() {
-    let format = |record: &log::LogRecord| {
-        format!("{} [{}] {}: {}", time::now_utc().rfc3339(),
-            record.location().module_path(),
-            record.level(), record.args())
-    };
-
-    let mut builder = env_logger::LogBuilder::new();
-    builder.format(format).filter(None, log::LogLevelFilter::Warn);
-
-    if let Ok(value) = env::var("RUST_LOG") {
-       builder.parse(&value);
-    }
-
-    builder.init().unwrap();
-}
-
 pub fn main() {
-    init_logging();
+    if env::var("RUST_LOG").is_err() {
+        env::set_var("RUST_LOG", "warn");
+    }
+    env_logger::init();
 
     let mut config = String::from("/etc/swindon/main.yaml");
     let mut check = false;

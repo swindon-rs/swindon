@@ -78,7 +78,7 @@ pub fn main() {
     if env::var("RUST_LOG").is_err() {
         env::set_var("RUST_LOG", "warn");
     }
-    env_logger::init().unwrap();
+    env_logger::init();
 
     let mut verbose = true;
     let mut show_config = false;
