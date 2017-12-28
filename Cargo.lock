@@ -813,7 +813,7 @@ dependencies = [
 
 [[package]]
 name = "swindon"
-version = "0.7.6"
+version = "0.7.7"
 dependencies = [
  "abstract-ns 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "argparse 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",

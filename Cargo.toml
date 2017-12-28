@@ -1,7 +1,7 @@
 [package]
 
 name = "swindon"
-version = "0.7.6"
+version = "0.7.7"
 authors = ["a.popravka@smartweb.com.ua", "paul@colomiets.name"]
 description = """
     An HTTP edge (frontend) server with smart websockets support
