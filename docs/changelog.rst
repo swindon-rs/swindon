@@ -2,6 +2,15 @@
 Swindon Changes By Version
 ==========================
 
+
+.. _changelog-v0.7.7:
+
+v0.7.7
+======
+
+* Changed log format according to a new env_logger
+* Bugfix: Content-Range generated on static was invalid previously
+
 .. _changelog-v0.7.6:
 
 v0.7.6
