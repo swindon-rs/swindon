@@ -26,7 +26,7 @@ argparse = "0.2.1"
 time = "0.1.35"
 lazy_static = "1.0.0"
 mime_guess = "1.8.0"
-http-file-headers = "0.1.5"
+http-file-headers = "0.1.6"
 httpdate = "0.3.0"
 tk-bufstream = "0.3.0"
 tk-http = { version="0.3.5", default-features=false }
