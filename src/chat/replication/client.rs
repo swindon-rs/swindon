@@ -1,5 +1,4 @@
 use std::str;
-use std::ascii::AsciiExt;
 use tk_http::websocket::client::{self as ws, Head, Encoder, EncoderDone};
 use tk_http::websocket::Error;
 

@@ -4,7 +4,6 @@
 /// ["chat.send_message", {"request_id": "123"}, ["text"], {}]
 /// ```
 use std::str;
-use std::ascii::AsciiExt;
 use serde_json::{self, Value as Json, Map, Error as JsonError};
 use serde::ser::{Serialize, Serializer, SerializeTuple};
 

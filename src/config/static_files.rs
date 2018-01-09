@@ -1,5 +1,4 @@
 use std::sync::Arc;
-use std::ascii::AsciiExt;
 use std::path::PathBuf;
 use std::collections::HashMap;
 

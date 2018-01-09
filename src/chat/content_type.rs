@@ -1,4 +1,3 @@
-use std::ascii::AsciiExt;
 use std::str::from_utf8;
 
 

@@ -1,5 +1,4 @@
 use std::sync::Arc;
-use std::ascii::AsciiExt;
 
 use tk_http::Status;
 use futures::future::ok;

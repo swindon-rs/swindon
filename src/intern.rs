@@ -1,5 +1,4 @@
 use std::fmt;
-use std::ascii::AsciiExt;
 use string_intern::{Symbol, Validator};
 
 mod private {

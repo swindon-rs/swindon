@@ -1,5 +1,4 @@
 use std::str;
-use std::ascii::AsciiExt;
 use futures::{Stream, Future, Async};
 use futures::future::{ok};
 use futures::sync::mpsc::unbounded;

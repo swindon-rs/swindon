@@ -1,6 +1,5 @@
 use std::str::FromStr;
 use std::sync::Arc;
-use std::ascii::AsciiExt;
 use std::borrow::Cow;
 
 use futures::{AsyncSink};
