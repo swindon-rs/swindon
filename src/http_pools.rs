@@ -342,7 +342,11 @@ impl ErrorLog for PoolLog {
         warn!("{}: Connecting to {} failed: {}", self.0, addr, e);
     }
     fn sink_error(&self, addr: SocketAddr, e: Self::SinkError) {
-        warn!("{}: Connection to {} errored: {}", self.0, addr, e);
+        if e.is_graceful() {
+            debug!("{}: Connection to {} errored: {}", self.0, addr, e);
+        } else {
+            warn!("{}: Connection to {} errored: {}", self.0, addr, e);
+        }
     }
     /// Starting to shut down pool
     fn pool_shutting_down(&self, reason: ShutdownReason) {

@@ -295,7 +295,7 @@ def run_swindon(_proc, bin, config, log, *wait_ports, **options):
     assert _check_config(config, returncode=0, __swindon_bin=bin) in ('',
         # TODO(tailhook) maybe elimitate this warning?
         #                or make explicit tests for it?
-        'WARN: swindon::config::read: '
+        'WARN swindon::config::read: '
         'handler"proxy_w_request_id": request_id_header is deprecated '
         'in !Proxy setting, '
         'it must be specified in http destination\n')
@@ -406,7 +406,7 @@ def _run_check(bin, file, returncode):
     # removes escape sequences
     output = re.sub(r"\x1b\[\d*m", "", output)
     # removes log timestamps
-    output = re.sub(r"(?m)^(\w+:\s*)[\d-]{10}T[\d:]{8}Z:\s*", r"\1", output)
+    output = re.sub(r"(?m)^ (\w+)\s*[\d-]{10}T[\d:]{8}Z:\s*", r"\1 ", output)
     return output
 
 # helpers

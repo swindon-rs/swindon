@@ -2,10 +2,8 @@ use std::collections::HashMap;
 use std::fmt::Display;
 use std::io;
 use std::sync::Arc;
-use std::time::SystemTime;
 
 use futures::{Future, Async};
-use httpdate::HttpDate;
 use tk_http::Status;
 use tk_http::server as http;
 use tk_http::server::{EncoderDone};
@@ -113,7 +111,7 @@ impl<S> Encoder<S> {
         self.config.server_name.as_ref().map(|name| {
             enc.add_header("Server", name).unwrap();
         });
-        enc.format_header("Date", HttpDate::from(SystemTime::now())).unwrap();
+        enc.add_date();
         if let Some(route) = self.debug.get_route() {
             enc.add_header("X-Swindon-Route", route)
                 .expect("route is a valid header");
