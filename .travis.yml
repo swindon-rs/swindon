@@ -47,7 +47,7 @@ jobs:
     - FUNC_TEST=y
     - AIOHTTP_NO_EXTENSIONS=1
     install:
-    - source .travis/coverage.sh && build_kcov
+    # - source .travis/coverage.sh && build_kcov
     - curl https://bootstrap.pypa.io/get-pip.py -o - | python3.6 - --user
     - pip3 install -r tests/requirements.txt --user
     script:
@@ -57,7 +57,8 @@ jobs:
       pytest --swindon-bin=$(pwd)/target/debug/swindon \
         --swindon-config=$(pwd)/tests/config.yaml.tpl \
         --swindon-replication-config=$(pwd)/tests/config-w-replication.yaml.tpl \
-        -rsxX --kcov=$HOME/.local/bin/kcov $TEST_ARGS
+        -rsxX  $TEST_ARGS
+    # --kcov=$HOME/.local/bin/kcov
     - bash <(curl -s https://codecov.io/bash)
 
   - env:
