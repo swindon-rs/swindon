@@ -3,6 +3,16 @@ Swindon Changes By Version
 ==========================
 
 
+.. _changelog-v0.7.8:
+
+v0.7.8
+======
+
+* Log format is changed again (we don't consider it stable though)
+* Bugfix: another issue with Content-Range fixed
+* Bugfix: fix occasional crash in name resolution code
+
+
 .. _changelog-v0.7.7:
 
 v0.7.7
