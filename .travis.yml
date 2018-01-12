@@ -18,6 +18,8 @@ addons:
     - libiberty-dev
     - fakeroot
     - musl-tools
+    - slapd
+    - ldap-utils
   hosts:
   - example.com
   - www.example.com

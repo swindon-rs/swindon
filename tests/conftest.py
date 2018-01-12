@@ -370,7 +370,7 @@ def slapd(_proc, request, debug_routing, unused_port):
     LDAP_PORT = unused_port()
 
     proc = _proc('/usr/sbin/slapd',
-                 '-f/etc/ldap/slapd.conf',
+                 '-f./tests/slapd.conf',
                  '-hldap://127.0.0.1:{}'.format(LDAP_PORT),
                  '-dnone')
     while True:

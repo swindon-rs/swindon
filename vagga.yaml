@@ -178,17 +178,6 @@ containers:
 
     # for ldap tests
     - !Install [slapd, ldap-utils]
-    - !Text
-      /etc/ldap/slapd.conf: |
-        include     /etc/ldap/schema/core.schema
-        include     /etc/ldap/schema/cosine.schema
-        include     /etc/ldap/schema/nis.schema
-        include     /etc/ldap/schema/inetorgperson.schema
-        database    ldif
-        suffix      "dc=ldap,dc=example,dc=org"
-        rootdn      "cn=Manager,dc=ldap,dc=example,dc=org"
-        rootpw      1234
-        directory   /var/lib/ldap
     # end of ldap
 
 commands:
@@ -218,7 +207,6 @@ commands:
 
   func-test: &functest !Command
     container: pytest
-    work-dir: /work/tests
     prerequisites: [make]
     user-id: 1
     environ:
