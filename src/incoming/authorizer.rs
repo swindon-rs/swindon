@@ -12,7 +12,9 @@ impl Authorizer {
             Authorizer::SourceIp(ref cfg) => {
                 authorizers::source_ip::check(cfg, input)
             }
-            Authorizer::Ldap(_) => unimplemented!(),
+            Authorizer::Ldap(ref cfg) => {
+                authorizers::ldap::check(cfg, input)
+            }
         }
     }
 }
