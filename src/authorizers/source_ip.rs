@@ -5,10 +5,10 @@ use std::net::IpAddr;
 use tk_http::server::{Error};
 
 use config::networks::SourceIpAuthorizer;
-use incoming::Input;
+use incoming::AuthInput;
 
 
-pub fn check(cfg: &Arc<SourceIpAuthorizer>, input: &mut Input)
+pub fn check(cfg: &Arc<SourceIpAuthorizer>, input: &mut AuthInput)
     -> Result<bool, Error>
 {
     let forwarded = cfg.accept_forwarded_headers_from.as_ref()

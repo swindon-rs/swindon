@@ -6,7 +6,8 @@ use tk_http::Status;
 use tk_http::server::{Dispatcher, Error as ServerError, Head};
 
 use runtime::Runtime;
-use incoming::{Request, Debug, Input, Transport};
+use incoming::{Request, Debug, Transport};
+use incoming::input::{Input, AuthInput};
 use routing::{parse_host, route};
 use default_error_page::serve_error_page;
 use request_id;
@@ -92,7 +93,7 @@ impl Router {
         };
         debug.set_route(route);
 
-        let mut inp = Input {
+        let mut inp = AuthInput {
             addr: self.addr,
             runtime: &self.runtime,
             config: &cfg,
@@ -104,13 +105,8 @@ impl Router {
             request_id: request_id,
         };
 
-        match route.authorizer.check(&mut inp) {
-            Ok(true) => {}
-            Ok(false) => {
-                return Err(Page(Status::Forbidden, inp.debug));
-            }
-            Err(e) => return Err(Fallback(e)),
-        }
+        let fut = route.authorizer.check(&mut inp);
+        let inp = Input::from_auth(inp, fut);
 
         route.handler.serve(inp).map_err(Fallback)
     }
