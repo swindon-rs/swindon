@@ -10,11 +10,11 @@ Github_ | Crate_
 
 
 .. figure:: messages.png
-   :alt: a screenshot of a dashboard showing a 29k simultaneous connections
-         and 13.8M messages in a day
+   :alt: a screenshot of a dashboard showing a 122k simultaneous connections
+         and 22.6M messages in a day
 
-   *While swindon is quite recent project it handles about 30k simultaneous
-   connections and 13-16 million messages per day in our setup. The screenshot
+   *While swindon is quite recent project it handles about 120k simultaneous
+   connections and ~20 million messages per day in our setup. The screenshot
    above shows just a random day from our dashboard.*
 
 
