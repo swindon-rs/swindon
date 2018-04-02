@@ -17,10 +17,10 @@ values, receiving updates from server**. For example:
    with the term in other contexts are coincidental.
 
 
+.. _lattice-chat-example:
+
 What Does Client See?
 =====================
-
-.. _lattice-chat-example:
 
 Every lattice is a dictionary of dictionaries. For example this is how
 chat rooms might be delivered to the javascript client:
@@ -67,7 +67,7 @@ of "private" and "shared".
 Example
 -------
 
-`Example chat <lattice-chat-example>`_ from the backend point of view looks
+`Example chat <#lattice-chat-example>`_ from the backend point of view looks
 like:
 
 .. code-block:: json
