@@ -41,6 +41,8 @@ jobs:
   - rust: stable
   - rust: stable
     os: osx
+  - rust: stable
+    os: windows
   - rust: beta
   - rust: nightly
   - env:
