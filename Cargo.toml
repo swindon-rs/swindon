@@ -27,7 +27,7 @@ time = "0.1.35"
 lazy_static = "1.0.0"
 mime_guess = "1.8.0"
 http-file-headers = "0.1.6"
-httpdate = "0.3.0"
+httpdate = "0.3.2"
 tk-bufstream = "0.3.0"
 tk-http = { version="0.3.6", default-features=false, features=["date_header"] }
 netbuf = "0.4.0"
