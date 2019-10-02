@@ -12,8 +12,8 @@ mod quick_reply;
 mod handler;
 mod authorizer;
 
-pub type Request<S> = Box<Codec<S, ResponseFuture=Reply<S>>>;
-pub type Reply<S> = Box<Future<Item=EncoderDone<S>, Error=Error>>;
+pub type Request<S> = Box<dyn Codec<S, ResponseFuture=Reply<S>>>;
+pub type Reply<S> = Box<dyn Future<Item=EncoderDone<S>, Error=Error>>;
 
 pub use self::debug::Debug;
 pub use tk_http::server::EncoderDone;

@@ -60,7 +60,7 @@ pub fn generate_index(path: &Path, virtual_path: &str,
             return Err(Status::InternalServerError);
         }
     };
-    let vpath = virtual_path.trim_right_matches('/');
+    let vpath = virtual_path.trim_end_matches('/');
     let mut ctx = Context::new();
     ctx.set("entries", &files);
     ctx.set("path", &vpath);

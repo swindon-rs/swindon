@@ -7,14 +7,14 @@ use runtime::Runtime;
 
 pub use libcantal::{Counter, Integer};
 
-pub type List = Vec<(Metric<'static>, &'static Value)>;
+pub type List = Vec<(Metric<'static>, &'static dyn Value)>;
 
 pub struct Metric<'a>(pub &'a str, pub &'a str);
 
 // this is not actually static, but we have no lifetime name for it
 struct Wrapper(libcantal::ActiveCollection<'static>);
 
-pub struct ActiveCollection(OwningHandle<Box<Vec<Box<Collection>>>, Wrapper>);
+pub struct ActiveCollection(OwningHandle<Box<Vec<Box<dyn Collection>>>, Wrapper>);
 
 impl<'a> Name for Metric<'a> {
     fn get(&self, key: &str) -> Option<&str> {
@@ -24,7 +24,7 @@ impl<'a> Name for Metric<'a> {
             _ => None,
         }
     }
-    fn visit(&self, s: &mut NameVisitor) {
+    fn visit(&self, s: &mut dyn NameVisitor) {
         s.visit_pair("group", self.0);
         s.visit_pair("metric", self.1);
     }
@@ -35,7 +35,7 @@ impl ::std::ops::Deref for Wrapper {
     fn deref(&self) -> &() { &() }
 }
 
-pub fn all(runtime: &Arc<Runtime>) -> Box<Vec<Box<Collection>>> {
+pub fn all(runtime: &Arc<Runtime>) -> Box<Vec<Box<dyn Collection>>> {
     Box::new(vec![
         Box::new(::incoming::metrics()),
         Box::new(::chat::metrics()),

@@ -48,7 +48,7 @@ lazy_static! {
 /// FutureResult, but we will probably change it to something
 pub type HttpFuture<S> = FutureResult<EncoderDone<S>, Error>;
 pub type PoolInner = Pool<
-    Box<Codec<TcpStream, Future=HttpFuture<TcpStream>>+Send>,
+    Box<dyn Codec<TcpStream, Future=HttpFuture<TcpStream>>+Send>,
     PoolMetrics>;
 
 pub struct HttpPool {
@@ -124,7 +124,7 @@ impl Metrics {
 }
 
 impl Collection for PoolMetrics {
-    fn visit<'x>(&'x self, v: &mut Visitor<'x>) {
+    fn visit<'x>(&'x self, v: &mut dyn Visitor<'x>) {
         use metrics::Metric as M;
         let ref s = self.0;
         let g = format!("http.pools.{}", s.name);

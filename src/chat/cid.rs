@@ -14,12 +14,11 @@ pub struct Cid(u64);
 pub struct PubCid(pub Cid, pub ServerId);
 
 impl Cid {
-    #[cfg(target_pointer_width = "64")]
     pub fn new() -> Cid {
         // Until atomic u64 really works
-        use std::sync::atomic::{AtomicUsize, ATOMIC_USIZE_INIT, Ordering};
-        static COUNTER: AtomicUsize = ATOMIC_USIZE_INIT;
-        Cid(COUNTER.fetch_add(1, Ordering::Relaxed) as u64)
+        use std::sync::atomic::{AtomicU64, Ordering};
+        static COUNTER: AtomicU64 = AtomicU64::new(0);
+        Cid(COUNTER.fetch_add(1, Ordering::Relaxed))
     }
 }
 

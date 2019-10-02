@@ -26,7 +26,7 @@ pub fn serve<S: 'static>(settings: &Arc<SelfStatus>, inp: Input)
         struct Response<'a> {
             process: ProcessReport<'a>,
             threads: ThreadReport<'a>,
-            metrics: Json<'a, Vec<Box<Collection>>>,
+            metrics: Json<'a, Vec<Box<dyn Collection>>>,
             config_fingerprint: String,
             version: &'a str,
         }

@@ -307,7 +307,7 @@ impl<S> http::Codec<S> for AuthCodec {
             }
             _ => unreachable!(),
         }
-        Ok((Async::Ready(data.len())))
+        Ok(Async::Ready(data.len()))
     }
 }
 
@@ -409,7 +409,7 @@ impl<S> http::Codec<S> for CallCodec {
             }
             _ => unreachable!(),
         }
-        Ok((Async::Ready(data.len())))
+        Ok(Async::Ready(data.len()))
     }
 }
 
@@ -447,7 +447,7 @@ impl<S> http::Codec<S> for InactivityCodec {
         -> Result<Async<usize>, http::Error>
     {
         assert!(end);
-        Ok((Async::Ready(data.len())))
+        Ok(Async::Ready(data.len()))
     }
 }
 

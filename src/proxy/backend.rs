@@ -72,6 +72,6 @@ impl<S> http::Codec<S> for Codec {
             }
             _ => unreachable!(),
         }
-        Ok((Async::Ready(data.len())))
+        Ok(Async::Ready(data.len()))
     }
 }

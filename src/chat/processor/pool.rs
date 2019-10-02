@@ -175,9 +175,9 @@ impl Pool {
             let mut session = Session::new();
             session.connections.insert(conn_id);
             session.metadata = metadata;
+            session.status_timestamp = now;
             copy_attachments(&mut session, &conn, conn_id, users_lattice);
             self.sessions.active.insert(session_id.clone(), expire, session);
-            session.status_timestamp = now;
             self.publish_status(&session_id, &*ACTIVE_STATUS, now);
             ACTIVE_SESSIONS.incr(1);
         }
@@ -290,9 +290,9 @@ impl Pool {
             };
             if !has_session {
                 let mut sess = Session::new();
+                sess.status_timestamp = now;
                 self.sessions.active.insert(
                     sess_id.clone(), activity_ts, sess);
-                sess.status_timestamp = now;
                 self.publish_status(&sess_id, &*ACTIVE_STATUS, now);
                 ACTIVE_SESSIONS.incr(1);
             }
