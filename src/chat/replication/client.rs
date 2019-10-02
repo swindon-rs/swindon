@@ -2,7 +2,7 @@ use std::str;
 use tk_http::websocket::client::{self as ws, Head, Encoder, EncoderDone};
 use tk_http::websocket::Error;
 
-use runtime::ServerId;
+use crate::runtime::ServerId;
 
 
 pub struct Authorizer {

@@ -5,8 +5,8 @@ use tk_http::server::Error;
 use tk_http::Status;
 use http_file_headers::{Output};
 
-use default_error_page::{error_page};
-use incoming::{self, Input, Request, Transport, Encoder};
+use crate::default_error_page::{error_page};
+use crate::incoming::{self, Input, Request, Transport, Encoder};
 
 
 pub enum NotFile {

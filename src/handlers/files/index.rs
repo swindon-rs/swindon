@@ -6,8 +6,8 @@ use std::sync::Arc;
 use tk_http::Status;
 use trimmer::{Template, Context, Variable, Var, DataError};
 
-use template;
-use config::static_files::Static;
+use crate::template;
+use crate::config::static_files::Static;
 
 quick_error! {
     #[derive(Debug)]

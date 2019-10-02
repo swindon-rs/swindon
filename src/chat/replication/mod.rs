@@ -1,7 +1,7 @@
 use futures::sync::mpsc::UnboundedSender;
 use tk_http::websocket::Packet;
 
-use metrics::{Counter, Integer};
+use crate::metrics::{Counter, Integer};
 
 mod action;
 mod session;

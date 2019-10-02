@@ -4,8 +4,8 @@ use futures::Async;
 use tk_http::server::{Error, Codec, RecvMode};
 use tk_http::server as http;
 
-use config::Config;
-use incoming::{Request, Reply, Encoder, IntoContext, Debug};
+use crate::config::Config;
+use crate::incoming::{Request, Reply, Encoder, IntoContext, Debug};
 
 
 pub struct QuickReply<F> {

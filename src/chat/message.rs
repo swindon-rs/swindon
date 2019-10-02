@@ -8,7 +8,7 @@ use serde_json::{self, Value as Json, Map, Error as JsonError};
 use serde::ser::{Serialize, Serializer, SerializeTuple};
 
 use super::cid::Cid;
-use runtime::ServerId;
+use crate::runtime::ServerId;
 
 pub type Meta = Map<String, Json>;
 pub type Args = Vec<Json>;
@@ -150,7 +150,7 @@ mod test {
     use serde_json::Value as Json;
     use serde_json::to_string as json_encode;
 
-    use chat::message::{self, Call, Meta, Args, Kwargs, Auth, AuthData};
+    use crate::chat::message::{self, Call, Meta, Args, Kwargs, Auth, AuthData};
 
     #[test]
     fn decode_message_errors() {

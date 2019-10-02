@@ -11,12 +11,12 @@ use tk_http::server as http;
 use tk_http::server::{EncoderDone, RecvMode};
 use serde_json::{self, Value as Json};
 
-use intern::{Topic, Lattice as Namespace, SessionId};
-use chat::cid::PubCid;
-use chat::processor::Action;
-use chat::processor::Delta;
-use chat::listener::spawn::WorkerData;
-use chat::replication::RemoteAction;
+use crate::intern::{Topic, Lattice as Namespace, SessionId};
+use crate::chat::cid::PubCid;
+use crate::chat::processor::Action;
+use crate::chat::processor::Delta;
+use crate::chat::listener::spawn::WorkerData;
+use crate::chat::replication::RemoteAction;
 
 
 pub struct Handler {
@@ -128,8 +128,8 @@ impl<S> Dispatcher<S> for Handler {
                     match self.dispatch(&path[4..], headers.method()) {
                         State::Query(q) => {
                             if q.has_body() {
-                                use chat::content_type::check_json;
-                                use chat::content_type::ContentType::*;
+                                use crate::chat::content_type::check_json;
+                                use crate::chat::content_type::ContentType::*;
                                 let weak_type = self.wdata.settings
                                     .weak_content_type.unwrap_or(false);
                                 match check_json(headers.headers()) {

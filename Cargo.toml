@@ -12,6 +12,7 @@ keywords = ["tokio", "http", "websockets", "server", "web"]
 categories = ["asynchronous", "web-programming::http-server"]
 homepage = "http://github.com/swindon-rs/swindon"
 documentation = "https://swindon-rs.github.io/swindon"
+edition = "2018"
 
 [dependencies]
 futures = "0.1.16"

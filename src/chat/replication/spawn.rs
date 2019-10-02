@@ -16,12 +16,12 @@ use tokio_core::net::{TcpStream};
 use tokio_core::reactor::{Timeout, Handle};
 use ns_router::future::AddrStream;
 
-use config::Replication;
-use runtime::ServerId;
+use crate::config::Replication;
+use crate::runtime::ServerId;
 use super::server::Incoming;
 use super::client::Authorizer;
 use super::{IncomingChannel, ReplAction};
-use chat::replication::{CONNECTIONS, FRAMES_SENT, FRAMES_RECEIVED};
+use crate::chat::replication::{CONNECTIONS, FRAMES_SENT, FRAMES_RECEIVED};
 
 
 pub fn listen(addr_stream: AddrStream, sender: IncomingChannel,

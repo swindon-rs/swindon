@@ -4,11 +4,11 @@ use std::sync::{Arc};
 use tk_http::Status;
 use http_file_headers::{Input as HeadersInput};
 
-use config::static_files::{SingleFile};
-use default_error_page::{serve_error_page};
-use incoming::{Input, Request, Transport};
-use handlers::files::pools::get_pool;
-use handlers::files::common::{reply_file, NotFile};
+use crate::config::static_files::{SingleFile};
+use crate::default_error_page::{serve_error_page};
+use crate::incoming::{Input, Request, Transport};
+use crate::handlers::files::pools::get_pool;
+use crate::handlers::files::common::{reply_file, NotFile};
 
 
 pub fn serve_file<S: Transport>(settings: &Arc<SingleFile>, mut inp: Input)

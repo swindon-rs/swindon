@@ -9,11 +9,11 @@ use tk_http::server::{Dispatcher, Head, Error, Codec, RecvMode, Encoder};
 use tk_http::websocket::{Accept, Loop, ServerCodec, Config as WsConfig};
 use tk_bufstream::{WriteBuf, ReadBuf};
 
-use incoming::{Request, Reply, Transport};
-use runtime::ServerId;
+use crate::incoming::{Request, Reply, Transport};
+use crate::runtime::ServerId;
 use super::spawn::Handler;
 use super::{IncomingChannel, ReplAction};
-use chat::replication::{CONNECTIONS, FRAMES_SENT};
+use crate::chat::replication::{CONNECTIONS, FRAMES_SENT};
 
 
 /// Incoming requests dispatcher.

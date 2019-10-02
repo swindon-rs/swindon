@@ -12,14 +12,14 @@ use quire::{raw_parse as parse_yaml};
 use quire::ast::{Ast, process as process_ast};
 use regex;
 
-use config::authorizers::Authorizer;
-use config::root::{ConfigData, ConfigSource, Mixin};
-use config::root::{config_validator, mixin_validator};
+use crate::config::authorizers::Authorizer;
+use crate::config::root::{ConfigData, ConfigSource, Mixin};
+use crate::config::root::{config_validator, mixin_validator};
 use super::Handler;
-use config::static_files::Mode;
-use config::log;
-use intern::{LogFormatName, Authorizer as AuthorizerName, HandlerName};
-use routing::RoutingTable;
+use crate::config::static_files::Mode;
+use crate::config::log;
+use crate::intern::{LogFormatName, Authorizer as AuthorizerName, HandlerName};
+use crate::routing::RoutingTable;
 
 
 quick_error! {

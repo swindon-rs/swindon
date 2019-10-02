@@ -24,7 +24,7 @@ pub use self::dispatcher::Dispatcher;
 pub use self::connection_sender::ConnectionSender;
 pub use self::replication::ReplicationSession;
 
-use metrics::{Counter, Integer, List, Metric};
+use crate::metrics::{Counter, Integer, List, Metric};
 
 lazy_static! {
     pub static ref CONNECTS: Counter = Counter::new();

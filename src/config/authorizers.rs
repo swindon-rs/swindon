@@ -2,8 +2,8 @@ use std::sync::Arc;
 
 use quire::validate::{Enum, Nothing};
 
-use config::ldap;
-use config::networks;
+use crate::config::ldap;
+use crate::config::networks;
 
 
 #[derive(Deserialize, Debug, Clone, PartialEq, Eq)]

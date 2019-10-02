@@ -6,22 +6,22 @@ use std::collections::hash_map::Entry::Occupied;
 use serde_json::Value as Json;
 use futures::sync::mpsc::{UnboundedSender as Sender};
 
-use intern::{Topic, SessionId, SessionPoolName, Lattice as Namespace};
-use intern::{LatticeKey};
-use config;
-use chat::{Cid, CloseReason, ConnectionSender};
+use crate::intern::{Topic, SessionId, SessionPoolName, Lattice as Namespace};
+use crate::intern::{LatticeKey};
+use crate::config;
+use crate::chat::{Cid, CloseReason, ConnectionSender};
 use super::{ConnectionMessage, PoolMessage};
 use super::session::Session;
 use super::connection::{NewConnection, Connection};
 use super::heap::HeapMap;
-use chat::processor::lattice::{Lattice, Delta, Values, Register};
-use metrics::{Integer, Counter};
-use chat::processor::{SWINDON_USER, STATUS_VAR};
-use chat::processor::{ACTIVE_STATUS, INACTIVE_STATUS, OFFLINE_STATUS};
-use chat::processor::pair::PairCollection;
-use chat::processor::lattice::Expires;
-use chat::processor::lattice::{PRIVATE_KEYS, PRIVATE_COUNTERS, PRIVATE_SETS};
-use chat::processor::lattice::{PRIVATE_REGISTERS};
+use crate::chat::processor::lattice::{Lattice, Delta, Values, Register};
+use crate::metrics::{Integer, Counter};
+use crate::chat::processor::{SWINDON_USER, STATUS_VAR};
+use crate::chat::processor::{ACTIVE_STATUS, INACTIVE_STATUS, OFFLINE_STATUS};
+use crate::chat::processor::pair::PairCollection;
+use crate::chat::processor::lattice::Expires;
+use crate::chat::processor::lattice::{PRIVATE_KEYS, PRIVATE_COUNTERS, PRIVATE_SETS};
+use crate::chat::processor::lattice::{PRIVATE_REGISTERS};
 
 lazy_static! {
     pub static ref ACTIVE_SESSIONS: Integer = Integer::new();
@@ -306,7 +306,7 @@ impl Pool {
     }
 
     fn lattice_cleanup(&mut self, timestamp: Instant) -> Option<Instant> {
-        use chat::processor::lattice::Expires::*;
+        use crate::chat::processor::lattice::Expires::*;
         let interval = Duration::from_millis(LATTICE_CLEANUP_INTERVAL);
         if timestamp < self.last_lattice_cleanup + interval {
             if self.lattices.len() > 0 {
@@ -837,12 +837,12 @@ mod test {
     use futures::stream::Stream;
     use futures::sync::mpsc::{unbounded as channel};
     use futures::sync::mpsc::{UnboundedReceiver as Receiver};
-    use intern::{SessionId, SessionPoolName, Lattice as Ns};
+    use crate::intern::{SessionId, SessionPoolName, Lattice as Ns};
 
     use string_intern::{Symbol, Validator};
-    use config;
-    use config::listen::Listen;
-    use chat::{Cid, ConnectionSender};
+    use crate::config;
+    use crate::config::listen::Listen;
+    use crate::chat::{Cid, ConnectionSender};
 
     use super::Pool;
     use super::super::lattice::{Delta, Values};

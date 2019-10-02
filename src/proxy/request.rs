@@ -4,10 +4,10 @@ use std::net::SocketAddr;
 use tk_http::Version;
 use tk_http::client::{Encoder, EncoderDone};
 
-use config::http_destinations::Destination;
-use config::proxy::Proxy;
-use incoming::{Input};
-use request_id::RequestId;
+use crate::config::http_destinations::Destination;
+use crate::config::proxy::Proxy;
+use crate::incoming::{Input};
+use crate::request_id::RequestId;
 
 
 /// A repeatable (so fully-buffered) request structure

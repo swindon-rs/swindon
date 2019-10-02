@@ -2,7 +2,7 @@ use trimmer::{Template, Options, ParseError};
 use serde::de::{Deserialize, Deserializer, Error};
 use quire::validate::{Structure, Scalar};
 
-use template;
+use crate::template;
 
 lazy_static! {
     static ref OPTIONS: Options = Options::new()

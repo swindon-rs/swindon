@@ -6,8 +6,8 @@ use futures::future::{FutureResult, ok};
 use futures::sync::oneshot;
 use tk_http::client as http;
 
-use config::http_destinations::Destination;
-use proxy::{RepReq, HalfResp, Response};
+use crate::config::http_destinations::Destination;
+use crate::proxy::{RepReq, HalfResp, Response};
 
 enum State {
     Init(RepReq),

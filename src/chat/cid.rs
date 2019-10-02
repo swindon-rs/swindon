@@ -3,7 +3,7 @@ use std::str::FromStr;
 use std::num::ParseIntError;
 use serde::de::{self, Deserialize, Deserializer, Visitor};
 
-use runtime::ServerId;
+use crate::runtime::ServerId;
 
 /// Internal connection id
 #[derive(Hash, PartialEq, Eq, Clone, Copy, Serialize, Deserialize)]

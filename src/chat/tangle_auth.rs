@@ -2,8 +2,8 @@ use std::fmt;
 
 use serde_json::to_string;
 
-use base64::Base64;
-use intern::SessionId;
+use crate::base64::Base64;
+use crate::intern::SessionId;
 
 pub struct TangleAuth<'a>(pub &'a SessionId);
 

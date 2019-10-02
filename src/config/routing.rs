@@ -4,8 +4,8 @@ use regex::Regex;
 use serde::de::{Deserializer, Deserialize};
 use quire::validate::{Mapping, Scalar};
 
-use config::visitors::FromStrVisitor;
-use intern::{HandlerName, Authorizer};
+use crate::config::visitors::FromStrVisitor;
+use crate::intern::{HandlerName, Authorizer};
 
 lazy_static! {
     static ref ROUTING_RE: Regex = Regex::new(

@@ -8,13 +8,13 @@ use http_file_headers::{Input as HeadersInput, Output};
 use httpdate::HttpDate;
 use tk_http::Status;
 
-use config::static_files::{VersionChars, VersionedStatic};
-use default_error_page::{error_page};
-use incoming::{Input, Request, Transport, reply};
-use handlers::files::decode::decode_component;
-use handlers::files::normal;
-use handlers::files::pools::get_pool;
-use handlers::files::common::{reply_file, NotFile};
+use crate::config::static_files::{VersionChars, VersionedStatic};
+use crate::default_error_page::{error_page};
+use crate::incoming::{Input, Request, Transport, reply};
+use crate::handlers::files::decode::decode_component;
+use crate::handlers::files::normal;
+use crate::handlers::files::pools::get_pool;
+use crate::handlers::files::common::{reply_file, NotFile};
 
 
 const VERSIONED_CACHE: &str = "public, max-age=31536000, immutable";
@@ -120,7 +120,7 @@ pub fn serve_versioned<S: Transport>(settings: &Arc<VersionedStatic>,
         inp.headers.method(), inp.headers.headers());
     let fut = pool.spawn_fn(move || {
         use self::VersionError::*;
-        use config::static_files::FallbackMode::*;
+        use crate::config::static_files::FallbackMode::*;
 
         let res = path.as_ref()
             .map_err(|e| *e)

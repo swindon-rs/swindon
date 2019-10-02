@@ -17,12 +17,12 @@ use serde_json::Value as Json;
 use serde::ser::{Serialize, Serializer, SerializeTuple};
 use futures::sync::mpsc::{UnboundedSender as Sender};
 
-use config;
-use intern::{Topic, SessionId, SessionPoolName, Lattice as Namespace};
-use intern::{LatticeKey, LatticeVar};
-use chat::{Cid, ConnectionSender, CloseReason};
-use chat::message::{Meta, MetaWithExtra};
-use chat::error::MessageError;
+use crate::config;
+use crate::intern::{Topic, SessionId, SessionPoolName, Lattice as Namespace};
+use crate::intern::{LatticeKey, LatticeVar};
+use crate::chat::{Cid, ConnectionSender, CloseReason};
+use crate::chat::message::{Meta, MetaWithExtra};
+use crate::chat::error::MessageError;
 
 mod main;
 mod pool;

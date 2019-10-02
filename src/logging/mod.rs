@@ -8,7 +8,7 @@ pub use self::context::AsContext;
 use std::io::{stdout, Write};
 use std::sync::Arc;
 
-use runtime::Runtime;
+use crate::runtime::Runtime;
 
 
 pub fn log<C: AsContext>(runtime: &Arc<Runtime>, ctx: C) {

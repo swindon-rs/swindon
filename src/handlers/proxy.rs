@@ -1,11 +1,11 @@
 use std::sync::Arc;
-use proxy::frontend::Codec;
+use crate::proxy::frontend::Codec;
 
 use tk_http::Status;
 use tk_http::server::RequestTarget::Authority;
-use config::proxy::Proxy;
-use incoming::{Request, Input};
-use default_error_page::serve_error_page;
+use crate::config::proxy::Proxy;
+use crate::incoming::{Request, Input};
+use crate::default_error_page::serve_error_page;
 
 
 pub fn serve<S: 'static>(settings: &Arc<Proxy>, inp: Input)

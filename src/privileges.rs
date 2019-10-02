@@ -1,5 +1,5 @@
 use std::io;
-use config::Config;
+use crate::config::Config;
 
 
 #[cfg(unix)]

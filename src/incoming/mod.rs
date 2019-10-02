@@ -2,7 +2,7 @@ use futures::future::Future;
 use tk_http::server::{Codec, Error};
 use tokio_io::{AsyncRead, AsyncWrite};
 
-use metrics::{Metric, List};
+use crate::metrics::{Metric, List};
 
 mod input;
 mod router;

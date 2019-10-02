@@ -13,11 +13,11 @@ use serde_json::to_string as json_encode;
 use ns_router::{Router};
 use void::Void;
 
-use intern::SessionPoolName;
-use runtime::{Runtime, ServerId};
-use config::listen::Listen;
-use config::{Replication};
-use chat::processor::Processor;
+use crate::intern::SessionPoolName;
+use crate::runtime::{Runtime, ServerId};
+use crate::config::listen::Listen;
+use crate::config::{Replication};
+use crate::chat::processor::Processor;
 
 use super::{ReplAction, RemoteAction, IncomingChannel, OutgoingChannel};
 use super::action::Message;

@@ -3,8 +3,8 @@ use std::str::FromStr;
 use serde::de::{Deserializer, Deserialize};
 use quire::validate::{Scalar};
 
-use intern::Upstream;
-use config::visitors::FromStrVisitor;
+use crate::intern::Upstream;
+use crate::config::visitors::FromStrVisitor;
 
 
 pub fn destination_validator() -> Scalar {

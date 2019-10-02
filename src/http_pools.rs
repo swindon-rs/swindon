@@ -14,9 +14,9 @@ use tk_pool::pool_for;
 use futures::future::FutureResult;
 use libcantal::{Collection, Visitor};
 
-use intern::Upstream;
-use config::http_destinations::Destination;
-use metrics::{Counter, List, Metric, Integer};
+use crate::intern::Upstream;
+use crate::config::http_destinations::Destination;
+use crate::metrics::{Counter, List, Metric, Integer};
 
 lazy_static! {
     pub static ref REQUESTS: Counter = Counter::new();
@@ -125,7 +125,7 @@ impl Metrics {
 
 impl Collection for PoolMetrics {
     fn visit<'x>(&'x self, v: &mut dyn Visitor<'x>) {
-        use metrics::Metric as M;
+        use crate::metrics::Metric as M;
         let ref s = self.0;
         let g = format!("http.pools.{}", s.name);
         v.metric(&M(&g, "connecting"), &s.connecting);

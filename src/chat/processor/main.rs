@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use super::{Event, Action};
 use super::pool::Pool;
 use super::try_iter::try_iter;
-use metrics::Integer;
+use crate::metrics::Integer;
 
 lazy_static! {
     pub static ref SESSION_POOLS: Integer = Integer::new();

@@ -6,21 +6,21 @@ use std::path::PathBuf;
 
 use quire::validate::{Structure, Sequence, Mapping, Scalar, Numeric};
 
-use intern::{HandlerName, Upstream, SessionPoolName, DiskPoolName};
-use intern::{LdapUpstream, Network, Authorizer as AuthorizerName};
-use intern::{LogFormatName};
-use config::listen::{self, Listen};
-use config::routing::{self, HostPath, RouteDef};
-use config::handlers::{self, Handler};
-use config::authorizers::{self, Authorizer};
-use config::session_pools::{self, SessionPool};
-use config::http_destinations::{self, Destination};
-use config::ldap;
-use config::log;
-use config::networks;
-use config::disk::{self, Disk};
-use config::replication::{self, Replication};
-use routing::RoutingTable;
+use crate::intern::{HandlerName, Upstream, SessionPoolName, DiskPoolName};
+use crate::intern::{LdapUpstream, Network, Authorizer as AuthorizerName};
+use crate::intern::{LogFormatName};
+use crate::config::listen::{self, Listen};
+use crate::config::routing::{self, HostPath, RouteDef};
+use crate::config::handlers::{self, Handler};
+use crate::config::authorizers::{self, Authorizer};
+use crate::config::session_pools::{self, SessionPool};
+use crate::config::http_destinations::{self, Destination};
+use crate::config::ldap;
+use crate::config::log;
+use crate::config::networks;
+use crate::config::disk::{self, Disk};
+use crate::config::replication::{self, Replication};
+use crate::routing::RoutingTable;
 
 
 #[derive(Deserialize, PartialEq, Eq, Debug)]

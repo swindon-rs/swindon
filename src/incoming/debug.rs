@@ -4,10 +4,10 @@ use std::path::{Path, PathBuf};
 
 use tk_http::server::Head;
 
-use intern::{Authorizer};
-use config::Config;
-use routing::Route;
-use request_id::RequestId;
+use crate::intern::{Authorizer};
+use crate::config::Config;
+use crate::routing::Route;
+use crate::request_id::RequestId;
 
 pub struct Debug(Option<Box<DebugInfo>>);
 

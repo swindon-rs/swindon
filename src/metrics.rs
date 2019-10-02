@@ -3,7 +3,7 @@ use std::sync::Arc;
 use libcantal::{self, Name, NameVisitor, Value, Collection, Error};
 use owning_ref::OwningHandle;
 
-use runtime::Runtime;
+use crate::runtime::Runtime;
 
 pub use libcantal::{Counter, Integer};
 
@@ -37,10 +37,10 @@ impl ::std::ops::Deref for Wrapper {
 
 pub fn all(runtime: &Arc<Runtime>) -> Box<Vec<Box<dyn Collection>>> {
     Box::new(vec![
-        Box::new(::incoming::metrics()),
-        Box::new(::chat::metrics()),
-        Box::new(::http_pools::metrics()),
-        Box::new(::http_pools::pool_metrics(&runtime.http_pools)),
+        Box::new(crate::incoming::metrics()),
+        Box::new(crate::chat::metrics()),
+        Box::new(crate::http_pools::metrics()),
+        Box::new(crate::http_pools::pool_metrics(&runtime.http_pools)),
     ])
 }
 
