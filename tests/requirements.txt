@@ -1,7 +1,7 @@
 setuptools
-aiohttp==2.3.6
-pytest>=3.0.5
+aiohttp==3.6.1
+pytest==5.2.0
 pytest-aiohttp==0.3.0
-pytest-xdist==1.15.0
-uvloop
-Werkzeug==0.12.2
+pytest-xdist>=1.15.0
+uvloop==0.13.0
+Werkzeug==0.16.0
