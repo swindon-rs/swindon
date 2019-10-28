@@ -96,8 +96,9 @@ async def test_ip_header(proxy_server, swindon, request):
 
         req = await handler.request()
         if is_wsgi:
-            # last header wins
-            assert set(req.headers.getall('X-Some-Header')) == {'1.2.3.4'}
+            # XXX: werkzeug 0.16 returns all values but unparsed
+            assert set(req.headers.getall('X-Some-Header')) == {
+                '127.0.0.1,1.2.3.4'}
         else:
             assert set(req.headers.getall('X-Some-Header')) == {
                 '1.2.3.4', '127.0.0.1'}
