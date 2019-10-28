@@ -492,8 +492,8 @@ class _BaseServer:
     async def request(self, method, url, timeout=None, **kwargs):
         with async_timeout.timeout(timeout, loop=self.loop):
             async with self._session.request(method, url, **kwargs) as resp:
-                await resp.read()
-                return resp
+                body = await resp.read()
+                return resp, body
 
     async def ws_connect(self, url, **kwargs):
         ws = await self._session.ws_connect(url, **kwargs)
