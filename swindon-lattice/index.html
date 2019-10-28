@@ -1,0 +1,162 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Swindon-lattice Protocol &#8212; Swindon 0.7.8 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '0.7.8',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Lattices" href="lattices.html" />
+    <link rel="prev" title="Load Balancing" href="../internals/load_balancing.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="swindon-lattice-protocol">
+<span id="swindon-lattice"></span><h1>Swindon-lattice Protocol<a class="headerlink" href="#swindon-lattice-protocol" title="Permalink to this headline">¶</a></h1>
+<p>The protocol is higher level-protocol on top of websockets that allows routing
+messages between backends, push from any backend to any user, publish-subscribe
+and few other useful things.</p>
+<p>The protocol is designed to cover large number of cases including different
+applications covered by single websocket connection for efficiency.</p>
+<p>The protocol is <a class="reference external" href="iana_ws">registered by IANA</a> as <code class="docutils literal"><span class="pre">v1.swindon-lattice+json</span></code>
+and this value needs to be passed in <code class="docutils literal"><span class="pre">Sec-WebSocket-Protocol</span></code> field in
+handshake.</p>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="lattices.html">Lattices</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="lattices.html#what-does-client-see">What Does Client See?</a></li>
+<li class="toctree-l2"><a class="reference internal" href="lattices.html#what-does-backend-send">What Does Backend Send?</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="lattices.html#example">Example</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="lattices.html#why-is-it-so-complex">Why is it so Complex?</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="crdt.html">CRDT Types</a></li>
+<li class="toctree-l1"><a class="reference internal" href="frontend.html">Frontend API Reference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="frontend.html#request-format">Request Format</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="frontend.html#example">Example</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="frontend.html#response-format">Response Format</a></li>
+<li class="toctree-l2"><a class="reference internal" href="frontend.html#event-types">Event Types</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="frontend.html#method-call-result-result-error">Method Call Result (<code class="docutils literal"><span class="pre">result</span></code>/<code class="docutils literal"><span class="pre">error</span></code>)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="frontend.html#user-information-hello">User Information (<code class="docutils literal"><span class="pre">hello</span></code>)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="frontend.html#fatal-errors-fatal-error">Fatal Errors (<code class="docutils literal"><span class="pre">fatal_error</span></code>)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="frontend.html#message-message">Message (<code class="docutils literal"><span class="pre">message</span></code>)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="frontend.html#lattice-update-lattice">Lattice Update (<code class="docutils literal"><span class="pre">lattice</span></code>)</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="upstream.html">Upstream backend requirements</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="upstream.html#general-requests-format">General requests format</a></li>
+<li class="toctree-l2"><a class="reference internal" href="upstream.html#authorization-request">Authorization request</a></li>
+<li class="toctree-l2"><a class="reference internal" href="upstream.html#inactive-session-notification">Inactive session notification</a></li>
+<li class="toctree-l2"><a class="reference internal" href="upstream.html#websocket-calls">Websocket calls</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="backend.html">Backend API Reference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="backend.html#pub-sub-subscriptions">Pub/Sub subscriptions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="backend.html#lattice-subscriptions">Lattice Subscriptions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="backend.html#users-lattice">Users Lattice</a></li>
+<li class="toctree-l2"><a class="reference internal" href="backend.html#parameters-specification">Parameters specification</a></li>
+<li class="toctree-l2"><a class="reference internal" href="backend.html#api-response-status-codes">API response status codes</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="websocket_shutdown_codes.html">Websocket Shutdown Codes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Example Applications</a></li>
+</ul>
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../index.html">
+              <img class="logo" src="../_static/swindon.jpg" alt="Logo"/>
+            </a></p><div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="../internals/load_balancing.html" title="previous chapter">Load Balancing</a></li>
+      <li>Next: <a href="lattices.html" title="next chapter">Lattices</a></li>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/swindon-lattice/index.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2016, Evo Company.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="../_sources/swindon-lattice/index.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

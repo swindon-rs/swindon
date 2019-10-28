@@ -1,0 +1,241 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Lattices &#8212; Swindon 0.7.8 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '0.7.8',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="CRDT Types" href="crdt.html" />
+    <link rel="prev" title="Swindon-lattice Protocol" href="index.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="lattices">
+<span id="lattice-definition"></span><h1>Lattices<a class="headerlink" href="#lattices" title="Permalink to this headline">¶</a></h1>
+<p>Lattice <a class="footnote-reference" href="#id2" id="id1">[1]</a> has single one function, that is: <strong>subscribe to a family of
+values, receiving updates from server</strong>. For example:</p>
+<blockquote>
+<div>We subscribe for the rooms of user X. If new message arrives in any
+of subscribed chat room the update is propagated to the user. If user
+joins another room the update is delivered to every device connected on
+behalf of the user.</div></blockquote>
+<table class="docutils footnote" frame="void" id="id2" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label"><a class="fn-backref" href="#id1">[1]</a></td><td>We invented this term to describe this specific protocol. Any clashes
+with the term in other contexts are coincidental.</td></tr>
+</tbody>
+</table>
+<div class="section" id="what-does-client-see">
+<span id="lattice-chat-example"></span><h2>What Does Client See?<a class="headerlink" href="#what-does-client-see" title="Permalink to this headline">¶</a></h2>
+<p>Every lattice is a dictionary of dictionaries. For example this is how
+chat rooms might be delivered to the javascript client:</p>
+<div class="highlight-json"><div class="highlight"><pre><span></span><span class="p">[</span><span class="s2">&quot;lattice&quot;</span><span class="p">,</span> <span class="p">{</span><span class="nt">&quot;namespace&quot;</span><span class="p">:</span> <span class="s2">&quot;chat.rooms&quot;</span><span class="p">},</span> <span class="p">{</span>
+    <span class="nt">&quot;room1&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="nt">&quot;last_message_counter&quot;</span><span class="p">:</span> <span class="mi">123</span><span class="p">,</span>
+        <span class="nt">&quot;last_seen_counter&quot;</span><span class="p">:</span> <span class="mi">120</span><span class="p">},</span>
+    <span class="nt">&quot;room2&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="nt">&quot;last_message_counter&quot;</span><span class="p">:</span> <span class="mi">245</span><span class="p">,</span>
+        <span class="nt">&quot;last_seen_counter&quot;</span><span class="p">:</span> <span class="mi">245</span><span class="p">}</span>
+<span class="p">}]</span>
+</pre></div>
+</div>
+<p>Here we see that there is single message unread by user in <code class="docutils literal"><span class="pre">room1</span></code> (that is
+the difference between <code class="docutils literal"><span class="pre">last_message_counter</span></code> and <code class="docutils literal"><span class="pre">last_seen_counter</span></code>), and
+there are no unread messages in <code class="docutils literal"><span class="pre">room2</span></code>.</p>
+<p>Every update can contain arbitrary number or keys on both levels, and client
+must be able to aggregate them correctly. Aggregation of the messages works
+only two levels deep and depends on type of the value. Value type is marked
+by the key suffix.</p>
+<p>Suffix <code class="docutils literal"><span class="pre">_counter</span></code> is used for type that can only grow. This means if update
+that was just received contains smaller value we drop it and use old value.
+This works on <strong>key by key basis</strong>.</p>
+<p>This kind of structures and how to summarize them correctly are called
+CRDT: Commutative Replicated Data Types, and are described in
+<a class="reference external" href="crdt-types">their own section</a>.</p>
+</div>
+<div class="section" id="what-does-backend-send">
+<h2>What Does Backend Send?<a class="headerlink" href="#what-does-backend-send" title="Permalink to this headline">¶</a></h2>
+<p>Backend has a little bit more complex representation of lattices. Data consists
+of “private” and “shared”.</p>
+<ol class="arabic simple">
+<li>Shared data is the set of keys visible for many (potentially all)
+users. But not all users have access to all the keys.</li>
+<li>Private keys are only visible to specific user.</li>
+</ol>
+<div class="section" id="example">
+<h3>Example<a class="headerlink" href="#example" title="Permalink to this headline">¶</a></h3>
+<p><a class="reference external" href="#lattice-chat-example">Example chat</a> from the backend point of view looks
+like:</p>
+<div class="highlight-json"><div class="highlight"><pre><span></span><span class="p">{</span><span class="nt">&quot;shared&quot;</span><span class="p">:</span> <span class="p">{</span>
+    <span class="nt">&quot;room1&quot;</span><span class="p">:</span> <span class="p">{</span><span class="nt">&quot;last_message_counter&quot;</span><span class="p">:</span> <span class="mi">123</span><span class="p">},</span>
+    <span class="nt">&quot;room2&quot;</span><span class="p">:</span> <span class="p">{</span><span class="nt">&quot;last_message_counter&quot;</span><span class="p">:</span> <span class="mi">245</span><span class="p">}},</span>
+ <span class="nt">&quot;private&quot;</span><span class="p">:</span> <span class="p">{</span>
+   <span class="nt">&quot;7777&quot;</span><span class="p">:</span> <span class="p">{</span>
+    <span class="nt">&quot;room1&quot;</span><span class="p">:</span> <span class="p">{</span><span class="nt">&quot;last_seen_counter&quot;</span><span class="p">:</span> <span class="mi">120</span><span class="p">},</span>
+    <span class="nt">&quot;room2&quot;</span><span class="p">:</span> <span class="p">{</span><span class="nt">&quot;last_seen_counter&quot;</span><span class="p">:</span> <span class="mi">245</span><span class="p">}},</span>
+   <span class="nt">&quot;8734&quot;</span><span class="p">:</span> <span class="p">{</span>
+    <span class="nt">&quot;room1&quot;</span><span class="p">:</span> <span class="p">{</span><span class="nt">&quot;last_seen_counter&quot;</span><span class="p">:</span> <span class="mi">123</span><span class="p">},</span>
+    <span class="nt">&quot;room2&quot;</span><span class="p">:</span> <span class="p">{</span><span class="nt">&quot;last_seen_counter&quot;</span><span class="p">:</span> <span class="mi">24</span><span class="p">}}</span>
+<span class="p">}}</span>
+</pre></div>
+</div>
+<p>As you might see every user in the “private” section has it’s own key. In the
+example above you have seen how these dicts are merged for a specific user
+“7777”.</p>
+<p>You can send only changed keys from the backend. For example if user “7777”
+sent a message to a “room2”, a backend can send the following message:</p>
+<div class="highlight-json"><div class="highlight"><pre><span></span><span class="p">{</span><span class="nt">&quot;shared&quot;</span><span class="p">:</span> <span class="p">{</span>
+    <span class="nt">&quot;room2&quot;</span><span class="p">:</span> <span class="p">{</span><span class="nt">&quot;last_message_counter&quot;</span><span class="p">:</span> <span class="mi">246</span><span class="p">}},</span>
+ <span class="nt">&quot;private&quot;</span><span class="p">:</span> <span class="p">{</span>
+   <span class="nt">&quot;7777&quot;</span><span class="p">:</span> <span class="p">{</span>
+    <span class="nt">&quot;room2&quot;</span><span class="p">:</span> <span class="p">{</span><span class="nt">&quot;last_seen_counter&quot;</span><span class="p">:</span> <span class="mi">246</span><span class="p">}},</span>
+<span class="p">}}</span>
+</pre></div>
+</div>
+<p>Note the following:</p>
+<ol class="arabic simple">
+<li>The message text and metadata is delivered in other way. Usually pub-sub
+topic is used. But client can also request the message on demand.</li>
+<li>We marked message as read in the same transaction</li>
+</ol>
+<p>In this case javascript received the following JSON for user “7777”:</p>
+<div class="highlight-json"><div class="highlight"><pre><span></span><span class="p">[</span><span class="s2">&quot;lattice&quot;</span><span class="p">,</span> <span class="p">{</span><span class="nt">&quot;namespace&quot;</span><span class="p">:</span> <span class="s2">&quot;chat.public&quot;</span><span class="p">},</span>
+ <span class="p">{</span>
+    <span class="nt">&quot;room2&quot;</span><span class="p">:</span> <span class="p">{</span><span class="nt">&quot;last_message_counter&quot;</span><span class="p">:</span> <span class="mi">246</span><span class="p">,</span>
+              <span class="nt">&quot;last_seen_counter&quot;</span><span class="p">:</span> <span class="mi">246</span><span class="p">}</span>
+ <span class="p">}]</span>
+</pre></div>
+</div>
+<p>And devices working on behalf of “8734” receive something like this:</p>
+<div class="highlight-json"><div class="highlight"><pre><span></span><span class="p">[</span><span class="s2">&quot;lattice&quot;</span><span class="p">,</span> <span class="p">{</span><span class="nt">&quot;namespace&quot;</span><span class="p">:</span> <span class="s2">&quot;chat.public&quot;</span><span class="p">},</span>
+ <span class="p">{</span><span class="nt">&quot;room2&quot;</span><span class="p">:</span> <span class="p">{</span><span class="nt">&quot;last_message_counter&quot;</span><span class="p">:</span> <span class="mi">246</span><span class="p">}}]</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="why-is-it-so-complex">
+<h2>Why is it so Complex?<a class="headerlink" href="#why-is-it-so-complex" title="Permalink to this headline">¶</a></h2>
+<p>We aim to provide reliable information for users despite that something might
+fail during user’s session. Here is the list of some issues that we try to
+avoid with lattices:</p>
+<ol class="arabic simple">
+<li>Messages from backend can be delayed for arbitrary time, so the order
+backend messages reach swindon (and client) is not guaranteed</li>
+<li>Websocket can be disconnected at any time. Any single message can be
+lost on disconnect.</li>
+<li>Messages to or from backend can be lost (backend is down, connection between
+datacenters is lost, …)</li>
+<li>And swindon itself (which is an edge/gateway server for users) can die
+so all client will reconnect again.</li>
+</ol>
+<p>Lattices try to avoid all these issues and always provide reliable data.</p>
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../index.html">
+              <img class="logo" src="../_static/swindon.jpg" alt="Logo"/>
+            </a></p>
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Lattices</a><ul>
+<li><a class="reference internal" href="#what-does-client-see">What Does Client See?</a></li>
+<li><a class="reference internal" href="#what-does-backend-send">What Does Backend Send?</a><ul>
+<li><a class="reference internal" href="#example">Example</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#why-is-it-so-complex">Why is it so Complex?</a></li>
+</ul>
+</li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="index.html">Swindon-lattice Protocol</a><ul>
+      <li>Previous: <a href="index.html" title="previous chapter">Swindon-lattice Protocol</a></li>
+      <li>Next: <a href="crdt.html" title="next chapter">CRDT Types</a></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/swindon-lattice/lattices.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2016, Evo Company.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="../_sources/swindon-lattice/lattices.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

@@ -1,0 +1,240 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Auth &amp; Auth &#8212; Swindon 0.7.8 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '0.7.8',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="LDAP Support" href="ldap.html" />
+    <link rel="prev" title="Http Destinations" href="http-destinations.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="auth-auth">
+<h1>Auth &amp; Auth<a class="headerlink" href="#auth-auth" title="Permalink to this headline">¶</a></h1>
+<p>Swindon currently supports authorization based on source ip address.
+Ldap authorization is in the works.</p>
+<div class="section" id="authorization-table">
+<h2>Authorization Table<a class="headerlink" href="#authorization-table" title="Permalink to this headline">¶</a></h2>
+<div class="versionchanged">
+<p><span class="versionmodified">Changed in version v0.7.0.</span></p>
+</div>
+<p>Authorizer are flagged in <code class="docutils literal"><span class="pre">routing</span></code> table as <code class="docutils literal"><span class="pre">&#64;authorizer</span></code>.</p>
+<div class="highlight-yaml"><div class="highlight"><pre><span></span><span class="nt">routing</span><span class="p">:</span>
+  <span class="nt">corporate.example.com</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">site @corporate-network</span>
+  <span class="nt">corporate.example.com/admin</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">admin @super-admins</span>
+</pre></div>
+</div>
+<p>Everything is allowed by default (because it’s a web server, it’s here
+to publish things). But you can override it by setting <code class="docutils literal"><span class="pre">default</span></code> authorizer,
+which applies implicitly.</p>
+<p>Note that unlike handlers, authorizers are inherited across paths and
+subdomains unless overrriden:</p>
+<div class="highlight-yaml"><div class="highlight"><pre><span></span><span class="nt">routing</span><span class="p">:</span>
+    <span class="s">&quot;*.example.org&quot;</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">site @auth1</span>
+    <span class="s">&quot;example.org&quot;</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">main-site</span>
+    <span class="s">&quot;example.org/admin&quot;</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">admin @admin</span>
+    <span class="s">&quot;example.org/admin/something&quot;</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">something</span>
+    <span class="s">&quot;example.org/otherthing&quot;</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">otherthing</span>
+</pre></div>
+</div>
+<p>Is equivalent to:</p>
+<div class="highlight-yaml"><div class="highlight"><pre><span></span><span class="nt">routing</span><span class="p">:</span>
+    <span class="s">&quot;*.example.org&quot;</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">site @auth1</span>
+    <span class="s">&quot;example.org&quot;</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">main-site @auth1</span>
+    <span class="s">&quot;example.org/admin&quot;</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">admin @admin</span>
+    <span class="s">&quot;example.org/admin/something&quot;</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">something @admin</span>
+    <span class="s">&quot;example.org/otherthing&quot;</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">otherthing @auth1</span>
+</pre></div>
+</div>
+<p>Also note that exact domain is more specific star domain:</p>
+<div class="highlight-yaml"><div class="highlight"><pre><span></span><span class="nt">routing</span><span class="p">:</span>
+    <span class="s">&quot;*.example.org&quot;</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">handler</span>
+    <span class="s">&quot;example.org&quot;</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">handler @auth</span>
+</pre></div>
+</div>
+<p>Here the <code class="docutils literal"><span class="pre">auth</span></code> is not applied to <code class="docutils literal"><span class="pre">somethign.example.org</span></code>, but in this
+case:</p>
+<div class="highlight-yaml"><div class="highlight"><pre><span></span><span class="nt">routing</span><span class="p">:</span>
+    <span class="s">&quot;*.example.org&quot;</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">handler @auth</span>
+</pre></div>
+</div>
+<p>The authorization (as well as handler) is applied both for the main site
+<code class="docutils literal"><span class="pre">example.org</span></code> and all the subdomains.</p>
+<p>The routing here is the same as in normal routing table, in particular:
+<code class="docutils literal"><span class="pre">corporate-network</span></code> limit is not obeyed on <code class="docutils literal"><span class="pre">corporate.example.com/admin</span></code>.</p>
+</div>
+<div class="section" id="authorizers">
+<h2>Authorizers<a class="headerlink" href="#authorizers" title="Permalink to this headline">¶</a></h2>
+<p>Authorizers section contains named authorizers. For example:</p>
+<div class="highlight-yaml"><div class="highlight"><pre><span></span><span class="nt">authorizers</span><span class="p">:</span>
+  <span class="nt">corporate-network</span><span class="p">:</span> <span class="kt">!SourceIp</span>
+     <span class="nt">allowed-network</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">corporate-ip-group</span>
+     <span class="nt">forwarded-ip-header</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">X-Remote-Ip</span>
+     <span class="nt">accept-forwarded-headers-from</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">frontend-servers</span>
+</pre></div>
+</div>
+<p>Note by default there is a hidden <code class="docutils literal"><span class="pre">default</span></code> authorizer:</p>
+<div class="highlight-yaml"><div class="highlight"><pre><span></span><span class="nt">authorizers</span><span class="p">:</span>
+  <span class="nt">default</span><span class="p">:</span> <span class="kt">!AllowAll</span>
+</pre></div>
+</div>
+<p>You can override it and it will be used for anything having no authorizer:</p>
+<div class="highlight-yaml"><div class="highlight"><pre><span></span><span class="nt">authorizers</span><span class="p">:</span>
+  <span class="nt">default</span><span class="p">:</span> <span class="kt">!SourceIp</span>
+    <span class="nt">allowed-network</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">localhost</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="allowall-authorizer">
+<h2>AllowAll Authorizer<a class="headerlink" href="#allowall-authorizer" title="Permalink to this headline">¶</a></h2>
+<p>This authorizer allows everybody access the page. It’s here to be used
+as default one, but maybe specified explicitly if default is overriden or
+just for convenience.</p>
+<div class="highlight-yaml" id="index-0"><div class="highlight"><pre><span></span><span class="nt">public-data</span><span class="p">:</span> <span class="kt">!AllowAll</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="source-ip-authorizer">
+<h2>Source Ip Authorizer<a class="headerlink" href="#source-ip-authorizer" title="Permalink to this headline">¶</a></h2>
+<p id="index-1">Source IP authorizer looks like this:</p>
+<div class="highlight-yaml"><div class="highlight"><pre><span></span><span class="nt">corporate-network</span><span class="p">:</span> <span class="kt">!SourceIp</span>
+   <span class="nt">allowed-network</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">corporate-ip-group</span>
+   <span class="nt">forwarded-ip-header</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">X-Remote-Ip</span>
+   <span class="nt">accept-forwarded-headers-from</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">frontend-servers</span>
+</pre></div>
+</div>
+<p>Settings:</p>
+<dl class="opt">
+<dt id="opt-allowed-network">
+<code class="descname">allowed-network</code><a class="headerlink" href="#opt-allowed-network" title="Permalink to this definition">¶</a></dt>
+<dd><p>(required) Name of the network to allow access from. The network is got
+from <code class="docutils literal"><span class="pre">networks</span></code> section.</p>
+</dd></dl>
+
+<dl class="opt">
+<dt id="opt-accept-forwarded-headers-from">
+<code class="descname">accept-forwarded-headers-from</code><a class="headerlink" href="#opt-accept-forwarded-headers-from" title="Permalink to this definition">¶</a></dt>
+<dd><p>(optional) Sometimes clients do not connect to this instance of swindon
+directly but are proxied from another instance. This means that real IP
+address where swindon receives a connection from is upstream server rather
+than real client. In this case, real client IP address is transferred in
+header specified by <code class="docutils literal"><span class="pre">forwarded-ip-header</span></code>.</p>
+<p>To prevent faking the IP address we accept this header only from allowed
+networks specified in this setting.</p>
+</dd></dl>
+
+<dl class="opt">
+<dt id="opt-forwarded-ip-header">
+<code class="descname">forwarded-ip-header</code><a class="headerlink" href="#opt-forwarded-ip-header" title="Permalink to this definition">¶</a></dt>
+<dd><p>(optional) Name of the header where to read IP address from if the source
+address is within the <code class="docutils literal"><span class="pre">accept-forwarded-headers-from</span></code> network.</p>
+</dd></dl>
+
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../index.html">
+              <img class="logo" src="../_static/swindon.jpg" alt="Logo"/>
+            </a></p>
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Auth &amp; Auth</a><ul>
+<li><a class="reference internal" href="#authorization-table">Authorization Table</a></li>
+<li><a class="reference internal" href="#authorizers">Authorizers</a></li>
+<li><a class="reference internal" href="#allowall-authorizer">AllowAll Authorizer</a></li>
+<li><a class="reference internal" href="#source-ip-authorizer">Source Ip Authorizer</a></li>
+</ul>
+</li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="index.html">Configuration</a><ul>
+      <li>Previous: <a href="http-destinations.html" title="previous chapter">Http Destinations</a></li>
+      <li>Next: <a href="ldap.html" title="next chapter">LDAP Support</a></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/config/auth.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2016, Evo Company.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="../_sources/config/auth.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

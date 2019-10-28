@@ -1,0 +1,337 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Main Configuration &#8212; Swindon 0.7.8 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '0.7.8',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Routing Table" href="routing.html" />
+    <link rel="prev" title="Configuration" href="index.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="main-configuration">
+<h1>Main Configuration<a class="headerlink" href="#main-configuration" title="Permalink to this headline">¶</a></h1>
+<p><a class="reference external" href="http://rust-quire.readthedocs.io/en/latest/user.html">Configuration format basics</a>.</p>
+<div class="section" id="sections">
+<h2>Sections<a class="headerlink" href="#sections" title="Permalink to this headline">¶</a></h2>
+<p>All sections except routing can be put into a separate files using
+<a class="reference internal" href="mixins.html#mixins"><span class="std std-ref">Mixins</span></a>.</p>
+<p>There are following sections:</p>
+<dl class="sect">
+<dt id="sect-routing">
+<code class="descname">routing</code><a class="headerlink" href="#sect-routing" title="Permalink to this definition">¶</a></dt>
+<dd><p>Describes routing table for all input requests. See <a class="reference internal" href="routing.html#routing"><span class="std std-ref">Routing Table</span></a></p>
+<p>Example:</p>
+<div class="highlight-yaml"><div class="highlight"><pre><span></span><span class="nt">routing</span><span class="p">:</span>
+   <span class="nt">localhost/empty.gif</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">empty-gif</span>
+   <span class="nt">localhost/admin</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">admin-handler</span>
+   <span class="nt">localhost/js</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">static-files</span>
+   <span class="nt">localhost/</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">proxy-handler</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="sect">
+<dt id="sect-handlers">
+<code class="descname">handlers</code><a class="headerlink" href="#sect-handlers" title="Permalink to this definition">¶</a></dt>
+<dd><p>A mapping of handler name to the handler itself. See <a class="reference internal" href="handlers.html#handlers"><span class="std std-ref">Handlers</span></a></p>
+<p>Example:</p>
+<div class="highlight-yaml"><div class="highlight"><pre><span></span><span class="nt">handlers</span><span class="p">:</span>
+  <span class="nt">empty-gif</span><span class="p">:</span> <span class="kt">!EmptyGif</span>
+  <span class="nt">proxy-handler</span><span class="p">:</span> <span class="kt">!Proxy</span>
+    <span class="nt">destination</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">host1/</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="sect">
+<dt id="sect-http-destinations">
+<code class="descname">http-destinations</code><a class="headerlink" href="#sect-http-destinations" title="Permalink to this definition">¶</a></dt>
+<dd><p>Describes upstream servers. See ref:<cite>http_destinations</cite></p>
+<p>Example:</p>
+<div class="highlight-yaml"><div class="highlight"><pre><span></span><span class="nt">http-destinations</span><span class="p">:</span>
+   <span class="nt">host1</span><span class="p">:</span>
+      <span class="nt">addresses</span><span class="p">:</span>
+      <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">127.0.0.1:8080</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="sect">
+<dt id="sect-session-pools">
+<code class="descname">session-pools</code><a class="headerlink" href="#sect-session-pools" title="Permalink to this definition">¶</a></dt>
+<dd><p>Describes session pools for chat protocol. See <span class="xref std std-ref">sessions</span></p>
+<p>Example:</p>
+<div class="highlight-yaml"><div class="highlight"><pre><span></span><span class="nt">session-pools</span><span class="p">:</span>
+   <span class="nt">example-chat-session</span><span class="p">:</span>
+      <span class="nt">listen</span><span class="p">:</span>
+      <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">127.0.0.1</span>
+      <span class="nt">inactivity-handlers</span><span class="p">:</span>
+      <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">some-desctination/chat/route</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="sect">
+<dt id="sect-disk-pools">
+<code class="descname">disk-pools</code><a class="headerlink" href="#sect-disk-pools" title="Permalink to this definition">¶</a></dt>
+<dd><p>TBD</p>
+</dd></dl>
+
+</div>
+<div class="section" id="options">
+<h2>Options<a class="headerlink" href="#options" title="Permalink to this headline">¶</a></h2>
+<dl class="opt">
+<dt id="opt-listen">
+<code class="descname">listen</code><a class="headerlink" href="#opt-listen" title="Permalink to this definition">¶</a></dt>
+<dd><p>List of sockets to listen to and accept connections</p>
+<p>Example:</p>
+<div class="highlight-yaml"><div class="highlight"><pre><span></span><span class="nt">listen</span><span class="p">:</span>
+<span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">127.0.0.1:80</span>
+<span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">127.0.0.1:8080</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="opt">
+<dt id="opt-max-connections">
+<code class="descname">max-connections</code><a class="headerlink" href="#opt-max-connections" title="Permalink to this definition">¶</a></dt>
+<dd><p>(default <code class="docutils literal"><span class="pre">1000</span></code>) Maximum number of client connections to accept. Note
+you should bump up a file descriptor limit to something larger than this
+value + number of potential proxy/backend connections.</p>
+<p>Note: currently max-connections is obeyed per each listening address
+separately. We’re considering to change this behavior in future.</p>
+</dd></dl>
+
+<dl class="opt">
+<dt id="opt-pipeline-depth">
+<code class="descname">pipeline-depth</code><a class="headerlink" href="#opt-pipeline-depth" title="Permalink to this definition">¶</a></dt>
+<dd><p>(default <code class="docutils literal"><span class="pre">2</span></code>) Accept maximum N in-flight requests for each HTTP
+connection. Pipelined requests improve performance of your service but also
+expose it to DoS attacks.</p>
+<p>The possible DoS attack vector is: client can send multiple requests and
+they will be forwarded to backends regardless of whether previous ones are
+read from client. Which effectively means that active requests can be up
+to <code class="docutils literal"><span class="pre">max-connections</span> <span class="pre">×</span> <span class="pre">pipeline-depth</span></code>.</p>
+</dd></dl>
+
+<dl class="opt">
+<dt id="opt-listen-error-timeout">
+<code class="descname">listen-error-timeout</code><a class="headerlink" href="#opt-listen-error-timeout" title="Permalink to this definition">¶</a></dt>
+<dd><p>(default <code class="docutils literal"><span class="pre">100ms</span></code>) Time to sleep when we caught error accepting connection,
+mostly error is some resource shortage (usually EMFILE or ENFILE), so
+repeating after some short timeout makes sense (chances that some connection
+freed some resources).</p>
+</dd></dl>
+
+<dl class="opt">
+<dt id="opt-first-byte-timeout">
+<code class="descname">first-byte-timeout</code><a class="headerlink" href="#opt-first-byte-timeout" title="Permalink to this definition">¶</a></dt>
+<dd><p>(default <code class="docutils literal"><span class="pre">5s</span></code>) Timeout receiving very first byte over connection</p>
+</dd></dl>
+
+<dl class="opt">
+<dt id="opt-keep-alive-timeout">
+<code class="descname">keep-alive-timeout</code><a class="headerlink" href="#opt-keep-alive-timeout" title="Permalink to this definition">¶</a></dt>
+<dd><p>(default <code class="docutils literal"><span class="pre">90s</span></code>) Timeout of idle connection (when no request has been sent
+yet)</p>
+</dd></dl>
+
+<dl class="opt">
+<dt id="opt-headers-timeout">
+<code class="descname">headers-timeout</code><a class="headerlink" href="#opt-headers-timeout" title="Permalink to this definition">¶</a></dt>
+<dd><p>(default <code class="docutils literal"><span class="pre">10s</span></code>) Timeout of receiving whole request headers</p>
+<p>This timeout starts when first byte of headers is received</p>
+</dd></dl>
+
+<dl class="opt">
+<dt id="opt-input-body-byte-timeout">
+<code class="descname">input-body-byte-timeout</code><a class="headerlink" href="#opt-input-body-byte-timeout" title="Permalink to this definition">¶</a></dt>
+<dd><p>(default <code class="docutils literal"><span class="pre">15s</span></code>) Maximum delay between any two bytes of
+input request received</p>
+</dd></dl>
+
+<dl class="opt">
+<dt id="opt-input-body-whole-timeout">
+<code class="descname">input-body-whole-timeout</code><a class="headerlink" href="#opt-input-body-whole-timeout" title="Permalink to this definition">¶</a></dt>
+<dd><p>(default <code class="docutils literal"><span class="pre">1</span> <span class="pre">hour</span></code>) Timeout of whole request body received</p>
+</dd></dl>
+
+<dl class="opt">
+<dt id="opt-output-body-byte-timeout">
+<code class="descname">output-body-byte-timeout</code><a class="headerlink" href="#opt-output-body-byte-timeout" title="Permalink to this definition">¶</a></dt>
+<dd><p>(default <code class="docutils literal"><span class="pre">15s</span></code>)</p>
+</dd></dl>
+
+<dl class="opt">
+<dt id="opt-output-body-whole-timeout">
+<code class="descname">output-body-whole-timeout</code><a class="headerlink" href="#opt-output-body-whole-timeout" title="Permalink to this definition">¶</a></dt>
+<dd><p>(default <code class="docutils literal"><span class="pre">1</span> <span class="pre">hour</span></code>) Timeout for the whole response body to be send to the
+client</p>
+<p>This timeout is taken literally for any response, so it must be
+as large as needed for slowest client fetching slowest file. I.e.
+it might be as big as a hour or day for some applications, but consider
+short timeouts if you don’t serve large files to prevent DoS attacks.</p>
+</dd></dl>
+
+<dl class="opt">
+<dt id="opt-debug-routing">
+<code class="descname">debug-routing</code><a class="headerlink" href="#opt-debug-routing" title="Permalink to this definition">¶</a></dt>
+<dd><p>Enable <code class="docutils literal"><span class="pre">X-Swindon-*</span></code> headers in responses to debug routes chosen for
+this request.</p>
+<p>Note this option has performance and security implications.</p>
+<p>Currently we have the following headers:</p>
+<ul class="simple">
+<li><code class="docutils literal"><span class="pre">X-Swindon-Route</span></code> – displays a handler chosen for serving a request
+(basically a value from the <a class="reference internal" href="routing.html#routing"><span class="std std-ref">routing table</span></a>).</li>
+<li><code class="docutils literal"><span class="pre">X-Swindon-File-Path</span></code> – full path of the file that was served (or
+could be served if exists) for this request</li>
+<li><code class="docutils literal"><span class="pre">X-Swindon-Request-Id</span></code> – identifier of the request if the one was
+generated for the request</li>
+<li><code class="docutils literal"><span class="pre">X-Swindon-Authorizer</span></code> – denotes current authorizer used for request
+if any</li>
+<li><code class="docutils literal"><span class="pre">X-Swindon-Allow</span></code> – denotes why the request was allowed to pass</li>
+<li><code class="docutils literal"><span class="pre">X-Swindon-Deny</span></code> – denotes why the request was denied</li>
+</ul>
+<p>Note that headers are subject to change at any time.</p>
+</dd></dl>
+
+<dl class="opt">
+<dt id="opt-debug-logging">
+<code class="descname">debug-logging</code><a class="headerlink" href="#opt-debug-logging" title="Permalink to this definition">¶</a></dt>
+<dd><p>Enables logging of requests into stderr. This is usually useful for local
+debugging. Better logging functionality will be available in next release.</p>
+<div class="versionadded">
+<p><span class="versionmodified">New in version v0.6.3.</span></p>
+</div>
+</dd></dl>
+
+<dl class="opt">
+<dt id="opt-server-name">
+<code class="descname">server-name</code><a class="headerlink" href="#opt-server-name" title="Permalink to this definition">¶</a></dt>
+<dd><p>Server name that will be sent in <code class="docutils literal"><span class="pre">Server</span></code> header. By default it’s
+<code class="docutils literal"><span class="pre">swindon/VERSION</span></code>, but it might also be <code class="docutils literal"><span class="pre">null</span></code> (don’t send <code class="docutils literal"><span class="pre">Server</span></code>
+header) or any other value.</p>
+</dd></dl>
+
+<dl class="opt">
+<dt id="opt-set-user">
+<code class="descname">set-user</code><a class="headerlink" href="#opt-set-user" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="opt">
+<dt id="opt-set-group">
+<code class="descname">set-group</code><a class="headerlink" href="#opt-set-group" title="Permalink to this definition">¶</a></dt>
+<dd><p>(no default) The name and group of the user to setuid into. This is useful
+if you run swindon as root. If only user is specified, we’re doing
+<cite>set-group</cite> to user’s primary group.</p>
+<p>The trick here is: first time we bind addresses before setting user, but
+when configuration is reloaded we might fail to bind to privileged ports.</p>
+</dd></dl>
+
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../index.html">
+              <img class="logo" src="../_static/swindon.jpg" alt="Logo"/>
+            </a></p>
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Main Configuration</a><ul>
+<li><a class="reference internal" href="#sections">Sections</a></li>
+<li><a class="reference internal" href="#options">Options</a></li>
+</ul>
+</li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="index.html">Configuration</a><ul>
+      <li>Previous: <a href="index.html" title="previous chapter">Configuration</a></li>
+      <li>Next: <a href="routing.html" title="next chapter">Routing Table</a></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/config/main.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2016, Evo Company.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="../_sources/config/main.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

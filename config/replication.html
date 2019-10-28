@@ -1,0 +1,172 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Replication configuration &#8212; Swindon 0.7.8 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '0.7.8',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Mixins" href="mixins.html" />
+    <link rel="prev" title="LDAP Support" href="ldap.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="replication-configuration">
+<h1>Replication configuration<a class="headerlink" href="#replication-configuration" title="Permalink to this headline">¶</a></h1>
+<p>Swindon employs a special protocol we call “replication” to keep in sync
+swindon instances serving same session pools.  This is required to allow users
+to connect to any instance and get all updates that target the user, and also
+allows backends to send requests and data to any swindon instance without
+doing any sophisticated logic.</p>
+<div class="section" id="example">
+<h2>Example<a class="headerlink" href="#example" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-yaml"><div class="highlight"><pre><span></span><span class="nt">replication</span><span class="p">:</span>
+   <span class="nt">listen</span><span class="p">:</span>
+   <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">0.0.0.0:7878</span>
+
+   <span class="nt">peers</span><span class="p">:</span>
+   <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">peer2:7878</span>
+   <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">peer3:7878</span>
+
+   <span class="nt">max-connections</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">10</span>
+   <span class="nt">listen-error-timeout</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">100ms</span>
+   <span class="nt">reconnect-timeout</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">5s</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="options">
+<h2>Options<a class="headerlink" href="#options" title="Permalink to this headline">¶</a></h2>
+<dl class="opt">
+<dt id="opt-listen">
+<code class="descname">listen</code><a class="headerlink" href="#opt-listen" title="Permalink to this definition">¶</a></dt>
+<dd><p>A list of addresses to bind to.</p>
+</dd></dl>
+
+<dl class="opt">
+<dt id="opt-peers">
+<code class="descname">peers</code><a class="headerlink" href="#opt-peers" title="Permalink to this definition">¶</a></dt>
+<dd><p>A list of peer names to connect to.</p>
+</dd></dl>
+
+<dl class="opt">
+<dt id="opt-max-connections">
+<code class="descname">max-connections</code><a class="headerlink" href="#opt-max-connections" title="Permalink to this definition">¶</a></dt>
+<dd><p>(default <code class="docutils literal"><span class="pre">10</span></code>) Maximum number of client connections to accept.</p>
+</dd></dl>
+
+<dl class="opt">
+<dt id="opt-listen-error-timeout">
+<code class="descname">listen-error-timeout</code><a class="headerlink" href="#opt-listen-error-timeout" title="Permalink to this definition">¶</a></dt>
+<dd><p>(default <code class="docutils literal"><span class="pre">100ms</span></code>) Time to sleep when we caught error accepting connection.</p>
+</dd></dl>
+
+<dl class="opt">
+<dt id="opt-reconnect-timeout">
+<code class="descname">reconnect-timeout</code><a class="headerlink" href="#opt-reconnect-timeout" title="Permalink to this definition">¶</a></dt>
+<dd><p>(default <code class="docutils literal"><span class="pre">5s</span></code>) Time to sleep between retrying to connect to peer.</p>
+</dd></dl>
+
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../index.html">
+              <img class="logo" src="../_static/swindon.jpg" alt="Logo"/>
+            </a></p>
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Replication configuration</a><ul>
+<li><a class="reference internal" href="#example">Example</a></li>
+<li><a class="reference internal" href="#options">Options</a></li>
+</ul>
+</li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="index.html">Configuration</a><ul>
+      <li>Previous: <a href="ldap.html" title="previous chapter">LDAP Support</a></li>
+      <li>Next: <a href="mixins.html" title="next chapter">Mixins</a></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/config/replication.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2016, Evo Company.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="../_sources/config/replication.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

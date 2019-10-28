@@ -1,0 +1,194 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Session Pool &#8212; Swindon 0.7.8 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '0.7.8',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Http Destinations" href="http-destinations.html" />
+    <link rel="prev" title="Handlers" href="handlers.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="session-pool">
+<h1>Session Pool<a class="headerlink" href="#session-pool" title="Permalink to this headline">¶</a></h1>
+<p>Session pool is a fully-isolated namespace of swindon chat service with
+it’s own address for backend connections. Each client websocket can connect
+to exactly one session pool.</p>
+<p>Note: while it’s tempting to use a session pool per application, it may or
+may not make sense for your specific case. You may combine multiple
+“applications” under umbrella of a single session pool to connect all of them
+using a single websocket. Each session pool contains multiple namespaces of
+“lattices” and you can arbitrarily nest pub-sub topics, so there are plenty
+room for isolating and integrating multiple applications in the session
+pool.</p>
+<div class="section" id="example">
+<h2>Example<a class="headerlink" href="#example" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-yaml"><div class="highlight"><pre><span></span><span class="nt">session-pools</span><span class="p">:</span>
+
+  <span class="nt">example-chat-session</span><span class="p">:</span>
+    <span class="nt">listen</span><span class="p">:</span>
+    <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">127.0.0.1:2007</span>
+    <span class="nt">inactivity-handlers</span><span class="p">:</span>
+    <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">some-destination/chat/route</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="options">
+<h2>Options<a class="headerlink" href="#options" title="Permalink to this headline">¶</a></h2>
+<dl class="opt">
+<dt id="opt-listen">
+<code class="descname">listen</code><a class="headerlink" href="#opt-listen" title="Permalink to this definition">¶</a></dt>
+<dd><p>List of sockets to listen to and accept connections</p>
+<p>Example:</p>
+<div class="highlight-yaml"><div class="highlight"><pre><span></span><span class="nt">listen</span><span class="p">:</span>
+<span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">127.0.0.1:2222</span>
+<span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">127.0.0.1:3333</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="opt">
+<dt id="opt-max-connections">
+<code class="descname">max-connections</code><a class="headerlink" href="#opt-max-connections" title="Permalink to this definition">¶</a></dt>
+<dd><p>(default <code class="docutils literal"><span class="pre">1000</span></code>) Maximum number of backend connections to accept. Note
+you should bump up a file descriptor limit to something larger than this
+value + max client connections.</p>
+</dd></dl>
+
+<dl class="opt">
+<dt id="opt-max-payload-size">
+<code class="descname">max-payload-size</code><a class="headerlink" href="#opt-max-payload-size" title="Permalink to this definition">¶</a></dt>
+<dd><p>(default <code class="docutils literal"><span class="pre">10Mib</span></code>) Maximum size of the payload (json data) from backend
+to swindon.</p>
+</dd></dl>
+
+<dl class="opt">
+<dt id="opt-pipeline-depth">
+<code class="descname">pipeline-depth</code><a class="headerlink" href="#opt-pipeline-depth" title="Permalink to this definition">¶</a></dt>
+<dd><p>(default <code class="docutils literal"><span class="pre">2</span></code>) Accept maximum N in-flight requests for each HTTP
+connection. Pipelined requests improve performance of your service but also
+expose it to DoS attacks.</p>
+</dd></dl>
+
+<dl class="opt">
+<dt id="opt-listen-error-timeout">
+<code class="descname">listen-error-timeout</code><a class="headerlink" href="#opt-listen-error-timeout" title="Permalink to this definition">¶</a></dt>
+<dd><p>(default <code class="docutils literal"><span class="pre">100ms</span></code>) Time to sleep when we caught error accepting connection,
+mostly error is some resource shortage (usually EMFILE or ENFILE), so
+repeating after some short timeout makes sense (chances that some connection
+freed some resources).</p>
+</dd></dl>
+
+<dl class="opt">
+<dt id="opt-inactivity-handlers">
+<code class="descname">inactivity-handlers</code><a class="headerlink" href="#opt-inactivity-handlers" title="Permalink to this definition">¶</a></dt>
+<dt id="opt-TBD">
+<code class="descname">TBD</code><a class="headerlink" href="#opt-TBD" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../index.html">
+              <img class="logo" src="../_static/swindon.jpg" alt="Logo"/>
+            </a></p>
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Session Pool</a><ul>
+<li><a class="reference internal" href="#example">Example</a></li>
+<li><a class="reference internal" href="#options">Options</a></li>
+</ul>
+</li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="index.html">Configuration</a><ul>
+      <li>Previous: <a href="handlers.html" title="previous chapter">Handlers</a></li>
+      <li>Next: <a href="http-destinations.html" title="next chapter">Http Destinations</a></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/config/session-pools.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2016, Evo Company.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="../_sources/config/session-pools.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

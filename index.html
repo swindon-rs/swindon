@@ -1,0 +1,178 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Welcome to Swindon’s documentation! &#8212; Swindon 0.7.8 documentation</title>
+    
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '0.7.8',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Installation" href="installation.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="welcome-to-swindon-s-documentation">
+<h1>Welcome to Swindon’s documentation!<a class="headerlink" href="#welcome-to-swindon-s-documentation" title="Permalink to this headline">¶</a></h1>
+<p>Swindon is a web server that eventually should develop all the features needed
+for a frontend server. But the most powerful feature is a
+<a class="reference internal" href="swindon-lattice/index.html#swindon-lattice"><span class="std std-ref">protocol</span></a> for handling websockets.</p>
+<p><a class="reference external" href="https://github.com/swindon-rs/swindon">Github</a> | <a class="reference external" href="https://crates.io/crates/swindon">Crate</a></p>
+<div class="figure" id="id1">
+<img alt="a screenshot of a dashboard showing a 122k simultaneous connections and 22.6M messages in a day" src="_images/messages.png" />
+<p class="caption"><span class="caption-text"><em>While swindon is quite recent project it handles about 120k simultaneous
+connections and ~20 million messages per day in our setup. The screenshot
+above shows just a random day from our dashboard.</em></span></p>
+</div>
+<p>Contents:</p>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#using-cargo">Using Cargo</a></li>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#example-config">Example Config</a></li>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#ubuntu-installation">Ubuntu Installation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#vagga-installation">Vagga Installation</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="config/index.html">Configuration</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="config/main.html">Main Configuration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="config/routing.html">Routing Table</a></li>
+<li class="toctree-l2"><a class="reference internal" href="config/handlers.html">Handlers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="config/session-pools.html">Session Pool</a></li>
+<li class="toctree-l2"><a class="reference internal" href="config/http-destinations.html">Http Destinations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="config/auth.html">Auth &amp; Auth</a></li>
+<li class="toctree-l2"><a class="reference internal" href="config/ldap.html">LDAP Support</a></li>
+<li class="toctree-l2"><a class="reference internal" href="config/replication.html">Replication configuration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="config/mixins.html">Mixins</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="internals/index.html">Swindon Internals</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="internals/request_id.html">Request Id</a></li>
+<li class="toctree-l2"><a class="reference internal" href="internals/load_balancing.html">Load Balancing</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="swindon-lattice/index.html">Swindon-lattice Protocol</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="swindon-lattice/lattices.html">Lattices</a></li>
+<li class="toctree-l2"><a class="reference internal" href="swindon-lattice/crdt.html">CRDT Types</a></li>
+<li class="toctree-l2"><a class="reference internal" href="swindon-lattice/frontend.html">Frontend API Reference</a></li>
+<li class="toctree-l2"><a class="reference internal" href="swindon-lattice/upstream.html">Upstream backend requirements</a></li>
+<li class="toctree-l2"><a class="reference internal" href="swindon-lattice/backend.html">Backend API Reference</a></li>
+<li class="toctree-l2"><a class="reference internal" href="swindon-lattice/websocket_shutdown_codes.html">Websocket Shutdown Codes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="swindon-lattice/examples.html">Example Applications</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="changelog.html">Swindon Changes By Version</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="changelog.html#v0-7-8">v0.7.8</a></li>
+<li class="toctree-l2"><a class="reference internal" href="changelog.html#v0-7-7">v0.7.7</a></li>
+<li class="toctree-l2"><a class="reference internal" href="changelog.html#v0-7-6">v0.7.6</a></li>
+<li class="toctree-l2"><a class="reference internal" href="changelog.html#v0-7-5">v0.7.5</a></li>
+<li class="toctree-l2"><a class="reference internal" href="changelog.html#v0-7-4">v0.7.4</a></li>
+<li class="toctree-l2"><a class="reference internal" href="changelog.html#v0-7-3">v0.7.3</a></li>
+<li class="toctree-l2"><a class="reference internal" href="changelog.html#v0-7-2">v0.7.2</a></li>
+<li class="toctree-l2"><a class="reference internal" href="changelog.html#v0-7-0">v0.7.0</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</div>
+<div class="section" id="indices-and-tables">
+<h1>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this headline">¶</a></h1>
+<ul class="simple">
+<li><a class="reference internal" href="genindex.html"><span class="std std-ref">Index</span></a></li>
+<li><a class="reference internal" href="search.html"><span class="std std-ref">Search Page</span></a></li>
+</ul>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="#">
+              <img class="logo" src="_static/swindon.jpg" alt="Logo"/>
+            </a></p>
+  <h3><a href="#">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Welcome to Swindon’s documentation!</a></li>
+<li><a class="reference internal" href="#indices-and-tables">Indices and tables</a></li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="#">Documentation overview</a><ul>
+      <li>Next: <a href="installation.html" title="next chapter">Installation</a></li>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/index.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2016, Evo Company.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/index.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

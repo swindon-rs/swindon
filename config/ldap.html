@@ -1,0 +1,209 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>LDAP Support &#8212; Swindon 0.7.8 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '0.7.8',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Replication configuration" href="replication.html" />
+    <link rel="prev" title="Auth &amp; Auth" href="auth.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="ldap-support">
+<h1>LDAP Support<a class="headerlink" href="#ldap-support" title="Permalink to this headline">¶</a></h1>
+<p><strong>LDAP doesn’t work yet, this is provisional documentation</strong></p>
+<p>Swindon has experimental support of LDAP authorization.</p>
+<p>Configuration of LDAP consists of three parts:</p>
+<ol class="arabic simple">
+<li>Configuring LDAP destination. This is where addresses and size of connection
+pool are configured.</li>
+<li>Actual LDAP search and bind requests are configured in <code class="docutils literal"><span class="pre">authorizers</span></code>
+section with <code class="docutils literal"><span class="pre">!Ldap</span></code> authorizer.</li>
+<li>And the last but least thing is to add authorizer configured at step #2 to
+actually handle parts of the site.</li>
+</ol>
+<div class="section" id="ldap-destination">
+<h2>LDAP Destination<a class="headerlink" href="#ldap-destination" title="Permalink to this headline">¶</a></h2>
+<p>Currently destination has minimum configuration:</p>
+<div class="highlight-yaml"><div class="highlight"><pre><span></span><span class="nt">ldap-destinations</span><span class="p">:</span>
+  <span class="nt">local-ldap</span><span class="p">:</span>
+    <span class="nt">addresses</span><span class="p">:</span>
+    <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">localhost:8398</span>
+</pre></div>
+</div>
+<p>Options:</p>
+<dl class="opt">
+<dt id="opt-addresses">
+<code class="descname">addresses</code><a class="headerlink" href="#opt-addresses" title="Permalink to this definition">¶</a></dt>
+<dd><p>A list of addresses to connect to. Currently you must specify also a port,
+but we consider using <code class="docutils literal"><span class="pre">SRV</span></code> records in the future.</p>
+<p>Each address may be resolved to a multiple IPs and each API participate in
+round-robin on it’s own (not the whole hostname).</p>
+</dd></dl>
+
+</div>
+<div class="section" id="ldap-authorizer">
+<h2>LDAP Authorizer<a class="headerlink" href="#ldap-authorizer" title="Permalink to this headline">¶</a></h2>
+<p>Next thing is to configure an authorizer. The authorizer is a thing that
+picks specific rules for accessing the website.</p>
+<p>Here is an example of authorizer configuration:</p>
+<div class="highlight-yaml"><div class="highlight"><pre><span></span><span class="nt">authorizers</span><span class="p">:</span>
+  <span class="nt">ldap</span><span class="p">:</span> <span class="kt">!Ldap</span>
+    <span class="nt">destination</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">local-ldap</span>
+    <span class="nt">search-base</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">dc=users,dc=example,dc=org</span>
+    <span class="nt">login-attribute</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">uid</span>
+    <span class="nt">password-attibute</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">userPassword</span>
+    <span class="nt">login-header</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">X-User-Uid</span>
+    <span class="nt">additional-queries</span><span class="p">:</span>
+      <span class="nt">X-User-Groups</span><span class="p">:</span>
+        <span class="nt">search-base</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">cn=Group,dc=uaprom,dc=org</span>
+        <span class="nt">fetch-attribute</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">dn</span>
+        <span class="nt">filter</span><span class="p">:</span> <span class="s">&quot;member=${dn}&quot;</span>
+        <span class="nt">dn-attribute-strip-base</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">cn=Group,dc=uaprom,dc=org</span>
+</pre></div>
+</div>
+<p>Options:</p>
+<dl class="opt">
+<dt id="opt-destination">
+<code class="descname">destination</code><a class="headerlink" href="#opt-destination" title="Permalink to this definition">¶</a></dt>
+<dd><p>Destination LDAP connection pool name (see <span class="xref std std-ref">LDAP Destinations</span>)</p>
+</dd></dl>
+
+<dl class="opt">
+<dt id="opt-search-base">
+<code class="descname">search-base</code><a class="headerlink" href="#opt-search-base" title="Permalink to this definition">¶</a></dt>
+<dd><p>Base DN for searching for user</p>
+</dd></dl>
+
+<dl class="opt">
+<dt id="opt-login-attribute">
+<code class="descname">login-attribute</code><a class="headerlink" href="#opt-login-attribute" title="Permalink to this definition">¶</a></dt>
+<dd><p>The attribute that will be matched against when user is logging in.</p>
+</dd></dl>
+
+<dl class="opt">
+<dt id="opt-password-attribute">
+<code class="descname">password-attribute</code><a class="headerlink" href="#opt-password-attribute" title="Permalink to this definition">¶</a></dt>
+<dd><p>The password attribute name for authentication.</p>
+</dd></dl>
+
+<dl class="opt">
+<dt id="opt-login-header">
+<code class="descname">login-header</code><a class="headerlink" href="#opt-login-header" title="Permalink to this definition">¶</a></dt>
+<dd><p>A header where valid login will be passed when proxying request to a HTTP
+destination (when authentication succeeds).</p>
+</dd></dl>
+
+<dl class="opt">
+<dt id="opt-additional-queries">
+<code class="descname">additional-queries</code><a class="headerlink" href="#opt-additional-queries" title="Permalink to this definition">¶</a></dt>
+<dd><p>Each of this query will be executed for already logged in user and result
+of the query will be passed as the header value to the a HTTP destination.</p>
+</dd></dl>
+
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../index.html">
+              <img class="logo" src="../_static/swindon.jpg" alt="Logo"/>
+            </a></p>
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">LDAP Support</a><ul>
+<li><a class="reference internal" href="#ldap-destination">LDAP Destination</a></li>
+<li><a class="reference internal" href="#ldap-authorizer">LDAP Authorizer</a></li>
+</ul>
+</li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="index.html">Configuration</a><ul>
+      <li>Previous: <a href="auth.html" title="previous chapter">Auth &amp; Auth</a></li>
+      <li>Next: <a href="replication.html" title="next chapter">Replication configuration</a></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/config/ldap.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2016, Evo Company.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="../_sources/config/ldap.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

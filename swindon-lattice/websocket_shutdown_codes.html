@@ -1,0 +1,145 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Websocket Shutdown Codes &#8212; Swindon 0.7.8 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '0.7.8',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Example Applications" href="examples.html" />
+    <link rel="prev" title="Backend API Reference" href="backend.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="websocket-shutdown-codes">
+<span id="id1"></span><h1>Websocket Shutdown Codes<a class="headerlink" href="#websocket-shutdown-codes" title="Permalink to this headline">¶</a></h1>
+<p>Here are codes that you can see in <code class="docutils literal"><span class="pre">onclose</span></code> event handler:</p>
+<div class="highlight-javascript"><div class="highlight"><pre><span></span><span class="kd">var</span> <span class="nx">ws</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">WebSocket</span><span class="p">(..)</span>
+<span class="nx">os</span><span class="p">.</span><span class="nx">onclose</span> <span class="o">=</span> <span class="kd">function</span><span class="p">(</span><span class="nx">ev</span><span class="p">)</span> <span class="p">{</span>
+     <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">ev</span><span class="p">.</span><span class="nx">code</span><span class="p">,</span> <span class="nx">ev</span><span class="p">.</span><span class="nx">reason</span><span class="p">)</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">Chromium doesn’t report custom shutdown codes to Javascript. So
+we also duplicate same erorr using <a class="reference internal" href="frontend.html#fatal-error-message"><span class="std std-ref">Fatal Errors (fatal_error)</span></a>.</p>
+</div>
+<p>Our custom codes (and reasons):</p>
+<ul class="simple">
+<li><code class="docutils literal"><span class="pre">4001</span></code>, <code class="docutils literal"><span class="pre">session_pool_stopped</span></code> – session pool is closed,
+basically this means that this specific
+application is not supported by this server any more. This message may be
+received at any time.</li>
+<li><code class="docutils literal"><span class="pre">4400</span></code>, <code class="docutils literal"><span class="pre">backend_error</span></code> – no websockets allowed at this route</li>
+<li><code class="docutils literal"><span class="pre">4401</span></code>, <code class="docutils literal"><span class="pre">backend_error</span></code> – unauthorized (i.e. no cookie or other
+authentication data)</li>
+<li><code class="docutils literal"><span class="pre">4403</span></code>, <code class="docutils literal"><span class="pre">backend_error</span></code> – forbidden (i.e. authorized but not allowed</li>
+<li><code class="docutils literal"><span class="pre">4404</span></code>, <code class="docutils literal"><span class="pre">backend_error</span></code> – route not found (http status: Not Found)</li>
+<li><code class="docutils literal"><span class="pre">4410</span></code>, <code class="docutils literal"><span class="pre">backend_error</span></code> – route not found (http status: Gone)</li>
+<li><code class="docutils literal"><span class="pre">4500</span></code>, <code class="docutils literal"><span class="pre">backend_error</span></code> – internal server error when authorizing</li>
+<li><code class="docutils literal"><span class="pre">4503</span></code>, <code class="docutils literal"><span class="pre">backend_error</span></code> – temporary error, unable to authorize</li>
+</ul>
+<p>Bacically we have reserved these status codes to correspond to HTTP error
+codes returned from backend. But we only guarantee to propagate codes
+described above, because other ones may impose security vulnerability.</p>
+<ul class="simple">
+<li><code class="docutils literal"><span class="pre">4400-4499</span></code>, <code class="docutils literal"><span class="pre">backend_error</span></code> – for HTTP codes 400-499</li>
+<li><code class="docutils literal"><span class="pre">4500-4599</span></code>, <code class="docutils literal"><span class="pre">backend_error</span></code> – for HTTP codes 500-599</li>
+</ul>
+<p>These errors only propagate on connection authorization. When single request
+fails we respond with <code class="docutils literal"><span class="pre">[&quot;error&quot;...]</span></code> as websocket message.</p>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../index.html">
+              <img class="logo" src="../_static/swindon.jpg" alt="Logo"/>
+            </a></p><div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="index.html">Swindon-lattice Protocol</a><ul>
+      <li>Previous: <a href="backend.html" title="previous chapter">Backend API Reference</a></li>
+      <li>Next: <a href="examples.html" title="next chapter">Example Applications</a></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/swindon-lattice/websocket_shutdown_codes.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2016, Evo Company.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="../_sources/swindon-lattice/websocket_shutdown_codes.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

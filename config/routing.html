@@ -1,0 +1,141 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Routing Table &#8212; Swindon 0.7.8 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '0.7.8',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Handlers" href="handlers.html" />
+    <link rel="prev" title="Main Configuration" href="main.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="routing-table">
+<span id="routing"></span><h1>Routing Table<a class="headerlink" href="#routing-table" title="Permalink to this headline">¶</a></h1>
+<p>Describes routing table for all input requests.
+It is a mapping of either exact host and path prefix,
+or host suffix and path path prefix
+to the name of the <a class="reference internal" href="handlers.html#handlers"><span class="std std-ref">handler</span></a>.</p>
+<p>Example of routing table:</p>
+<div class="highlight-yaml"><div class="highlight"><pre><span></span><span class="nt">routing</span><span class="p">:</span>
+  <span class="nt">localhost/empty.gif</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">empty-gif</span>
+  <span class="nt">localhost/admin</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">admin-handler</span>
+  <span class="nt">localhost/js</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">static-files</span>
+  <span class="nt">localhost/</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">proxy-handler</span>
+  <span class="s">&quot;*.example.com/&quot;</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">all-subdomains-handler</span>
+  <span class="nt">www.example.com/favicon.ico</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">favicon-handler</span>
+</pre></div>
+</div>
+<p>Route rosolution is done in two steps:</p>
+<blockquote>
+<div><ol class="arabic simple">
+<li>The host is matched first:<ol class="loweralpha">
+<li>exact match is tested first (<code class="docutils literal"><span class="pre">www.example.com</span></code>),</li>
+<li>then match by suffix is checked (<code class="docutils literal"><span class="pre">*.example.com</span></code>).</li>
+</ol>
+</li>
+<li>The path prefix within that host is matched.</li>
+</ol>
+</div></blockquote>
+<p>Here is the example for route matching:</p>
+<p>Assume we requested <code class="docutils literal"><span class="pre">www.example.com/hello</span></code> URL,
+at first step the host <code class="docutils literal"><span class="pre">www.example.com</span></code> will be matched
+with last entry in table above, next, path <code class="docutils literal"><span class="pre">/hello</span></code> will
+be tested against all pathes for that host – only one in our case –
+and <code class="docutils literal"><span class="pre">/favicon.ico</span></code> path doesn’t match <code class="docutils literal"><span class="pre">/hello</span></code>.
+So the request for <code class="docutils literal"><span class="pre">www.example.com/hello</span></code> will end up with <code class="docutils literal"><span class="pre">404</span> <span class="pre">Not</span> <span class="pre">Found</span></code>.</p>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../index.html">
+              <img class="logo" src="../_static/swindon.jpg" alt="Logo"/>
+            </a></p><div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="index.html">Configuration</a><ul>
+      <li>Previous: <a href="main.html" title="previous chapter">Main Configuration</a></li>
+      <li>Next: <a href="handlers.html" title="next chapter">Handlers</a></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/config/routing.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2016, Evo Company.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="../_sources/config/routing.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

@@ -1,0 +1,591 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Handlers &#8212; Swindon 0.7.8 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '0.7.8',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Session Pool" href="session-pools.html" />
+    <link rel="prev" title="Routing Table" href="routing.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="handlers">
+<span id="id1"></span><h1>Handlers<a class="headerlink" href="#handlers" title="Permalink to this headline">¶</a></h1>
+<div class="contents local topic" id="id2">
+<p class="topic-title first">Handlers</p>
+<ul class="simple">
+<li><a class="reference internal" href="#proxy-handler" id="id3">Proxy handler</a></li>
+<li><a class="reference internal" href="#static-single-file-handlers" id="id4">Static &amp; Single file handlers</a><ul>
+<li><a class="reference internal" href="#common-settings" id="id5">Common Settings</a></li>
+<li><a class="reference internal" href="#singlefile-settings" id="id6">!SingleFile settings</a></li>
+<li><a class="reference internal" href="#static-settings" id="id7">!Static Settings</a></li>
+<li><a class="reference internal" href="#versionedstatic-settings" id="id8">!VersionedStatic Settings</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#swindon-lattice-handler" id="id9">Swindon Lattice Handler</a></li>
+<li><a class="reference internal" href="#redirect-handlers" id="id10">Redirect handlers</a></li>
+<li><a class="reference internal" href="#websocketecho" id="id11">WebsocketEcho</a></li>
+<li><a class="reference internal" href="#empty-gif-handler" id="id12">Empty GIF handler</a></li>
+<li><a class="reference internal" href="#http-bin-handler" id="id13">Http bin handler</a></li>
+</ul>
+</div>
+<div class="section" id="proxy-handler">
+<h2><a class="toc-backref" href="#id3">Proxy handler</a><a class="headerlink" href="#proxy-handler" title="Permalink to this headline">¶</a></h2>
+<p id="index-0">Proxy handler looks like:</p>
+<div class="highlight-yaml"><div class="highlight"><pre><span></span><span class="nt">example-chat-http</span><span class="p">:</span> <span class="kt">!Proxy</span>
+  <span class="nt">ip-header</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">X-Remote-Ip</span>
+  <span class="nt">destination</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">somedest/some/path</span>
+</pre></div>
+</div>
+<p>Settings:</p>
+<dl class="opt">
+<dt id="opt-destination">
+<code class="descname">destination</code><a class="headerlink" href="#opt-destination" title="Permalink to this definition">¶</a></dt>
+<dd><p>(required) The name of the destination and <em>subpath</em> where to forward
+request to.</p>
+</dd></dl>
+
+<dl class="opt">
+<dt id="opt-ip-header">
+<code class="descname">ip-header</code><a class="headerlink" href="#opt-ip-header" title="Permalink to this definition">¶</a></dt>
+<dd><p>(default is null) Name of the HTTP header where to put source IP address to.</p>
+</dd></dl>
+
+<dl class="opt">
+<dt id="opt-request-id-header">
+<code class="descname">request-id-header</code><a class="headerlink" href="#opt-request-id-header" title="Permalink to this definition">¶</a></dt>
+<dd><p><strong>Deprecated</strong>, use <code class="docutils literal"><span class="pre">request-id-header</span></code> option in
+<a class="reference internal" href="http-destinations.html#http-destinations"><span class="std std-ref">http-destination</span></a>.</p>
+<p>(default is null) Creates a request id</p>
+</dd></dl>
+
+<dl class="opt">
+<dt id="opt-max-payload-size">
+<code class="descname">max-payload-size</code><a class="headerlink" href="#opt-max-payload-size" title="Permalink to this definition">¶</a></dt>
+<dd><p>(default <code class="docutils literal"><span class="pre">10MiB</span></code>) Maximum payload size that might be send to this
+destination</p>
+</dd></dl>
+
+<dl class="opt">
+<dt id="opt-stream-requests">
+<code class="descname">stream-requests</code><a class="headerlink" href="#opt-stream-requests" title="Permalink to this definition">¶</a></dt>
+<dd><p>(default <code class="docutils literal"><span class="pre">false</span></code>) If <code class="docutils literal"><span class="pre">true</span></code> requests bodies might be forwarded to the
+backend before whole body has been read.</p>
+<p>You shouldn’t turn this option to <code class="docutils literal"><span class="pre">true</span></code> unless your backend is
+asynchronous too or can start processing request before receiving full body.</p>
+</dd></dl>
+
+<dl class="opt">
+<dt id="opt-response-buffer-size">
+<code class="descname">response-buffer-size</code><a class="headerlink" href="#opt-response-buffer-size" title="Permalink to this definition">¶</a></dt>
+<dd><p>(default <code class="docutils literal"><span class="pre">10MiB</span></code>) A high water mark of buffering responses in swindon. If
+this number of bytes is reached swindon will stop reading response from a
+backend until client receives some data.</p>
+<p>Here are few tips for tweaking this value:</p>
+<ol class="arabic simple">
+<li>The size of most of your pages (or other content served through this
+proxy) should be strictly less than this value, to have good performance.
+This holds true even for async backends written in scripting languages.</li>
+<li>For non-async backends even if just one page of your site doesn’t fit
+the buffer it might make DoS attack super-easy unless this page is
+protected by some rate limit.</li>
+<li>Making this limit lower makes sense when you can generate data
+continuously, like fetching data from the database by chunks, or
+decompress data on the fly.</li>
+<li>Consider making use cases (1-2) and (3) separate routes with different
+limits.</li>
+</ol>
+</dd></dl>
+
+</div>
+<div class="section" id="static-single-file-handlers">
+<h2><a class="toc-backref" href="#id4">Static &amp; Single file handlers</a><a class="headerlink" href="#static-single-file-handlers" title="Permalink to this headline">¶</a></h2>
+<p id="index-1">Handler for serving static files:</p>
+<div class="highlight-yaml"><div class="highlight"><pre><span></span><span class="nt">robots-txt</span><span class="p">:</span> <span class="kt">!SingleFile</span>
+   <span class="nt">path</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">/www/my-host/robots.txt</span>
+   <span class="nt">content-type</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">text/plain</span>
+
+<span class="nt">static-files</span><span class="p">:</span> <span class="kt">!Static</span>
+   <span class="nt">path</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">/www/my-host/static</span>
+</pre></div>
+</div>
+<div class="section" id="common-settings">
+<h3><a class="toc-backref" href="#id5">Common Settings</a><a class="headerlink" href="#common-settings" title="Permalink to this headline">¶</a></h3>
+<dl class="opt">
+<dt id="opt-pool">
+<code class="descname">pool</code><a class="headerlink" href="#opt-pool" title="Permalink to this definition">¶</a></dt>
+<dd><p>(default: <code class="docutils literal"><span class="pre">default</span></code>) Disk pool name to be used to serve this file.</p>
+</dd></dl>
+
+<dl class="opt">
+<dt id="opt-extra-headers">
+<code class="descname">extra-headers</code><a class="headerlink" href="#opt-extra-headers" title="Permalink to this definition">¶</a></dt>
+<dd><p>(optional) Extra HTTP headers to be added to response.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="singlefile-settings">
+<h3><a class="toc-backref" href="#id6">!SingleFile settings</a><a class="headerlink" href="#singlefile-settings" title="Permalink to this headline">¶</a></h3>
+<dl class="opt">
+<dt id="opt-path">
+<code class="descname">path</code><a class="headerlink" href="#opt-path" title="Permalink to this definition">¶</a></dt>
+<dd><p>(required) Path to file to serve.</p>
+</dd></dl>
+
+<dl class="opt">
+<dt id="opt-content-type">
+<code class="descname">content-type</code><a class="headerlink" href="#opt-content-type" title="Permalink to this definition">¶</a></dt>
+<dd><p>(optional) Set Content type for served file. By default mime type is guessed
+by extension</p>
+</dd></dl>
+
+</div>
+<div class="section" id="static-settings">
+<h3><a class="toc-backref" href="#id7">!Static Settings</a><a class="headerlink" href="#static-settings" title="Permalink to this headline">¶</a></h3>
+<dl class="opt">
+<dt id="opt-path">
+<code class="descname">path</code><a class="headerlink" href="#opt-path" title="Permalink to this definition">¶</a></dt>
+<dd><p>(required) Path to directory to serve.</p>
+</dd></dl>
+
+<dl class="opt">
+<dt id="opt-mode">
+<code class="descname">mode</code><a class="headerlink" href="#opt-mode" title="Permalink to this definition">¶</a></dt>
+<dd><p>(default: <code class="docutils literal"><span class="pre">relative_to_route</span></code>) Sets path resolve mode:</p>
+<ul class="simple">
+<li><dl class="first docutils">
+<dt><code class="docutils literal"><span class="pre">relative_to_domain_root</span></code></dt>
+<dd>Use whole URL path as filesystem path to file;</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt><code class="docutils literal"><span class="pre">relative_to_route</span></code></dt>
+<dd>Use only route suffix/tail as filesystem path to file;</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt><code class="docutils literal"><span class="pre">with_hostname</span></code></dt>
+<dd>Add hostname as the first directory component</dd>
+</dl>
+</li>
+</ul>
+<p>These pathes, ofcourse, relative to <code class="docutils literal"><span class="pre">path</span></code> setting.</p>
+</dd></dl>
+
+<dl class="opt">
+<dt id="opt-text-charset">
+<code class="descname">text-charset</code><a class="headerlink" href="#opt-text-charset" title="Permalink to this definition">¶</a></dt>
+<dd><p>(optional, default <code class="docutils literal"><span class="pre">utf-8</span></code>) Sets <code class="docutils literal"><span class="pre">charset</span></code> parameter
+of <code class="docutils literal"><span class="pre">Content-Type</span></code> header.</p>
+</dd></dl>
+
+<dl class="opt">
+<dt id="opt-strip-host-suffix">
+<code class="descname">strip-host-suffix</code><a class="headerlink" href="#opt-strip-host-suffix" title="Permalink to this definition">¶</a></dt>
+<dd><p>(optional) If <code class="docutils literal"><span class="pre">mode</span></code> is <code class="docutils literal"><span class="pre">with_hostname</span></code> strip the specified suffix
+from the host name before using it as a first component of a directory.
+For example, if <code class="docutils literal"><span class="pre">strip-host-suffix</span></code> is <code class="docutils literal"><span class="pre">example.org</span></code> then URL
+<code class="docutils literal"><span class="pre">http://something.example.com/xx/yy</span></code> will be searched in the directory
+<code class="docutils literal"><span class="pre">something/xx/yy</span></code>.</p>
+</dd></dl>
+
+<dl class="opt">
+<dt id="opt-index-files">
+<code class="descname">index-files</code><a class="headerlink" href="#opt-index-files" title="Permalink to this definition">¶</a></dt>
+<dd><p>(default <code class="docutils literal"><span class="pre">[]</span></code>) List of files to be used as a directory index.
+If none of them found (or <code class="docutils literal"><span class="pre">index-files</span></code> is an empty list) the 403 error
+is returned.</p>
+<p>MIME type for index file is guessed just like for any other file.</p>
+<p>Example:</p>
+<div class="highlight-yaml"><div class="highlight"><pre><span></span><span class="nt">index-files</span><span class="p">:</span> <span class="p p-Indicator">[</span><span class="s">&quot;index.html&quot;</span><span class="p p-Indicator">,</span> <span class="s">&quot;index.htm&quot;</span><span class="p p-Indicator">]</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="opt">
+<dt id="opt-generate-index">
+<code class="descname">generate-index</code><a class="headerlink" href="#opt-generate-index" title="Permalink to this definition">¶</a></dt>
+<dd><p>(default <code class="docutils literal"><span class="pre">false</span></code>) Generate HTML file with list of files if no
+<code class="docutils literal"><span class="pre">index-files</span></code> are present.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">We don’t guarantee format of that HTML file just yet, it may
+change in future.</p>
+</div>
+</dd></dl>
+
+<dl class="opt">
+<dt id="opt-generated-index-max-files">
+<code class="descname">generated-index-max-files</code><a class="headerlink" href="#opt-generated-index-max-files" title="Permalink to this definition">¶</a></dt>
+<dd><p>(default <code class="docutils literal"><span class="pre">100000</span></code>) Maximum number of files to show in generated index.
+This is required to prevent DoS attacks on listing large directories.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="versionedstatic-settings">
+<span id="versioned-static"></span><h3><a class="toc-backref" href="#id8">!VersionedStatic Settings</a><a class="headerlink" href="#versionedstatic-settings" title="Permalink to this headline">¶</a></h3>
+<p>VersionedStatic is a handler that returns file by revision specified in
+query args. For example url <code class="docutils literal"><span class="pre">/img/myimage.jpg?r=deadbeef</span></code> is served from
+<code class="docutils literal"><span class="pre">/versioned-root/de/adbeef/myimage.jpg</span></code>.</p>
+<p>These files are considered to be <code class="docutils literal"><span class="pre">immutable</span></code>, i.e. if file changes the
+version changes. So we send files with headers:</p>
+<div class="highlight-yaml"><div class="highlight"><pre><span></span><span class="nt">Cache-Control</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">public, max-age=31536000, immutable</span>
+</pre></div>
+</div>
+<p>‥ and <code class="docutils literal"><span class="pre">Expires</span></code> in 365 days in the future (for old user agents, also
+date more than 1 year might not work).</p>
+<p>In case we the target version is missing and we have fallback enabled
+(see below), we serve them uncacheable:</p>
+<div class="highlight-yaml"><div class="highlight"><pre><span></span><span class="nt">Cache-Control</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">no-cache, no-store, must-revalidate</span>
+<span class="nt">Expires</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">0</span>
+</pre></div>
+</div>
+<p>And for files which doesn’t have revision specified at all and <code class="docutils literal"><span class="pre">no-version</span></code>
+(or less strict option) specified in <code class="docutils literal"><span class="pre">fallback-to-plain</span></code> we we serve files
+without <code class="docutils literal"><span class="pre">Cache-Control</span></code> header at all (usually cached for user’s session).</p>
+<p>We may add more settings to customize cache headers in future.</p>
+<dl class="opt">
+<dt id="opt-versioned-root">
+<code class="descname">versioned-root</code><a class="headerlink" href="#opt-versioned-root" title="Permalink to this definition">¶</a></dt>
+<dd><p>(required) Root of the directory where versioned files should be served
+from. Basic pattern how files are served from there is:</p>
+<div class="highlight-yaml"><div class="highlight"><pre><span></span><span class="l l-Scalar l-Scalar-Plain">&lt;versioned-root&gt;/xx/yyyyyy/filename.ext</span>
+</pre></div>
+</div>
+<p>In particular:</p>
+<ul class="simple">
+<li><code class="docutils literal"><span class="pre">xx/yyyyy</span></code> is a value extracted from <code class="docutils literal"><span class="pre">version-arg</span></code></li>
+<li>Name of the file is original one, but without path. Name is kept barely
+to debug issues easier.</li>
+<li>Extension (suffix) of the filename is kept as is to be able to find
+out mime type.</li>
+</ul>
+<p>So for example url <code class="docutils literal"><span class="pre">/img/myimage.jpg?r=deadbeef</span></code> is served from
+<code class="docutils literal"><span class="pre">/versioned-root/de/adbeef/myimage.jpg</span></code>.</p>
+</dd></dl>
+
+<dl class="opt">
+<dt id="opt-plain-root">
+<code class="descname">plain-root</code><a class="headerlink" href="#opt-plain-root" title="Permalink to this definition">¶</a></dt>
+<dd><p>(optional) When no file found in <code class="docutils literal"><span class="pre">versioned-root</span></code> we may search in
+<code class="docutils literal"><span class="pre">plain-root</span></code> by original filename/path depending on
+<code class="docutils literal"><span class="pre">fallback-to-plain</span></code> setting. This works in a way similar to
+<code class="docutils literal"><span class="pre">Static</span></code>.</p>
+<p>It’s expected that <code class="docutils literal"><span class="pre">plain-root</span></code> contains files of the latest version of
+an application. And it’s main purpose is to serve well-known files like
+<code class="docutils literal"><span class="pre">robots.txt</span></code> or <code class="docutils literal"><span class="pre">crossdomain.xml</span></code>.</p>
+</dd></dl>
+
+<dl class="opt">
+<dt id="opt-version-arg">
+<code class="descname">version-arg</code><a class="headerlink" href="#opt-version-arg" title="Permalink to this definition">¶</a></dt>
+<dd><p>(required) The query argument to get version from. It’s usually some
+short thing like <code class="docutils literal"><span class="pre">r</span></code>, <code class="docutils literal"><span class="pre">v</span></code>, <code class="docutils literal"><span class="pre">ver</span></code>, <code class="docutils literal"><span class="pre">revision</span></code>, <code class="docutils literal"><span class="pre">hash</span></code>.</p>
+</dd></dl>
+
+<dl class="opt">
+<dt id="opt-version-split">
+<code class="descname">version-split</code><a class="headerlink" href="#opt-version-split" title="Permalink to this definition">¶</a></dt>
+<dd><p>(required) Parts to split version argument into, to search for a path.
+Sum of all number here must be equal to the length of the version argument,
+we do not support variable length yet.</p>
+<p>For example <code class="docutils literal"><span class="pre">version-split:</span> <span class="pre">[2,</span> <span class="pre">6]</span></code> means that value must
+consist of eight characters and that <code class="docutils literal"><span class="pre">myimage.gif?r=deadbeef</span></code> is searched
+in <code class="docutils literal"><span class="pre">de/adbeef</span></code> folder.</p>
+</dd></dl>
+
+<dl class="opt">
+<dt id="opt-version-chars">
+<code class="descname">version-chars</code><a class="headerlink" href="#opt-version-chars" title="Permalink to this definition">¶</a></dt>
+<dd><p>(required) Validates version chars allowed in hash string. Currently only
+<code class="docutils literal"><span class="pre">lowercase-hex</span></code> mode is supported.</p>
+</dd></dl>
+
+<dl class="opt">
+<dt id="opt-fallback-to-plain">
+<code class="descname">fallback-to-plain</code><a class="headerlink" href="#opt-fallback-to-plain" title="Permalink to this definition">¶</a></dt>
+<dd><p>(default <code class="docutils literal"><span class="pre">never</span></code>) When to fallback to serving files from <code class="docutils literal"><span class="pre">plain-root</span></code>.
+We have a very conservative default, it’s useful for staging servers where
+you want specifically, For production deployment, you may wish to change it
+to more lenient ones.</p>
+</dd></dl>
+
+<dl class="opt">
+<dt id="opt-fallback-mode">
+<code class="descname">fallback-mode</code><a class="headerlink" href="#opt-fallback-mode" title="Permalink to this definition">¶</a></dt>
+<dd><p>(default <code class="docutils literal"><span class="pre">relative_to_route</span></code>) A mode to serve url if there is no versioned
+file. This directly corresponds to <a class="reference internal" href="#opt-mode"><code class="xref swindon swindon-opt docutils literal"><span class="pre">mode</span></code></a> of <code class="docutils literal"><span class="pre">!Static</span></code>.</p>
+</dd></dl>
+
+<dl class="opt">
+<dt id="opt-text-charset">
+<code class="descname">text-charset</code><a class="headerlink" href="#opt-text-charset" title="Permalink to this definition">¶</a></dt>
+<dd><p>(optional, default <code class="docutils literal"><span class="pre">utf-8</span></code>) Sets <code class="docutils literal"><span class="pre">charset</span></code> parameter of
+<code class="docutils literal"><span class="pre">Content-Type</span></code> header.</p>
+</dd></dl>
+
+</div>
+</div>
+<div class="section" id="swindon-lattice-handler">
+<h2><a class="toc-backref" href="#id9">Swindon Lattice Handler</a><a class="headerlink" href="#swindon-lattice-handler" title="Permalink to this headline">¶</a></h2>
+<span class="target" id="index-2"></span><p id="index-3">Swindon lattice handler:</p>
+<div class="highlight-yaml"><div class="highlight"><pre><span></span><span class="nt">example-chat</span><span class="p">:</span> <span class="kt">!SwindonLattice</span>
+   <span class="nt">session-pool</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">example-chat-session</span>
+   <span class="nt">http-route</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">backend/fallback</span>
+   <span class="nt">message-handlers</span><span class="p">:</span>
+     <span class="s">&quot;*&quot;</span><span class="p p-Indicator">:</span> <span class="l l-Scalar l-Scalar-Plain">backend/path</span>
+</pre></div>
+</div>
+<div class="versionchanged">
+<p><span class="versionmodified">Changed in version v0.7.0: </span>Old name of the handler type is <code class="docutils literal"><span class="pre">SwindonChat</span></code> which is <strong>removed</strong> in
+v0.7.0.</p>
+</div>
+<p>The <code class="docutils literal"><span class="pre">backend/path</span></code> here, i.e. the message handler, should have
+<a class="reference internal" href="http-destinations.html#opt-override-host-header"><code class="xref swindon swindon-opt docutils literal"><span class="pre">override-host-header</span></code></a> setting set, so that swindon knows what <code class="docutils literal"><span class="pre">Host</span></code>
+header to send for RPC requests.</p>
+<p>Settings:</p>
+<dl class="opt">
+<dt id="opt-session-pool">
+<code class="descname">session-pool</code><a class="headerlink" href="#opt-session-pool" title="Permalink to this definition">¶</a></dt>
+<dd><p>(required) Sets session pool to be used with this chat</p>
+</dd></dl>
+
+<dl class="opt">
+<dt id="opt-http-route">
+<code class="descname">http-route</code><a class="headerlink" href="#opt-http-route" title="Permalink to this definition">¶</a></dt>
+<dd><p>(optional) Sets fallback http route to be used in case when
+URL is accessed with plain http request, not websocket upgrade request.</p>
+</dd></dl>
+
+<dl class="opt">
+<dt id="opt-message-handlers">
+<code class="descname">message-handlers</code><a class="headerlink" href="#opt-message-handlers" title="Permalink to this definition">¶</a></dt>
+<dd><p>(required) Mapping of chat method name patterns to http handlers.</p>
+<p>Allowed patterns of 3 types:</p>
+<dl class="docutils">
+<dt><code class="docutils literal"><span class="pre">&quot;*&quot;</span></code> – (required) special “default” pattern; any method with doesn’t match</dt>
+<dd>any other pattern will be sent to this http handler.</dd>
+<dt><code class="docutils literal"><span class="pre">&quot;prefix.*&quot;</span></code> – “glob” pattern matches method name by prefix including dot,</dt>
+<dd><p class="first">for instance, pattern <code class="docutils literal"><span class="pre">&quot;chat.*&quot;</span></code> will match:</p>
+<div class="highlight-yaml"><div class="highlight"><pre><span></span><span class="l l-Scalar l-Scalar-Plain">chat.send_message</span>
+<span class="l l-Scalar l-Scalar-Plain">chat.hello</span>
+</pre></div>
+</div>
+<p>but will not match:</p>
+<div class="highlight-yaml"><div class="highlight"><pre><span></span><span class="l l-Scalar l-Scalar-Plain">chat_send_message</span>
+<span class="l l-Scalar l-Scalar-Plain">chat</span>
+</pre></div>
+</div>
+<p class="last">also “chat.send*” is invalid pattern, it will be read as ‘exact’ pattern,
+however will not work ever because “*” is not allowed in method names.</p>
+</dd>
+</dl>
+<p><code class="docutils literal"><span class="pre">&quot;exact.pattern&quot;</span></code> – “exact” pattern, matches whole method name.</p>
+<p>Patterns match order is: “exact” then “glob” otherwise “default”.</p>
+</dd></dl>
+
+<dl class="opt">
+<dt id="opt-compatibility">
+<code class="descname">compatibility</code><a class="headerlink" href="#opt-compatibility" title="Permalink to this definition">¶</a></dt>
+<dd><p>(default no value, i.e. latest) This allows to enable old behavior of
+the protocol. Here are the list of compatibility breaks:</p>
+<ul class="simple">
+<li><code class="docutils literal"><span class="pre">v0.5.4</span></code> – allows skipping <code class="docutils literal"><span class="pre">Sec-WebSocket-Protocol</span></code></li>
+<li><dl class="first docutils">
+<dt><code class="docutils literal"><span class="pre">v0.6.2</span></code> – does three things:</dt>
+<dd><ul class="first last">
+<li>uses <code class="docutils literal"><span class="pre">/tangle/authorize_connection</span></code> and
+<code class="docutils literal"><span class="pre">/tangle/session_inactive</span></code> instead of <code class="docutils literal"><span class="pre">/swindon//</span></code>-prefixed ones</li>
+<li>uses <code class="docutils literal"><span class="pre">Authorization:</span> <span class="pre">Tangle</span> <span class="pre">&lt;base64-encoded-data&gt;</span></code></li>
+<li>treats arbitrary <code class="docutils literal"><span class="pre">Content-Type</span></code> as <code class="docutils literal"><span class="pre">application/json</span></code> rather
+than verifying it</li>
+</ul>
+</dd>
+</dl>
+</li>
+</ul>
+<p>Note: some behavior is <em>not</em> restored intentionally, in particlar:</p>
+<ol class="arabic simple">
+<li>Both <code class="docutils literal"><span class="pre">swindon.*</span></code> and <code class="docutils literal"><span class="pre">tangle.*</span></code> methods are reserved</li>
+<li>Lattices <code class="docutils literal"><span class="pre">swindon.*</span></code> are reserved too</li>
+<li><code class="docutils literal"><span class="pre">_register</span></code> CRDT’s and presence API work anyway</li>
+</ol>
+</dd></dl>
+
+</div>
+<div class="section" id="redirect-handlers">
+<h2><a class="toc-backref" href="#id10">Redirect handlers</a><a class="headerlink" href="#redirect-handlers" title="Permalink to this headline">¶</a></h2>
+<p id="index-4"><code class="docutils literal"><span class="pre">!BaseRedirect</span></code> handler is used for permanent base host redirects:</p>
+<div class="highlight-yaml"><div class="highlight"><pre><span></span><span class="nt">routing</span><span class="p">:</span>
+   <span class="nt">example.com</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">new-handler</span>
+   <span class="nt">example.org</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">redirect</span>
+<span class="nt">handlers</span><span class="p">:</span>
+   <span class="nt">redirect</span><span class="p">:</span> <span class="kt">!BaseRedirect</span>
+      <span class="nt">redirect-to-domain</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">example.com</span>
+
+   <span class="nt">new-handler</span><span class="p">:</span> <span class="kt">!Proxy</span>
+      <span class="nt">destination</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">somedest/</span>
+</pre></div>
+</div>
+<dl class="opt">
+<dt id="opt-redirect-to-domain">
+<code class="descname">redirect-to-domain</code><a class="headerlink" href="#opt-redirect-to-domain" title="Permalink to this definition">¶</a></dt>
+<dd><p>Destination domain to redirect to.</p>
+</dd></dl>
+
+<p><code class="docutils literal"><span class="pre">!StripWWWRedirect</span></code> handler is used redirect to URL without <code class="docutils literal"><span class="pre">www.</span></code> prefix:</p>
+<div class="highlight-yaml"><div class="highlight"><pre><span></span><span class="nt">routing</span><span class="p">:</span>
+   <span class="nt">example.com</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">new-handler</span>
+   <span class="nt">www.example.com</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">strip-www</span>
+<span class="nt">handlers</span><span class="p">:</span>
+   <span class="nt">strip-www</span><span class="p">:</span> <span class="kt">!StripWWWRedirect</span>
+   <span class="nt">example.com</span><span class="p">:</span> <span class="kt">!Proxy</span>
+      <span class="nt">destination</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">somedest/</span>
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">Both redirects use <em>301 Moved Permanently</em> status code.</p>
+</div>
+</div>
+<div class="section" id="websocketecho">
+<h2><a class="toc-backref" href="#id11">WebsocketEcho</a><a class="headerlink" href="#websocketecho" title="Permalink to this headline">¶</a></h2>
+<p id="index-5">Handler for a dummy websocket echo service:</p>
+<div class="highlight-yaml"><div class="highlight"><pre><span></span><span class="nt">echo</span><span class="p">:</span> <span class="kt">!WebsocketEcho</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="empty-gif-handler">
+<h2><a class="toc-backref" href="#id12">Empty GIF handler</a><a class="headerlink" href="#empty-gif-handler" title="Permalink to this headline">¶</a></h2>
+<p id="index-6">Empty GIF handler is used to serve static empty pixel gif image:</p>
+<div class="highlight-yaml"><div class="highlight"><pre><span></span><span class="nt">empty-gif</span><span class="p">:</span> <span class="kt">!EmptyGif</span>
+</pre></div>
+</div>
+<p>Seetings:</p>
+<dl class="opt">
+<dt id="opt-extra-headers">
+<code class="descname">extra-headers</code><a class="headerlink" href="#opt-extra-headers" title="Permalink to this definition">¶</a></dt>
+<dd><p>Mapping of extra http headers to return in response.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="http-bin-handler">
+<h2><a class="toc-backref" href="#id13">Http bin handler</a><a class="headerlink" href="#http-bin-handler" title="Permalink to this headline">¶</a></h2>
+<p id="index-7">Serves kind’a request-response testing service, see <a class="reference external" href="http://httpbin.org">http://httpbin.org</a>.</p>
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../index.html">
+              <img class="logo" src="../_static/swindon.jpg" alt="Logo"/>
+            </a></p>
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Handlers</a><ul>
+<li><a class="reference internal" href="#proxy-handler">Proxy handler</a></li>
+<li><a class="reference internal" href="#static-single-file-handlers">Static &amp; Single file handlers</a><ul>
+<li><a class="reference internal" href="#common-settings">Common Settings</a></li>
+<li><a class="reference internal" href="#singlefile-settings">!SingleFile settings</a></li>
+<li><a class="reference internal" href="#static-settings">!Static Settings</a></li>
+<li><a class="reference internal" href="#versionedstatic-settings">!VersionedStatic Settings</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#swindon-lattice-handler">Swindon Lattice Handler</a></li>
+<li><a class="reference internal" href="#redirect-handlers">Redirect handlers</a></li>
+<li><a class="reference internal" href="#websocketecho">WebsocketEcho</a></li>
+<li><a class="reference internal" href="#empty-gif-handler">Empty GIF handler</a></li>
+<li><a class="reference internal" href="#http-bin-handler">Http bin handler</a></li>
+</ul>
+</li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="index.html">Configuration</a><ul>
+      <li>Previous: <a href="routing.html" title="previous chapter">Routing Table</a></li>
+      <li>Next: <a href="session-pools.html" title="next chapter">Session Pool</a></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/config/handlers.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2016, Evo Company.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="../_sources/config/handlers.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

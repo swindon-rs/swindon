@@ -1,0 +1,165 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Mixins &#8212; Swindon 0.7.8 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '0.7.8',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Swindon Internals" href="../internals/index.html" />
+    <link rel="prev" title="Replication configuration" href="replication.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="mixins">
+<span id="id1"></span><h1>Mixins<a class="headerlink" href="#mixins" title="Permalink to this headline">¶</a></h1>
+<p>Mixin is another file that contains a number of sections from the configuration
+file, but only has items prefixed with specified prefix. For example:</p>
+<div class="highlight-yaml"><div class="highlight"><pre><span></span><span class="c1"># main.yaml</span>
+<span class="nt">routing</span><span class="p">:</span>
+  <span class="nt">app1.example.com</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">app1-main</span>
+  <span class="nt">app1.example.com/static</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">app1-static</span>
+  <span class="nt">app1.example.com/app2</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">app2-main</span>  <span class="c1"># app2 is mounted in a folder too</span>
+  <span class="nt">app2.example.com</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">app2-main</span>
+  <span class="nt">app2.example.com/static</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">app2-empty</span>
+
+<span class="nt">mixins</span><span class="p">:</span>
+  <span class="nt">app1-</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">app1.yaml</span>
+  <span class="nt">app2-</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">app2.yaml</span>
+
+<span class="c1"># app1.yaml</span>
+
+<span class="nt">handlers</span><span class="p">:</span>
+  <span class="nt">app1-main</span><span class="p">:</span> <span class="kt">!Proxy</span>
+    <span class="nt">destination</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">app1-service</span>
+  <span class="nt">app1-static</span><span class="p">:</span> <span class="kt">!Static</span>
+
+<span class="nt">http-destination</span><span class="p">:</span>
+  <span class="nt">app1-service</span><span class="p">:</span>
+    <span class="nt">addresses</span><span class="p">:</span>
+    <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">localhost:8000</span>
+
+<span class="c1"># app2.yaml</span>
+
+<span class="nt">handlers</span><span class="p">:</span>
+  <span class="nt">app2-main</span><span class="p">:</span> <span class="kt">!Static</span>
+  <span class="nt">app2-empty</span><span class="p">:</span> <span class="kt">!EmptyGif</span>
+</pre></div>
+</div>
+<p>Note the following things:</p>
+<ol class="arabic simple">
+<li>Swindon ensures that all handlers, http-destinations, and other things
+are prefixed in a file, to avoid mistakes</li>
+<li><code class="docutils literal"><span class="pre">routing</span></code> section is not mixed in. You can split it via
+<a class="reference external" href="http://rust-quire.readthedocs.io/en/latest/user.html#includes">includes</a> and <a class="reference external" href="http://rust-quire.readthedocs.io/en/latest/user.html#merging-mappings">merge-tags</a> if you want.</li>
+<li>You can mix and match different handlers in <code class="docutils literal"><span class="pre">routing</span></code> table as well
+as refer to the items accross files. There is no limitation on referencing,
+only on definition of items.</li>
+</ol>
+<p>This allows nice splitting and incapsulation in config. Still keeping routing
+table short an clean.</p>
+<p>Sections supported for mixins:</p>
+<ul class="simple">
+<li><a class="reference internal" href="main.html#sect-handlers"><code class="xref swindon swindon-sect docutils literal"><span class="pre">handlers</span></code></a></li>
+<li><code class="xref swindon swindon-sect docutils literal"><span class="pre">authorizers</span></code></li>
+<li><a class="reference internal" href="main.html#sect-session-pools"><code class="xref swindon swindon-sect docutils literal"><span class="pre">session-pools</span></code></a></li>
+<li><a class="reference internal" href="main.html#sect-http-destinations"><code class="xref swindon swindon-sect docutils literal"><span class="pre">http-destinations</span></code></a></li>
+<li><code class="xref swindon swindon-sect docutils literal"><span class="pre">ldap-destinations</span></code></li>
+<li><code class="xref swindon swindon-sect docutils literal"><span class="pre">networks</span></code></li>
+<li><code class="xref swindon swindon-sect docutils literal"><span class="pre">log-formats</span></code></li>
+<li><a class="reference internal" href="main.html#sect-disk-pools"><code class="xref swindon swindon-sect docutils literal"><span class="pre">disk-pools</span></code></a></li>
+</ul>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../index.html">
+              <img class="logo" src="../_static/swindon.jpg" alt="Logo"/>
+            </a></p><div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="index.html">Configuration</a><ul>
+      <li>Previous: <a href="replication.html" title="previous chapter">Replication configuration</a></li>
+      <li>Next: <a href="../internals/index.html" title="next chapter">Swindon Internals</a></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/config/mixins.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2016, Evo Company.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="../_sources/config/mixins.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

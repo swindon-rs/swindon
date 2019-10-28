@@ -1,0 +1,201 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Installation &#8212; Swindon 0.7.8 documentation</title>
+    
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '0.7.8',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Configuration" href="config/index.html" />
+    <link rel="prev" title="Welcome to Swindon’s documentation!" href="index.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="installation">
+<h1><a class="toc-backref" href="#id1">Installation</a><a class="headerlink" href="#installation" title="Permalink to this headline">¶</a></h1>
+<div class="contents topic" id="contents">
+<p class="topic-title first">Contents</p>
+<ul class="simple">
+<li><a class="reference internal" href="#installation" id="id1">Installation</a><ul>
+<li><a class="reference internal" href="#using-cargo" id="id2">Using Cargo</a></li>
+<li><a class="reference internal" href="#example-config" id="id3">Example Config</a></li>
+<li><a class="reference internal" href="#ubuntu-installation" id="id4">Ubuntu Installation</a></li>
+<li><a class="reference internal" href="#vagga-installation" id="id5">Vagga Installation</a></li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="section" id="using-cargo">
+<h2><a class="toc-backref" href="#id2">Using Cargo</a><a class="headerlink" href="#using-cargo" title="Permalink to this headline">¶</a></h2>
+<p>You can install <em>swindon</em> using cargo:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">cargo</span> <span class="n">install</span> <span class="n">swindon</span>
+</pre></div>
+</div>
+<p>But we also provide binaries for ubuntu and <a class="reference external" href="http://vagga.readthedocs.org">vagga</a> configs.</p>
+</div>
+<div class="section" id="example-config">
+<h2><a class="toc-backref" href="#id3">Example Config</a><a class="headerlink" href="#example-config" title="Permalink to this headline">¶</a></h2>
+<p>To run swindon you need some config here is the minimal one serving static
+from <code class="docutils literal"><span class="pre">public</span></code> folder at port 8080:</p>
+<div class="highlight-yaml"><div class="highlight"><pre><span></span><span class="nt">listen</span><span class="p">:</span>
+<span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">127.0.0.1:8080</span>
+
+<span class="nt">routing</span><span class="p">:</span>
+  <span class="nt">localhost/js</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">public</span>
+  <span class="nt">localhost/css</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">public</span>
+  <span class="nt">localhost/img</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">public</span>
+
+<span class="nt">handlers</span><span class="p">:</span>
+  <span class="nt">public</span><span class="p">:</span> <span class="kt">!Static</span>
+    <span class="nt">mode</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">relative_to_domain_root</span>
+    <span class="nt">index-files</span><span class="p">:</span> <span class="p p-Indicator">[</span><span class="nv">index.html</span><span class="p p-Indicator">]</span>
+    <span class="nt">path</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">public</span>
+    <span class="nt">text-charset</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">utf-8</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="ubuntu-installation">
+<h2><a class="toc-backref" href="#id4">Ubuntu Installation</a><a class="headerlink" href="#ubuntu-installation" title="Permalink to this headline">¶</a></h2>
+<p>Installation for ubuntu xenial:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">echo</span> <span class="s1">&#39;deb [trusted=yes] http://repo.mglawica.org/ubuntu/ xenial swindon&#39;</span> <span class="o">|</span> <span class="n">sudo</span> <span class="n">tee</span> <span class="o">/</span><span class="n">etc</span><span class="o">/</span><span class="n">apt</span><span class="o">/</span><span class="n">sources</span><span class="o">.</span><span class="n">list</span><span class="o">.</span><span class="n">d</span><span class="o">/</span><span class="n">swindon</span><span class="o">.</span><span class="n">list</span>
+<span class="n">apt</span><span class="o">-</span><span class="n">get</span> <span class="n">update</span>
+<span class="n">apt</span><span class="o">-</span><span class="n">get</span> <span class="n">install</span> <span class="n">swindon</span>
+</pre></div>
+</div>
+<p>More repositories:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">deb</span> <span class="p">[</span><span class="n">trusted</span><span class="o">=</span><span class="n">yes</span><span class="p">]</span> <span class="n">http</span><span class="p">:</span><span class="o">//</span><span class="n">repo</span><span class="o">.</span><span class="n">mglawica</span><span class="o">.</span><span class="n">org</span><span class="o">/</span><span class="n">ubuntu</span><span class="o">/</span> <span class="n">xenial</span> <span class="n">swindon</span>
+<span class="n">deb</span> <span class="p">[</span><span class="n">trusted</span><span class="o">=</span><span class="n">yes</span><span class="p">]</span> <span class="n">http</span><span class="p">:</span><span class="o">//</span><span class="n">repo</span><span class="o">.</span><span class="n">mglawica</span><span class="o">.</span><span class="n">org</span><span class="o">/</span><span class="n">ubuntu</span><span class="o">/</span> <span class="n">xenial</span> <span class="n">swindon</span><span class="o">-</span><span class="n">testing</span>
+<span class="n">deb</span> <span class="p">[</span><span class="n">trusted</span><span class="o">=</span><span class="n">yes</span><span class="p">]</span> <span class="n">http</span><span class="p">:</span><span class="o">//</span><span class="n">repo</span><span class="o">.</span><span class="n">mglawica</span><span class="o">.</span><span class="n">org</span><span class="o">/</span><span class="n">ubuntu</span><span class="o">/</span> <span class="n">precise</span> <span class="n">swindon</span>
+<span class="n">deb</span> <span class="p">[</span><span class="n">trusted</span><span class="o">=</span><span class="n">yes</span><span class="p">]</span> <span class="n">http</span><span class="p">:</span><span class="o">//</span><span class="n">repo</span><span class="o">.</span><span class="n">mglawica</span><span class="o">.</span><span class="n">org</span><span class="o">/</span><span class="n">ubuntu</span><span class="o">/</span> <span class="n">precise</span> <span class="n">swindon</span><span class="o">-</span><span class="n">testing</span>
+<span class="n">deb</span> <span class="p">[</span><span class="n">trusted</span><span class="o">=</span><span class="n">yes</span><span class="p">]</span> <span class="n">http</span><span class="p">:</span><span class="o">//</span><span class="n">repo</span><span class="o">.</span><span class="n">mglawica</span><span class="o">.</span><span class="n">org</span><span class="o">/</span><span class="n">ubuntu</span><span class="o">/</span> <span class="n">trusty</span> <span class="n">swindon</span>
+<span class="n">deb</span> <span class="p">[</span><span class="n">trusted</span><span class="o">=</span><span class="n">yes</span><span class="p">]</span> <span class="n">http</span><span class="p">:</span><span class="o">//</span><span class="n">repo</span><span class="o">.</span><span class="n">mglawica</span><span class="o">.</span><span class="n">org</span><span class="o">/</span><span class="n">ubuntu</span><span class="o">/</span> <span class="n">trusty</span> <span class="n">swindon</span><span class="o">-</span><span class="n">testing</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="vagga-installation">
+<h2><a class="toc-backref" href="#id5">Vagga Installation</a><a class="headerlink" href="#vagga-installation" title="Permalink to this headline">¶</a></h2>
+<p>Same as above, but in form of vagga config:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span>containers:
+  swindon:
+    setup:
+    - !Ubuntu xenial
+    - !UbuntuRepo
+      url: https://repo.mglawica.org/ubuntu/
+      suite: xenial
+      components: [swindon-stable]
+      trusted: true
+    - !Install [swindon=0.7.8+xenial1]
+
+commands:
+  swindon: !Command
+    container: swindon
+    run:
+    - swindon
+    - --verbose
+    - --config=swindon.yaml
+</pre></div>
+</div>
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="index.html">
+              <img class="logo" src="_static/swindon.jpg" alt="Logo"/>
+            </a></p>
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Installation</a><ul>
+<li><a class="reference internal" href="#using-cargo">Using Cargo</a></li>
+<li><a class="reference internal" href="#example-config">Example Config</a></li>
+<li><a class="reference internal" href="#ubuntu-installation">Ubuntu Installation</a></li>
+<li><a class="reference internal" href="#vagga-installation">Vagga Installation</a></li>
+</ul>
+</li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="index.html" title="previous chapter">Welcome to Swindon’s documentation!</a></li>
+      <li>Next: <a href="config/index.html" title="next chapter">Configuration</a></li>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/installation.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2016, Evo Company.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/installation.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

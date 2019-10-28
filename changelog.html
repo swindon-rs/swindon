@@ -1,0 +1,278 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Swindon Changes By Version &#8212; Swindon 0.7.8 documentation</title>
+    
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '0.7.8',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="Example Applications" href="swindon-lattice/examples.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="swindon-changes-by-version">
+<h1>Swindon Changes By Version<a class="headerlink" href="#swindon-changes-by-version" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="v0-7-8">
+<span id="changelog-v0-7-8"></span><h2>v0.7.8<a class="headerlink" href="#v0-7-8" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>Log format is changed again (we don’t consider it stable though)</li>
+<li>Bugfix: another issue with Content-Range fixed</li>
+<li>Bugfix: fix occasional crash in name resolution code</li>
+</ul>
+</div>
+<div class="section" id="v0-7-7">
+<span id="changelog-v0-7-7"></span><h2>v0.7.7<a class="headerlink" href="#v0-7-7" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>Changed log format according to a new env_logger</li>
+<li>Bugfix: Content-Range generated on static was invalid previously</li>
+</ul>
+</div>
+<div class="section" id="v0-7-6">
+<span id="changelog-v0-7-6"></span><h2>v0.7.6<a class="headerlink" href="#v0-7-6" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>Add more detailed metrics for connection pools (<code class="docutils literal"><span class="pre">http-destination</span></code>)</li>
+<li>Separate metrics for each <code class="docutils literal"><span class="pre">http-destination</span></code></li>
+<li>Internals: Swindon now rewrites cantal metrics on config reload</li>
+<li>Internals: We reread config in a separate thread (so config reload makes
+smaller or no latency spike and do not hold server when disk is slow)</li>
+</ul>
+</div>
+<div class="section" id="v0-7-5">
+<span id="changelog-v0-7-5"></span><h2>v0.7.5<a class="headerlink" href="#v0-7-5" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>All <code class="docutils literal"><span class="pre">listen</span></code> settings are now updatable, i.e. swindon will rebind if
+the name resolves to different addresses or when config changes.</li>
+<li>When swindon fails to listen on some address it will retry every second
+instead of waiting for configuration change</li>
+<li>Fixes broken <code class="docutils literal"><span class="pre">swindon-dev</span></code> when proxying is used</li>
+</ul>
+</div>
+<div class="section" id="v0-7-4">
+<span id="changelog-v0-7-4"></span><h2>v0.7.4<a class="headerlink" href="#v0-7-4" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>Bugfix: due to a bug in abstract-ns domain names with numbers were not
+resolved properly (in client protocols: replication, http destination…)</li>
+<li>Added a log message on start (to find restarts in log easier)</li>
+</ul>
+</div>
+<div class="section" id="v0-7-3">
+<span id="changelog-v0-7-3"></span><h2>v0.7.3<a class="headerlink" href="#v0-7-3" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>Bugfix: TTL on private lattice data introduced in v0.7.2 were sometimes not
+handled properly on auth, effectively leaving users unsubscribed right after
+authorization</li>
+<li>Bugfix: while we started to sync users activity properly in v0.7.2, the
+information from a replica wasn’t properly propagated to clients</li>
+</ul>
+</div>
+<div class="section" id="v0-7-2">
+<span id="changelog-v0-7-2"></span><h2>v0.7.2<a class="headerlink" href="#v0-7-2" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li><dl class="first docutils">
+<dt><code class="docutils literal"><span class="pre">SwindonLattice</span></code> protocol:</dt>
+<dd><ul class="first last">
+<li>Added <a class="reference internal" href="swindon-lattice/backend.html#expires-in"><span class="std std-ref">expires_in</span></a> experimental
+API</li>
+<li>Private lattice data is now cleaned in 1 minute if unused, this removes
+a memory leak, but may be a problem if connection authorization works for
+longer that a minute</li>
+<li><code class="docutils literal"><span class="pre">active</span></code> user online status is now replicated better</li>
+</ul>
+</dd>
+</dl>
+</li>
+<li>Previously when swindon couldn’t resolve name on startup it could crash
+connectin pool (http-destination) and never fix it again. Now it will retry
+name resolution indefinitely</li>
+</ul>
+</div>
+<div class="section" id="v0-7-0">
+<span id="changelog-v0-7-0"></span><h2>v0.7.0<a class="headerlink" href="#v0-7-0" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li><dl class="first docutils">
+<dt><strong>[breaking]</strong> changes to <code class="docutils literal"><span class="pre">SwindonLattice</span></code> protocol:</dt>
+<dd><ul class="first last">
+<li>uses <code class="docutils literal"><span class="pre">/swindon/authorize_connection</span></code> and <code class="docutils literal"><span class="pre">/swindon/session_inactive</span></code>
+API routes instead of ones prefixed by <code class="docutils literal"><span class="pre">/tangle/</span></code> previously</li>
+<li>deprecated handler type <code class="docutils literal"><span class="pre">SwindonChat</span></code> is removed, also dropped
+<code class="docutils literal"><span class="pre">allow-empty-subprotocol</span></code> setting (the behavior can still be restored
+by using <a class="reference internal" href="config/handlers.html#opt-compatibility"><code class="xref swindon swindon-opt docutils literal"><span class="pre">compatibility</span></code></a>)</li>
+<li>added <a class="reference internal" href="config/handlers.html#opt-compatibility"><code class="xref swindon swindon-opt docutils literal"><span class="pre">compatibility</span></code></a> setting</li>
+<li>The lattices <code class="docutils literal"><span class="pre">swindon.*</span></code> are reserved, and can’t be subscribed to and
+updated using normal backend lattice API (one <code class="docutils literal"><span class="pre">swindon.user</span></code> is already
+used as desribed above)</li>
+<li>The <code class="docutils literal"><span class="pre">Authorization</span></code> header has now prefix of <code class="docutils literal"><span class="pre">Swindon+json</span></code> rather
+than <code class="docutils literal"><span class="pre">Tangle</span></code></li>
+<li>Responses to <code class="docutils literal"><span class="pre">authorize_connection</span></code> and method calls must contain
+<code class="docutils literal"><span class="pre">Content-Type:</span> <span class="pre">application/json</span></code> header, as well as requests to
+backend API endpoints that contain JSON data.</li>
+</ul>
+</dd>
+</dl>
+</li>
+<li>Added <a class="reference internal" href="swindon-lattice/crdt.html#register-crdt"><span class="std std-ref">register CRDT</span></a> type (basically last-write-wins)</li>
+<li>User <a class="reference external" href="https://github.com/swindon-rs/swindon/issues/51">online status tracking</a> is implemented in <a class="reference internal" href="swindon-lattice/index.html#swindon-lattice"><span class="std std-ref">Swindon-lattice Protocol</span></a></li>
+<li>Added <a class="reference internal" href="config/mixins.html#mixins"><span class="std std-ref">Mixins</span></a> support</li>
+<li><strong>[breaking]</strong> no <code class="docutils literal"><span class="pre">authorization</span></code> section any more. You can add
+authorizer by adding <code class="docutils literal"><span class="pre">&#64;authorizer-name</span></code> in the normal routing table.</li>
+<li><strong>[breaking]</strong> there is now <code class="docutils literal"><span class="pre">default</span></code> handler implicitly defined. You
+can override it and it will work everywhere where plain 404 were previosly
+returned</li>
+<li><strong>[breaking]</strong> there is now <code class="docutils literal"><span class="pre">default</span></code> authorizer. You can override it
+and it will apply for every route whenever not overridden by other
+authorizer</li>
+<li>Added <code class="docutils literal"><span class="pre">AllowAll</span></code> authorizer (just to be explicit)</li>
+<li>[bugfix] Updating only public part of lattice now delivers the changes to
+users</li>
+<li>Swindon now compiles correctly on Windows</li>
+<li><dl class="first docutils">
+<dt>Many enhancements into file serving, in particular:</dt>
+<dd><ul class="first last">
+<li>Range requests are supported</li>
+<li>If-Modified-Since requests are supported</li>
+<li>If-None-Match requests are supported</li>
+<li>Only GET (and HEAD) requests serve file now, other methods are rejected</li>
+<li>Gzip (<code class="docutils literal"><span class="pre">.gz</span></code>) and Brotli (<code class="docutils literal"><span class="pre">.br</span></code>) files are now served by default if
+file exists and user agent supports the encoding (including for
+<code class="docutils literal"><span class="pre">!SingleFile</span></code> handler)</li>
+<li>Directory indexes are now rendered (format of the directory index will
+probably change in future)</li>
+<li><a class="reference internal" href="config/handlers.html#versioned-static"><span class="std std-ref">VersionedStatic</span></a> now sets cache control
+headers</li>
+<li><dl class="first docutils">
+<dt><code class="docutils literal"><span class="pre">content-type</span></code> is not required for <code class="docutils literal"><span class="pre">!SingleFile</span></code> anymore,</dt>
+<dd>it’s guessed by extension as for <code class="docutils literal"><span class="pre">!Static</span></code></dd>
+</dl>
+</li>
+<li><strong>[breaking]</strong> <code class="docutils literal"><span class="pre">text-charset</span></code> is now <code class="docutils literal"><span class="pre">utf-8</span></code> by default</li>
+<li><strong>[breaking]</strong> <code class="docutils literal"><span class="pre">charset=</span></code> is now added to <code class="docutils literal"><span class="pre">application/javascript</span></code>
+too (in addition to all <code class="docutils literal"><span class="pre">text/*</span></code> as before)</li>
+<li>Serving devices (special files like <code class="docutils literal"><span class="pre">/dev/null</span></code>) returns 403, while
+previously might work</li>
+</ul>
+</dd>
+</dl>
+</li>
+<li>The dot <code class="docutils literal"><span class="pre">.</span></code> character is allowed in <code class="docutils literal"><span class="pre">user_id</span></code></li>
+<li>Upgraded <a class="reference external" href="http://rust-quire.readthedocs.io/en/latest/">quire</a> configuration library to the one based on the <code class="docutils literal"><span class="pre">serde</span></code>
+crate, this should not change anything user-visible, except some tweaks of
+error messages in configs. But can also have some edge cases.</li>
+</ul>
+<p>Upgrading:</p>
+<ol class="arabic simple">
+<li>Replace <code class="docutils literal"><span class="pre">SwindonChat</span></code> to <code class="docutils literal"><span class="pre">SwindonLattice</span></code></li>
+<li>Set <a class="reference internal" href="config/handlers.html#opt-compatibility"><code class="xref swindon swindon-opt docutils literal"><span class="pre">compatibility</span></code></a> field to desired level</li>
+<li>Upgrade application to support both versions of APIs (there are no things
+that conflict with each other)</li>
+<li>Bump <a class="reference internal" href="config/handlers.html#opt-compatibility"><code class="xref swindon swindon-opt docutils literal"><span class="pre">compatibility</span></code></a></li>
+<li>Remove support of the old API</li>
+</ol>
+<p>Note: <code class="docutils literal"><span class="pre">/swindon/</span></code> prefix was reserved (so you couldn’t call such methods
+from frontend) in swindon since <code class="docutils literal"><span class="pre">0.6.0</span></code>.</p>
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="index.html">
+              <img class="logo" src="_static/swindon.jpg" alt="Logo"/>
+            </a></p>
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Swindon Changes By Version</a><ul>
+<li><a class="reference internal" href="#v0-7-8">v0.7.8</a></li>
+<li><a class="reference internal" href="#v0-7-7">v0.7.7</a></li>
+<li><a class="reference internal" href="#v0-7-6">v0.7.6</a></li>
+<li><a class="reference internal" href="#v0-7-5">v0.7.5</a></li>
+<li><a class="reference internal" href="#v0-7-4">v0.7.4</a></li>
+<li><a class="reference internal" href="#v0-7-3">v0.7.3</a></li>
+<li><a class="reference internal" href="#v0-7-2">v0.7.2</a></li>
+<li><a class="reference internal" href="#v0-7-0">v0.7.0</a></li>
+</ul>
+</li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="swindon-lattice/examples.html" title="previous chapter">Example Applications</a></li>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/changelog.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2016, Evo Company.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/changelog.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

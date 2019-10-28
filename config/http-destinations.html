@@ -1,0 +1,251 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Http Destinations &#8212; Swindon 0.7.8 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '0.7.8',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Auth &amp; Auth" href="auth.html" />
+    <link rel="prev" title="Session Pool" href="session-pools.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="http-destinations">
+<span id="id1"></span><h1>Http Destinations<a class="headerlink" href="#http-destinations" title="Permalink to this headline">¶</a></h1>
+<p>Each HTTP destination defines a connection pool to uniformly distributed
+service. For example:</p>
+<div class="highlight-yaml"><div class="highlight"><pre><span></span><span class="nt">http-destinations</span><span class="p">:</span>
+
+  <span class="nt">myapp</span><span class="p">:</span>
+
+    <span class="nt">load-balancing</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">queue</span>
+    <span class="nt">queue-size-for-503</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">100k</span>
+    <span class="nt">backend-connections-per-ip-port</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">1</span>
+    <span class="nt">in-flight-requests-per-backend-connection</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">1</span>
+
+    <span class="nt">addresses</span><span class="p">:</span>
+    <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">example.com:5000</span>
+
+  <span class="nt">httpbin</span><span class="p">:</span>
+
+    <span class="nt">load-balancing</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">queue</span>
+    <span class="nt">queue-size-for-503</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">50</span>
+    <span class="nt">backend-connections-per-ip-port</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">5</span>
+    <span class="nt">in-flight-requests-per-backend-connection</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">2</span>
+
+    <span class="nt">addresses</span><span class="p">:</span>
+    <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">httpbin.org:80</span>
+</pre></div>
+</div>
+<p>Here we define two connection pools with different pipelining settings (
+<code class="docutils literal"><span class="pre">inflight-requests-per-backend-connection</span></code> and different queue size.</p>
+<p>You can use single http destination in multiple handlers. Handlers that support
+http destination are <code class="docutils literal"><span class="pre">!Proxy</span></code> and <code class="docutils literal"><span class="pre">!SwindonChat</span></code>, it’s also used
+as a <code class="docutils literal"><span class="pre">inactivity-handler</span></code> in <code class="docutils literal"><span class="pre">session-pools</span></code>.</p>
+<div class="section" id="options">
+<h2>Options<a class="headerlink" href="#options" title="Permalink to this headline">¶</a></h2>
+<dl class="opt">
+<dt id="opt-addresses">
+<code class="descname">addresses</code><a class="headerlink" href="#opt-addresses" title="Permalink to this definition">¶</a></dt>
+<dd><p>A list of addresses to connect to. Currently you must specify also a port,
+but we consider using <code class="docutils literal"><span class="pre">SRV</span></code> records in the future.</p>
+<p>Each address may be resolved to a multiple IPs and each API participate in
+round-robin on it’s own (not the whole hostname).</p>
+</dd></dl>
+
+<dl class="opt">
+<dt id="opt-load-balancing">
+<code class="descname">load-balancing</code><a class="headerlink" href="#opt-load-balancing" title="Permalink to this definition">¶</a></dt>
+<dd><p>(default <code class="docutils literal"><span class="pre">queue</span></code>) Load-balancing kind, only <code class="docutils literal"><span class="pre">queue</span></code> is supported for now.</p>
+</dd></dl>
+
+<dl class="opt">
+<dt id="opt-queue-size-for-503">
+<code class="descname">queue-size-for-503</code><a class="headerlink" href="#opt-queue-size-for-503" title="Permalink to this definition">¶</a></dt>
+<dd><p>(default <code class="docutils literal"><span class="pre">100000</span></code>) After this number of requests queued all subsequent
+requests that match this destination will be rejected immediately with
+the code 503 (service unavailable).</p>
+</dd></dl>
+
+<dl class="opt">
+<dt id="opt-backend-connections-per-ip-port">
+<code class="descname">backend-connections-per-ip-port</code><a class="headerlink" href="#opt-backend-connections-per-ip-port" title="Permalink to this definition">¶</a></dt>
+<dd><p>(default <code class="docutils literal"><span class="pre">100</span></code>) This number of connections will be created to each backend
+specified in <code class="docutils literal"><span class="pre">addresses</span></code> or resolved by hostname.</p>
+<p>Optimal value for this setting depends on whether backends are written
+in asynchronous style or synchronous style and how many threads or processes
+are running on each machine.</p>
+</dd></dl>
+
+<dl class="opt">
+<dt id="opt-keep-alive-timeout">
+<code class="descname">keep-alive-timeout</code><a class="headerlink" href="#opt-keep-alive-timeout" title="Permalink to this definition">¶</a></dt>
+<dd><p>(default <code class="docutils literal"><span class="pre">4</span> <span class="pre">sec</span></code>) Time connection can be kept idle when no requests being
+sent. Note the default time is very conservative. You should upgrade it
+to as large as server on the other side is willing to keep connection open
+sans roundtrip time.</p>
+</dd></dl>
+
+<dl class="opt">
+<dt id="opt-max-request-timeout">
+<code class="descname">max-request-timeout</code><a class="headerlink" href="#opt-max-request-timeout" title="Permalink to this definition">¶</a></dt>
+<dd><p>(default <code class="docutils literal"><span class="pre">30</span> <span class="pre">secs</span></code>) Maximum time request is waiting for response. This
+time is accounted from the first byte sent to the last byte received.</p>
+<p>There are two important issues to consider:</p>
+<ol class="arabic simple">
+<li>In the current implementation we don’t cancel requests earlier than
+a timeout. I.e. if timeout in <cite>!Handler</cite> is smaller, request on backend
+will wait.</li>
+<li>Time request waits in the queue is not accounted in this timeout.</li>
+</ol>
+</dd></dl>
+
+<dl class="opt">
+<dt id="opt-safe-pipeline-timeout">
+<code class="descname">safe-pipeline-timeout</code><a class="headerlink" href="#opt-safe-pipeline-timeout" title="Permalink to this definition">¶</a></dt>
+<dd><p>(default <code class="docutils literal"><span class="pre">300</span> <span class="pre">ms</span></code>) Maximum time a single request is being handled by
+backend until we stop pipelining more requests into this connection. This
+timeout stems from two principles:</p>
+<ol class="arabic simple">
+<li>Pipelining is only useful for quick request, on slower ones effect of
+pipelining is negligible.</li>
+<li>If backend starts to be slow, we should stop sending more requests as
+fast as possible.</li>
+</ol>
+<p>Note: we track this timeout on each individual connection, so it isn’t
+suited very well for avoiding failed nodes, but rather to make effect of
+head of line blocking smaller. But with carefully set up
+<code class="docutils literal"><span class="pre">backend-connections-per-ip-port</span></code> it might help loosing smaller number
+of requests.</p>
+</dd></dl>
+
+<dl class="opt">
+<dt id="opt-override-host-header">
+<code class="descname">override-host-header</code><a class="headerlink" href="#opt-override-host-header" title="Permalink to this definition">¶</a></dt>
+<dd><p>(optional) Replace host header for the original request into this one.
+This is kind of rewrite of a request url if your backend accepts different
+domain name than frontend shows.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">This setting is currently required for handlers used for
+<a class="reference internal" href="handlers.html#opt-message-handlers"><code class="xref swindon swindon-opt docutils literal"><span class="pre">message-handlers</span></code></a> for <code class="docutils literal"><span class="pre">SwindonChat</span></code> protocol. We’re seeking for
+a way to provide sane default <cite>Host</cite> header for such handlers.</p>
+</div>
+</dd></dl>
+
+<dl class="opt">
+<dt id="opt-request-id-header">
+<code class="descname">request-id-header</code><a class="headerlink" href="#opt-request-id-header" title="Permalink to this definition">¶</a></dt>
+<dd><p>(default is null) Creates a request id. Request id value depends on
+handler type:</p>
+<ul class="simple">
+<li>for <code class="docutils literal"><span class="pre">!Proxy</span></code> – see <a class="reference internal" href="../internals/request_id.html"><span class="doc">Request Id</span></a>;</li>
+<li>for <code class="docutils literal"><span class="pre">!SwindonChat</span></code> handler – a combination of server id, connection id
+and request id is used.</li>
+</ul>
+</dd></dl>
+
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../index.html">
+              <img class="logo" src="../_static/swindon.jpg" alt="Logo"/>
+            </a></p>
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Http Destinations</a><ul>
+<li><a class="reference internal" href="#options">Options</a></li>
+</ul>
+</li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="index.html">Configuration</a><ul>
+      <li>Previous: <a href="session-pools.html" title="previous chapter">Session Pool</a></li>
+      <li>Next: <a href="auth.html" title="next chapter">Auth &amp; Auth</a></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/config/http-destinations.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2016, Evo Company.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="../_sources/config/http-destinations.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
