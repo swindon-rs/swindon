@@ -15,16 +15,16 @@ use tokio_core::reactor::Handle;
 use tokio_io::{AsyncRead, AsyncWrite};
 use serde_json::{to_string as json_encode, Value as Json};
 
-use chat::ConnectionMessage::{Hello, FatalError};
-use chat::MessageError::HttpError;
-use chat::{self, Cid, ConnectionMessage, ConnectionSender};
-use chat::{json_err, good_status};
-use chat::tangle_auth::{SwindonAuth, TangleAuth};
-use config::chat::{Chat};
-use default_error_page::serve_error_page;
-use incoming::{Context, IntoContext};
-use incoming::{Request, Input, Reply, Encoder, Transport};
-use runtime::Runtime;
+use crate::chat::ConnectionMessage::{Hello, FatalError};
+use crate::chat::MessageError::HttpError;
+use crate::chat::{self, Cid, ConnectionMessage, ConnectionSender};
+use crate::chat::{json_err, good_status};
+use crate::chat::tangle_auth::{SwindonAuth, TangleAuth};
+use crate::config::chat::{Chat};
+use crate::default_error_page::serve_error_page;
+use crate::incoming::{Context, IntoContext};
+use crate::incoming::{Request, Input, Reply, Encoder, Transport};
+use crate::runtime::Runtime;
 
 struct WebsockReply {
     cid: Cid,

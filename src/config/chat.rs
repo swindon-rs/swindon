@@ -6,9 +6,9 @@ use serde::de::{Deserialize, Deserializer, Error};
 use quire::validate::{Structure, Scalar, Mapping};
 
 use super::http;
-use intern::{HandlerName, SessionPoolName};
-use config::visitors::FromStrVisitor;
-use config::version::Version;
+use crate::intern::{HandlerName, SessionPoolName};
+use crate::config::visitors::FromStrVisitor;
+use crate::config::version::Version;
 
 #[derive(Debug, Clone, PartialOrd, Ord, PartialEq, Eq)]
 #[allow(non_camel_case_types)]

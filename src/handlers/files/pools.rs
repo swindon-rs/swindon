@@ -7,9 +7,9 @@ use std::sync::{Arc, RwLock};
 use futures_cpupool::{self, CpuPool};
 use self_meter_http::Meter;
 
-use config;
-use intern::{DiskPoolName};
-use runtime::Runtime;
+use crate::config;
+use crate::intern::{DiskPoolName};
+use crate::runtime::Runtime;
 
 
 #[derive(Clone)]

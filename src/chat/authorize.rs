@@ -8,16 +8,16 @@ use tk_http::Status;
 use tk_http::server::Head;
 use serde_json::{self, Value as Json};
 
-use http_pools::{REQUESTS, FAILED_503};
-use intern::SessionId;
-use config::chat::Chat;
-use incoming::{Input};
-use chat::{Cid, MessageError, ConnectionSender};
-use chat::MessageError::HttpError;
-use chat::ConnectionMessage::FatalError;
-use chat::backend;
-use chat::message::AuthData;
-use chat::processor::{Action};
+use crate::http_pools::{REQUESTS, FAILED_503};
+use crate::intern::SessionId;
+use crate::config::chat::Chat;
+use crate::incoming::{Input};
+use crate::chat::{Cid, MessageError, ConnectionSender};
+use crate::chat::MessageError::HttpError;
+use crate::chat::ConnectionMessage::FatalError;
+use crate::chat::backend;
+use crate::chat::message::AuthData;
+use crate::chat::processor::{Action};
 
 /// Issue Auth call to backend.
 ///

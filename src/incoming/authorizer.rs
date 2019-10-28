@@ -1,8 +1,8 @@
 use tk_http::server::{Error};
 
-use incoming::{Input};
-use config::{Authorizer};
-use authorizers;
+use crate::incoming::{Input};
+use crate::config::{Authorizer};
+use crate::authorizers;
 
 // TODO(tailhook) this should eventually be a virtual method on Authorizer
 impl Authorizer {

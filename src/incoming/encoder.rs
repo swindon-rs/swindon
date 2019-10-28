@@ -10,8 +10,8 @@ use tk_http::server::{EncoderDone};
 use tokio_io::AsyncWrite;
 
 
-use config::Config;
-use incoming::Debug;
+use crate::config::Config;
+use crate::incoming::Debug;
 
 pub type Context = (Arc<Config>, Debug);
 

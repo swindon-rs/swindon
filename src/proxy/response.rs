@@ -2,7 +2,7 @@ use tk_http::{Status};
 use tk_http::client::Head;
 use tk_http::server::{EncoderDone};
 
-use incoming::Encoder;
+use crate::incoming::Encoder;
 
 
 #[derive(Debug)]

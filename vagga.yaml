@@ -17,11 +17,11 @@ containers:
       - lsb-release  # to build package
       - vim  # to edit release notes
     - &rust !TarInstall
-      url: https://static.rust-lang.org/dist/rust-1.23.0-x86_64-unknown-linux-gnu.tar.gz
+      url: https://static.rust-lang.org/dist/rust-1.38.0-x86_64-unknown-linux-gnu.tar.gz
       script: "./install.sh --prefix=/usr \
                --components=rustc,rust-std-x86_64-unknown-linux-gnu,cargo"
     - !TarInstall
-      url: "https://static.rust-lang.org/dist/rust-std-1.23.0-x86_64-unknown-linux-musl.tar.gz"
+      url: "https://static.rust-lang.org/dist/rust-std-1.38.0-x86_64-unknown-linux-musl.tar.gz"
       script: "./install.sh --prefix=/musl \
                --components=rust-std-x86_64-unknown-linux-musl"
     - !Sh 'ln -s /musl/lib/rustlib/x86_64-unknown-linux-musl /usr/lib/rustlib/x86_64-unknown-linux-musl'
@@ -144,11 +144,11 @@ containers:
 
   pytest:
     setup:
-    - !Ubuntu xenial
-    - !AptTrust
-      keys: [4AB0F789CBA31744CC7DA76A8CF63AD3F06FC659]
-    - !UbuntuPPA jonathonf/python-3.6
-    - !Install [libcurl3, libdw1, python3.6, python3.6-dev, ca-certificates]
+    - !Ubuntu cosmic
+    # - !AptTrust
+    #   keys: [4AB0F789CBA31744CC7DA76A8CF63AD3F06FC659]
+    # - !UbuntuPPA jonathonf/python-3.6
+    - !Install [libcurl4, libdw1, python3.7, python3.7-dev, ca-certificates]
     - !BuildDeps
       - wget
       - make
@@ -161,7 +161,8 @@ containers:
       - zlib1g-dev
       - libcurl4-openssl-dev
       - binutils-dev
-      - python
+      - python3
+      - python3-distutils
     - !TarInstall
       url: https://github.com/SimonKagstrom/kcov/archive/master.tar.gz
       script: |
@@ -173,7 +174,7 @@ containers:
     - !PipConfig
       dependencies: true
       install-python: false
-      python-exe: /usr/bin/python3.6
+      python-exe: /usr/bin/python3.7
     - !Py3Requirements "tests/requirements.txt"
 
 commands:

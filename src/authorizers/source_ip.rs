@@ -4,8 +4,8 @@ use std::net::IpAddr;
 
 use tk_http::server::{Error};
 
-use config::networks::SourceIpAuthorizer;
-use incoming::Input;
+use crate::config::networks::SourceIpAuthorizer;
+use crate::incoming::Input;
 
 
 pub fn check(cfg: &Arc<SourceIpAuthorizer>, input: &mut Input)

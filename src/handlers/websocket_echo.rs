@@ -11,9 +11,9 @@ use futures::future::{ok};
 use tokio_core::reactor::Handle;
 use tokio_io::{AsyncRead, AsyncWrite};
 
-use config::Config;
-use incoming::{Request, Input, Debug, Reply, Encoder};
-use default_error_page::serve_error_page;
+use crate::config::Config;
+use crate::incoming::{Request, Input, Debug, Reply, Encoder};
+use crate::default_error_page::serve_error_page;
 
 
 struct WebsockReply {

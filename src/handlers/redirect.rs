@@ -3,9 +3,9 @@ use std::sync::Arc;
 use tk_http::Status;
 use futures::future::ok;
 
-use default_error_page::serve_error_page;
-use config::redirect::BaseRedirect;
-use incoming::{reply, Request, Input};
+use crate::default_error_page::serve_error_page;
+use crate::config::redirect::BaseRedirect;
+use crate::incoming::{reply, Request, Input};
 
 
 pub fn base_redirect<S: 'static>(settings: &Arc<BaseRedirect>, inp: Input)

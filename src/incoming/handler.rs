@@ -4,10 +4,10 @@ use tk_http::server::{Dispatcher, Error};
 use tk_http::Status;
 use httpbin::HttpBin;
 
-use config::{Handler};
-use handlers;
-use incoming::{Request, Input, Transport};
-use default_error_page::serve_error_page;
+use crate::config::{Handler};
+use crate::handlers;
+use crate::incoming::{Request, Input, Transport};
+use crate::default_error_page::serve_error_page;
 
 
 // TODO(tailhook) this should eventually be a virtual method on Handler trait

@@ -9,11 +9,11 @@ use tk_http::Status;
 use tk_http::server::{Error, RecvMode};
 use tk_http::server as http;
 
-use config::proxy::Proxy;
-use incoming::{Input, Reply, Encoder, Context, IntoContext};
-use default_error_page::error_page;
-use http_pools::{HttpPools, REQUESTS, FAILED_503};
-use proxy:: {RepReq, HalfReq, Response, backend};
+use crate::config::proxy::Proxy;
+use crate::incoming::{Input, Reply, Encoder, Context, IntoContext};
+use crate::default_error_page::error_page;
+use crate::http_pools::{HttpPools, REQUESTS, FAILED_503};
+use crate::proxy:: {RepReq, HalfReq, Response, backend};
 
 
 enum State {

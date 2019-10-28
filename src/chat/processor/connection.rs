@@ -3,8 +3,8 @@ use std::collections::{HashSet, HashMap};
 
 use serde_json::Value as Json;
 
-use chat::{Cid, CloseReason, ConnectionSender};
-use intern::{Topic, SessionId, Lattice as Namespace, LatticeKey};
+use crate::chat::{Cid, CloseReason, ConnectionSender};
+use crate::intern::{Topic, SessionId, Lattice as Namespace, LatticeKey};
 use super::{ConnectionMessage};
 use super::lattice;
 

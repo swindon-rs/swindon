@@ -1,7 +1,7 @@
 use std::time::Duration;
 use quire::validate::{Structure, Sequence, Scalar, Numeric};
 
-use config::listen::{self, Listen};
+use crate::config::listen::{self, Listen};
 
 
 #[derive(Debug, Deserialize, PartialEq, Eq)]

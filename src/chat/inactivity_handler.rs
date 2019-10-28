@@ -7,19 +7,19 @@ use futures::sync::oneshot::{channel as oneshot, Sender};
 use futures::sync::mpsc::{UnboundedReceiver as Receiver};
 use tokio_core::reactor::Handle;
 
-use http_pools::{REQUESTS, FAILED_503};
-use runtime::Runtime;
-use config::SessionPool;
-use chat::Shutdown;
-use chat::backend;
-use chat::processor::{PoolMessage};
+use crate::http_pools::{REQUESTS, FAILED_503};
+use crate::runtime::Runtime;
+use crate::config::SessionPool;
+use crate::chat::Shutdown;
+use crate::chat::backend;
+use crate::chat::processor::{PoolMessage};
 
 
 pub fn run(runtime: &Arc<Runtime>, settings: &Arc<SessionPool>,
            handle: &Handle, stream: Receiver<PoolMessage>)
     -> Sender<Shutdown>
 {
-    use chat::processor::PoolMessage::*;
+    use crate::chat::processor::PoolMessage::*;
     let mut handlers = Vec::new();
     let runtime = runtime.clone();
     for dest in &settings.inactivity_handlers {

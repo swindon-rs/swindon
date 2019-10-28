@@ -9,20 +9,20 @@ use tk_http::client as http;
 use serde::ser::Serialize;
 use serde_json;
 
-use chat::authorize::{parse_userinfo, good_status};
-use chat::{Cid, ConnectionSender, ConnectionMessage};
-use chat::ConnectionMessage::{Hello, FatalError};
-use chat::error::MessageError::{HttpError};
-use chat::message::{AuthData, Auth, Call, Meta, Args, Kwargs};
-use chat::processor::{ProcessorPool, Action};
-use chat::replication::{RemotePool, RemoteAction};
-use chat::tangle_auth::{TangleAuth, SwindonAuth};
-use config::SessionPool;
-use config::http_destinations::Destination;
-use runtime::{ServerId};
-use intern::SessionId;
-use proxy::{Response};
-use request_id;
+use crate::chat::authorize::{parse_userinfo, good_status};
+use crate::chat::{Cid, ConnectionSender, ConnectionMessage};
+use crate::chat::ConnectionMessage::{Hello, FatalError};
+use crate::chat::error::MessageError::{HttpError};
+use crate::chat::message::{AuthData, Auth, Call, Meta, Args, Kwargs};
+use crate::chat::processor::{ProcessorPool, Action};
+use crate::chat::replication::{RemotePool, RemoteAction};
+use crate::chat::tangle_auth::{TangleAuth, SwindonAuth};
+use crate::config::SessionPool;
+use crate::config::http_destinations::Destination;
+use crate::runtime::{ServerId};
+use crate::intern::SessionId;
+use crate::proxy::{Response};
+use crate::request_id;
 
 
 const INACTIVITY_PAYLOAD: &'static [u8] = b"[{}, [], {}]";
@@ -219,8 +219,8 @@ impl<S> http::Codec<S> for AuthCodec {
     fn headers_received(&mut self, headers: &http::Head)
         -> Result<http::RecvMode, http::Error>
     {
-        use chat::content_type::check_json;
-        use chat::content_type::ContentType::*;
+        use crate::chat::content_type::check_json;
+        use crate::chat::content_type::ContentType::*;
         use self::AuthState::*;
         if let Wait = mem::replace(&mut self.state, Void) {
             self.state = Headers(
@@ -307,7 +307,7 @@ impl<S> http::Codec<S> for AuthCodec {
             }
             _ => unreachable!(),
         }
-        Ok((Async::Ready(data.len())))
+        Ok(Async::Ready(data.len()))
     }
 }
 
@@ -340,8 +340,8 @@ impl<S> http::Codec<S> for CallCodec {
     fn headers_received(&mut self, headers: &http::Head)
         -> Result<http::RecvMode, http::Error>
     {
-        use chat::content_type::check_json;
-        use chat::content_type::ContentType::*;
+        use crate::chat::content_type::check_json;
+        use crate::chat::content_type::ContentType::*;
         use self::CallState::*;
         if let Wait = mem::replace(&mut self.state, Void) {
             self.state = Headers(
@@ -409,7 +409,7 @@ impl<S> http::Codec<S> for CallCodec {
             }
             _ => unreachable!(),
         }
-        Ok((Async::Ready(data.len())))
+        Ok(Async::Ready(data.len()))
     }
 }
 
@@ -447,7 +447,7 @@ impl<S> http::Codec<S> for InactivityCodec {
         -> Result<Async<usize>, http::Error>
     {
         assert!(end);
-        Ok((Async::Ready(data.len())))
+        Ok(Async::Ready(data.len()))
     }
 }
 

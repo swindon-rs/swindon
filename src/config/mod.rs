@@ -145,7 +145,7 @@ impl Configurator {
 #[cfg(test)]
 pub mod test {
     use std::sync::Arc;
-    use config::{ConfigCell, Config};
+    use crate::config::{ConfigCell, Config};
 
     pub fn make_config() -> Arc<Config> {
         let raw = r#"

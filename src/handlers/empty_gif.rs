@@ -3,8 +3,8 @@ use std::sync::Arc;
 use tk_http::Status;
 use futures::future::{ok};
 
-use config::empty_gif::EmptyGif;
-use incoming::{reply, Request, Input};
+use crate::config::empty_gif::EmptyGif;
+use crate::incoming::{reply, Request, Input};
 
 
 const EMPTY_GIF: &'static [u8] = include_bytes!("../empty.gif");

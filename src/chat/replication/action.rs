@@ -2,11 +2,11 @@ use std::sync::Arc;
 use std::time::{Instant, Duration};
 use serde_json::Value as Json;
 
-use runtime::ServerId;
-use intern::{SessionId, SessionPoolName, Topic, Lattice as Namespace};
-use config::Replication;
-use chat::Cid;
-use chat::processor::{Action, Delta};
+use crate::runtime::ServerId;
+use crate::intern::{SessionId, SessionPoolName, Topic, Lattice as Namespace};
+use crate::config::Replication;
+use crate::chat::Cid;
+use crate::chat::processor::{Action, Delta};
 use super::OutgoingChannel;
 
 

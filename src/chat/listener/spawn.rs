@@ -8,12 +8,12 @@ use futures::future::{Future};
 use tokio_core::reactor::{Handle};
 use ns_router::future::AddrStream;
 
-use intern::SessionPoolName;
-use config::SessionPool;
-use runtime::Runtime;
-use chat::listener::codec::Handler;
-use chat::processor::{ProcessorPool};
-use chat::replication::RemotePool;
+use crate::intern::SessionPoolName;
+use crate::config::SessionPool;
+use crate::runtime::Runtime;
+use crate::chat::listener::codec::Handler;
+use crate::chat::processor::{ProcessorPool};
+use crate::chat::replication::RemotePool;
 
 
 pub struct WorkerData {

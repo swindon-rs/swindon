@@ -1,14 +1,14 @@
 language: rust
 rust: stable
 os: linux
-dist: trusty
+dist: bionic
 sudo: false
 addons:
   apt:
-    sources:
-    - sourceline: 'ppa:fkrull/deadsnakes'
+    # sources:
+    # - sourceline: 'ppa:fkrull/deadsnakes'
     packages:
-    - python3.6
+    # - python3.7
     - libcurl4-openssl-dev
     - libelf-dev
     - libdw-dev

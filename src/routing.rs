@@ -2,11 +2,11 @@ use std::collections::{HashMap};
 
 use regex::{self, RegexSet};
 
-use intern::{HandlerName, Authorizer as AuthorizerName};
-use config::{ConfigSource, Error};
-use config::routing::{Host, HostPath, RouteDef};
-use config::handlers::Handler::{self, StripWWWRedirect};
-use config::authorizers::Authorizer;
+use crate::intern::{HandlerName, Authorizer as AuthorizerName};
+use crate::config::{ConfigSource, Error};
+use crate::config::routing::{Host, HostPath, RouteDef};
+use crate::config::handlers::Handler::{self, StripWWWRedirect};
+use crate::config::authorizers::Authorizer;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Route {
@@ -83,8 +83,8 @@ impl PathTable {
 }
 
 trait Resolver {
-    fn handler(&self, &HandlerName) -> Option<Handler>;
-    fn authorizer(&self, &AuthorizerName) -> Option<Authorizer>;
+    fn handler(&self, _: &HandlerName) -> Option<Handler>;
+    fn authorizer(&self, _: &AuthorizerName) -> Option<Authorizer>;
     fn route(&self, route: &RouteDef) -> Result<Route, Error> {
         let auth = route.authorizer.clone()
             .unwrap_or(AuthorizerName::from("default"));
@@ -357,10 +357,10 @@ pub fn parse_host(host_header: &str) -> &str {
 mod route_test {
     use std::str::FromStr;
     use super::{route, RoutingTable, Resolver};
-    use intern::{HandlerName, Authorizer as AuthorizerName};
-    use config::routing::{HostPath, RouteDef};
-    use config::handlers::Handler;
-    use config::authorizers::Authorizer;
+    use crate::intern::{HandlerName, Authorizer as AuthorizerName};
+    use crate::config::routing::{HostPath, RouteDef};
+    use crate::config::handlers::Handler;
+    use crate::config::authorizers::Authorizer;
 
     struct Fake;
 

@@ -3,7 +3,7 @@ use std::time::Duration;
 
 use async_slot as slot;
 
-use config::{Configurator};
+use crate::config::{Configurator};
 
 
 fn updater(tx: slot::Sender<()>, mut configurator: Configurator) {

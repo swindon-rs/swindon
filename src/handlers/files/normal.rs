@@ -6,13 +6,13 @@ use std::str::from_utf8;
 use tk_http::Status;
 use http_file_headers::{Input as HeadersInput, Output};
 
-use config::static_files::{Static, Mode};
-use default_error_page::{serve_error_page};
-use incoming::{Input, Request, Transport};
-use handlers::files::decode::decode_component;
-use handlers::files::pools::get_pool;
-use handlers::files::common::{reply_file, NotFile};
-use handlers::files::index::generate_index;
+use crate::config::static_files::{Static, Mode};
+use crate::default_error_page::{serve_error_page};
+use crate::incoming::{Input, Request, Transport};
+use crate::handlers::files::decode::decode_component;
+use crate::handlers::files::pools::get_pool;
+use crate::handlers::files::common::{reply_file, NotFile};
+use crate::handlers::files::index::generate_index;
 
 
 pub fn serve_dir<S: Transport>(settings: &Arc<Static>, mut inp: Input)

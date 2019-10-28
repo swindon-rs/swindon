@@ -7,7 +7,7 @@ use quire::validate::{Nothing, Enum, Structure, Scalar, Mapping, Sequence};
 use quire::validate::{Numeric};
 use serde::de::{Deserializer, Deserialize, Error};
 
-use intern::DiskPoolName;
+use crate::intern::DiskPoolName;
 
 
 #[derive(Deserialize, Debug, PartialEq, Eq, Clone, Copy)]

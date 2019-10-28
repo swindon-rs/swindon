@@ -1,6 +1,6 @@
 use futures::sync::mpsc::{unbounded, UnboundedSender, UnboundedReceiver};
 
-use chat::{ConnectionMessage};
+use crate::chat::{ConnectionMessage};
 
 pub type Receiver = UnboundedReceiver<ConnectionMessage>;
 

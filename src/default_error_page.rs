@@ -2,9 +2,9 @@ use tk_http::{Status};
 use tk_http::server::{Error, EncoderDone};
 use trimmer::{Template, Context, Variable, Var, DataError};
 
-use template;
+use crate::template;
 use futures::future::{ok, FutureResult};
-use incoming::{reply, Request, Encoder, IntoContext};
+use crate::incoming::{reply, Request, Encoder, IntoContext};
 
 #[derive(Debug)]
 pub struct StatusVar(Status);

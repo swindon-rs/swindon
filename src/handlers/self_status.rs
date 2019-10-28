@@ -7,9 +7,9 @@ use self_meter_http::{ThreadReport, ProcessReport};
 use serde_json;
 use tk_http::Status;
 
-use config::self_status::SelfStatus;
-use incoming::{reply, Request, Input};
-use metrics;
+use crate::config::self_status::SelfStatus;
+use crate::incoming::{reply, Request, Input};
+use crate::metrics;
 
 
 pub fn serve<S: 'static>(settings: &Arc<SelfStatus>, inp: Input)
@@ -26,7 +26,7 @@ pub fn serve<S: 'static>(settings: &Arc<SelfStatus>, inp: Input)
         struct Response<'a> {
             process: ProcessReport<'a>,
             threads: ThreadReport<'a>,
-            metrics: Json<'a, Vec<Box<Collection>>>,
+            metrics: Json<'a, Vec<Box<dyn Collection>>>,
             config_fingerprint: String,
             version: &'a str,
         }

@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use quire::validate::{Structure, Mapping, Scalar};
-use config::static_files::header_contains;
+use crate::config::static_files::header_contains;
 use serde::de::{Deserialize, Deserializer};
 
 

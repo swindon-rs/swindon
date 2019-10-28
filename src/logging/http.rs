@@ -5,8 +5,8 @@ use tk_http::Status;
 use tk_http::server::Head;
 use trimmer::{Variable, Var, DataError, Output};
 
-use request_id::RequestId;
-use logging::context::{Context, AsContext};
+use crate::request_id::RequestId;
+use crate::logging::context::{Context, AsContext};
 
 
 pub struct EarlyRequest<'a> {

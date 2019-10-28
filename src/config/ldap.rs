@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use quire::validate::{Structure, Sequence, Mapping, Scalar};
 
-use intern::LdapUpstream;
+use crate::intern::LdapUpstream;
 
 
 #[derive(Deserialize, PartialEq, Eq, Debug)]

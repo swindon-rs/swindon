@@ -5,8 +5,8 @@ use std::sync::mpsc::{channel, Sender};
 use futures::sync::mpsc::{UnboundedSender as ChannelSender};
 
 
-use intern::SessionPoolName;
-use config;
+use crate::intern::SessionPoolName;
+use crate::config;
 use super::{Event, Action, PoolMessage};
 use super::main;
 

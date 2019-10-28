@@ -10,8 +10,8 @@ use serde::ser::{Serialize, Serializer, SerializeMap};
 use serde::de::{self, Deserialize, Deserializer, Visitor, MapAccess};
 use serde_json::Value;
 
-use intern::{LatticeKey as Key, LatticeVar as Var, SessionId};
-use metrics::{Integer};
+use crate::intern::{LatticeKey as Key, LatticeVar as Var, SessionId};
+use crate::metrics::{Integer};
 
 lazy_static! {
     pub static ref SHARED_KEYS: Integer = Integer::new();
@@ -51,10 +51,10 @@ pub enum Expires {
 
 #[derive(Debug, Clone)]
 pub struct Values {
-    pub(in chat::processor) counters: HashMap<Var, Counter>,
-    pub(in chat::processor) sets: HashMap<Var, Set>,
-    pub(in chat::processor) registers: HashMap<Var, Register>,
-    pub(in chat::processor) expires: Expires,
+    pub(in crate::chat::processor) counters: HashMap<Var, Counter>,
+    pub(in crate::chat::processor) sets: HashMap<Var, Set>,
+    pub(in crate::chat::processor) registers: HashMap<Var, Register>,
+    pub(in crate::chat::processor) expires: Expires,
 }
 
 pub struct Lattice {
@@ -401,7 +401,7 @@ mod test {
     use serde_json::ser::to_string;
 
     use super::*;
-    use intern::{LatticeKey as Key, LatticeVar as Var};
+    use crate::intern::{LatticeKey as Key, LatticeVar as Var};
 
     #[test]
     fn decode_delta() {

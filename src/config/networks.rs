@@ -5,8 +5,8 @@ use std::net::IpAddr;
 use quire::validate::{Structure, Sequence, Scalar};
 use serde::de::{Deserializer, Deserialize};
 
-use config::visitors::FromStrVisitor;
-use intern::Network;
+use crate::config::visitors::FromStrVisitor;
+use crate::intern::Network;
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct NetworkList {

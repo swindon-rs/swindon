@@ -11,19 +11,19 @@ use tk_http::websocket::Frame::{self, Text, Binary, Ping, Pong, Close};
 use tokio_core::reactor::Handle;
 use serde_json::{Error as JsonError};
 
-use http_pools::{REQUESTS, FAILED_503};
-use runtime::Runtime;
-use intern::SessionId;
-use config::chat::Chat;
-use config::SessionPool;
-use chat::{Cid, ConnectionSender, CloseReason, CONNECTIONS};
-use chat::message::{self, Meta, Args, Kwargs};
-use chat::processor::{Action, ProcessorPool, ConnectionMessage};
-use chat::backend::CallCodec;
-use chat::error::MessageError;
-use chat::replication::{RemotePool, RemoteAction};
+use crate::http_pools::{REQUESTS, FAILED_503};
+use crate::runtime::Runtime;
+use crate::intern::SessionId;
+use crate::config::chat::Chat;
+use crate::config::SessionPool;
+use crate::chat::{Cid, ConnectionSender, CloseReason, CONNECTIONS};
+use crate::chat::message::{self, Meta, Args, Kwargs};
+use crate::chat::processor::{Action, ProcessorPool, ConnectionMessage};
+use crate::chat::backend::CallCodec;
+use crate::chat::error::MessageError;
+use crate::chat::replication::{RemotePool, RemoteAction};
 
-use metrics::{Counter};
+use crate::metrics::{Counter};
 
 lazy_static! {
     pub static ref FRAMES_RECEIVED: Counter = Counter::new();

@@ -60,6 +60,7 @@ def pytest_addoption(parser):
 def user_id(_c=count(1)):
     return 'u:{}'.format(next(_c))
 
+
 @pytest.fixture
 def user_id2(_c=count(1)):
     return 'u:{}'.format(next(_c))
@@ -71,6 +72,7 @@ def static_request_method(request):
     (GET / ).
     """
     return request.param
+
 
 @pytest.fixture(params=[
     'GET', 'PATCH', 'POST', 'PUT', 'UPDATED', 'DELETE', 'XXX'])
@@ -106,6 +108,8 @@ def http_request(proxy_request_method, http_version, debug_routing, loop):
     return inner
 
 # all head requests must equal to get requests
+
+
 @pytest.fixture
 def get_request(static_request_method, http_version, debug_routing, loop):
 
@@ -135,8 +139,7 @@ def assert_headers(headers, debug_routing):
     assert headers.getall('Server') == ['swindon/func-tests']
 
 
-SwindonInfo = namedtuple('SwindonInfo',
-    'proc url proxy api api2 api3 api4')
+SwindonInfo = namedtuple('SwindonInfo', 'proc url proxy api api2 api3 api4')
 
 
 @pytest.fixture(scope='session')
@@ -292,7 +295,8 @@ def run_swindon(_proc, bin, config, log, *wait_ports, **options):
         tpl = string.Template(f.read())
 
     config = tpl.substitute(**options)
-    assert _check_config(config, returncode=0, __swindon_bin=bin) in ('',
+    assert _check_config(config, returncode=0, __swindon_bin=bin) in (
+        '',
         # TODO(tailhook) maybe elimitate this warning?
         #                or make explicit tests for it?
         'WARN swindon::config::read: '
@@ -327,8 +331,7 @@ def run_swindon(_proc, bin, config, log, *wait_ports, **options):
     api3 = yarl.URL('http://localhost:{session_pool3_port}'.format(**options))
     api4 = yarl.URL('http://localhost:{session_pool4_port}'.format(**options))
     try:
-        yield SwindonInfo(proc, url, proxy,
-            api1, api2, api3, api4)
+        yield SwindonInfo(proc, url, proxy, api1, api2, api3, api4)
     finally:
         os.close(fd)
         os.remove(fname)
@@ -369,6 +372,7 @@ def _write_configs(cfg, files={}):
 def _check_config(cfg='', returncode=1, files={}, *, __swindon_bin):
     with _write_configs(cfg, files) as main:
         return _run_check(__swindon_bin, main, returncode)
+
 
 def _check_fingerprint(cfg='', files={}, *, __swindon_bin):
     with _write_configs(cfg, files) as main:
@@ -473,7 +477,7 @@ class _BaseServer:
         while self.futures:
             self.futures.pop().cancel()
         while self.websockets:
-            await (self.websockets.pop()).close()
+            await self.websockets.pop().close()
         await self.stop_server()
         sess, self._session = self._session, None
         await sess.__aexit__(*error)
@@ -488,8 +492,8 @@ class _BaseServer:
     async def request(self, method, url, timeout=None, **kwargs):
         with async_timeout.timeout(timeout, loop=self.loop):
             async with self._session.request(method, url, **kwargs) as resp:
-                await resp.read()
-                return resp
+                body = await resp.read()
+                return resp, body
 
     async def ws_connect(self, url, **kwargs):
         ws = await self._session.ws_connect(url, **kwargs)
@@ -519,8 +523,8 @@ class _BaseServer:
     def start_ws(self, url, **kwargs):
         ws_fut = asyncio.ensure_future(
             self.ws_connect(url,
-                protocols=['v1.swindon-lattice+json'],
-                **kwargs),
+                            protocols=['v1.swindon-lattice+json'],
+                            **kwargs),
             loop=self.loop)
         req_fut = asyncio.ensure_future(
             self.wait_request(),
@@ -727,10 +731,10 @@ def async_server(loop):
 
 
 @pytest.fixture(params=[
-    pytest.param(AiohttpServer, marks=pytest.mark.async),
+    pytest.param(AiohttpServer, marks=pytest.mark.asyncio),
     pytest.param(WsgiServer, marks=pytest.mark.wsgi),
 ], ids=[
-    'upstream[async]',
+    'upstream[asyncio]',
     'upstream[wsgi]',
 ], scope='module')
 def proxy_server(request, swindon, loop):

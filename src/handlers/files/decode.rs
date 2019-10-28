@@ -21,8 +21,8 @@ pub fn decode_component(buf: &mut Vec<u8>, component: &str) -> Result<(), ()>
 
 fn from_hex(b: u8) -> Result<u8, ()> {
     match b {
-        b'0'...b'9' => Ok(b & 0x0f),
-        b'a'...b'f' | b'A'...b'F' => Ok((b & 0x0f) + 9),
+        b'0'..=b'9' => Ok(b & 0x0f),
+        b'a'..=b'f' | b'A'..=b'F' => Ok((b & 0x0f) + 9),
         _ => Err(())
     }
 }
