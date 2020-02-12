@@ -17,6 +17,7 @@ use libcantal::{Collection, Visitor};
 use crate::intern::Upstream;
 use crate::config::http_destinations::Destination;
 use crate::metrics::{Counter, List, Metric, Integer};
+use crate::prometheus_metrics as prom;
 
 lazy_static! {
     pub static ref REQUESTS: Counter = Counter::new();
@@ -320,6 +321,30 @@ pub fn pool_metrics(h: &HttpPools) -> Vec<PoolMetrics> {
         .collect()
 }
 
+pub fn prometheus_metrics() -> prom::List<'static> {
+    vec![
+        ("http_outgoing_requests", &[], &*REQUESTS),
+        ("http_outgoing_backpressure_failures", &[], &*FAILED_503),
+        ("http_outgoing_connecting", &[], &*CONNECTING),
+        ("http_outgoing_connected", &[], &*CONNECTED),
+        ("http_outgoing_blacklisted", &[], &*BLACKLISTED),
+        ("http_outgoing_request_queue", &[], &*REQUEST_QUEUE),
+
+        ("http_outgoing_connection_attempted", &[], &*CONNECTION_ATTEMPTED),
+        ("http_outgoing_connection_aborted", &[], &*CONNECTION_ABORTED),
+        ("http_outgoing_connection_errored", &[], &*CONNECTION_ERRORED),
+        ("http_outgoing_connection_established", &[], &*CONNECTION_ESTABLISHED),
+        ("http_outgoing_connection_dropped", &[], &*CONNECTION_DROPPED),
+        ("http_outgoing_blacklist_added", &[], &*BLACKLIST_ADDED),
+        ("http_outgoing_blacklist_removed", &[], &*BLACKLIST_REMOVED),
+        ("http_outgoing_requests_queued", &[], &*REQUESTS_QUEUED),
+        ("http_outgoing_requests_forwarded", &[], &*REQUESTS_FORWARDED),
+
+        ("http_outgoing_pools", &[], &*POOLS),
+        ("http_outgoing_pools_started", &[], &*POOLS_STARTED),
+        ("http_outgoing_pools_stopped", &[], &*POOLS_STOPPED),
+    ]
+}
 
 impl NewErrorLog<Error, Error> for PoolLog {
     type ErrorLog = PoolLog;
@@ -355,5 +380,37 @@ impl ErrorLog for PoolLog {
     /// This is triggered when pool done all the work and shut down entirely
     fn pool_closed(&self) {
         info!("{}: Pool closed", self.0);
+    }
+}
+
+impl prom::Collection for Vec<PoolMetrics> {
+    fn visit(&self, visitor: &mut dyn prom::Visit) {
+        let mut tmp = Vec::<(_, _, &dyn prom::Value)>::new();
+        for pool_metrics in self {
+            let m = &pool_metrics.0;
+            tmp.extend_from_slice(&[
+                ("http_pools_connecting", &m.name, &m.connecting),
+                ("http_pools_connected", &m.name, &m.connected),
+                ("http_pools_blacklisted", &m.name, &m.blacklisted),
+                ("http_pools_request_queue", &m.name, &m.request_queue),
+                ("http_pools_connection_attempted", &m.name, &m.connection_attempted),
+                ("http_pools_connection_aborted", &m.name, &m.connection_aborted),
+                ("http_pools_connection_errored", &m.name, &m.connection_errored),
+                ("http_pools_connection_establied", &m.name, &m.connection_established),
+                ("http_pools_connection_dropped", &m.name, &m.connection_dropped),
+                ("http_pools_blacklist_added", &m.name, &m.blacklist_added),
+                ("http_pools_blacklist_removed", &m.name, &m.blacklist_removed),
+                ("http_pools_requests_queued", &m.name, &m.requests_queued),
+                ("http_pools_requests_forwarded", &m.name, &m.requests_forwarded),
+            ]);
+        }
+        if !tmp.is_empty() {
+            let n = tmp.len()/self.len();
+            for i in 0..n {
+                for (metric, upstream, value) in tmp.iter().skip(i).step_by(n) {
+                    visitor.metric(metric, &[("upstream", upstream)], *value);
+                }
+            }
+        }
     }
 }

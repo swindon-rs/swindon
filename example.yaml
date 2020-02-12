@@ -9,6 +9,7 @@ debug-logging: true
 routing:
   localhost/: default @local
   localhost/~~swindon-status: status
+  localhost/metrics: prom-metrics
   localhost/empty.gif: empty-gif
   localhost/sources: src
   localhost/websocket.html: websocket-echo-static
@@ -74,6 +75,7 @@ handlers:
     destination: bin
 
   status: !SelfStatus
+  prom-metrics: !PrometheusMetrics
 
 session-pools:
 

@@ -55,6 +55,9 @@ impl Handler {
             Handler::SelfStatus(ref settings) => {
                 Ok(handlers::self_status::serve(settings, input))
             }
+            Handler::PrometheusMetrics => {
+                Ok(handlers::prometheus_metrics::serve(input))
+            }
         }
     }
 }

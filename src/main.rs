@@ -16,6 +16,7 @@ mod incoming;
 mod intern;
 mod logging;
 mod metrics;
+mod prometheus_metrics;
 mod privileges;
 mod proxy;
 mod request_id;

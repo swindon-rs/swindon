@@ -3,6 +3,7 @@ use tk_http::server::{Codec, Error};
 use tokio_io::{AsyncRead, AsyncWrite};
 
 use crate::metrics::{Metric, List};
+use crate::prometheus_metrics as prom_metrics;
 
 mod input;
 mod router;
@@ -32,5 +33,11 @@ pub fn metrics() -> List {
     vec![
         // obeys cantal-py.RequestTracker
         (Metric("frontend.incoming", "requests"), &*router::REQUESTS),
+    ]
+}
+
+pub fn prometheus_metrics() -> prom_metrics::List<'static> {
+    vec![
+        ("frontend_incoming_requests", &[], &*router::REQUESTS),
     ]
 }

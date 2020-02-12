@@ -5,3 +5,4 @@ pub mod swindon_chat;
 pub mod proxy;
 pub mod redirect;
 pub mod self_status;
+pub mod prometheus_metrics;

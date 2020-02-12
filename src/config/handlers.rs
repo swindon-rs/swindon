@@ -28,6 +28,7 @@ pub enum Handler {
     BaseRedirect(Arc<redirect::BaseRedirect>),
     StripWWWRedirect,
     SelfStatus(Arc<self_status::SelfStatus>),
+    PrometheusMetrics,
 }
 
 pub fn validator<'x>() -> Enum<'x> {
@@ -43,4 +44,5 @@ pub fn validator<'x>() -> Enum<'x> {
     .option("BaseRedirect", redirect::base_redirect())
     .option("StripWWWRedirect", Nothing)
     .option("SelfStatus", self_status::validator())
+    .option("PrometheusMetrics", Nothing)
 }
