@@ -41,7 +41,7 @@ quick_error! {
     #[derive(Debug)]
     pub enum BadIdent {
         InvalidChar {
-            description("invalid character in identifier")
+            display("invalid character in identifier")
         }
     }
 }

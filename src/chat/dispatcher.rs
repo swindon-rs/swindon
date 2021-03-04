@@ -46,12 +46,11 @@ quick_error! {
     #[derive(Debug)]
     pub enum Error {
         Validation(e: JsonError) {
-            description(e.description())
-            cause(e)
+            source(e)
             from()
         }
         Binary {
-            description("binary messages are not supported yet")
+            display("binary messages are not supported yet")
         }
     }
 }
