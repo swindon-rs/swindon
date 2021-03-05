@@ -27,52 +27,42 @@ quick_error! {
     pub enum Error {
         Io(err: io::Error) {
             display("IO error: {}", err)
-            description("IO error")
             from()
         }
         Config(err: quire::ErrorList) {
             display("config error: {}", err)
-            description("config error")
             from()
         }
         Validation(err: String) {
             display("validation error: {}", err)
-            description("validation error")
             from()
         }
         Routing(err: String) {
             display("routing table error: {}", err)
-            description("routing table error")
         }
         BadMixinPath(filename: PathBuf) {
             display("bad mixin path: {:?}, \
                 only relative paths are allowed", filename)
-            description("bad mixin path")
         }
         InvalidPrefixInMixin(prefix: String, filename: PathBuf,
                              typ: &'static str, name: String)
         {
             display("mixin {:?} has {} named {:?} without prefix {:?}",
                 filename, typ, name, prefix)
-            description("item in mixin file has invalid prefix")
         }
         MixinConflict(filename: PathBuf, typ: &'static str, name: String) {
             display("mixin {:?} has overlapping {} {:?}",
                 filename, typ, name)
-            description("mixin has overlapping item")
         }
         Regex(err: regex::Error) {
             display("error compiling routing regex: {}", err)
-            description("error compiling routing regex")
             from()
         }
         NoHandler(name: HandlerName) {
             display("handler {:?} not found", name)
-            description("handler not found")
         }
         NoAuthorizer(name: AuthorizerName) {
             display("authorizer {:?} not found", name)
-            description("authorizer not found")
         }
     }
 }

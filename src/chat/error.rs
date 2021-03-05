@@ -12,47 +12,41 @@ quick_error! {
     pub enum MessageError {
         /// Http client request error;
         IoError(err: io::Error) {
-            description(err.description())
             display("I/O error: {:?}", err)
             from()
         }
         /// Utf8 decoding error;
         Utf8Error(err: Utf8Error) {
-            description(err.description())
             display("Decode error {}", err)
             from()
         }
         /// JSON Parser Error;
         JsonError(err: JsonError) {
-            description(err.description())
             display("JSON error: {}", err)
             from()
         }
         /// Protocol Message validation error;
         ValidationError(reason: String) {
-            description("Message validation error")
             display("Validation error: {}", reason)
             from()
         }
         /// Backend application Error;
         HttpError(status: Status, body: Option<Value>) {
             // from()
-            description("Http error")
             display("Http error: {}: {:?}", status.code(), body)
         }
         /// Coundn't send request by HTTP, got network or protocol error
         Proto(err: client::Error) {
             from()
-            description("Http error")
             display("Http error: {}", err)
         }
         /// Too many requests queued
         PoolOverflow {
-            description("too many requests queued")
+            display("too many requests queued")
         }
         /// Error sending message to worker pool
         PoolError {
-            description("error sending message to worker pool")
+            display("error sending message to worker pool")
         }
     }
 }
